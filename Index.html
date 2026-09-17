@@ -30,276 +30,341 @@
     }
   </script>
   <script type="application/json" id="NotesData">
+{
+  "vaultMeta": {
+    "title": "Notes Vault",
+    "version": "1.0.0"
+  },
+  "tableTemplates": [],
+  "tikzTemplates": [],
+  "folders": [
+    "LaTex"
+  ],
+  "notes": [
     {
-      "vaultMeta": {
-        "title": "Notes Vault",
-        "version": "1.0.0"
+      "id": "note_latex_complete_reference_01",
+      "slug": "latex-mathematical-environments-and-symbols-reference",
+      "title": "LaTeX Mathematical Environments, Structures & Complete Symbol Reference",
+      "folder": "LaTex",
+      "tags": [
+        "latex",
+        "reference",
+        "cheatsheet",
+        "symbols",
+        "katex"
+      ],
+      "description": "- [x] Complete Guide to Supported & Unsupported LaTeX in Vanilla JS HUB\n- [x] AMS-LaTeX Environments, Alignments & Matrices\n- [x] Delimiters, Fractions, Polynomials & Large Calculus Operators\n- [x] Complete Symbol Taxonomy (Greek, Arrows, Relations, Sets, Binary Ops)\n$$\n\\int_{-\\infty}^{\\infty} e^{-x^2} \\, \\mathrm{d}x = \\sqrt{\\pi}, \\quad \\nabla \\times \\mathbf{E} = -\\frac{\\partial \\mathbf{B}}{\\partial t}, \\quad \\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}^{-1} = \\frac{1}{ad-bc}\\begin{pmatrix} d & -b \\\\ -c & a \\end{pmatrix}\n$$",
+      "meta": {
+        "created": "2026-08-31",
+        "author": "Amiya"
       },
-      "tableTemplates": [],
-      "tikzTemplates": [],
-      "folders": ["LaTex"],
-      "notes": [
+      "flashcard": {
+        "isFlashcard": true,
+        "front": "What LaTeX math environments and features are supported in Vanilla JS HUB Notes?",
+        "back": "- [x] Full KaTeX Math Engine (inline $, display $$)\n- [x] AMS Environments: align*, gather*, cases, dcases, pmatrix, bmatrix, array\n- [x] Full TikZ graphics compilation via TikZJax\n- [x] Dynamic and manual delimiters \\left...\\right, \\underbrace, \\overbrace\n- [x] Complete math font families (\\mathbb, \\mathbf, \\mathcal, \\mathfrak, \\mathscr)\n- [ ] Server-side .sty CLI packages and raw TeX primitive programming are not supported"
+      },
+      "blocks": [
         {
-          "id": "note_latex_complete_reference_01",
-          "slug": "latex-mathematical-environments-and-symbols-reference",
-          "title": "LaTeX Mathematical Environments, Structures & Complete Symbol Reference",
-          "folder": "LaTex",
-          "tags": ["latex", "reference", "cheatsheet", "symbols", "katex"],
-          "description": "- [x] Complete Guide to Supported & Unsupported LaTeX in Vanilla JS HUB\n- [x] AMS-LaTeX Environments, Alignments & Matrices\n- [x] Delimiters, Fractions, Polynomials & Large Calculus Operators\n- [x] Complete Symbol Taxonomy (Greek, Arrows, Relations, Sets, Binary Ops)\n$$\n\\int_{-\\infty}^{\\infty} e^{-x^2} \\, \\mathrm{d}x = \\sqrt{\\pi}, \\quad \\nabla \\times \\mathbf{E} = -\\frac{\\partial \\mathbf{B}}{\\partial t}, \\quad \\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}^{-1} = \\frac{1}{ad-bc}\\begin{pmatrix} d & -b \\\\ -c & a \\end{pmatrix}\n$$",
-          "meta": {
-            "created": "2026-08-31",
-            "author": "Amiya"
-          },
-          "flashcard": {
-            "isFlashcard": true,
-            "front": "What LaTeX math environments and features are supported in Vanilla JS HUB Notes?",
-            "back": "- [x] Full KaTeX Math Engine (inline $, display $$)\n- [x] AMS Environments: align*, gather*, cases, dcases, pmatrix, bmatrix, array\n- [x] Full TikZ graphics compilation via TikZJax\n- [x] Dynamic and manual delimiters \\left...\\right, \\underbrace, \\overbrace\n- [x] Complete math font families (\\mathbb, \\mathbf, \\mathcal, \\mathfrak, \\mathscr)\n- [ ] Server-side .sty CLI packages and raw TeX primitive programming are not supported"
-          },
-          "blocks": [
-            {
-              "id": "b_lat_h1",
-              "type": "heading",
-              "level": "h1",
-              "title": "Vanilla JS HUB Notes: What CAN & CANNOT Be Used"
-            },
-            {
-              "id": "b_lat_t1",
-              "type": "text",
-              "content": "- [x] **Full KaTeX Math Engine**: Fast client-side compilation of standard LaTeX math (`$...$` inline and `$$...$$` display).\n- [x] **AMS-LaTeX Environments**: `equation*`, `align*`, `aligned`, `gather*`, `gathered`, `cases`, `dcases`, `rcases`, `matrix`, `pmatrix`, `bmatrix`, `Bmatrix`, `vmatrix`, `Vmatrix`, `array`, `split`.\n- [x] **Delimiters & Bracing**: Dynamic `\\left ... \\right`, manual `\\bigl`, `\\Bigl`, `\\biggl`, `\\Biggl`, horizontal braces `\\underbrace{...}_{...}`, `\\overbrace{...}^{...}`.\n- [x] **Calculus, Summations & Operators**: Integrals `\\int`, `\\iint`, `\\iiint`, `\\oint`, summations `\\sum`, products `\\prod`, limits `\\lim`, differentials `\\mathrm{d}x`, partials `\\partial`, vector del `\\nabla`.\n- [x] **Mathematical Fonts**: `\\mathbb{R}`, `\\mathbf{x}`, `\\boldsymbol{v}`, `\\mathrm{d}`, `\\mathit{x}`, `\\mathcal{L}`, `\\mathscr{E}`, `\\mathfrak{g}`, `\\mathsf{T}`, `\\mathtt{x}`.\n- [x] **Text & Color Formatting**: `\\textcolor{#hex}{...}`, `\\colorbox{...}{...}`, `\\boxed{...}`, `\\cancel{...}`, `\\underline{...}`.\n- [x] **TikZ Diagrams**: Full vector TikZ graphics compiled natively in browser via TikZJax (`\\begin{tikzpicture} ... \\end{tikzpicture}`).\n- [x] **Interactive Markdown Features**: Razor-sharp vector task checkboxes (`- [ ]`, `- [x]`), bullet lists, bold `**...**`, italic `*...*`, strikethrough `~~...~~`, and bidirectional `[[WikiLinks]]`.\n\n### What CANNOT Be Used (Browser-Side Limitations):\n- [ ] **External LaTeX CLI Packages**: Cannot load arbitrary server-side `.sty` files requiring `pdflatex` / `xelatex` (e.g. `\\usepackage{microtype}`, `\\usepackage{pgfplots}` with external gnuplot, or raw `pythontex`).\n- [ ] **Low-Level TeX Primitives**: Low-level TeX engine macro programming (`\\catcode`, `\\expandafter`, `\\csname`, `\\def\\temp`) are not supported in KaTeX.\n- [ ] **External BibTeX Files**: Cannot load external `.bib` files directly via `\\bibliography{...}` (use direct references or WikiLinks `[[...]]`).\n- [ ] **Multi-Page Float Layout Engines**: Page-break engines (`\\clearpage`, float-page repositioning) are handled by clean fluid web layouts rather than fixed DVI pagination."
-            },
-            {
-              "id": "b_lat_h2",
-              "type": "heading",
-              "level": "h1",
-              "title": "Math Modes & Display Style Specifiers"
-            },
-            {
-              "id": "b_lat_t2",
-              "type": "text",
-              "content": "- **Inline Math**: `$f(x) = \\frac{1}{x}$` renders inline with surrounding text: $f(x) = \\frac{1}{x}$.\n- **Display Math**: `$$\\int_a^b f(x) \\, \\mathrm{d}x$$` renders on its own centered line:\n$$\\int_a^b f(x) \\, \\mathrm{d}x$$\n- **Style Specifiers**:\n  - `\\displaystyle \\sum_{k=1}^n k`: Forces full display height $\\displaystyle \\sum_{k=1}^n k$.\n  - `\\textstyle \\frac{a}{b}`: Forces inline size $\\textstyle \\frac{a}{b}$.\n  - `\\scriptstyle x`: First-level index size $\\scriptstyle x$.\n  - `\\scriptscriptstyle x`: Nested script size $\\scriptscriptstyle x$."
-            },
-            {
-              "id": "b_lat_h3",
-              "type": "heading",
-              "level": "h1",
-              "title": "Equation Alignment & Multi-Line Environments"
-            },
-            {
-              "id": "b_lat_h3_1",
-              "type": "heading",
-              "level": "h2",
-              "title": "Align and Gather Environments"
-            },
-            {
-              "id": "b_lat_eq1",
-              "type": "equation",
-              "tex": "\\begin{aligned}\n\\nabla \\cdot \\mathbf{E} &= \\frac{\\rho}{\\varepsilon_0} \\\\\n\\nabla \\cdot \\mathbf{B} &= 0 \\\\\n\\nabla \\times \\mathbf{E} &= -\\frac{\\partial \\mathbf{B}}{\\partial t} \\\\\n\\nabla \\times \\mathbf{B} &= \\mu_0 \\mathbf{J} + \\mu_0 \\varepsilon_0 \\frac{\\partial \\mathbf{E}}{\\partial t}\n\\end{aligned}"
-            },
-            {
-              "id": "b_lat_t3_1",
-              "type": "text",
-              "content": "- `aligned`: Aligns at the `&` symbol on each line.\n- `gathered`: Centers each line independently without horizontal alignment anchors."
-            },
-            {
-              "id": "b_lat_h3_2",
-              "type": "heading",
-              "level": "h2",
-              "title": "Piecewise Functions (cases & dcases)"
-            },
-            {
-              "id": "b_lat_eq2",
-              "type": "equation",
-              "tex": "f(x) = \\begin{dcases}\n\\frac{\\sin(x)}{x} & \\text{if } x \\neq 0 \\\\\n1 & \\text{if } x = 0\n\\end{dcases}, \\quad\ng(n) = \\begin{cases}\nn/2 & \\text{if } n \\equiv 0 \\pmod 2 \\\\\n3n+1 & \\text{if } n \\equiv 1 \\pmod 2\n\\end{cases}"
-            },
-            {
-              "id": "b_lat_h3_3",
-              "type": "heading",
-              "level": "h2",
-              "title": "Matrices & Tabular Arrays"
-            },
-            {
-              "id": "b_lat_eq3",
-              "type": "equation",
-              "tex": "\\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}, \\quad\n\\begin{bmatrix} 1 & 0 & 0 \\\\ 0 & 1 & 0 \\\\ 0 & 0 & 1 \\end{bmatrix}, \\quad\n\\begin{vmatrix} x_1 & y_1 \\\\ x_2 & y_2 \\end{vmatrix}, \\quad\n\\begin{Bmatrix} \\alpha & \\beta \\\\ \\gamma & \\delta \\end{Bmatrix}, \\quad\n\\begin{Vmatrix} A_{11} & A_{12} \\\\ A_{21} & A_{22} \\end{Vmatrix}"
-            },
-            {
-              "id": "b_lat_h3_4",
-              "type": "heading",
-              "level": "h2",
-              "title": "Nested Sub-Derivations (Array inside Aligned)"
-            },
-            {
-              "id": "b_lat_eq3_4",
-              "type": "equation",
-              "tex": "\\begin{aligned}\n\\int x^2 e^{-x^2} \\, \\mathrm{d}x &= \\int x \\cdot \\left( x e^{-x^2} \\right) \\mathrm{d}x \\\\\n  &\\quad \\left[\n    \\begin{array}{ll}\n      \\text{Integration by Parts:} & \\\\\n      u = x & \\implies \\mathrm{d}u = \\mathrm{d}x \\\\\n      \\mathrm{d}v = x e^{-x^2} \\mathrm{d}x & \\implies v = -\\frac{1}{2} e^{-x^2}\n    \\end{array}\n  \\right] \\\\\n  &= u v - \\int v \\, \\mathrm{d}u \\\\\n  &= -\\frac{1}{2} x e^{-x^2} - \\int \\left( -\\frac{1}{2} e^{-x^2} \\right) \\mathrm{d}x \\\\\n  &= -\\frac{1}{2} x e^{-x^2} + \\frac{1}{2} \\int e^{-x^2} \\, \\mathrm{d}x + C\n\\end{aligned}"
-            },
-            {
-              "id": "b_lat_t3_4",
-              "type": "text",
-              "content": "- **Outer `aligned`**: Aligns the primary mathematical derivation sequence at `&=`.\n- **Inner `array`**: Nests side calculations, substitution tables, or coordinate transforms (`\\begin{array}{ll} ... \\end{array}`) with their own internal `&` and `\\\\` delimiters without breaking outer derivation alignment."
-            },
-            {
-              "id": "b_lat_h4",
-              "type": "heading",
-              "level": "h1",
-              "title": "Delimiters, Braces & Scaled Enclosures"
-            },
-            {
-              "id": "b_lat_eq4",
-              "type": "equation",
-              "tex": "\\left( \\frac{\\sum_{i=1}^n x_i^2}{\\sqrt[3]{1 + \\frac{a}{b}}} \\right) = \\underbrace{a_1 + a_2 + \\cdots + a_k}_{\\text{Sum of } k \\text{ terms}} + \\overbrace{b_1 + b_2 + \\cdots + b_m}^{\\text{Sum of } m \\text{ terms}}"
-            },
-            {
-              "id": "b_lat_t4",
-              "type": "text",
-              "content": "- **Auto-sizing Delimiters**: `\\left( ... \\right)`, `\\left[ ... \\right]`, `\\left\\{ ... \\right\\}`, `\\left| ... \\right|`, `\\left\\| ... \\right\\|`, `\\left\\langle ... \\right\\rangle`, `\\left\\lfloor ... \\right\\rfloor`, `\\left\\lceil ... \\right\\rceil`.\n- **Evaluated-at Bar**: `\\left. \\frac{\\mathrm{d}f}{\\mathrm{d}x} \\right|_{x=0}` produces $\\left. \\frac{\\mathrm{d}f}{\\mathrm{d}x} \\right|_{x=0}$.\n- **Manual Sizing Scale**: `\\bigl( \\dots \\bigr) < \\Bigl( \\dots \\Bigr) < \\biggl( \\dots \\biggr) < \\Biggl( \\dots \\Biggr)`."
-            },
-            {
-              "id": "b_lat_h5",
-              "type": "heading",
-              "level": "h1",
-              "title": "Fractions, Binomials, Roots & Polynomials"
-            },
-            {
-              "id": "b_lat_eq5_1",
-              "type": "equation",
-              "tex": "P_n(x) = a_n x^n + a_{n-1} x^{n-1} + \\cdots + a_1 x + a_0 = \\sum_{k=0}^n \\binom{n}{k} x^k y^{n-k}"
-            },
-            {
-              "id": "b_lat_eq5_2",
-              "type": "equation",
-              "tex": "\\cfrac{1}{1 + \\cfrac{1}{2 + \\cfrac{1}{3 + \\cfrac{1}{4 + \\cdots}}}} = \\frac{\\sqrt{5}-1}{2}"
-            },
-            {
-              "id": "b_lat_t5",
-              "type": "text",
-              "content": "- `\\frac{a}{b}` (standard fraction), `\\dfrac{a}{b}` (display fraction), `\\cfrac{a}{b}` (continued fraction).\n- `\\binom{n}{k}` (binomial coefficient $\\binom{n}{k}$), `\\dbinom{n}{k}` (display binomial).\n- `\\sqrt{x}` ($\\sqrt{x}$), `\\sqrt[n]{x}` ($\\sqrt[n]{x}$)."
-            },
-            {
-              "id": "b_lat_h6",
-              "type": "heading",
-              "level": "h1",
-              "title": "Large Operators, Limits & Calculus"
-            },
-            {
-              "id": "b_lat_eq6",
-              "type": "equation",
-              "tex": "\\int_{0}^{\\infty} x^{s-1} e^{-x} \\, \\mathrm{d}x = \\Gamma(s), \\quad \\lim_{x \\to 0} \\frac{\\sin x}{x} = 1, \\quad \\oint_C \\mathbf{F} \\cdot \\mathrm{d}\\mathbf{r} = \\iint_S (\\nabla \\times \\mathbf{F}) \\cdot \\mathrm{d}\\mathbf{S}"
-            },
-            {
-              "id": "b_lat_t6",
-              "type": "text",
-              "content": "- **Sum & Product**: `\\sum_{i=1}^\\infty a_i`, `\\prod_{i=1}^n x_i`, `\\coprod_{j=1}^m Y_j`.\n- **Integrals**: `\\int`, `\\iint`, `\\iiint`, `\\idotsint`, `\\oint`.\n- **Limits & Extrema**: `\\lim_{x \\to a}`, `\\max_{x \\in S}`, `\\min_{x \\in S}`, `\\sup`, `\\inf`, `\\argmax`, `\\argmin`.\n- **Custom Operator**: `\\operatorname{tr}(A)`, `\\operatorname{diag}(v)`, `\\operatorname{sinc}(t)`."
-            },
-            {
-              "id": "b_lat_h7",
-              "type": "heading",
-              "level": "h1",
-              "title": "Mathematical Font Families"
-            },
-            {
-              "id": "b_lat_t7",
-              "type": "text",
-              "content": "- `\\mathbb{R}, \\mathbb{C}, \\mathbb{Z}, \\mathbb{N}, \\mathbb{Q}, \\mathbb{F}` $\\to \\mathbb{R}, \\mathbb{C}, \\mathbb{Z}, \\mathbb{N}, \\mathbb{Q}, \\mathbb{F}$ (Blackboard Bold)\n- `\\mathbf{A}, \\mathbf{x}, \\mathbf{v}` $\\to \\mathbf{A}, \\mathbf{x}, \\mathbf{v}$ (Bold Roman)\n- `\\boldsymbol{\\alpha}, \\boldsymbol{\\beta}, \\boldsymbol{\\nabla}` $\\to \\boldsymbol{\\alpha}, \\boldsymbol{\\beta}, \\boldsymbol{\\nabla}$ (Bold Greek / Math)\n- `\\mathrm{d}x, \\mathrm{e}^{i\\pi}` $\\to \\mathrm{d}x, \\mathrm{e}^{i\\pi}$ (Upright Roman)\n- `\\mathit{TotalCost}` $\\to \\mathit{TotalCost}$ (Math Italic)\n- `\\mathcal{L}, \\mathcal{H}, \\mathcal{F}, \\mathcal{N}` $\\to \\mathcal{L}, \\mathcal{H}, \\mathcal{F}, \\mathcal{N}$ (Calligraphic)\n- `\\mathscr{E}, \\mathscr{F}, \\mathscr{P}` $\\to \\mathscr{E}, \\mathscr{F}, \\mathscr{P}$ (Script)\n- `\\mathfrak{g}, \\mathfrak{p}, \\mathfrak{S}` $\\to \\mathfrak{g}, \\mathfrak{p}, \\mathfrak{S}$ (Fraktur / Gothic)\n- `\\mathsf{T}, \\mathsf{H}, \\mathsf{E}` $\\to \\mathsf{T}, \\mathsf{H}, \\mathsf{E}$ (Sans-Serif)\n- `\\mathtt{0x1F}, \\mathtt{ptr}` $\\to \\mathtt{0x1F}, \\mathtt{ptr}$ (Monospace)\n- `\\text{Hello World}` $\\to \\text{Hello World}$ (Plain Text)"
-            },
-            {
-              "id": "b_lat_h8",
-              "type": "heading",
-              "level": "h1",
-              "title": "Math Spacing, Accents, Vectors & Annotations"
-            },
-            {
-              "id": "b_lat_t8",
-              "type": "text",
-              "content": "- **Spacing**:\n  - `\\,` (thin: $3/18\\text{em}$), `\\:` (med: $4/18\\text{em}$), `\\;` (thick: $5/18\\text{em}$), `\\quad` ($1\\text{em}$), `\\qquad` ($2\\text{em}$), `\\!` (negative: $-3/18\\text{em}$).\n- **Accents & Vectors**:\n  - `\\vec{v}` ($\\vec{v}$), `\\overrightarrow{AB}` ($\\overrightarrow{AB}$), `\\hat{x}` ($\\hat{x}$), `\\widehat{xyz}` ($\\widehat{xyz}$), `\\bar{x}` ($\\bar{x}$), `\\overline{z}` ($\\overline{z}$), `\\tilde{x}` ($\\tilde{x}$), `\\dot{x}` ($\\dot{x}$), `\\ddot{x}` ($\\ddot{x}$), `\\dddot{x}` ($\\dddot{x}$), `\\ddddot{x}` ($\\ddddot{x}$).\n- **Boxes & Color**:\n  - `\\boxed{E = mc^2}` $\\to \\boxed{E = mc^2}$\n  - `\\textcolor{#8b5cf6}{\\text{Purple Text}}` $\\to \\textcolor{#8b5cf6}{\\text{Purple Text}}$\n  - `\\cancel{x+1}` $\\to \\cancel{x+1}$, `\\bcancel{x}` $\\to \\bcancel{x}$, `\\xcancel{x}` $\\to \\xcancel{x}$."
-            },
-            {
-              "id": "b_lat_h9",
-              "type": "heading",
-              "level": "h1",
-              "title": "Complete LaTeX Symbol Classification"
-            },
-            {
-              "id": "b_lat_h9_1",
-              "type": "heading",
-              "level": "h2",
-              "title": "Greek Alphabet (Lowercase & Uppercase)"
-            },
-            {
-              "id": "b_lat_t9_1",
-              "type": "text",
-              "content": "- **Lowercase Greek**:\n  - `\\alpha` ($\\alpha$), `\\beta` ($\\beta$), `\\gamma` ($\\gamma$), `\\delta` ($\\delta$), `\\epsilon` ($\\epsilon$), `\\varepsilon` ($\\varepsilon$), `\\zeta` ($\\zeta$), `\\eta` ($\\eta$), `\\theta` ($\\theta$), `\\vartheta` ($\\vartheta$), `\\iota` ($\\iota$), `\\kappa` ($\\kappa$), `\\varkappa` ($\\varkappa$), `\\lambda` ($\\lambda$), `\\mu` ($\\mu$), `\\nu` ($\\nu$), `\\xi` ($\\xi$), `\\pi` ($\\pi$), `\\varpi` ($\\varpi$), `\\rho` ($\\rho$), `\\varrho` ($\\varrho$), `\\sigma` ($\\sigma$), `\\varsigma` ($\\varsigma$), `\\tau` ($\\tau$), `\\upsilon` ($\\upsilon$), `\\phi` ($\\phi$), `\\varphi` ($\\varphi$), `\\chi` ($\\chi$), `\\psi` ($\\psi$), `\\omega` ($\\omega$).\n- **Uppercase Greek**:\n  - `\\Gamma` ($\\Gamma$), `\\Delta` ($\\Delta$), `\\Theta` ($\\Theta$), `\\Lambda` ($\\Lambda$), `\\Xi` ($\\Xi$), `\\Pi` ($\\Pi$), `\\Sigma` ($\\Sigma$), `\\Upsilon` ($\\Upsilon$), `\\Phi` ($\\Phi$), `\\Psi` ($\\Psi$), `\\Omega` ($\\Omega$)."
-            },
-            {
-              "id": "b_lat_h9_2",
-              "type": "heading",
-              "level": "h2",
-              "title": "Arrow Symbols"
-            },
-            {
-              "id": "b_lat_t9_2",
-              "type": "text",
-              "content": "- **Horizontal Arrows**:\n  - `\\to` or `\\rightarrow` ($\\to$), `\\leftarrow` ($\\leftarrow$), `\\leftrightarrow` ($\\leftrightarrow$), `\\Rightarrow` ($\\Rightarrow$), `\\Leftarrow` ($\\Leftarrow$), `\\Leftrightarrow` or `\\iff` ($\\Leftrightarrow$).\n  - `\\longrightarrow` ($\\longrightarrow$), `\\longleftarrow` ($\\longleftarrow`), `\\Longrightarrow` ($\\Longrightarrow$), `\\Longleftarrow` ($\\Longleftarrow`), `\\Longleftrightarrow` ($\\Longleftrightarrow$).\n  - `\\mapsto` ($\\mapsto$), `\\longmapsto` ($\\longmapsto$), `\\hookrightarrow` ($\\hookrightarrow$), `\\hookleftarrow` ($\\hookleftarrow`), `\\rightharpoonup` ($\\rightharpoonup$), `\\leftharpoondown` ($\\leftharpoondown$).\n- **Vertical & Diagonal Arrows**:\n  - `\\uparrow` ($\\uparrow$), `\\downarrow` ($\\downarrow$), `\\updownarrow` ($\\updownarrow`), `\\Uparrow` ($\\Uparrow$), `\\Downarrow` ($\\Downarrow`), `\\Updownarrow` ($\\Updownarrow$).\n  - `\\nearrow` ($\\nearrow$), `\\searrow` ($\\searrow$), `\\swarrow` ($\\swarrow$), `\\nwarrow` ($\\nwarrow$)."
-            },
-            {
-              "id": "b_lat_h9_3",
-              "type": "heading",
-              "level": "h2",
-              "title": "Relational & Comparison Symbols"
-            },
-            {
-              "id": "b_lat_t9_3",
-              "type": "text",
-              "content": "- **Equality & Equivalence**:\n  - `=` ($=$), `\\neq` ($\\neq$), `\\equiv` ($\\equiv$), `\\sim` ($\\sim$), `\\approx` ($\\approx`), `\\simeq` ($\\simeq`), `\\cong` ($\\cong`), `\\propto` ($\\propto`), `\\doteq` ($\\doteq$), `\\asymp` ($\\asymp$).\n- **Ordering**:\n  - `<` ($<$), `>` ($>$), `\\le` or `\\leq` ($\\le$), `\\ge` or `\\geq` ($\\ge`), `\\ll` ($\\ll`), `\\gg` ($\\gg$), `\\prec` ($\\prec$), `\\succ` ($\\succ$), `\\preceq` ($\\preceq$), `\\succeq` ($\\succeq$).\n- **Geometry & Alignment**:\n  - `\\parallel` ($\\parallel$), `\\nparallel` ($\\nparallel$), `\\perp` ($\\perp$), `\\mid` ($\\mid$), `\\nmid` ($\\nmid$)."
-            },
-            {
-              "id": "b_lat_h9_4",
-              "type": "heading",
-              "level": "h2",
-              "title": "Set Theory & Logic Symbols"
-            },
-            {
-              "id": "b_lat_t9_4",
-              "type": "text",
-              "content": "- **Set Operations**:\n  - `\\in` ($\\in$), `\\notin` ($\\notin$), `\\ni` or `\\owns` ($\\ni$), `\\subset` ($\\subset$), `\\supset` ($\\supset$), `\\subseteq` ($\\subseteq$), `\\supseteq` ($\\supseteq`), `\\subsetneq` ($\\subsetneq$), `\\supsetneq` ($\\supsetneq$).\n  - `\\cap` ($\\cap$), `\\cup` ($\\cup$), `\\setminus` ($\\setminus`), `\\emptyset` ($\\emptyset$), `\\varnothing` ($\\varnothing$), `\\complement` ($\\complement$).\n- **Logic & Proofs**:\n  - `\\forall` ($\\forall$), `\\exists` ($\\exists$), `\\nexists` ($\\nexists$), `\\neg` or `\\lnot` ($\\neg$), `\\land` ($\\land$), `\\lor` ($\\lor$), `\\implies` ($\\implies$), `\\impliedby` ($\\impliedby$), `\\iff` ($\\iff$).\n  - `\\vdash` ($\\vdash`), `\\vDash` ($\\vDash$), `\\top` ($\\top$), `\\bot` ($\\bot$), `\\therefore` ($\\therefore$), `\\because` ($\\because$), `\\blacksquare` ($\\blacksquare$)."
-            },
-            {
-              "id": "b_lat_h9_5",
-              "type": "heading",
-              "level": "h2",
-              "title": "Binary Operations & Arithmetic"
-            },
-            {
-              "id": "b_lat_t9_5",
-              "type": "text",
-              "content": "- **Arithmetic**:\n  - `+` ($+$), `-` ($-$), `\\pm` ($\\pm$), `\\mp` ($\\mp`), `\\times` ($\\times`), `\\div` ($\\div$), `\\cdot` ($\\cdot`), `\\ast` ($\\ast$), `\\star` ($\\star$).\n- **Advanced Operations**:\n  - `\\circ` ($\\circ$), `\\bullet` ($\\bullet$), `\\otimes` ($\\otimes$), `\\oplus` ($\\oplus$), `\\odot` ($\\odot$), `\\ominus` ($\\ominus$), `\\oslash` ($\\oslash$), `\\boxtimes` ($\\boxtimes$), `\\boxplus` ($\\boxplus$).\n  - `\\wedge` ($\\wedge$), `\\vee` ($\\vee$), `\\cap` ($\\cap$), `\\cup` ($\\cup$), `\\sqcap` ($\\sqcap$), `\\sqcup` ($\\sqcup$)."
-            },
-            {
-              "id": "b_lat_h9_6",
-              "type": "heading",
-              "level": "h2",
-              "title": "Calculus, Geometry & Physics Symbols"
-            },
-            {
-              "id": "b_lat_t9_6",
-              "type": "text",
-              "content": "- **Calculus & Vector Calculus**:\n  - `\\partial` ($\\partial$), `\\nabla` ($\\nabla$), `\\nabla^2` ($\\nabla^2$), `\\infty` ($\\infty$), `\\int` ($\\int$), `\\oint` ($\\oint$), `\\mathrm{d}` ($\\mathrm{d}$).\n- **Physics Constants & Units**:\n  - `\\hbar` ($\\hbar$), `\\ell` ($\\ell$), `\\Re` ($\\Re`), `\\Im` ($\\Im$), `\\wp` ($\\wp$), `\\aleph` ($\\aleph$).\n  - `\\triangle` ($\\triangle$), `\\angle` ($\\angle`), `\\measuredangle` ($\\measuredangle$), `\\sphericalangle` ($\\sphericalangle$)."
-            },
-            {
-              "id": "b_lat_h9_7",
-              "type": "heading",
-              "level": "h2",
-              "title": "Miscellaneous & Punctuation Symbols"
-            },
-            {
-              "id": "b_lat_t9_7",
-              "type": "text",
-              "content": "- **Ellipses**:\n  - `\\dots` or `\\ldots` ($\\dots$), `\\cdots` ($\\cdots$), `\\vdots` ($\\vdots$), `\\ddots` ($\\ddots$).\n- **Markers & Suits**:\n  - `\\prime` ($\\prime$), `\\backprime` ($\\backprime`), `\\checkmark` ($\\checkmark$), `\\dagger` ($\\dagger$), `\\ddagger` ($\\ddagger$).\n  - `\\spadesuit` ($\\spadesuit$), `\\heartsuit` ($\\heartsuit$), `\\diamondsuit` ($\\diamondsuit$), `\\clubsuit` ($\\clubsuit$).\n  - `\\flat` ($\\flat$), `\\natural` ($\\natural$), `\\sharp` ($\\sharp$)."
-            }
-          ]
+          "id": "b_lat_h1",
+          "type": "heading",
+          "level": "h1",
+          "title": "Vanilla JS HUB Notes: What CAN & CANNOT Be Used"
+        },
+        {
+          "id": "b_lat_t1",
+          "type": "text",
+          "content": "- [x] **Full KaTeX Math Engine**: Fast client-side compilation of standard LaTeX math (`$...$` inline and `$$...$$` display).\n- [x] **AMS-LaTeX Environments**: `equation*`, `align*`, `aligned`, `gather*`, `gathered`, `cases`, `dcases`, `rcases`, `matrix`, `pmatrix`, `bmatrix`, `Bmatrix`, `vmatrix`, `Vmatrix`, `array`, `split`.\n- [x] **Delimiters & Bracing**: Dynamic `\\left ... \\right`, manual `\\bigl`, `\\Bigl`, `\\biggl`, `\\Biggl`, horizontal braces `\\underbrace{...}_{...}`, `\\overbrace{...}^{...}`.\n- [x] **Calculus, Summations & Operators**: Integrals `\\int`, `\\iint`, `\\iiint`, `\\oint`, summations `\\sum`, products `\\prod`, limits `\\lim`, differentials `\\mathrm{d}x`, partials `\\partial`, vector del `\\nabla`.\n- [x] **Mathematical Fonts**: `\\mathbb{R}`, `\\mathbf{x}`, `\\boldsymbol{v}`, `\\mathrm{d}`, `\\mathit{x}`, `\\mathcal{L}`, `\\mathscr{E}`, `\\mathfrak{g}`, `\\mathsf{T}`, `\\mathtt{x}`.\n- [x] **Text & Color Formatting**: `\\textcolor{#hex}{...}`, `\\colorbox{...}{...}`, `\\boxed{...}`, `\\cancel{...}`, `\\underline{...}`.\n- [x] **TikZ Diagrams**: Full vector TikZ graphics compiled natively in browser via TikZJax (`\\begin{tikzpicture} ... \\end{tikzpicture}`).\n- [x] **Interactive Markdown Features**: Razor-sharp vector task checkboxes (`- [ ]`, `- [x]`), bullet lists, bold `**...**`, italic `*...*`, strikethrough `~~...~~`, and bidirectional `[[WikiLinks]]`.\n\n### What CANNOT Be Used (Browser-Side Limitations):\n- [ ] **External LaTeX CLI Packages**: Cannot load arbitrary server-side `.sty` files requiring `pdflatex` / `xelatex` (e.g. `\\usepackage{microtype}`, `\\usepackage{pgfplots}` with external gnuplot, or raw `pythontex`).\n- [ ] **Low-Level TeX Primitives**: Low-level TeX engine macro programming (`\\catcode`, `\\expandafter`, `\\csname`, `\\def\\temp`) are not supported in KaTeX.\n- [ ] **External BibTeX Files**: Cannot load external `.bib` files directly via `\\bibliography{...}` (use direct references or WikiLinks `[[...]]`).\n- [ ] **Multi-Page Float Layout Engines**: Page-break engines (`\\clearpage`, float-page repositioning) are handled by clean fluid web layouts rather than fixed DVI pagination."
+        },
+        {
+          "id": "b_lat_h2",
+          "type": "heading",
+          "level": "h1",
+          "title": "Math Modes & Display Style Specifiers"
+        },
+        {
+          "id": "b_lat_t2",
+          "type": "text",
+          "content": "- **Inline Math**: `$f(x) = \\frac{1}{x}$` renders inline with surrounding text: $f(x) = \\frac{1}{x}$.\n- **Display Math**: `$$\\int_a^b f(x) \\, \\mathrm{d}x$$` renders on its own centered line:\n$$\\int_a^b f(x) \\, \\mathrm{d}x$$\n- **Style Specifiers**:\n  - `\\displaystyle \\sum_{k=1}^n k`: Forces full display height $\\displaystyle \\sum_{k=1}^n k$.\n  - `\\textstyle \\frac{a}{b}`: Forces inline size $\\textstyle \\frac{a}{b}$.\n  - `\\scriptstyle x`: First-level index size $\\scriptstyle x$.\n  - `\\scriptscriptstyle x`: Nested script size $\\scriptscriptstyle x$."
+        },
+        {
+          "id": "b_lat_h3",
+          "type": "heading",
+          "level": "h1",
+          "title": "Equation Alignment & Multi-Line Environments"
+        },
+        {
+          "id": "b_lat_h3_1",
+          "type": "heading",
+          "level": "h2",
+          "title": "Align and Gather Environments"
+        },
+        {
+          "id": "b_lat_eq1",
+          "type": "equation",
+          "tex": "\\begin{aligned}\n\\nabla \\cdot \\mathbf{E} &= \\frac{\\rho}{\\varepsilon_0} \\\\\n\\nabla \\cdot \\mathbf{B} &= 0 \\\\\n\\nabla \\times \\mathbf{E} &= -\\frac{\\partial \\mathbf{B}}{\\partial t} \\\\\n\\nabla \\times \\mathbf{B} &= \\mu_0 \\mathbf{J} + \\mu_0 \\varepsilon_0 \\frac{\\partial \\mathbf{E}}{\\partial t}\n\\end{aligned}"
+        },
+        {
+          "id": "b_lat_t3_1",
+          "type": "text",
+          "content": "- `aligned`: Aligns at the `&` symbol on each line.\n- `gathered`: Centers each line independently without horizontal alignment anchors."
+        },
+        {
+          "id": "b_lat_h3_2",
+          "type": "heading",
+          "level": "h2",
+          "title": "Piecewise Functions (cases & dcases)"
+        },
+        {
+          "id": "b_lat_eq2",
+          "type": "equation",
+          "tex": "f(x) = \\begin{dcases}\n\\frac{\\sin(x)}{x} & \\text{if } x \\neq 0 \\\\\n1 & \\text{if } x = 0\n\\end{dcases}, \\quad\ng(n) = \\begin{cases}\nn/2 & \\text{if } n \\equiv 0 \\pmod 2 \\\\\n3n+1 & \\text{if } n \\equiv 1 \\pmod 2\n\\end{cases}"
+        },
+        {
+          "id": "b_lat_h3_3",
+          "type": "heading",
+          "level": "h2",
+          "title": "Matrices & Tabular Arrays"
+        },
+        {
+          "id": "b_lat_eq3",
+          "type": "equation",
+          "tex": "\\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}, \\quad\n\\begin{bmatrix} 1 & 0 & 0 \\\\ 0 & 1 & 0 \\\\ 0 & 0 & 1 \\end{bmatrix}, \\quad\n\\begin{vmatrix} x_1 & y_1 \\\\ x_2 & y_2 \\end{vmatrix}, \\quad\n\\begin{Bmatrix} \\alpha & \\beta \\\\ \\gamma & \\delta \\end{Bmatrix}, \\quad\n\\begin{Vmatrix} A_{11} & A_{12} \\\\ A_{21} & A_{22} \\end{Vmatrix}"
+        },
+        {
+          "id": "b_lat_h3_4",
+          "type": "heading",
+          "level": "h2",
+          "title": "Nested Sub-Derivations (Array inside Aligned)"
+        },
+        {
+          "id": "b_lat_eq3_4",
+          "type": "equation",
+          "tex": "\\begin{aligned}\n\\int x^2 e^{-x^2} \\, \\mathrm{d}x &= \\int x \\cdot \\left( x e^{-x^2} \\right) \\mathrm{d}x \\\\\n  &\\quad \\left[\n    \\begin{array}{ll}\n      \\text{Integration by Parts:} & \\\\\n      u = x & \\implies \\mathrm{d}u = \\mathrm{d}x \\\\\n      \\mathrm{d}v = x e^{-x^2} \\mathrm{d}x & \\implies v = -\\frac{1}{2} e^{-x^2}\n    \\end{array}\n  \\right] \\\\\n  &= u v - \\int v \\, \\mathrm{d}u \\\\\n  &= -\\frac{1}{2} x e^{-x^2} - \\int \\left( -\\frac{1}{2} e^{-x^2} \\right) \\mathrm{d}x \\\\\n  &= -\\frac{1}{2} x e^{-x^2} + \\frac{1}{2} \\int e^{-x^2} \\, \\mathrm{d}x + C\n\\end{aligned}"
+        },
+        {
+          "id": "b_lat_t3_4",
+          "type": "text",
+          "content": "- **Outer `aligned`**: Aligns the primary mathematical derivation sequence at `&=`.\n- **Inner `array`**: Nests side calculations, substitution tables, or coordinate transforms (`\\begin{array}{ll} ... \\end{array}`) with their own internal `&` and `\\\\` delimiters without breaking outer derivation alignment."
+        },
+        {
+          "id": "b_lat_h4",
+          "type": "heading",
+          "level": "h1",
+          "title": "Delimiters, Braces & Scaled Enclosures"
+        },
+        {
+          "id": "b_lat_eq4",
+          "type": "equation",
+          "tex": "\\left( \\frac{\\sum_{i=1}^n x_i^2}{\\sqrt[3]{1 + \\frac{a}{b}}} \\right) = \\underbrace{a_1 + a_2 + \\cdots + a_k}_{\\text{Sum of } k \\text{ terms}} + \\overbrace{b_1 + b_2 + \\cdots + b_m}^{\\text{Sum of } m \\text{ terms}}"
+        },
+        {
+          "id": "b_lat_t4",
+          "type": "text",
+          "content": "- **Auto-sizing Delimiters**: `\\left( ... \\right)`, `\\left[ ... \\right]`, `\\left\\{ ... \\right\\}`, `\\left| ... \\right|`, `\\left\\| ... \\right\\|`, `\\left\\langle ... \\right\\rangle`, `\\left\\lfloor ... \\right\\rfloor`, `\\left\\lceil ... \\right\\rceil`.\n- **Evaluated-at Bar**: `\\left. \\frac{\\mathrm{d}f}{\\mathrm{d}x} \\right|_{x=0}` produces $\\left. \\frac{\\mathrm{d}f}{\\mathrm{d}x} \\right|_{x=0}$.\n- **Manual Sizing Scale**: `\\bigl( \\dots \\bigr) < \\Bigl( \\dots \\Bigr) < \\biggl( \\dots \\biggr) < \\Biggl( \\dots \\Biggr)`."
+        },
+        {
+          "id": "b_lat_h5",
+          "type": "heading",
+          "level": "h1",
+          "title": "Fractions, Binomials, Roots & Polynomials"
+        },
+        {
+          "id": "b_lat_eq5_1",
+          "type": "equation",
+          "tex": "P_n(x) = a_n x^n + a_{n-1} x^{n-1} + \\cdots + a_1 x + a_0 = \\sum_{k=0}^n \\binom{n}{k} x^k y^{n-k}"
+        },
+        {
+          "id": "b_lat_eq5_2",
+          "type": "equation",
+          "tex": "\\cfrac{1}{1 + \\cfrac{1}{2 + \\cfrac{1}{3 + \\cfrac{1}{4 + \\cdots}}}} = \\frac{\\sqrt{5}-1}{2}"
+        },
+        {
+          "id": "b_lat_t5",
+          "type": "text",
+          "content": "- `\\frac{a}{b}` (standard fraction), `\\dfrac{a}{b}` (display fraction), `\\cfrac{a}{b}` (continued fraction).\n- `\\binom{n}{k}` (binomial coefficient $\\binom{n}{k}$), `\\dbinom{n}{k}` (display binomial).\n- `\\sqrt{x}` ($\\sqrt{x}$), `\\sqrt[n]{x}` ($\\sqrt[n]{x}$)."
+        },
+        {
+          "id": "b_lat_h6",
+          "type": "heading",
+          "level": "h1",
+          "title": "Large Operators, Limits & Calculus"
+        },
+        {
+          "id": "b_lat_eq6",
+          "type": "equation",
+          "tex": "\\int_{0}^{\\infty} x^{s-1} e^{-x} \\, \\mathrm{d}x = \\Gamma(s), \\quad \\lim_{x \\to 0} \\frac{\\sin x}{x} = 1, \\quad \\oint_C \\mathbf{F} \\cdot \\mathrm{d}\\mathbf{r} = \\iint_S (\\nabla \\times \\mathbf{F}) \\cdot \\mathrm{d}\\mathbf{S}"
+        },
+        {
+          "id": "b_lat_t6",
+          "type": "text",
+          "content": "- **Sum & Product**: `\\sum_{i=1}^\\infty a_i`, `\\prod_{i=1}^n x_i`, `\\coprod_{j=1}^m Y_j`.\n- **Integrals**: `\\int`, `\\iint`, `\\iiint`, `\\idotsint`, `\\oint`.\n- **Limits & Extrema**: `\\lim_{x \\to a}`, `\\max_{x \\in S}`, `\\min_{x \\in S}`, `\\sup`, `\\inf`, `\\argmax`, `\\argmin`.\n- **Custom Operator**: `\\operatorname{tr}(A)`, `\\operatorname{diag}(v)`, `\\operatorname{sinc}(t)`."
+        },
+        {
+          "id": "b_lat_h7",
+          "type": "heading",
+          "level": "h1",
+          "title": "Mathematical Font Families"
+        },
+        {
+          "id": "b_lat_t7",
+          "type": "text",
+          "content": "- `\\mathbb{R}, \\mathbb{C}, \\mathbb{Z}, \\mathbb{N}, \\mathbb{Q}, \\mathbb{F}` $\\to \\mathbb{R}, \\mathbb{C}, \\mathbb{Z}, \\mathbb{N}, \\mathbb{Q}, \\mathbb{F}$ (Blackboard Bold)\n- `\\mathbf{A}, \\mathbf{x}, \\mathbf{v}` $\\to \\mathbf{A}, \\mathbf{x}, \\mathbf{v}$ (Bold Roman)\n- `\\boldsymbol{\\alpha}, \\boldsymbol{\\beta}, \\boldsymbol{\\nabla}` $\\to \\boldsymbol{\\alpha}, \\boldsymbol{\\beta}, \\boldsymbol{\\nabla}$ (Bold Greek / Math)\n- `\\mathrm{d}x, \\mathrm{e}^{i\\pi}` $\\to \\mathrm{d}x, \\mathrm{e}^{i\\pi}$ (Upright Roman)\n- `\\mathit{TotalCost}` $\\to \\mathit{TotalCost}$ (Math Italic)\n- `\\mathcal{L}, \\mathcal{H}, \\mathcal{F}, \\mathcal{N}` $\\to \\mathcal{L}, \\mathcal{H}, \\mathcal{F}, \\mathcal{N}$ (Calligraphic)\n- `\\mathscr{E}, \\mathscr{F}, \\mathscr{P}` $\\to \\mathscr{E}, \\mathscr{F}, \\mathscr{P}$ (Script)\n- `\\mathfrak{g}, \\mathfrak{p}, \\mathfrak{S}` $\\to \\mathfrak{g}, \\mathfrak{p}, \\mathfrak{S}$ (Fraktur / Gothic)\n- `\\mathsf{T}, \\mathsf{H}, \\mathsf{E}` $\\to \\mathsf{T}, \\mathsf{H}, \\mathsf{E}$ (Sans-Serif)\n- `\\mathtt{0x1F}, \\mathtt{ptr}` $\\to \\mathtt{0x1F}, \\mathtt{ptr}$ (Monospace)\n- `\\text{Hello World}` $\\to \\text{Hello World}$ (Plain Text)"
+        },
+        {
+          "id": "b_lat_h8",
+          "type": "heading",
+          "level": "h1",
+          "title": "Math Spacing, Accents, Vectors & Annotations"
+        },
+        {
+          "id": "b_lat_t8",
+          "type": "text",
+          "content": "- **Spacing**:\n  - `\\,` (thin: $3/18\\text{em}$), `\\:` (med: $4/18\\text{em}$), `\\;` (thick: $5/18\\text{em}$), `\\quad` ($1\\text{em}$), `\\qquad` ($2\\text{em}$), `\\!` (negative: $-3/18\\text{em}$).\n- **Accents & Vectors**:\n  - `\\vec{v}` ($\\vec{v}$), `\\overrightarrow{AB}` ($\\overrightarrow{AB}$), `\\hat{x}` ($\\hat{x}$), `\\widehat{xyz}` ($\\widehat{xyz}$), `\\bar{x}` ($\\bar{x}$), `\\overline{z}` ($\\overline{z}$), `\\tilde{x}` ($\\tilde{x}$), `\\dot{x}` ($\\dot{x}$), `\\ddot{x}` ($\\ddot{x}$), `\\dddot{x}` ($\\dddot{x}$), `\\ddddot{x}` ($\\ddddot{x}$).\n- **Boxes & Color**:\n  - `\\boxed{E = mc^2}` $\\to \\boxed{E = mc^2}$\n  - `\\textcolor{#8b5cf6}{\\text{Purple Text}}` $\\to \\textcolor{#8b5cf6}{\\text{Purple Text}}$\n  - `\\cancel{x+1}` $\\to \\cancel{x+1}$, `\\bcancel{x}` $\\to \\bcancel{x}$, `\\xcancel{x}` $\\to \\xcancel{x}$."
+        },
+        {
+          "id": "b_lat_h9",
+          "type": "heading",
+          "level": "h1",
+          "title": "Complete LaTeX Symbol Classification"
+        },
+        {
+          "id": "b_lat_h9_1",
+          "type": "heading",
+          "level": "h2",
+          "title": "Greek Alphabet (Lowercase & Uppercase)"
+        },
+        {
+          "id": "b_lat_t9_1",
+          "type": "text",
+          "content": "- **Lowercase Greek**:\n  - `\\alpha` ($\\alpha$), `\\beta` ($\\beta$), `\\gamma` ($\\gamma$), `\\delta` ($\\delta$), `\\epsilon` ($\\epsilon$), `\\varepsilon` ($\\varepsilon$), `\\zeta` ($\\zeta$), `\\eta` ($\\eta$), `\\theta` ($\\theta$), `\\vartheta` ($\\vartheta$), `\\iota` ($\\iota$), `\\kappa` ($\\kappa$), `\\varkappa` ($\\varkappa$), `\\lambda` ($\\lambda$), `\\mu` ($\\mu$), `\\nu` ($\\nu$), `\\xi` ($\\xi$), `\\pi` ($\\pi$), `\\varpi` ($\\varpi$), `\\rho` ($\\rho$), `\\varrho` ($\\varrho$), `\\sigma` ($\\sigma$), `\\varsigma` ($\\varsigma$), `\\tau` ($\\tau$), `\\upsilon` ($\\upsilon$), `\\phi` ($\\phi$), `\\varphi` ($\\varphi$), `\\chi` ($\\chi$), `\\psi` ($\\psi$), `\\omega` ($\\omega$).\n- **Uppercase Greek**:\n  - `\\Gamma` ($\\Gamma$), `\\Delta` ($\\Delta$), `\\Theta` ($\\Theta$), `\\Lambda` ($\\Lambda$), `\\Xi` ($\\Xi$), `\\Pi` ($\\Pi$), `\\Sigma` ($\\Sigma$), `\\Upsilon` ($\\Upsilon$), `\\Phi` ($\\Phi$), `\\Psi` ($\\Psi$), `\\Omega` ($\\Omega$)."
+        },
+        {
+          "id": "b_lat_h9_2",
+          "type": "heading",
+          "level": "h2",
+          "title": "Arrow Symbols"
+        },
+        {
+          "id": "b_lat_t9_2",
+          "type": "text",
+          "content": "- **Horizontal Arrows**:\n  - `\\to` or `\\rightarrow` ($\\to$), `\\leftarrow` ($\\leftarrow$), `\\leftrightarrow` ($\\leftrightarrow$), `\\Rightarrow` ($\\Rightarrow$), `\\Leftarrow` ($\\Leftarrow$), `\\Leftrightarrow` or `\\iff` ($\\Leftrightarrow$).\n  - `\\longrightarrow` ($\\longrightarrow$), `\\longleftarrow` ($\\longleftarrow`), `\\Longrightarrow` ($\\Longrightarrow$), `\\Longleftarrow` ($\\Longleftarrow`), `\\Longleftrightarrow` ($\\Longleftrightarrow$).\n  - `\\mapsto` ($\\mapsto$), `\\longmapsto` ($\\longmapsto$), `\\hookrightarrow` ($\\hookrightarrow$), `\\hookleftarrow` ($\\hookleftarrow`), `\\rightharpoonup` ($\\rightharpoonup$), `\\leftharpoondown` ($\\leftharpoondown$).\n- **Vertical & Diagonal Arrows**:\n  - `\\uparrow` ($\\uparrow$), `\\downarrow` ($\\downarrow$), `\\updownarrow` ($\\updownarrow`), `\\Uparrow` ($\\Uparrow$), `\\Downarrow` ($\\Downarrow`), `\\Updownarrow` ($\\Updownarrow$).\n  - `\\nearrow` ($\\nearrow$), `\\searrow` ($\\searrow$), `\\swarrow` ($\\swarrow$), `\\nwarrow` ($\\nwarrow$)."
+        },
+        {
+          "id": "b_lat_h9_3",
+          "type": "heading",
+          "level": "h2",
+          "title": "Relational & Comparison Symbols"
+        },
+        {
+          "id": "b_lat_t9_3",
+          "type": "text",
+          "content": "- **Equality & Equivalence**:\n  - `=` ($=$), `\\neq` ($\\neq$), `\\equiv` ($\\equiv$), `\\sim` ($\\sim$), `\\approx` ($\\approx`), `\\simeq` ($\\simeq`), `\\cong` ($\\cong`), `\\propto` ($\\propto`), `\\doteq` ($\\doteq$), `\\asymp` ($\\asymp$).\n- **Ordering**:\n  - `<` ($<$), `>` ($>$), `\\le` or `\\leq` ($\\le$), `\\ge` or `\\geq` ($\\ge`), `\\ll` ($\\ll`), `\\gg` ($\\gg$), `\\prec` ($\\prec$), `\\succ` ($\\succ$), `\\preceq` ($\\preceq$), `\\succeq` ($\\succeq$).\n- **Geometry & Alignment**:\n  - `\\parallel` ($\\parallel$), `\\nparallel` ($\\nparallel$), `\\perp` ($\\perp$), `\\mid` ($\\mid$), `\\nmid` ($\\nmid$)."
+        },
+        {
+          "id": "b_lat_h9_4",
+          "type": "heading",
+          "level": "h2",
+          "title": "Set Theory & Logic Symbols"
+        },
+        {
+          "id": "b_lat_t9_4",
+          "type": "text",
+          "content": "- **Set Operations**:\n  - `\\in` ($\\in$), `\\notin` ($\\notin$), `\\ni` or `\\owns` ($\\ni$), `\\subset` ($\\subset$), `\\supset` ($\\supset$), `\\subseteq` ($\\subseteq$), `\\supseteq` ($\\supseteq`), `\\subsetneq` ($\\subsetneq$), `\\supsetneq` ($\\supsetneq$).\n  - `\\cap` ($\\cap$), `\\cup` ($\\cup$), `\\setminus` ($\\setminus`), `\\emptyset` ($\\emptyset$), `\\varnothing` ($\\varnothing$), `\\complement` ($\\complement$).\n- **Logic & Proofs**:\n  - `\\forall` ($\\forall$), `\\exists` ($\\exists$), `\\nexists` ($\\nexists$), `\\neg` or `\\lnot` ($\\neg$), `\\land` ($\\land$), `\\lor` ($\\lor$), `\\implies` ($\\implies$), `\\impliedby` ($\\impliedby$), `\\iff` ($\\iff$).\n  - `\\vdash` ($\\vdash`), `\\vDash` ($\\vDash$), `\\top` ($\\top$), `\\bot` ($\\bot$), `\\therefore` ($\\therefore$), `\\because` ($\\because$), `\\blacksquare` ($\\blacksquare$)."
+        },
+        {
+          "id": "b_lat_h9_5",
+          "type": "heading",
+          "level": "h2",
+          "title": "Binary Operations & Arithmetic"
+        },
+        {
+          "id": "b_lat_t9_5",
+          "type": "text",
+          "content": "- **Arithmetic**:\n  - `+` ($+$), `-` ($-$), `\\pm` ($\\pm$), `\\mp` ($\\mp`), `\\times` ($\\times`), `\\div` ($\\div$), `\\cdot` ($\\cdot`), `\\ast` ($\\ast$), `\\star` ($\\star$).\n- **Advanced Operations**:\n  - `\\circ` ($\\circ$), `\\bullet` ($\\bullet$), `\\otimes` ($\\otimes$), `\\oplus` ($\\oplus$), `\\odot` ($\\odot$), `\\ominus` ($\\ominus$), `\\oslash` ($\\oslash$), `\\boxtimes` ($\\boxtimes$), `\\boxplus` ($\\boxplus$).\n  - `\\wedge` ($\\wedge$), `\\vee` ($\\vee$), `\\cap` ($\\cap$), `\\cup` ($\\cup$), `\\sqcap` ($\\sqcap$), `\\sqcup` ($\\sqcup$)."
+        },
+        {
+          "id": "b_lat_h9_6",
+          "type": "heading",
+          "level": "h2",
+          "title": "Calculus, Geometry & Physics Symbols"
+        },
+        {
+          "id": "b_lat_t9_6",
+          "type": "text",
+          "content": "- **Calculus & Vector Calculus**:\n  - `\\partial` ($\\partial$), `\\nabla` ($\\nabla$), `\\nabla^2` ($\\nabla^2$), `\\infty` ($\\infty$), `\\int` ($\\int$), `\\oint` ($\\oint$), `\\mathrm{d}` ($\\mathrm{d}$).\n- **Physics Constants & Units**:\n  - `\\hbar` ($\\hbar$), `\\ell` ($\\ell$), `\\Re` ($\\Re`), `\\Im` ($\\Im$), `\\wp` ($\\wp$), `\\aleph` ($\\aleph$).\n  - `\\triangle` ($\\triangle$), `\\angle` ($\\angle`), `\\measuredangle` ($\\measuredangle$), `\\sphericalangle` ($\\sphericalangle$)."
+        },
+        {
+          "id": "b_lat_h9_7",
+          "type": "heading",
+          "level": "h2",
+          "title": "Miscellaneous & Punctuation Symbols"
+        },
+        {
+          "id": "b_lat_t9_7",
+          "type": "text",
+          "content": "- **Ellipses**:\n  - `\\dots` or `\\ldots` ($\\dots$), `\\cdots` ($\\cdots$), `\\vdots` ($\\vdots$), `\\ddots` ($\\ddots$).\n- **Markers & Suits**:\n  - `\\prime` ($\\prime$), `\\backprime` ($\\backprime`), `\\checkmark` ($\\checkmark$), `\\dagger` ($\\dagger$), `\\ddagger` ($\\ddagger$).\n  - `\\spadesuit` ($\\spadesuit$), `\\heartsuit` ($\\heartsuit$), `\\diamondsuit` ($\\diamondsuit$), `\\clubsuit` ($\\clubsuit$).\n  - `\\flat` ($\\flat$), `\\natural` ($\\natural$), `\\sharp` ($\\sharp$)."
+        }
+      ]
+    },
+    {
+      "id": "note_function_spaces_hierarchy_02",
+      "slug": "concrete-function-spaces-and-abstract-completeness-hierarchy",
+      "title": "Concrete Function Spaces on Bounded Domain & Abstract Completeness Hierarchy",
+      "folder": "LaTex",
+      "tags": [
+        "latex",
+        "tikz",
+        "functional-analysis",
+        "sobolev-spaces",
+        "hilbert-spaces",
+        "banach-spaces"
+      ],
+      "description": "- [x] Concrete function spaces on bounded domain $\\Omega$ ($C^\\infty, H^2, H^1, L^2, L^1, H^{-1}$)\n- [x] Abstract completeness hierarchy of spaces: Vector $\\to$ Normed / Inner-Product $\\to$ Banach / Hilbert\n- [x] Full vector TikZ diagram of nested regularity inclusions and structural embeddings",
+      "meta": {
+        "created": "2026-09-17",
+        "author": "Amiya"
+      },
+      "flashcard": {
+        "isFlashcard": true,
+        "front": "What is the relationship between Sobolev spaces $H^k(\\Omega)$, Lebesgue spaces $L^p(\\Omega)$, Banach spaces, and Hilbert spaces?",
+        "back": "- [x] On bounded $\\Omega$: $C^\\infty(\\overline\\Omega) \\subset H^2(\\Omega) \\subset H^1(\\Omega) \\subset L^2(\\Omega) \\subset L^1(\\Omega)$\n- [x] Banach Space: Complete normed vector space (e.g. $L^p(\\Omega)$ for $p \\ne 2$, $C^0$ with supremum norm)\n- [x] Hilbert Space: Complete inner-product space (e.g. $L^2(\\Omega)$ and $H^k(\\Omega)$)\n- [x] Every Hilbert space is automatically a Banach space via the induced norm $\\|u\\| = \\sqrt{\\langle u,u\\rangle}$"
+      },
+      "blocks": [
+        {
+          "id": "b_fas_h1",
+          "type": "heading",
+          "level": "h1",
+          "title": "Function Spaces & Abstract Completeness Hierarchy"
+        },
+        {
+          "id": "b_fas_t1",
+          "type": "text",
+          "content": "This note visualizes the duality and relationship between **concrete function spaces** on a bounded domain $\\Omega \\subset \\mathbb{R}^n$ and the **abstract hierarchy of complete spaces** (Vector, Normed, Inner-Product, Banach, and Hilbert spaces)."
+        },
+        {
+          "id": "b_fas_tikz1",
+          "type": "tikz",
+          "code": "\\begin{tikzpicture}[\n  font=\\sffamily\\footnotesize,\n  panel/.style={rounded corners=8pt, draw=#1!65!black, fill=#1!3,\n                line width=0.8pt},\n  panel/.default=teal,\n  paneltitle/.style={font=\\sffamily\\bfseries\\small, text=#1!45!black},\n  space/.style={ellipse, draw=black!32, fill=#1,\n                line width=0.75pt, align=center, inner sep=1.5pt},\n  hierarchy/.style={rounded corners=4pt, draw=black!30, fill=#1,\n                    line width=0.7pt, align=center, minimum height=10mm,\n                    text width=31mm, inner sep=3pt},\n  note/.style={rounded corners=3pt, draw=black!22, fill=white,\n               align=center, inner sep=3pt, font=\\sffamily\\scriptsize},\n  flow/.style={-{Stealth[length=2.4mm,width=1.6mm]}, line width=0.8pt,\n               draw=black!60},\n  link/.style={-{Stealth[length=2.4mm,width=1.6mm]}, dashed,\n               line width=1pt, draw=orange!75!black},\n  caption/.style={font=\\sffamily\\scriptsize, text=black!68, align=center},\n]\n% --------------------------------------------------------------------\n% Panel backgrounds and titles\n% --------------------------------------------------------------------\n\\draw[panel=teal] (-8.0,-4.75) rectangle (-0.35,5.15);\n\\draw[panel=blue] (0.35,-4.75) rectangle (8.0,5.15);\n\\node[paneltitle=teal] at (-4.175,4.72)\n      {Concrete spaces on a bounded domain $\\Omega$};\n\\node[caption] at (-4.175,4.30)\n      {Nested sets encode increasing regularity.};\n\\draw[teal!35, line width=0.5pt] (-7.65,4.02) -- (-0.70,4.02);\n\\node[paneltitle=blue] at (4.175,4.72)\n      {Abstract hierarchy of complete spaces};\n\\node[caption] at (4.175,4.30)\n      {Inner products induce norms; completeness names the space.};\n\\draw[blue!30, line width=0.5pt] (0.70,4.02) -- (7.65,4.02);\n% --------------------------------------------------------------------\n% Left panel: nested function spaces\n% --------------------------------------------------------------------\n\\node[space=teal!9, minimum width=6.45cm, minimum height=7.10cm]\n      (Lone) at (-4.15,-0.05) {};\n\\node[space=cyan!13, minimum width=5.30cm, minimum height=5.75cm]\n      (Ltwo) at (-4.15,-0.52) {};\n\\node[space=orange!18, minimum width=4.10cm, minimum height=4.35cm]\n      (Hone) at (-4.15,-0.96) {};\n\\node[space=orange!32, minimum width=2.75cm, minimum height=2.60cm]\n      (Htwo) at (-4.15,-1.38) {};\n\\node[space=orange!55, minimum width=1.55cm, minimum height=0.80cm]\n      (Cinf) at (-4.15,-1.78) {$C^\\infty(\\overline\\Omega)$};\n\\node[caption, text=teal!45!black] at (-4.15,3.10)\n      {\\textbf{$L^1(\\Omega)$}\\quad $\\displaystyle\\int_\\Omega |u|\\,\\mathrm d x<\\infty$};\n\\node[caption, text=cyan!35!black] at (-4.15,1.95)\n      {\\textbf{$L^2(\\Omega)$}\\quad\n       $\\langle u,v\\rangle_{L^2}=\\displaystyle\\int_\\Omega uv\\,\\mathrm d x$};\n\\node[caption, text=orange!55!black] at (-4.15,0.72)\n      {\\textbf{$H^1(\\Omega)$}\\quad\n       $\\displaystyle\\int_\\Omega\\bigl(|u|^2+|\\nabla u|^2\\bigr)\\,\\mathrm d x<\\infty$};\n\\node[caption, text=orange!65!black] at (-4.15,-0.48)\n      {\\textbf{$H^2(\\Omega)$}\\quad weak derivatives through order $2$};\n\\draw[flow, draw=teal!55!black] (-7.32,2.55) -- (-7.32,-2.45);\n\\node[rotate=90, font=\\sffamily\\tiny\\bfseries, text=teal!55!black]\n      at (-7.55,0.05) {INCREASING REGULARITY};\n\\node[note, draw=orange!50, fill=orange!6, text width=34mm]\n      (velocity) at (-5.15,-4.03)\n      {$\\star$ The velocity $V$ belongs to $H^1(\\Omega)$ in the model.};\n\\draw[link] (velocity.north) to[bend left=12] (Hone.248);\n\\node[note, dashed, draw=purple!55, fill=purple!4, text width=25mm]\n      (Hneg) at (-1.95,-4.03)\n      {$H^{-1}(\\Omega)=(H_0^1(\\Omega))'$\\\\[-1pt]\n       dual / rough-data space};\n\\draw[flow, dashed, draw=purple!65!black]\n      (Hneg.north west) to[bend right=16] (Hone.325);\n% --------------------------------------------------------------------\n% Right panel: abstract hierarchy\n% --------------------------------------------------------------------\n\\node[hierarchy=blue!12, text width=39mm] (vector) at (4.18,3.25)\n      {\\textbf{Vector space}\\\\[-1pt]\n       addition and scalar multiplication};\n\\node[hierarchy=blue!11] (normed) at (2.25,1.65)\n      {\\textbf{Normed space}\\\\ length $\\|u\\|$};\n\\node[hierarchy=orange!13] (inner) at (6.10,1.65)\n      {\\textbf{Inner-product space}\\\\ angle $\\langle u,v\\rangle$};\n\\node[hierarchy=blue!24] (banach) at (2.25,-0.15)\n      {\\textbf{BANACH}\\\\ normed $+$ complete};\n\\node[hierarchy=orange!32] (hilbert) at (6.10,-0.15)\n      {\\textbf{HILBERT}\\\\ inner product $+$ complete};\n\\draw[flow] (vector.south) -- ++(0,-0.25) -| (normed.north);\n\\draw[flow] (vector.south) -- ++(0,-0.25) -| (inner.north);\n\\draw[flow] (normed) -- (banach);\n\\draw[flow] (inner) -- (hilbert);\n% FIXED: changed \\node to node\n\\draw[link] (hilbert.north west) to[bend right=16] (banach.north east)\n      node[midway, above=1pt, fill=white, inner sep=1.5pt,\n           font=\\sffamily\\tiny\\bfseries, text=orange!65!black]\n      {Hilbert $\\Longrightarrow$ Banach};\n\\node[note, draw=blue!45, fill=blue!4, text width=31mm]\n      (banachex) at (2.25,-2.05)\n      {Typical Banach examples\\\\[1pt]\n       $L^p(\\Omega)$ for $p\\ne2$\\\\\n       $C^0$ with the supremum norm};\n\\node[note, draw=orange!55, fill=orange!5, text width=31mm]\n      (hilbertex) at (6.10,-2.05)\n      {Typical Hilbert examples\\\\[1pt]\n       $L^2(\\Omega)$ and $H^k(\\Omega)$\\\\\n       with their standard inner products};\n\\draw[flow, draw=blue!55!black] (banach) -- (banachex);\n\\draw[flow, draw=orange!65!black] (hilbert) -- (hilbertex);\n\\node[note, fill=blue!3, text width=61mm] at (4.18,-3.75)\n      {\\textbf{Completeness:} every Cauchy sequence converges to an element\n       of the same space---there are no missing limit points.};\n% --------------------------------------------------------------------\n% Shared conclusion\n% --------------------------------------------------------------------\n\\node[rounded corners=5pt, draw=orange!60!black, fill=orange!10,\n      line width=0.8pt, minimum width=15.25cm, minimum height=9mm,\n      align=center, font=\\sffamily\\scriptsize, text=black!78]\n      at (0,-5.35)\n      {\\textbf{Key relation (for bounded $\\Omega$):}\\quad\n       $C^\\infty(\\overline\\Omega)\\subset H^2(\\Omega)\\subset H^1(\\Omega)\n       \\subset L^2(\\Omega)\\subset L^1(\\Omega)$.\\quad\n       In particular, $L^2$ and the Sobolev spaces $H^k$ are Hilbert spaces.};\n\\end{tikzpicture}",
+          "caption": "Concrete Sobolev & Lebesgue function spaces on a bounded domain $\\Omega$ alongside the abstract completeness hierarchy of Banach and Hilbert spaces.",
+          "hasBorder": true,
+          "allowNumbering": true,
+          "tag": "function-spaces-hierarchy"
+        },
+        {
+          "id": "b_fas_h2",
+          "type": "heading",
+          "level": "h2",
+          "title": "Key Relations & Properties"
+        },
+        {
+          "id": "b_fas_t2",
+          "type": "text",
+          "content": "- **Nested Regularity Inclusion (Bounded $\\Omega$)**:\n  $$\n  C^\\infty(\\overline\\Omega) \\subset H^2(\\Omega) \\subset H^1(\\Omega) \\subset L^2(\\Omega) \\subset L^1(\\Omega)\n  $$\n- **Sobolev Spaces as Hilbert Spaces**:\n  - The space $L^2(\\Omega)$ is a Hilbert space equipped with inner product $\\langle u, v \\rangle_{L^2} = \\int_\\Omega uv \\, \\mathrm{d}x$.\n  - Sobolev spaces $H^k(\\Omega) = W^{k,2}(\\Omega)$ are Hilbert spaces under the inner product $\\langle u, v \\rangle_{H^k} = \\sum_{|\\alpha| \\le k} \\int_\\Omega D^\\alpha u D^\\alpha v \\, \\mathrm{d}x$.\n- **Banach vs. Hilbert**:\n  - Every Hilbert space is automatically a Banach space (its norm is induced by the inner product via $\\|u\\| = \\sqrt{\\langle u, u \\rangle}$).\n  - $L^p(\\Omega)$ for $p \\neq 2$ is a Banach space, but **not** a Hilbert space (it fails the parallelogram law)."
         }
       ]
     }
+  ]
+}
   </script>
 </head>
 

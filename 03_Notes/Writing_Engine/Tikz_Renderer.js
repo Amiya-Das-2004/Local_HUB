@@ -257,6 +257,49 @@ function waitForTikzSvg(targetContainer, renderId, timeoutMs = 20000) {
 }
 
 /**
+ * Auto-heals missing backslashes for common TikZ commands while strictly respecting path syntax.
+ * 'node' is only transformed to '\node' if it starts a new statement (after ';', ']', '}', or at the start).
+ * If 'node' appears on a continuation line (such as inside a multi-line \draw ... node ...;), it is preserved.
+ */
+export function healTikzCode(code) {
+  if (!code) return '';
+  return code
+    .replace(/(^|\n)(\s*)draw(\[|\s)/g, '$1$2\\draw$3')
+    .replace(/(^|\n)(\s*)path(\[|\s)/g, '$1$2\\path$3')
+    .replace(/(^|\n)(\s*)fill(\[|\s)/g, '$1$2\\fill$3')
+    .replace(/(^|\n)(\s*)clip(\[|\s)/g, '$1$2\\clip$3')
+    .replace(/(^|\n)(\s*)node(\[|\s|\{)/g, (match, p1, p2, p3, offset, str) => {
+      const before = str.slice(0, offset).replace(/%[^\n]*/g, '').trim();
+      if (!before || /[;\]\}]\s*$/.test(before)) {
+        return `${p1}${p2}\\node${p3}`;
+      }
+      return match;
+    });
+}
+
+/**
+ * Fixes TikZJax BaKoMa font encoding mismatch for math symbols:
+ * In BaKoMa cmsy10/cmbsy10 fonts, ASCII 124 maps to glyph 18 ('club' ♣),
+ * while ASCII 106 ('j') maps to glyph 47 ('bar' |), and ASCII 107 ('k') maps to glyph 44 ('bardbl' ||).
+ * TikZJax translates DVI char 106 into '&#124;' and DVI char 107 into '&#8741;' but leaves font-family as cmsy10.
+ * Correcting &#124; to &#106; and &#8741; to &#107; inside cmsy elements restores authentic TeX vertical bars.
+ */
+export function fixTikzSvgGlyphs(container) {
+  if (!container) return;
+  const textElements = container.querySelectorAll('text');
+  textElements.forEach(el => {
+    const style = el.getAttribute('style') || '';
+    if (/font-family:\s*(?:cmbsy|cmsy)\d*/i.test(style) || /cmsy/i.test(el.style?.fontFamily || '')) {
+      if (el.innerHTML && (/&#124;|\||&#8741;|\u2225/.test(el.innerHTML) || /\||\u2225/.test(el.textContent || ''))) {
+        el.innerHTML = el.innerHTML
+          .replace(/&#124;|\|/g, '&#106;')
+          .replace(/&#8741;|\u2225/g, '&#107;');
+      }
+    }
+  });
+}
+
+/**
  * Compiles TikZ code into SVG inside targetContainer without whole-page refresh.
  * @param {string} tikzCode - The raw TikZ LaTeX code.
  * @param {HTMLElement} targetContainer - Target DOM element to render the diagram.
@@ -293,12 +336,7 @@ export function renderTikzToElement(tikzCode, targetContainer, onComplete = null
   targetContainer.__tikzRenderId = currentRenderId;
 
   // 1. Auto-heal common typo: missing backslash before draw, node, path, fill, clip
-  let healedCode = rawClean
-    .replace(/(^|\n)(\s*)draw(\[|\s)/g, '$1$2\\draw$3')
-    .replace(/(^|\n)(\s*)node(\[|\s|\{)/g, '$1$2\\node$3')
-    .replace(/(^|\n)(\s*)path(\[|\s)/g, '$1$2\\path$3')
-    .replace(/(^|\n)(\s*)fill(\[|\s)/g, '$1$2\\fill$3')
-    .replace(/(^|\n)(\s*)clip(\[|\s)/g, '$1$2\\clip$3');
+  const healedCode = healTikzCode(rawClean);
 
   // 2. Resolve dual-theme colors (#Light|#Dark)
   const resolvedCode = resolveThemeColors(healedCode);
@@ -355,16 +393,41 @@ export function renderTikzToElement(tikzCode, targetContainer, onComplete = null
         targetContainer.appendChild(scriptEl);
 
         const runner = window.__tikzjax_runner || (typeof window.onload === 'function' ? window.onload : null);
+        let runnerPromise = null;
         if (typeof runner === 'function') {
           window.__tikzjax_runner = runner;
-          runner();
+          try {
+            runnerPromise = runner();
+          } catch (e) {
+            runnerPromise = Promise.reject(e);
+          }
         }
 
-        // Asynchronously wait for TikzJax to finish compilation and mount the SVG
-        const svgEl = await waitForTikzSvg(targetContainer, currentRenderId, 20000);
+        // Asynchronously wait for TikzJax to finish compilation and mount the SVG,
+        // or fail fast if the runner throws an error instead of waiting 20s
+        const svgEl = await Promise.race([
+          waitForTikzSvg(targetContainer, currentRenderId, 20000),
+          (async () => {
+            if (runnerPromise) {
+              try {
+                await runnerPromise;
+              } catch (err) {
+                throw new Error(`TikZ compilation failed in TeX engine: ${err?.message || err}`);
+              }
+            }
+            await new Promise(r => setTimeout(r, 600));
+            if (!targetContainer.querySelector('svg') && targetContainer.__tikzRenderId === currentRenderId) {
+              throw new Error('TikZ compilation completed without producing an SVG. Check syntax and missing semicolons.');
+            }
+            return new Promise(() => {});
+          })()
+        ]);
         if (targetContainer.__tikzRenderId !== currentRenderId) return;
 
         if (svgEl) {
+          // Fix BaKoMa font glyph mismatch (e.g. |u| rendering as clubs ♣ and ||u|| missing)
+          fixTikzSvgGlyphs(targetContainer);
+
           // 1. Unlock all parent wrappers injected by TikzJax (n and .page) so height expands naturally
           let parent = svgEl.parentElement;
           while (parent && parent !== targetContainer) {

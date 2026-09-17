@@ -4,7 +4,7 @@
  * template browser, template naming modal, and flexible \begin{tikzpicture}[...] support.
  */
 
-import { renderTikzToElement, getCachedTikzSvg } from '../../Writing_Engine/Tikz_Renderer.js';
+import { renderTikzToElement, getCachedTikzSvg, healTikzCode } from '../../Writing_Engine/Tikz_Renderer.js';
 import { escapeHtml } from '../../02_Utils.js';
 import { CreateColorSelector } from '../../../00_Components/06_Color_Selector.js';
 import { GetTikzTemplatesModalHTML, InitTikzTemplatesLogic } from './Tikz_Templates_Modal.js';
@@ -73,14 +73,6 @@ if (typeof document !== 'undefined' && !document.getElementById('tikz-block-anim
   document.head.appendChild(animStyle);
 }
 
-function healTikzCode(val) {
-  return (val || '')
-    .replace(/(^|\n)(\s*)draw(\[|\s)/g, '$1$2\\draw$3')
-    .replace(/(^|\n)(\s*)node(\[|\s|\{)/g, '$1$2\\node$3')
-    .replace(/(^|\n)(\s*)path(\[|\s)/g, '$1$2\\path$3')
-    .replace(/(^|\n)(\s*)fill(\[|\s)/g, '$1$2\\fill$3')
-    .replace(/(^|\n)(\s*)clip(\[|\s)/g, '$1$2\\clip$3');
-}
 
 export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onDone = null, onMoveUp = null, onMoveDown = null, onDelete = null, index = 0, totalBlocks = 1, figureInfo = null } = {}) {
   const container = document.createElement('div');
