@@ -16,7 +16,7 @@ export function CreateDocHeader(note, { onTitleClick = null } = {}) {
 
   header.innerHTML = `
     <!-- 1. Note Name (Top) - Click to pop up sidebar -->
-    <h1 class="doc-title-trigger text-2xl md:text-3xl font-extrabold font-serif text-[var(--text)] hover:text-purple-400 cursor-pointer tracking-tight mb-2 leading-tight transition-colors" title="Click to open Outline Sidebar">
+    <h1 class="doc-title-trigger text-2xl md:text-3xl font-extrabold text-[var(--text)] hover:text-purple-400 cursor-pointer tracking-tight mb-2 leading-tight transition-colors" style="font-family: var(--note-font-family, inherit);" title="Click to open Outline Sidebar">
       ${title}
     </h1>
 

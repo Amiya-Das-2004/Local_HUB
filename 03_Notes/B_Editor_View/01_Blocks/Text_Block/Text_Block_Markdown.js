@@ -575,7 +575,6 @@ export function createLiveBlockElement(blk, options = {}) {
     case 'line':
     default: {
       el = renderSingleLineToDom(blk.content, options);
-      el.setAttribute('data-raw', blk.raw);
       break;
     }
   }
@@ -604,6 +603,7 @@ export function renderObsidianMarkdown(markdownText = '', options = {}) {
   const container = document.createElement('div');
   container.className = 'obsidian-markdown-body w-full flex flex-col gap-1 select-text text-[var(--text)]';
   container.style.fontFamily = 'var(--note-font-family, inherit)';
+  container.style.fontSize = 'var(--note-font-size, 1rem)';
   container.style.lineHeight = 'var(--note-line-height, 1.6)';
 
   if (!markdownText || !markdownText.trim()) {

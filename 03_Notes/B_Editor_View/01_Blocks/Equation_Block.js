@@ -13,22 +13,9 @@ import { attachHighlightSync } from '../../Writing_Engine/Highlight_Sync.js';
 import { escapeHtml } from '../../02_Utils.js';
 import { CreateColorSelector } from '../../../00_Components/06_Color_Selector.js';
 import { getBlockActionsHTML, initBlockActions } from './Block_Actions.js';
+import { createCodeEditor } from './Block_Textarea.js';
 
 export { attachHighlightSync as setupBidirectionalHighlight };
-
-if (typeof document !== 'undefined' && !document.getElementById('equation-block-styles')) {
-  const eqStyle = document.createElement('style');
-  eqStyle.id = 'equation-block-styles';
-  eqStyle.textContent = `
-    .tex-input, .tex-input::placeholder {
-      font-family: var(--note-font-family, inherit) !important;
-    }
-    .tex-input::placeholder {
-      opacity: 0.6;
-    }
-  `;
-  document.head.appendChild(eqStyle);
-}
 
 export function renderEquationBlock(block, isEditing = false, onUpdate = null, { onDone = null, onMoveUp = null, onMoveDown = null, onDelete = null, index = 0, totalBlocks = 1 } = {}) {
   const container = document.createElement('div');
@@ -87,15 +74,33 @@ export function renderEquationBlock(block, isEditing = false, onUpdate = null, {
       ${getRenderedEquationHtml(rawTex)}
     </div>
 
-    <!-- Bottom: Resizable LaTeX Editor Textarea matching live preview background -->
-    <div class="w-full">
-      <textarea class="tex-input w-full p-2.5 text-sm leading-snug rounded-lg border border-[var(--border)] bg-[var(--surface)] focus:border-purple-500 outline-none box-border text-[var(--text)]" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" style="min-height: 85px; height: 95px; resize: vertical; scrollbar-width: thin; font-family: var(--note-font-family, inherit); transition: border-color 0.15s ease, box-shadow 0.15s ease;" placeholder="Enter LaTeX equation code (e.g. \\nabla \\times \\mathbf{E} = -\\frac{\\partial \\mathbf{B}}{\\partial t})...">${escapeHtml(rawTex)}</textarea>
-    </div>
+    <!-- Bottom: Monospace Code Editor with Line Numbers, Spacing & Folding -->
+    <div class="eq-editor-mount w-full"></div>
   `;
 
-  const textarea = editWrap.querySelector('.tex-input');
   const preview = editWrap.querySelector('.preview-pane');
   const borderToggleBtn = editWrap.querySelector('.btn-border-toggle');
+  const editorMount = editWrap.querySelector('.eq-editor-mount');
+
+  const codeEditor = createCodeEditor({
+    value: rawTex,
+    placeholder: 'Enter LaTeX equation code (e.g. \\nabla \\times \\mathbf{E} = -\\frac{\\partial \\mathbf{B}}{\\partial t})...',
+    badge: 'LaTeX',
+    minHeight: '100px',
+    height: '140px',
+    enableFolding: false,
+    onInput: (val) => {
+      preview.innerHTML = getRenderedEquationHtml(val);
+      if (onUpdate) onUpdate({ tex: val, content: val });
+    },
+    onChange: (val) => {
+      preview.innerHTML = getRenderedEquationHtml(val);
+      if (onUpdate) onUpdate({ tex: val, content: val });
+    }
+  });
+  editorMount.appendChild(codeEditor);
+
+  const textarea = codeEditor.textarea;
 
   // 1. Border Toggle Logic
   borderToggleBtn.addEventListener('click', () => {
@@ -123,29 +128,21 @@ export function renderEquationBlock(block, isEditing = false, onUpdate = null, {
     const colorWidget = CreateColorSelector({
       btnTitle: "Insert Dual-Theme Color (\\textcolor{#Light|#Dark}{})",
       onApply: ({ dual }) => {
-        const start = textarea.selectionStart;
-        const end = textarea.selectionEnd;
-        const val = textarea.value;
+        const current = codeEditor.getValue ? codeEditor.getValue() : textarea.value;
+        const start = textarea.selectionStart !== undefined ? textarea.selectionStart : current.length;
+        const end = textarea.selectionEnd !== undefined ? textarea.selectionEnd : start;
         const insertText = `\\textcolor{${dual}}{}`;
-        textarea.value = val.substring(0, start) + insertText + val.substring(end);
+        const updatedVal = current.substring(0, start) + insertText + current.substring(end);
+        codeEditor.setValue(updatedVal);
         textarea.selectionStart = start + insertText.length - 1; // place caret inside {}
         textarea.selectionEnd = start + insertText.length - 1;
         textarea.focus();
-        preview.innerHTML = getRenderedEquationHtml(textarea.value);
-        if (onUpdate) onUpdate({ tex: textarea.value, content: textarea.value });
+        preview.innerHTML = getRenderedEquationHtml(updatedVal);
+        if (onUpdate) onUpdate({ tex: updatedVal, content: updatedVal });
       }
     });
     colorMount.appendChild(colorWidget);
   }
-
-  // 3. Live Equation Preview Update
-  textarea.addEventListener('input', () => {
-    const val = textarea.value;
-    preview.innerHTML = getRenderedEquationHtml(val);
-    if (onUpdate) {
-      onUpdate({ tex: val, content: val });
-    }
-  });
 
   // 3. Bidirectional Double-Click Highlight Synchronization
   attachHighlightSync(preview, textarea);

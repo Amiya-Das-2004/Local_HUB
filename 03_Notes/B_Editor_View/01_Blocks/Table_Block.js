@@ -4,13 +4,13 @@
  * - Compiles LaTeX Tabular & Markdown tables via Table_Parser.js
  * - Template library browser & save template modal via Table_Templates_Modal.js
  * - Standardized action buttons via Block_Actions.js
- * - Smooth resizable textarea via Block_Textarea.js
+ * - Code editor with line numbers, 1.6x line spacing & folding via Block_Textarea.js
  */
 
 import { parseLatexTabular, parseMarkdownTable } from '../../Writing_Engine/Table_Parser.js';
 import { attachHighlightSync } from '../../Writing_Engine/Highlight_Sync.js';
 import { escapeHtml } from '../../02_Utils.js';
-import { createBlockTextarea } from './Block_Textarea.js';
+import { createCodeEditor } from './Block_Textarea.js';
 import { getBlockActionsHTML, initBlockActions } from './Block_Actions.js';
 import { GetTableTemplatesModalHTML, InitTableTemplatesLogic } from './Table_Templates_Modal.js';
 
@@ -166,49 +166,60 @@ Ampere-Maxwell & Magnetism & $\nabla \times \mathbf{B} = \mu_0 \mathbf{J} + \mu_
     }
   });
 
-  // Create Smooth Resizable Textarea
-  const textarea = createBlockTextarea({
+  // Create Monospace Code Editor with Line Numbers & Comfortable Spacing (Folding Disabled)
+  const codeEditor = createCodeEditor({
     value: rawTable,
     placeholder: 'Enter LaTeX tabular code (\\begin{tabular}...\\end{tabular}) or Markdown table...',
+    badge: 'Table',
     minHeight: '110px',
-    height: '140px',
-    className: 'font-mono text-xs leading-relaxed',
+    height: '150px',
+    enableFolding: false,
     onInput: (val) => {
+      preview.innerHTML = renderTableHtml(val);
+      if (onUpdate) {
+        onUpdate({ content: val, table: val, hasBorder: currentBorderState });
+      }
+    },
+    onChange: (val) => {
       preview.innerHTML = renderTableHtml(val);
       if (onUpdate) {
         onUpdate({ content: val, table: val, hasBorder: currentBorderState });
       }
     }
   });
-  textareaMount.appendChild(textarea);
+  textareaMount.appendChild(codeEditor);
+
+  const textarea = codeEditor.textarea;
 
   // Synchronize Token/Cell Double-Click Highlight
   attachHighlightSync(preview, textarea);
 
   // Initialize Template Browser & Modal Logic
   InitTableTemplatesLogic(editWrap, {
-    getCurrentCode: () => textarea.value,
+    getCurrentCode: () => (codeEditor.getValue ? codeEditor.getValue() : textarea.value),
     onInsert: (tplCode, mode) => {
-      const current = textarea.value;
+      const current = codeEditor.getValue ? codeEditor.getValue() : textarea.value;
       const trimmedTpl = (tplCode || '').trim();
+      let updatedVal = '';
 
       if (mode === 'replace' || !current.trim()) {
-        textarea.value = trimmedTpl;
+        updatedVal = trimmedTpl;
       } else {
         const start = textarea.selectionStart;
         const end = textarea.selectionEnd;
         if (start !== undefined && end !== undefined && start !== current.length) {
-          textarea.value = current.substring(0, start) + '\n' + trimmedTpl + '\n' + current.substring(end);
+          updatedVal = current.substring(0, start) + '\n' + trimmedTpl + '\n' + current.substring(end);
         } else {
-          textarea.value = current + '\n\n' + trimmedTpl;
+          updatedVal = current + '\n\n' + trimmedTpl;
         }
       }
 
-      preview.innerHTML = renderTableHtml(textarea.value);
+      codeEditor.setValue(updatedVal);
+      preview.innerHTML = renderTableHtml(updatedVal);
       if (onUpdate) {
-        onUpdate({ content: textarea.value, table: textarea.value });
+        onUpdate({ content: updatedVal, table: updatedVal, hasBorder: currentBorderState });
       }
-      textarea.focus();
+      codeEditor.focus();
     }
   });
 

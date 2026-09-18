@@ -10,11 +10,6 @@
 
 import { escapeHtml } from '../../02_Utils.js';
 import { CreateColorSelector } from '../../../00_Components/06_Color_Selector.js';
-import {
-  getCustomBullets,
-  removeCustomBullet,
-  openCustomBulletDialog
-} from '../../Writing_Engine/Bullet_Engine.js';
 import { renderKatex } from '../../Writing_Engine/Math_Renderer.js';
 import { getBlockActionsHTML, initBlockActions } from './Block_Actions.js';
 
@@ -93,8 +88,9 @@ export function renderTextBlock(
     }
 
     const viewWrap = document.createElement('div');
-    viewWrap.className = 'obsidian-view-surface notes-text-content w-full px-1 py-1 text-sm my-0.5 select-text box-border text-[var(--text)]';
+    viewWrap.className = 'obsidian-view-surface notes-text-content w-full px-1 py-1 my-0.5 select-text box-border text-[var(--text)]';
     viewWrap.style.fontFamily = 'var(--note-font-family, inherit)';
+    viewWrap.style.fontSize = 'var(--note-font-size, 1rem)';
     viewWrap.style.lineHeight = `var(--note-line-height, ${currentLineHeight})`;
     viewWrap.style.wordBreak = 'break-word';
 
@@ -147,7 +143,7 @@ export function renderTextBlock(
       <div class="floating-katex-pill hidden absolute pointer-events-none z-30 px-2.5 py-1 rounded-lg border border-purple-500/40 bg-[#161926]/95 text-purple-300 shadow-xl text-sm flex items-center justify-center backdrop-blur-xs transition-all duration-75"></div>
 
       <!-- In-Place Live Surface (Editable) -->
-      <div class="obsidian-live-surface w-full px-1 py-1 text-sm rounded-lg outline-none transition-all box-border text-[var(--text)] min-h-[90px] cursor-text select-text" contenteditable="true" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" style="font-family: var(--note-font-family, inherit); line-height: var(--note-line-height, ${currentLineHeight}); white-space: pre-wrap; word-break: break-word;"></div>
+      <div class="obsidian-live-surface w-full px-1 py-1 rounded-lg outline-none transition-all box-border text-[var(--text)] min-h-[90px] cursor-text select-text" contenteditable="true" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" style="font-family: var(--note-font-family, inherit); font-size: var(--note-font-size, 1rem); line-height: var(--note-line-height, ${currentLineHeight}); white-space: pre-wrap; word-break: break-word;"></div>
     </div>
   `;
 
@@ -761,14 +757,15 @@ export function renderTextBlock(
   };
 
   const renderBulletMenu = () => {
-    const customList = getCustomBullets();
-
     let itemsHtml = `
       <div class="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--text-dim)]">Presets (Inserts on Line)</div>
     `;
 
     const bulletOptions = [
       { label: '• Disc (Default)', prefix: '• ' },
+      { label: '○ Circle', prefix: '○ ' },
+      { label: '■ Square', prefix: '■ ' },
+      { label: '▸ Triangle', prefix: '▸ ' },
       { label: '– Dash', prefix: '– ' },
       { label: '➔ Arrow', prefix: '➔ ' },
       { label: '✦ Star', prefix: '✦ ' },
@@ -780,7 +777,7 @@ export function renderTextBlock(
     bulletOptions.forEach((opt) => {
       const isSelected = activeBulletPrefix === opt.prefix;
       itemsHtml += `
-        <button type="button" class="preset-item w-full flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-[var(--surface-hover)] text-left transition-colors ${isSelected ? 'bg-purple-500/15 text-purple-400 font-bold' : ''}" data-prefix="${escapeHtml(opt.prefix)}">
+        <button type="button" class="preset-item w-full flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-[var(--surface-hover)] text-left transition-colors cursor-pointer ${isSelected ? 'bg-purple-500/15 text-purple-400 font-bold' : ''}" data-prefix="${escapeHtml(opt.prefix)}">
           <div class="flex items-center gap-2">
             <span class="w-4 text-center font-bold text-purple-400">${renderBulletIcon(opt.prefix)}</span>
             <span>${escapeHtml(opt.label)}</span>
@@ -789,38 +786,6 @@ export function renderTextBlock(
         </button>
       `;
     });
-
-    if (customList.length > 0) {
-      itemsHtml += `
-        <div class="my-1 border-t border-[var(--border)]"></div>
-        <div class="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--text-dim)]">Global Custom LaTeX Bullets</div>
-      `;
-
-      customList.forEach((latex) => {
-        const latexPrefix = `$${latex}$ `;
-        const isSelected = activeBulletPrefix === latexPrefix;
-        itemsHtml += `
-          <div class="custom-bullet-row group flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-[var(--surface-hover)] transition-colors ${isSelected ? 'bg-purple-500/15 text-purple-400 font-bold' : ''}">
-            <button type="button" class="select-custom-btn flex items-center gap-2 flex-1 text-left" data-prefix="${escapeHtml(latexPrefix)}">
-              <span class="w-5 text-center text-purple-400 inline-flex items-center justify-center">${renderKatex(latex, false)}</span>
-              <span class="font-mono text-[11px]">${escapeHtml(latex)}</span>
-            </button>
-            <div class="flex items-center gap-1.5">
-              ${isSelected ? '<span class="text-xs text-purple-400">✓</span>' : ''}
-              <button type="button" class="del-custom-btn opacity-0 group-hover:opacity-100 hover:text-red-400 text-xs px-1 transition-opacity text-[var(--text-dim)]" data-latex="${escapeHtml(latex)}" title="Delete custom bullet">✕</button>
-            </div>
-          </div>
-        `;
-      });
-    }
-
-    itemsHtml += `
-      <div class="my-1 border-t border-[var(--border)]"></div>
-      <button type="button" class="add-custom-bullet-btn w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-purple-500/20 text-purple-300 font-semibold transition-colors">
-        <span class="text-purple-400 font-bold">+</span>
-        <span>Add Custom LaTeX Bullet...</span>
-      </button>
-    `;
 
     bulletMenu.innerHTML = itemsHtml;
 
@@ -831,33 +796,6 @@ export function renderTextBlock(
         closeBulletMenu();
       });
     });
-
-    bulletMenu.querySelectorAll('.select-custom-btn').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const p = btn.getAttribute('data-prefix');
-        insertBulletAtCurrentLine(p);
-        closeBulletMenu();
-      });
-    });
-
-    bulletMenu.querySelectorAll('.del-custom-btn').forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const lx = btn.getAttribute('data-latex');
-        removeCustomBullet(lx);
-        renderBulletMenu();
-      });
-    });
-
-    const addBtn = bulletMenu.querySelector('.add-custom-bullet-btn');
-    if (addBtn) {
-      addBtn.addEventListener('click', () => {
-        closeBulletMenu();
-        openCustomBulletDialog((newLatex) => {
-          insertBulletAtCurrentLine(`$${newLatex}$ `);
-        });
-      });
-    }
   };
 
   const toggleBulletMenu = () => {

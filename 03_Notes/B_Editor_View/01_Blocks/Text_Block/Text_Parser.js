@@ -75,7 +75,7 @@ export const serializeElement = (rootEl) => {
         return;
       }
       if (n.nodeType === Node.ELEMENT_NODE) {
-        if (n.classList && (n.classList.contains('live-widget') || n.hasAttribute('data-raw'))) {
+        if (n !== node && n.classList && (n.classList.contains('live-widget') || n.hasAttribute('data-raw'))) {
           const raw = n.getAttribute('data-raw');
           if (raw !== null) {
             result += raw;
@@ -272,8 +272,8 @@ export const renderSingleLineToDom = (rawLine, options = {}) => {
     return lineEl;
   }
 
-  // Bullet list item: `•`, `–`, `➔`, `✦`, `◆`, `1.`, `-`, `*`, `$\diamondsuit$`
-  const bulletMatch = rawLine.match(/^(\s*)([•–➔✦◆]|\$([^\$\n\r]+?)\$|[-*]|\d+\.)\s+(.*)$/);
+  // Bullet list item: `•`, `○`, `■`, `▸`, `–`, `➔`, `✦`, `◆`, `1.`, `-`, `*`, `$\diamondsuit$`
+  const bulletMatch = rawLine.match(/^(\s*)([•○■▸–➔✦◆]|\$([^\$\n\r]+?)\$|[-*]|\d+\.)\s+(.*)$/);
   if (bulletMatch) {
     const mathCode = bulletMatch[3];
     // Equations at line start like `$x = 5$ is an equation` should not become bullets unless mathCode is a single bullet macro

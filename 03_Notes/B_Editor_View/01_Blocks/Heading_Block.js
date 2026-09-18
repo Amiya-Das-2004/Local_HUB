@@ -19,18 +19,19 @@ export function renderHeadingBlock(block, isEditing = false, onUpdate = null, { 
     const isFirst = index === 0;
     
     if (level === 'h1') {
-      heading.className = `notes-heading h1 font-bold font-serif ${isFirst ? 'mt-1 mb-2 pt-0 border-t-0' : 'mt-6 mb-2 pt-3 pb-1 border-t border-[var(--border)]/30'} flex items-baseline gap-1 select-text leading-tight text-[var(--text)]`;
-      heading.style.fontSize = '1.55rem';
+      heading.className = `notes-heading h1 font-bold ${isFirst ? 'mt-1 mb-2 pt-0 border-t-0' : 'mt-6 mb-2 pt-3 pb-1 border-t border-[var(--border)]/30'} flex items-baseline gap-1 select-text leading-tight text-[var(--text)]`;
+      heading.style.fontSize = 'calc(var(--note-font-size, 1rem) * 1.55)';
     } else if (level === 'h2') {
-      heading.className = `notes-heading h2 font-bold font-serif ${isFirst ? 'mt-1 mb-1.5 pt-0' : 'mt-5 mb-1.5 pt-2 pb-0.5'} flex items-baseline gap-1 select-text leading-snug text-[var(--text)]`;
-      heading.style.fontSize = '1.3rem';
+      heading.className = `notes-heading h2 font-bold ${isFirst ? 'mt-1 mb-1.5 pt-0' : 'mt-5 mb-1.5 pt-2 pb-0.5'} flex items-baseline gap-1 select-text leading-snug text-[var(--text)]`;
+      heading.style.fontSize = 'calc(var(--note-font-size, 1rem) * 1.3)';
     } else {
-      heading.className = `notes-heading h3 font-bold font-serif ${isFirst ? 'mt-1 mb-1 pt-0' : 'mt-3.5 mb-1 pt-1 pb-0.5'} flex items-baseline gap-1 select-text leading-snug text-[var(--text)]`;
-      heading.style.fontSize = '1.1rem';
+      heading.className = `notes-heading h3 font-bold ${isFirst ? 'mt-1 mb-1 pt-0' : 'mt-3.5 mb-1 pt-1 pb-0.5'} flex items-baseline gap-1 select-text leading-snug text-[var(--text)]`;
+      heading.style.fontSize = 'calc(var(--note-font-size, 1rem) * 1.1)';
     }
+    heading.style.fontFamily = 'var(--note-font-family, inherit)';
 
     heading.innerHTML = `
-      <span class="mr-1.5 font-serif font-bold text-purple-400">${escapeHtml(prefix)}</span><span>${escapeHtml(title || 'Untitled Section')}</span>
+      <span class="mr-1.5 font-bold text-purple-400" style="font-family: var(--note-font-family, inherit);">${escapeHtml(prefix)}</span><span>${escapeHtml(title || 'Untitled Section')}</span>
     `;
     container.appendChild(heading);
     return container;
