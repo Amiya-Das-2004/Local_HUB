@@ -63,41 +63,104 @@ export const getNumberForLineAtIndent = (lineEl, targetIndent = '') => {
 
 export const serializeElement = (rootEl) => {
   if (!rootEl) return '';
-  const lines = [];
   const childNodes = Array.from(rootEl.childNodes);
-
   if (childNodes.length === 0) return '';
 
-  childNodes.forEach((lineNode) => {
-    let lineText = '';
-    if (lineNode.nodeType === Node.ELEMENT_NODE && lineNode.hasAttribute('data-indent')) {
-      lineText += lineNode.getAttribute('data-indent');
-    }
-
-    const traverse = (node) => {
-      if (node.nodeType === Node.TEXT_NODE) {
-        lineText += node.nodeValue;
+  // Helper to serialize an inline subtree (or single line without outer block breaks)
+  const serializeInlineSubtree = (node) => {
+    let result = '';
+    const traverse = (n) => {
+      if (n.nodeType === Node.TEXT_NODE) {
+        result += n.nodeValue;
         return;
       }
-      if (node.nodeType === Node.ELEMENT_NODE) {
-        if (node.classList && (node.classList.contains('live-widget') || node.hasAttribute('data-raw'))) {
-          const raw = node.getAttribute('data-raw');
+      if (n.nodeType === Node.ELEMENT_NODE) {
+        if (n.classList && (n.classList.contains('live-widget') || n.hasAttribute('data-raw'))) {
+          const raw = n.getAttribute('data-raw');
           if (raw !== null) {
-            lineText += raw;
+            result += raw;
             return;
           }
         }
-        if (node.tagName === 'BR') {
+        if (n.tagName === 'BR') {
+          result += '\n';
           return;
         }
-        node.childNodes.forEach(traverse);
+        n.childNodes.forEach(traverse);
       }
     };
+    traverse(node);
+    return result;
+  };
 
-    traverse(lineNode);
-    lines.push(lineText);
+  // Determine if a node represents an independent block / line
+  const isBlockElement = (el) => {
+    if (!el || el.nodeType !== Node.ELEMENT_NODE) return false;
+    if (el.classList && (
+      el.classList.contains('live-line') ||
+      el.classList.contains('obsidian-code-block') ||
+      el.classList.contains('obsidian-table-block') ||
+      el.classList.contains('live-hr') ||
+      el.classList.contains('obsidian-heading') ||
+      el.classList.contains('obsidian-callout-wrap') ||
+      el.classList.contains('obsidian-display-math')
+    )) {
+      return true;
+    }
+    if (el.getAttribute('data-is-raw-block') === 'true' || el.hasAttribute('data-block-type')) {
+      return true;
+    }
+    const tag = el.tagName;
+    return tag === 'DIV' || tag === 'P' || tag === 'PRE' || tag === 'BLOCKQUOTE' || tag === 'HR';
+  };
+
+  // Check if rootEl directly contains block elements
+  const hasBlockChildren = childNodes.some(isBlockElement);
+
+  // If rootEl has NO block children (e.g., copied selection within a single line),
+  // serialize strictly as inline text without creating line breaks between inline tokens.
+  if (!hasBlockChildren) {
+    return serializeInlineSubtree(rootEl);
+  }
+
+  // If rootEl has block-level children (e.g. liveSurface or multi-line selection):
+  const lines = [];
+  let currentInlineBuffer = '';
+
+  const flushInline = () => {
+    if (currentInlineBuffer.length > 0) {
+      lines.push(currentInlineBuffer);
+      currentInlineBuffer = '';
+    }
+  };
+
+  childNodes.forEach((lineNode) => {
+    if (isBlockElement(lineNode)) {
+      flushInline();
+
+      if (lineNode.getAttribute('data-is-raw-block') === 'true') {
+        lines.push(lineNode.innerText || lineNode.textContent || '');
+        return;
+      }
+
+      if (lineNode.hasAttribute('data-raw') && (lineNode.hasAttribute('data-block-type') || lineNode.classList.contains('live-hr'))) {
+        lines.push(lineNode.getAttribute('data-raw'));
+        return;
+      }
+
+      let lineText = '';
+      if (lineNode.hasAttribute('data-indent')) {
+        lineText += lineNode.getAttribute('data-indent');
+      }
+
+      lineText += serializeInlineSubtree(lineNode);
+      lines.push(lineText);
+    } else {
+      currentInlineBuffer += serializeInlineSubtree(lineNode);
+    }
   });
 
+  flushInline();
   return lines.join('\n');
 };
 
@@ -105,7 +168,7 @@ export const parseTextToFragment = (text, options = {}) => {
   const fragment = document.createDocumentFragment();
   if (!text) return fragment;
 
-  const tokenRegex = /((?<!\\)\$(?!\s)([^\$\n\r]+?)(?<!\s)\$)|(`([^`\n\r]+?)`)|(\*\*([^*]+?)\*\*)|((?:^|[^*])\*([^*\n\r]+?)\*(?!\*))|(\\underline\{([^}]+)\})|(~~([^~]+)~~)|(\\textcolor\{([#a-zA-Z0-9|]+)\}\{((?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})+)\})|(\\fig\{([^}]+)\})|(\[\[([^\]\n\r]+)\]\])/g;
+  const tokenRegex = /((?<!\\)\$(?!\s)([^\$\n\r]+?)(?<!\s)\$)|(`([^`\n\r]+?)`)|(\*\*([^*]+?)\*\*)|((?:^|[^*])\*([^*\n\r]+?)\*(?!\*))|(\\underline\{([^}]+)\})|(~~([^~]+)~~)|(\\textcolor\{([#a-zA-Z0-9|]+)\}\{((?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})+)\})|(\\fig\{([^}]+)\})|(\[\[([^\]\n\r]+)\]\])|(<u>([\s\S]*?)<\/u>)|(<b>([\s\S]*?)<\/b>|<strong>([\s\S]*?)<\/strong>)|(<i>([\s\S]*?)<\/i>|<em>([\s\S]*?)<\/em>)|(<mark>([\s\S]*?)<\/mark>)|(<code>([\s\S]*?)<\/code>)/g;
 
   let lastIndex = 0;
   let match;
@@ -152,6 +215,25 @@ export const parseTextToFragment = (text, options = {}) => {
     } else if (match[18]) {
       // WikiLink: [[title]]
       fragment.appendChild(createLiveWidget('wikilink', match[18], match[19], options));
+    } else if (match[20]) {
+      // HTML Underline: <u>...</u>
+      fragment.appendChild(createLiveWidget('underline', match[20], match[21], options));
+    } else if (match[22]) {
+      // HTML Bold: <b>...</b> or <strong>...</strong>
+      fragment.appendChild(createLiveWidget('bold', match[22], match[23] || match[24], options));
+    } else if (match[25]) {
+      // HTML Italic: <i>...</i> or <em>...</em>
+      fragment.appendChild(createLiveWidget('italic', match[25], match[26] || match[27], options));
+    } else if (match[28]) {
+      // HTML Highlight: <mark>...</mark>
+      const markSpan = document.createElement('mark');
+      markSpan.className = 'live-widget live-mark bg-yellow-400/25 text-yellow-200 px-1 py-0.5 rounded select-text';
+      markSpan.setAttribute('data-raw', match[28]);
+      markSpan.textContent = match[29];
+      fragment.appendChild(markSpan);
+    } else if (match[30]) {
+      // HTML Code: <code>...</code>
+      fragment.appendChild(createLiveWidget('code', match[30], match[31], options));
     }
 
     lastIndex = matchEnd;
@@ -216,6 +298,37 @@ export const renderSingleLineToDom = (rawLine, options = {}) => {
       lineEl.appendChild(parseTextToFragment(content, options));
       return lineEl;
     }
+  }
+
+  // Thematic Break / Divider: `---`, `***`, `___`
+  if (/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(rawLine)) {
+    lineEl.classList.add('live-hr', 'py-1', 'my-1');
+    lineEl.setAttribute('data-raw', rawLine);
+    lineEl.innerHTML = '<hr class="border-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--border)] to-transparent w-full m-0 pointer-events-none" />';
+    return lineEl;
+  }
+
+  // Markdown Headings: `# H1` to `###### H6`
+  const headingMatch = rawLine.match(/^(#{1,6})\s+(.*)$/);
+  if (headingMatch) {
+    const hashes = headingMatch[1];
+    const level = hashes.length;
+    const content = headingMatch[2];
+    lineEl.classList.add('live-heading', `live-h${level}`, 'font-bold', 'tracking-tight');
+    if (level === 1) lineEl.classList.add('text-2xl', 'font-extrabold', 'mt-3', 'mb-1', 'border-b', 'border-[var(--border)]/40', 'pb-1');
+    else if (level === 2) lineEl.classList.add('text-xl', 'font-bold', 'mt-2.5', 'mb-1', 'border-b', 'border-[var(--border)]/30', 'pb-0.5');
+    else if (level === 3) lineEl.classList.add('text-lg', 'font-semibold', 'mt-2', 'mb-0.5');
+    else if (level === 4) lineEl.classList.add('text-base', 'font-semibold', 'mt-1.5', 'mb-0.5');
+    else if (level === 5) lineEl.classList.add('text-sm', 'font-semibold', 'mt-1');
+    else lineEl.classList.add('text-xs', 'font-semibold', 'uppercase', 'tracking-wider', 'text-[var(--text-dim)]');
+
+    const markerSpan = document.createElement('span');
+    markerSpan.className = 'heading-marker text-[var(--text-dim)] font-mono text-xs opacity-50 mr-1.5 select-none align-middle font-normal';
+    markerSpan.textContent = `${hashes} `;
+    markerSpan.setAttribute('data-raw', `${hashes} `);
+    lineEl.appendChild(markerSpan);
+    lineEl.appendChild(parseTextToFragment(content, options));
+    return lineEl;
   }
 
   // Normal line with inline tokens

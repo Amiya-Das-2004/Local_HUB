@@ -99,10 +99,10 @@
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `syncHighlightTheme()` | 14 - 43 | Detects active light/dark theme and dynamically links or updates Highlight.js stylesheets (Atom One Dark vs Light) with transparent backgrounds. |
-| `ensureHighlightJsLoaded(callback)` | 53 - 74 | Dynamically injects and loads the Highlight.js library script from CDN if not already loaded in the window environment. |
-| `highlightCode(code, language = 'javascript')` | 76 - 89 | Highlights source code string using Highlight.js for the specified language with fallback to HTML escaping. |
-| `createHighlightedCodeBlock(code, language = 'javascript', title = '')` | 91 - 124 | Creates a complete styled code block DOM container featuring language badge, copy-to-clipboard button, and highlighted code container. |
+| `syncHighlightTheme()` | 14 - 74 | Dynamically switches between Atom One Dark and Atom One Light Highlight.js stylesheets and injects theme-adaptive code block styles. |
+| `ensureHighlightJsLoaded(callback)` | 84 - 105 | Dynamically injects and loads the Highlight.js library script from CDN if not already loaded in the window environment. |
+| `highlightCode(code, language = 'javascript')` | 107 - 120 | Highlights source code string using Highlight.js for the specified language with fallback to HTML escaping. |
+| `createHighlightedCodeBlock(code, language = 'javascript', title = '')` | 122 - 184 | Creates an Obsidian-grade code block DOM container featuring dynamic theme colors (very light grey in light mode, lighter dark shade in dark mode), no header bar, and an unobtrusive darker disguised copy button on the top-right. |
 
 **Highlight_Sync.js**
 
@@ -409,8 +409,8 @@
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `getBlockActionsHTML(options)` | 16 - 36 | Returns HTML markup for standard block action buttons (Done, Move Up, Move Down, + Below, Delete). |
-| `initBlockActions(parentEl, handlers)` | 50 - 92 | Attaches click event handlers to block action buttons (Done, Move Up, Move Down, Insert Below, Delete). |
+| `getBlockActionsHTML(options)` | 16 - 39 | Returns HTML markup for standard 25x25px block action buttons (Done tick icon, Move Up, Move Down, Copy icon, + Below, Delete trash icon). |
+| `initBlockActions(parentEl, handlers)` | 54 - 110 | Attaches event handlers to block action buttons (Done with selection-preserving mousedown, Move Up, Move Down, Copy with selection-preserving mousedown, Insert Below, Delete). |
 
 **Block_Block.js**
 
@@ -598,11 +598,12 @@
 | `./Block_Actions.js` | `getBlockActionsHTML`, `initBlockActions` | `renderTextBlock()` |
 | `./Text_Block/Text_Parser.js` | `LINE_SPACING_OPTIONS`, `getSpacingValue`, `getSpacingLabel`, `getNumberForLineAtIndent`, `serializeElement`, `parseTextToFragment`, `renderSingleLineToDom` | `renderTextBlock()` |
 | `./Text_Block/Text_Widgets.js` | `renderBulletIcon`, `createLiveWidget` | `renderTextBlock()` |
-| `./Text_Block/Text_Keyboard.js` | `getContainingLine`, `getLineRawText`, `checkAutoCollapseTokensNearCaret`, `checkAutoBulletConversion`, `handleTextBlockKeyDown` | `renderTextBlock()` (`getLineRawText` unused) |
+| `./Text_Block/Text_Keyboard.js` | `getContainingLine`, `getLineRawText`, `checkAutoCollapseTokensNearCaret`, `checkAutoBulletConversion`, `handleTextBlockKeyDown`, `scanAndCompileCompletedBlocks` | `renderTextBlock()` (`getLineRawText` unused) |
+| `./Text_Block/Text_Block_Markdown.js` | `renderObsidianMarkdown`, `createLiveBlockElement`, `lexMarkdownBlocks` | `renderTextBlock()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `renderTextBlock(block, isEditing = false, onUpdate = null, allNotes = [], options = {})` | 57 - 868 | Main rich text block component featuring live Obsidian-style in-place editing, bullet marker styling, line spacing selector, interactive checkboxes, and keyboard navigation. |
+| `renderTextBlock(block, isEditing = false, onUpdate = null, allNotes = [], options = {})` | 66 - 1089 | Main rich text block component featuring permanent Live Preview mode (no preview button toggle needed), top floating window formatting dock (`#notes-text-floating-dock`), in-place click-to-expand raw code for fenced code blocks, $$ math, tables, callouts, blockquotes, and dividers, auto-collapse on navigating away, 5-icon block action toolbar (tick, up, down, copy, delete), smart markdown-block paste compilation, live typing auto-compilation for code blocks and headings, bullet marker styling, line spacing selector, interactive checkboxes, and keyboard navigation. |
 
 **Tikz_Block.js**
 
@@ -651,18 +652,37 @@
 | Import Location | Functions Imported | used in Functions |
 | :--- | :--- | :--- |
 | `./Text_Widgets.js` | `createLiveWidget` | `checkAutoCollapseTokensNearCaret()`, `checkAutoBulletConversion()`, `tryCollapseTokenAtCaretOnEnter()`, `handleTextBlockKeyDown()` |
-| `./Text_Parser.js` | `parseTextToFragment`, `getNumberForLineAtIndent`, `isBulletMathSymbol` | `checkAutoBulletConversion()`, `handleTextBlockKeyDown()` (`parseTextToFragment` unused) |
+| `./Text_Parser.js` | `parseTextToFragment`, `renderSingleLineToDom`, `getNumberForLineAtIndent`, `isBulletMathSymbol` | `checkAutoBulletConversion()`, `handleTextBlockKeyDown()`, `scanAndCompileCompletedBlocks()` (`parseTextToFragment` unused) |
+| `./Text_Block_Markdown.js` | `createLiveBlockElement` | `handleTextBlockKeyDown()`, `scanAndCompileCompletedBlocks()` |
 | `../../../Writing_Engine/Math_Renderer.js` | `renderKatex` | `checkAutoBulletConversion()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `renumberSubsequentListItems(startLineEl)` | 11 - 62 | Renumbers downstream ordered list items sequentially when an item is added, indented, or deleted. |
-| `getContainingLine(node, rootEl)` | 65 - 73 | Helper to locate the containing line element of any DOM node within the text block. |
-| `getLineRawText(lineEl)` | 76 - 98 | Extracts the unformatted raw text representation of a single line element. |
-| `checkAutoCollapseTokensNearCaret(options)` | 100 - 166 | Automatically converts Markdown tokens near caret (e.g. **bold**, *italic*, `code`) into live formatted inline widgets. |
-| `checkAutoBulletConversion(options)` | 168 - 254 | Automatically detects list prefixes (e.g. - , * , 1. , [ ]) and converts the line into a list item widget. |
-| `tryCollapseTokenAtCaretOnEnter(options)` | 256 - 442 | Handles Enter key behavior by collapsing uncollapsed tokens at the caret before inserting a new line. |
-| `handleTextBlockKeyDown(e, ctx)` | 444 - 1031 | Master keydown handler for text blocks managing Enter, Backspace, Tab, Shift+Tab, and navigation shortcuts. |
+| `renumberSubsequentListItems(startLineEl)` | 12 - 63 | Renumbers downstream ordered list items sequentially when an item is added, indented, or deleted. |
+| `getContainingLine(node, rootEl)` | 66 - 74 | Helper to locate the containing line element of any DOM node within the text block. |
+| `getLineRawText(lineEl)` | 77 - 99 | Extracts the unformatted raw text representation of a single line element. |
+| `checkAutoCollapseTokensNearCaret(options)` | 101 - 167 | Automatically converts Markdown tokens near caret (e.g. **bold**, *italic*, `code`) into live formatted inline widgets. |
+| `checkAutoBulletConversion(options)` | 169 - 288 | Automatically detects list prefixes (e.g. - , * , 1. , [ ]) and heading markers (# to ######) and converts the line into a list item widget or styled heading with dimmed marker. |
+| `tryCollapseTokenAtCaretOnEnter(options)` | 290 - 476 | Handles Enter key behavior by collapsing uncollapsed tokens at or before the caret before inserting a new line. |
+| `handleTextBlockKeyDown(e, ctx)` | 478 - 1316 | Master keydown handler for text blocks managing Enter, Backspace, Tab, Shift+Tab, navigation shortcuts, live closing code fence compilation, opening code fence auto-completion, display math, horizontal rules, and heading Enter/Backspace navigation. |
+| `scanAndCompileCompletedBlocks(liveSurface, editModeOptions, triggerUpdate)` | 1322 - 1500 | Scans and compiles any completed closed blocks (fenced code blocks, display math, horizontal rules, headings) that are not currently focused by the caret. |
+
+**Text_Markdown.js / Text_Block_Markdown.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| `../../../Writing_Engine/Math_Renderer.js` | `renderKatex` | `renderObsidianMarkdown()` |
+| `../../../Writing_Engine/Code_Highlighter.js` | `createHighlightedCodeBlock` | `renderObsidianMarkdown()` |
+| `../../../Writing_Engine/Table_Parser.js` | `parseMarkdownTable` | `renderObsidianMarkdown()` |
+| `./Text_Widgets.js` | `createLiveWidget` | `renderObsidianMarkdown()` |
+| `./Text_Parser.js` | `parseTextToFragment`, `renderSingleLineToDom` | `renderObsidianMarkdown()` |
+| `../../../02_Utils.js` | `escapeHtml` | `renderObsidianMarkdown()` |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `CALLOUT_CONFIGS` | 21 - 100 | Obsidian callout presets, colors, and vector SVG icons (Note, Info, Todo, Tip, Hint, Important, Warning, Caution, Danger, Error, Bug, Success, Question, Example, Quote). |
+| `lexMarkdownBlocks(rawText)` | 118 - 295 | Tokenizes raw markdown into discrete blocks: fenced code blocks, display math ($$), LaTeX environments, horizontal rules, markdown tables, callouts, blockquotes, headings, tasks, and lines. |
+| `renderObsidianMarkdown(markdownText, options)` | 305 - 591 | Compiles raw markdown text into styled DOM elements with interactive task checkboxes, syntax highlighted code blocks, rendered KaTeX math, tables, callouts, and inline formatting. |
 
 **Text_Parser.js**
 
@@ -678,9 +698,9 @@
 | `getSpacingValue(key)` | 29 - 32 | Returns CSS line-height multiplier corresponding to a line spacing key. |
 | `getSpacingLabel(key)` | 34 - 37 | Returns human-readable label for a line spacing option. |
 | `getNumberForLineAtIndent(lineEl, targetIndent)` | 39 - 62 | Finds the previous numbered list item at the same indentation level to determine the next sequence number. |
-| `serializeElement(rootEl)` | 64 - 102 | Serializes rendered DOM line elements and widgets back into a clean plain text/markdown string. |
-| `parseTextToFragment(text, options)` | 104 - 165 | Parses multi-line text into a DocumentFragment containing styled line elements and widgets. |
-| `renderSingleLineToDom(rawLine, options)` | 167 - 224 | Parses and renders a single line of text with bullet icons, tasks, inline math, and live widgets into a DOM <div>. |
+| `serializeElement(rootEl)` | 64 - 165 | Serializes rendered DOM line elements, inline widgets, and selection fragments back into a clean plain text/markdown string while accurately distinguishing inline text from block-level lines. |
+| `parseTextToFragment(text, options)` | 167 - 246 | Parses text into a DocumentFragment containing styled line elements, inline widgets, and HTML formatting tags (<u>, <b>, <i>, <mark>, <code>). |
+| `renderSingleLineToDom(rawLine, options)` | 248 - 336 | Parses and renders a single line of text with styled headings (# with subtle dimmed marker), dividers (---), bullet icons, tasks, inline math, HTML tags, and live widgets into a DOM <div>. |
 
 **Text_Widgets.js**
 
@@ -693,7 +713,7 @@
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
 | `renderBulletIcon(prefix)` | 85 - 95 | Compiles and renders bullet icon markup for unordered, ordered, or custom LaTeX list markers. |
-| `createLiveWidget(type, raw, contentHtml, options)` | 97 - 189 | Creates live interactive inline DOM widgets for math ($...$), formatting (**bold**, *italic*), code (`code`), or citation links (`\fig`). |
+| `createLiveWidget(type, raw, contentHtml, options)` | 97 - 188 | Creates live interactive inline DOM widgets with seamless text selection (select-text) for math ($...$), formatting (**bold**, *italic*, <u>underline</u>), code (`code`), or citation links (`\fig`). |
 
 ## B_Editor_View/02_Sidebar
 **01_Sidebar_Logo.js**

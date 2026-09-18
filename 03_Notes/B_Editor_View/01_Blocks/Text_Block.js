@@ -38,10 +38,17 @@ import {
   getLineRawText,
   checkAutoCollapseTokensNearCaret,
   checkAutoBulletConversion,
-  handleTextBlockKeyDown
+  handleTextBlockKeyDown,
+  scanAndCompileCompletedBlocks
 } from './Text_Block/Text_Keyboard.js';
 
-// Re-export parser and widget utilities for full backward compatibility
+import {
+  renderObsidianMarkdown,
+  createLiveBlockElement,
+  lexMarkdownBlocks
+} from './Text_Block/Text_Block_Markdown.js';
+
+// Re-export parser, widget, and markdown utilities for full backward compatibility
 export {
   LINE_SPACING_OPTIONS,
   getSpacingValue,
@@ -51,7 +58,10 @@ export {
   parseTextToFragment,
   renderSingleLineToDom,
   renderBulletIcon,
-  createLiveWidget
+  createLiveWidget,
+  renderObsidianMarkdown,
+  createLiveBlockElement,
+  lexMarkdownBlocks
 };
 
 export function renderTextBlock(
@@ -71,7 +81,7 @@ export function renderTextBlock(
   container.style.setProperty('--note-line-height', String(currentLineHeight));
 
   // =========================================================================
-  // 1. VIEW MODE (EXACT 1:1 DOM PARITY WITH EDIT MODE - ZERO JUMP)
+  // 1. VIEW MODE (OBSIDIAN FULL MARKDOWN PARITY)
   // =========================================================================
   if (!isEditing) {
     if (!rawContent || !rawContent.trim()) {
@@ -86,11 +96,10 @@ export function renderTextBlock(
     viewWrap.className = 'obsidian-view-surface notes-text-content w-full px-1 py-1 text-sm my-0.5 select-text box-border text-[var(--text)]';
     viewWrap.style.fontFamily = 'var(--note-font-family, inherit)';
     viewWrap.style.lineHeight = `var(--note-line-height, ${currentLineHeight})`;
-    viewWrap.style.whiteSpace = 'pre-wrap';
     viewWrap.style.wordBreak = 'break-word';
 
-    const handleViewCheckboxToggle = () => {
-      const newMarkdown = serializeElement(viewWrap);
+    const handleViewCheckboxToggle = (updatedMarkdown) => {
+      const newMarkdown = updatedMarkdown !== undefined ? updatedMarkdown : serializeElement(viewWrap);
       rawContent = newMarkdown;
       block.content = newMarkdown;
       if (onUpdate) {
@@ -102,14 +111,12 @@ export function renderTextBlock(
       }
     };
 
-    const lines = rawContent.split('\n');
-    lines.forEach((l) => {
-      viewWrap.appendChild(renderSingleLineToDom(l, {
-        isViewMode: true,
-        allNotes,
-        onCheckboxToggle: handleViewCheckboxToggle
-      }));
+    const renderedMd = renderObsidianMarkdown(rawContent, {
+      isViewMode: true,
+      allNotes,
+      onCheckboxToggle: handleViewCheckboxToggle
     });
+    viewWrap.appendChild(renderedMd);
 
     container.appendChild(viewWrap);
     return container;
@@ -126,12 +133,12 @@ export function renderTextBlock(
   editWrap.innerHTML = `
     <!-- Top Row: Block Title (Left) | Block Actions (Right) -->
     <div class="flex items-center justify-between gap-1.5 w-full pb-1 border-b border-[var(--border)]/60 select-none">
-      <div class="flex items-center text-xs font-semibold text-purple-400 font-mono tracking-wide select-none">
+      <div class="flex items-center gap-2 text-xs font-semibold text-purple-400 font-mono tracking-wide select-none">
         <span class="uppercase tracking-wider text-[11px] font-bold">Text Block</span>
       </div>
 
-      <!-- Top Right: Block Actions Toolbar (Done, Up, Down, + Below, Delete) -->
-      ${getBlockActionsHTML({ index, totalBlocks, canInsertBelow: Boolean(onInsertBelow) })}
+      <!-- Top Right: Block Actions Toolbar (Done, Up, Down, Copy, Delete) -->
+      ${getBlockActionsHTML({ index, totalBlocks, canInsertBelow: false, canCopy: true })}
     </div>
 
     <!-- In-Place Live Preview Workspace Container -->
@@ -139,26 +146,15 @@ export function renderTextBlock(
       <!-- Clean Live Floating KaTeX Math Pill (NO 'Preview:' label) -->
       <div class="floating-katex-pill hidden absolute pointer-events-none z-30 px-2.5 py-1 rounded-lg border border-purple-500/40 bg-[#161926]/95 text-purple-300 shadow-xl text-sm flex items-center justify-center backdrop-blur-xs transition-all duration-75"></div>
 
-      <!-- Gentle Block Math Notice -->
-      <div class="block-math-notice hidden absolute right-2 top-2 z-20 px-2 py-1 rounded bg-amber-500/15 border border-amber-500/40 text-amber-300 text-[11px] pointer-events-none transition-opacity">
-        Display math ($$) belongs in Equation Blocks. Inline math ($...$) is supported here.
-      </div>
-
-      <!-- In-Place Live Surface -->
+      <!-- In-Place Live Surface (Editable) -->
       <div class="obsidian-live-surface w-full px-1 py-1 text-sm rounded-lg outline-none transition-all box-border text-[var(--text)] min-h-[90px] cursor-text select-text" contenteditable="true" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" style="font-family: var(--note-font-family, inherit); line-height: var(--note-line-height, ${currentLineHeight}); white-space: pre-wrap; word-break: break-word;"></div>
     </div>
   `;
 
-  // Top Centered Floating Formatting Window / Dock (Below Header)
-  const existingDock = document.getElementById('notes-text-floating-dock');
-  if (existingDock) {
-    if (typeof existingDock.__cleanup === 'function') existingDock.__cleanup();
-    existingDock.remove();
-  }
-
+  // Top Floating Window Formatting Dock
   const floatingDock = document.createElement('div');
   floatingDock.id = 'notes-text-floating-dock';
-  floatingDock.className = 'notes-text-floating-dock fixed top-[88px] sm:top-[94px] left-1/2 -translate-x-1/2 z-[60] p-1 sm:p-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md shadow-2xl flex items-center justify-center gap-1 sm:gap-1.5 select-none transition-all duration-200 flex-wrap max-w-[calc(100vw-24px)]';
+  floatingDock.className = 'notes-text-floating-dock fixed top-[84px] sm:top-[90px] left-1/2 -translate-x-1/2 z-[60] p-1 sm:p-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md shadow-2xl flex items-center justify-center gap-1 sm:gap-1.5 select-none transition-all duration-200 flex-wrap max-w-[calc(100vw-24px)]';
 
   floatingDock.innerHTML = `
     <!-- 1. Dual-Theme Text Color Selector [ + | ○ Light | ○ Dark ] -->
@@ -175,7 +171,7 @@ export function renderTextBlock(
       <button type="button" class="btn-italic w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-[var(--border)]/60 bg-[var(--card)] hover:bg-purple-500/15 hover:border-purple-500/40 text-xs font-bold flex items-center justify-center text-[var(--text)] transition-colors cursor-pointer shadow-xs" title="Italics: *text*">
         <span class="italic font-serif font-bold text-sm">I</span>
       </button>
-      <button type="button" class="btn-underline w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-[var(--border)]/60 bg-[var(--card)] hover:bg-purple-500/15 hover:border-purple-500/40 text-xs font-bold flex items-center justify-center text-[var(--text)] transition-colors cursor-pointer shadow-xs" title="Underline: \\underline{...}">
+      <button type="button" class="btn-underline w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-[var(--border)]/60 bg-[var(--card)] hover:bg-purple-500/15 hover:border-purple-500/40 text-xs font-bold flex items-center justify-center text-[var(--text)] transition-colors cursor-pointer shadow-xs" title="Underline: <u>text</u> or \\underline{...}">
         <span class="underline underline-offset-2 font-serif font-bold text-sm">U</span>
       </button>
       <button type="button" class="btn-strikeout w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-[var(--border)]/60 bg-[var(--card)] hover:bg-purple-500/15 hover:border-purple-500/40 text-xs font-bold flex items-center justify-center text-[var(--text)] transition-colors cursor-pointer shadow-xs" title="Strikethrough: ~~text~~">
@@ -242,7 +238,6 @@ export function renderTextBlock(
   // UI References
   const liveSurface = editWrap.querySelector('.obsidian-live-surface');
   const floatingPill = editWrap.querySelector('.floating-katex-pill');
-  const noticeBox = editWrap.querySelector('.block-math-notice');
 
   const colorMount = floatingDock.querySelector('.text-color-selector-mount');
   const btnBold = floatingDock.querySelector('.btn-bold');
@@ -258,14 +253,7 @@ export function renderTextBlock(
   const spacingMenu = floatingDock.querySelector('.spacing-dropdown-menu');
   const activeSpacingDisplay = floatingDock.querySelector('.active-spacing-display');
 
-  let noticeTimer = null;
-  const showNotice = () => {
-    noticeBox.classList.remove('hidden');
-    clearTimeout(noticeTimer);
-    noticeTimer = setTimeout(() => {
-      noticeBox.classList.add('hidden');
-    }, 2800);
-  };
+  const showNotice = () => {}; // Safe no-op
 
   const serializeSurface = () => serializeElement(liveSurface);
 
@@ -283,6 +271,66 @@ export function renderTextBlock(
   };
 
   let currentExpandedNode = null;
+  let currentExpandedBlock = null;
+
+  const expandBlock = (blockEl, raw) => {
+    if (!blockEl || !raw) return;
+    collapseExpandedBlock();
+    collapseExpandedNode();
+
+    const rawContainer = document.createElement('div');
+    rawContainer.className = 'obsidian-raw-block-editor w-full font-mono text-xs sm:text-sm p-2.5 rounded-lg border border-purple-500/50 bg-[#12131c] text-purple-200 outline-none my-2 transition-all shadow-inner select-text';
+    rawContainer.setAttribute('contenteditable', 'true');
+    rawContainer.setAttribute('data-is-raw-block', 'true');
+    rawContainer.setAttribute('data-raw', raw);
+    rawContainer.style.whiteSpace = 'pre-wrap';
+    rawContainer.style.wordBreak = 'break-word';
+    rawContainer.textContent = raw;
+
+    const parent = blockEl.parentNode;
+    if (!parent) return;
+
+    parent.replaceChild(rawContainer, blockEl);
+    currentExpandedBlock = { rawContainer, originalEl: blockEl };
+
+    rawContainer.focus();
+    const sel = window.getSelection();
+    if (sel) {
+      const range = document.createRange();
+      range.selectNodeContents(rawContainer);
+      range.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+  };
+
+  const collapseExpandedBlock = () => {
+    if (!currentExpandedBlock || !currentExpandedBlock.rawContainer.parentNode) {
+      currentExpandedBlock = null;
+      return;
+    }
+
+    const { rawContainer } = currentExpandedBlock;
+    const newRaw = rawContainer.innerText || rawContainer.textContent || '';
+    const parent = rawContainer.parentNode;
+
+    if (!newRaw.trim()) {
+      rawContainer.remove();
+      currentExpandedBlock = null;
+      triggerUpdate();
+      return;
+    }
+
+    const blocks = lexMarkdownBlocks(newRaw);
+    const fragment = document.createDocumentFragment();
+    blocks.forEach((b) => {
+      fragment.appendChild(createLiveBlockElement(b, editModeOptions));
+    });
+
+    parent.replaceChild(fragment, rawContainer);
+    currentExpandedBlock = null;
+    triggerUpdate();
+  };
 
   const expandWidget = (widget, { atEnd = false, atStart = false } = {}) => {
     const raw = widget.getAttribute('data-raw');
@@ -341,16 +389,24 @@ export function renderTextBlock(
     allNotes,
     onCheckboxToggle: () => triggerUpdate(),
     onExpand: (widget, opts) => expandWidget(widget, opts),
+    onExpandBlock: (blockEl, raw) => expandBlock(blockEl, raw),
     onUpdate: () => triggerUpdate(),
     parseSubFragment: (subText) => parseTextToFragment(subText, editModeOptions)
   };
 
   const buildEditorDom = () => {
     liveSurface.innerHTML = '';
-    const lines = (rawContent || '').split('\n');
+    if (!rawContent || !rawContent.trim()) {
+      const emptyLine = document.createElement('div');
+      emptyLine.className = 'live-line min-h-[1.5em] my-0.5';
+      emptyLine.innerHTML = '<br>';
+      liveSurface.appendChild(emptyLine);
+      return;
+    }
 
-    lines.forEach((l) => {
-      liveSurface.appendChild(renderSingleLineToDom(l, editModeOptions));
+    const blocks = lexMarkdownBlocks(rawContent);
+    blocks.forEach((blk) => {
+      liveSurface.appendChild(createLiveBlockElement(blk, editModeOptions));
     });
 
     if (liveSurface.childNodes.length === 0) {
@@ -359,6 +415,8 @@ export function renderTextBlock(
       emptyLine.innerHTML = '<br>';
       liveSurface.appendChild(emptyLine);
     }
+
+    scanAndCompileCompletedBlocks(liveSurface, editModeOptions, triggerUpdate);
   };
 
   buildEditorDom();
@@ -434,28 +492,150 @@ export function renderTextBlock(
     triggerUpdate();
   });
 
-  // Track cursor movement to update math pill and collapse out-of-focus expanded node
+  // Native Clean Paste Handler: captures plain text (chats, Obsidian .md files) without browser HTML distortion
+  liveSurface.addEventListener('paste', (e) => {
+    e.preventDefault();
+    const pastedText = (e.clipboardData || window.clipboardData).getData('text/plain');
+    if (!pastedText) return;
+
+    const hasMarkdownBlocks = /(^|\n)(```|---|===|\$\$|\|[^\n]+\|\n\|[-:\s|]+\||> \[!)/m.test(pastedText);
+
+    if (hasMarkdownBlocks) {
+      // Paste contains full markdown blocks (fenced code blocks, math environments, tables, callouts)
+      const blocks = lexMarkdownBlocks(pastedText);
+      const sel = window.getSelection();
+      const curLine = (sel && sel.rangeCount > 0)
+        ? (getContainingLine(sel.anchorNode, liveSurface) || liveSurface.firstChild)
+        : liveSurface.firstChild;
+
+      let insertTarget = curLine;
+      const isCurrentEmpty = !curLine || !curLine.textContent || curLine.textContent.trim() === '';
+
+      blocks.forEach((blk, bIdx) => {
+        const blkEl = createLiveBlockElement(blk, editModeOptions);
+        if (bIdx === 0 && isCurrentEmpty && curLine && curLine.parentNode === liveSurface) {
+          liveSurface.replaceChild(blkEl, curLine);
+          insertTarget = blkEl;
+        } else if (insertTarget && insertTarget.parentNode === liveSurface) {
+          liveSurface.insertBefore(blkEl, insertTarget.nextSibling);
+          insertTarget = blkEl;
+        } else {
+          liveSurface.appendChild(blkEl);
+          insertTarget = blkEl;
+        }
+      });
+
+      if (insertTarget) {
+        const newRange = document.createRange();
+        newRange.selectNodeContents(insertTarget);
+        newRange.collapse(false);
+        const curSel = window.getSelection();
+        if (curSel) {
+          curSel.removeAllRanges();
+          curSel.addRange(newRange);
+        }
+      }
+    } else if (pastedText.includes('\n')) {
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) return;
+      const range = sel.getRangeAt(0);
+      range.deleteContents();
+
+      const pastedLines = pastedText.split('\n');
+      const curLine = getContainingLine(sel.anchorNode, liveSurface) || liveSurface.firstChild;
+
+      if (curLine && curLine.parentNode === liveSurface) {
+        const isCurrentEmpty = !curLine.textContent || curLine.textContent.trim() === '';
+        let insertTarget = curLine;
+
+        pastedLines.forEach((pLine, pIdx) => {
+          const newLineEl = renderSingleLineToDom(pLine, editModeOptions);
+          if (pIdx === 0 && isCurrentEmpty) {
+            liveSurface.replaceChild(newLineEl, curLine);
+            insertTarget = newLineEl;
+          } else {
+            liveSurface.insertBefore(newLineEl, insertTarget.nextSibling);
+            insertTarget = newLineEl;
+          }
+        });
+
+        const newRange = document.createRange();
+        newRange.selectNodeContents(insertTarget);
+        newRange.collapse(false);
+        sel.removeAllRanges();
+        sel.addRange(newRange);
+      } else {
+        pastedLines.forEach((pLine) => {
+          liveSurface.appendChild(renderSingleLineToDom(pLine, editModeOptions));
+        });
+      }
+    } else {
+      document.execCommand('insertText', false, pastedText);
+    }
+
+    triggerUpdate();
+  });
+
+  // Seamless clean copy handler: when text inside liveSurface is copied, output clean markdown
+  liveSurface.addEventListener('copy', (e) => {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
+
+    const range = sel.getRangeAt(0);
+    const selectedText = sel.toString();
+    if (selectedText.trim() === liveSurface.innerText.trim()) {
+      e.preventDefault();
+      const cleanMd = serializeSurface();
+      e.clipboardData.setData('text/plain', cleanMd);
+      return;
+    }
+
+    const cloned = range.cloneContents();
+    const tempDiv = document.createElement('div');
+    tempDiv.appendChild(cloned);
+    const cleanMd = serializeElement(tempDiv);
+    if (cleanMd) {
+      e.preventDefault();
+      e.clipboardData.setData('text/plain', cleanMd);
+    }
+  });
+
+  // Track cursor movement to update math pill and collapse out-of-focus expanded node/block
   liveSurface.addEventListener('keyup', (e) => {
     if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', ' '].includes(e.key)) {
       const sel = window.getSelection();
+      if (sel && currentExpandedBlock && !currentExpandedBlock.rawContainer.contains(sel.anchorNode)) {
+        collapseExpandedBlock();
+      }
       if (sel && currentExpandedNode && sel.anchorNode !== currentExpandedNode) {
         collapseExpandedNode();
       }
       updateKatexPill();
+      scanAndCompileCompletedBlocks(liveSurface, editModeOptions, triggerUpdate);
     }
   });
 
-  liveSurface.addEventListener('click', () => {
+  liveSurface.addEventListener('click', (e) => {
     const sel = window.getSelection();
+    if (currentExpandedBlock && !currentExpandedBlock.rawContainer.contains(e.target)) {
+      collapseExpandedBlock();
+    }
     if (sel && currentExpandedNode && sel.anchorNode !== currentExpandedNode) {
       collapseExpandedNode();
     }
     updateKatexPill();
+    scanAndCompileCompletedBlocks(liveSurface, editModeOptions, triggerUpdate);
   });
 
   liveSurface.addEventListener('blur', () => {
-    hideKatexPill();
-    collapseExpandedNode();
+    setTimeout(() => {
+      if (!liveSurface.contains(document.activeElement)) {
+        hideKatexPill();
+        collapseExpandedNode();
+        collapseExpandedBlock();
+        scanAndCompileCompletedBlocks(liveSurface, editModeOptions, triggerUpdate);
+      }
+    }, 150);
   });
 
   // Toolbar formatting helper
@@ -809,19 +989,15 @@ export function renderTextBlock(
 
   // Click outside to dismiss menus and close floating dock when leaving text block
   const onDocClick = (e) => {
-    // If the click is inside the dock or inside this block container, keep it open
     if (floatingDock.contains(e.target) || container.contains(e.target)) {
       return;
     }
-    // If click is inside a modal/dialog (e.g. custom bullet modal, macros modal), keep it open
     if (e.target.closest('#notes-custom-bullet-modal, #notes-macros-modal, #sidebar-logo-modal')) {
       return;
     }
-    // Leaving text block: hide floating dock
     hideFloatingDock();
   };
 
-  // Attach onDocClick asynchronously so the event that selected this block does not immediately dismiss it
   setTimeout(() => {
     document.addEventListener('click', onDocClick);
   }, 100);
@@ -837,14 +1013,58 @@ export function renderTextBlock(
     cleanupFloatingDock();
   };
 
-  // Block Actions (Done, Up, Down, + Below, Delete)
+  const handleCopyBlock = async (btn) => {
+    collapseExpandedBlock();
+    collapseExpandedNode();
+    const markdownToCopy = serializeSurface();
+    const origHtml = btn.innerHTML;
+    const showCopied = () => {
+      btn.innerHTML = `
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="text-green-400">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+      `;
+      btn.title = 'Copied!';
+      setTimeout(() => {
+        btn.innerHTML = origHtml;
+        btn.title = 'Copy block markdown code';
+      }, 1200);
+    };
+
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(markdownToCopy);
+      } else {
+        throw new Error('Clipboard API unavailable');
+      }
+      showCopied();
+    } catch (err) {
+      const textarea = document.createElement('textarea');
+      textarea.value = markdownToCopy;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        showCopied();
+      } catch (e) {
+        console.error('Failed to copy markdown: ', e);
+      }
+      textarea.remove();
+    }
+  };
+
+  // Block Actions (Done, Up, Down, Copy, + Below, Delete)
   initBlockActions(editWrap, {
     onDone: () => {
       cleanupFloatingDock();
+      collapseExpandedBlock();
       collapseExpandedNode();
       triggerUpdate();
       if (onDone) onDone();
     },
+    onCopy: handleCopyBlock,
     onMoveUp: () => {
       cleanupFloatingDock();
       if (onMoveUp) onMoveUp();

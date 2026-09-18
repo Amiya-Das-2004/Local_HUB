@@ -4,7 +4,8 @@
  */
 
 import { createLiveWidget } from './Text_Widgets.js';
-import { parseTextToFragment, getNumberForLineAtIndent, isBulletMathSymbol } from './Text_Parser.js';
+import { parseTextToFragment, renderSingleLineToDom, getNumberForLineAtIndent, isBulletMathSymbol } from './Text_Parser.js';
+import { createLiveBlockElement } from './Text_Block_Markdown.js';
 import { renderKatex } from '../../../Writing_Engine/Math_Renderer.js';
 
 // Helper to renumber downstream ordered list items sequentially
@@ -174,14 +175,47 @@ export const checkAutoBulletConversion = ({ liveSurface, editModeOptions, trigge
   const curLine = getContainingLine(node, liveSurface);
   if (!curLine) return;
 
-  // Check if line already has a bullet or checkbox
-  if (curLine.querySelector('.live-bullet') || curLine.querySelector('.live-checkbox')) return;
+  // Check if line already has a bullet, checkbox, or heading
+  if (curLine.querySelector('.live-bullet') || curLine.querySelector('.live-checkbox') || curLine.classList.contains('live-heading')) return;
 
   // Check first text node of line
   const firstChild = curLine.firstChild;
   if (!firstChild || firstChild.nodeType !== Node.TEXT_NODE) return;
 
   const firstText = firstChild.nodeValue;
+
+  // 0. Heading auto conversion: `# `, `## `, `### `, `#### `, `##### `, `###### `
+  const headingMatch = firstText.match(/^(\s*)(#{1,6})\s+/);
+  if (headingMatch && !curLine.classList.contains('live-heading')) {
+    const hashes = headingMatch[2];
+    const level = hashes.length;
+    const fullMatch = headingMatch[0];
+
+    curLine.classList.add('live-heading', `live-h${level}`, 'font-bold', 'tracking-tight');
+    if (level === 1) curLine.classList.add('text-2xl', 'font-extrabold', 'mt-3', 'mb-1', 'border-b', 'border-[var(--border)]/40', 'pb-1');
+    else if (level === 2) curLine.classList.add('text-xl', 'font-bold', 'mt-2.5', 'mb-1', 'border-b', 'border-[var(--border)]/30', 'pb-0.5');
+    else if (level === 3) curLine.classList.add('text-lg', 'font-semibold', 'mt-2', 'mb-0.5');
+    else if (level === 4) curLine.classList.add('text-base', 'font-semibold', 'mt-1.5', 'mb-0.5');
+    else if (level === 5) curLine.classList.add('text-sm', 'font-semibold', 'mt-1');
+    else curLine.classList.add('text-xs', 'font-semibold', 'uppercase', 'tracking-wider', 'text-[var(--text-dim)]');
+
+    const markerSpan = document.createElement('span');
+    markerSpan.className = 'heading-marker text-[var(--text-dim)] font-mono text-xs opacity-50 mr-1.5 select-none align-middle font-normal';
+    markerSpan.textContent = `${hashes} `;
+    markerSpan.setAttribute('data-raw', `${hashes} `);
+
+    firstChild.nodeValue = firstText.substring(fullMatch.length);
+    curLine.insertBefore(markerSpan, firstChild);
+
+    const newRange = document.createRange();
+    newRange.setStart(firstChild, 0);
+    newRange.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(newRange);
+
+    triggerUpdate?.();
+    return;
+  }
 
   // 1. Checkbox auto conversion: `  - [ ] `, `  [ ] `, `    - [x] `, etc.
   const taskMatch = firstText.match(/^(\s*)(?:[-*]\s*)?\[([ xX])?\]\s+/);
@@ -348,7 +382,7 @@ export const tryCollapseTokenAtCaretOnEnter = ({ node, offset, editModeOptions, 
     const prefixLen = m[0].length - m[1].length;
     const start = m.index + prefixLen;
     const end = start + fullMatch.length;
-    if (offset > start && offset < end) {
+    if (offset > start && offset <= end) {
       if (m[2].trim() === '\\') {
         return exitEmptyWrapperWithSpace(end, end);
       }
@@ -361,7 +395,7 @@ export const tryCollapseTokenAtCaretOnEnter = ({ node, offset, editModeOptions, 
   while ((m = boldRegex.exec(text)) !== null) {
     const start = m.index;
     const end = start + m[0].length;
-    if (offset > start && offset < end) {
+    if (offset > start && offset <= end) {
       return collapseTokenAndInsertSpace(start, end, 'bold', m[0], m[1]);
     }
   }
@@ -373,7 +407,7 @@ export const tryCollapseTokenAtCaretOnEnter = ({ node, offset, editModeOptions, 
     const fullMatch = m[0].substring(prefix.length);
     const start = m.index + prefix.length;
     const end = start + fullMatch.length;
-    if (offset > start && offset < end) {
+    if (offset > start && offset <= end) {
       return collapseTokenAndInsertSpace(start, end, 'italic', fullMatch, m[1]);
     }
   }
@@ -383,7 +417,7 @@ export const tryCollapseTokenAtCaretOnEnter = ({ node, offset, editModeOptions, 
   while ((m = codeRegex.exec(text)) !== null) {
     const start = m.index;
     const end = start + m[0].length;
-    if (offset > start && offset < end) {
+    if (offset > start && offset <= end) {
       return collapseTokenAndInsertSpace(start, end, 'code', m[0], m[1]);
     }
   }
@@ -393,7 +427,7 @@ export const tryCollapseTokenAtCaretOnEnter = ({ node, offset, editModeOptions, 
   while ((m = uRegex.exec(text)) !== null) {
     const start = m.index;
     const end = start + m[0].length;
-    if (offset > start && offset < end) {
+    if (offset > start && offset <= end) {
       return collapseTokenAndInsertSpace(start, end, 'underline', m[0], m[1]);
     }
   }
@@ -403,7 +437,7 @@ export const tryCollapseTokenAtCaretOnEnter = ({ node, offset, editModeOptions, 
   while ((m = sRegex.exec(text)) !== null) {
     const start = m.index;
     const end = start + m[0].length;
-    if (offset > start && offset < end) {
+    if (offset > start && offset <= end) {
       return collapseTokenAndInsertSpace(start, end, 'strike', m[0], m[1]);
     }
   }
@@ -413,7 +447,7 @@ export const tryCollapseTokenAtCaretOnEnter = ({ node, offset, editModeOptions, 
   while ((m = cRegex.exec(text)) !== null) {
     const start = m.index;
     const end = start + m[0].length;
-    if (offset > start && offset < end) {
+    if (offset > start && offset <= end) {
       return collapseTokenAndInsertSpace(start, end, 'color', m[0], m[2]);
     }
   }
@@ -423,7 +457,7 @@ export const tryCollapseTokenAtCaretOnEnter = ({ node, offset, editModeOptions, 
   while ((m = figRegex.exec(text)) !== null) {
     const start = m.index;
     const end = start + m[0].length;
-    if (offset > start && offset < end) {
+    if (offset > start && offset <= end) {
       return collapseTokenAndInsertSpace(start, end, 'fig', m[0], m[1]);
     }
   }
@@ -433,7 +467,7 @@ export const tryCollapseTokenAtCaretOnEnter = ({ node, offset, editModeOptions, 
   while ((m = wikiRegex.exec(text)) !== null) {
     const start = m.index;
     const end = start + m[0].length;
-    if (offset > start && offset < end) {
+    if (offset > start && offset <= end) {
       return collapseTokenAndInsertSpace(start, end, 'wikilink', m[0], m[1]);
     }
   }
@@ -574,14 +608,7 @@ export const handleTextBlockKeyDown = (e, ctx) => {
     return;
   }
 
-  // 3. DISALLOW '$$' BLOCK MATH
-  if (e.key === '$' && range.collapsed) {
-    if (node.nodeType === Node.TEXT_NODE && offset > 0 && node.nodeValue[offset - 1] === '$') {
-      e.preventDefault();
-      showNotice?.();
-      return;
-    }
-  }
+  // 3. ALLOW '$$' DISPLAY MATH (Obsidian parity - display math supported natively)
 
   // 4. AUTO-ENVELOP '\' INTO '$\|$'
   if (e.key === '\\' && range.collapsed) {
@@ -691,6 +718,26 @@ export const handleTextBlockKeyDown = (e, ctx) => {
         triggerUpdate?.();
         return;
       }
+
+      // Backspace right after heading marker
+      if (offset === 0 && node.previousSibling && node.previousSibling.classList && node.previousSibling.classList.contains('heading-marker')) {
+        e.preventDefault();
+        const marker = node.previousSibling;
+        const raw = marker.getAttribute('data-raw') || '';
+        marker.remove();
+        if (curLine) {
+          curLine.className = 'live-line min-h-[1.5em] my-0.5';
+        }
+        const rawRestored = raw.trimEnd();
+        node.nodeValue = rawRestored + node.nodeValue;
+        const r = document.createRange();
+        r.setStart(node, rawRestored.length);
+        r.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(r);
+        triggerUpdate?.();
+        return;
+      }
     }
 
     // Backspace on empty line removes line and moves caret to previous line
@@ -720,7 +767,7 @@ export const handleTextBlockKeyDown = (e, ctx) => {
         (node.nodeType === Node.TEXT_NODE && offset === 0 && (!node.previousSibling || node.previousSibling.tagName === 'BR'))
       );
 
-      if (isAtLineStart && !curLine.querySelector('.live-bullet') && !curLine.querySelector('.live-checkbox')) {
+      if (isAtLineStart && !curLine.querySelector('.live-bullet') && !curLine.querySelector('.live-checkbox') && !curLine.querySelector('.heading-marker')) {
         e.preventDefault();
         const prev = curLine.previousElementSibling;
         if (prev.querySelector('br') && !getLineRawText(prev) && !prev.querySelector('.live-widget')) {
@@ -837,6 +884,244 @@ export const handleTextBlockKeyDown = (e, ctx) => {
       r.collapse(true);
       sel.removeAllRanges();
       sel.addRange(r);
+      triggerUpdate?.();
+      return;
+    }
+
+    const lineRaw = getLineRawText(curLine).trim();
+
+    // A. Closing Code Fence (```) -> Compile multi-line code block!
+    if (/^```\s*$/.test(lineRaw)) {
+      let openLine = null;
+      let lang = '';
+      const codeLines = [];
+      let prev = curLine.previousElementSibling;
+      while (prev) {
+        if (prev.classList.contains('obsidian-code-block') || prev.getAttribute('data-is-raw-block') === 'true') {
+          break;
+        }
+        const prevText = getLineRawText(prev);
+        const match = prevText.trim().match(/^```([a-zA-Z0-9_-]*)$/);
+        if (match) {
+          openLine = prev;
+          lang = match[1] || '';
+          break;
+        }
+        codeLines.unshift(prevText);
+        prev = prev.previousElementSibling;
+      }
+
+      if (openLine) {
+        const content = codeLines.join('\n');
+        const fullRaw = `\`\`\`${lang}\n${content}\n\`\`\``;
+        const codeBlockEl = createLiveBlockElement({
+          type: 'code_block',
+          language: lang,
+          content,
+          raw: fullRaw
+        }, editModeOptions);
+
+        const parent = curLine.parentNode;
+        parent.replaceChild(codeBlockEl, openLine);
+
+        let toRemove = codeBlockEl.nextSibling;
+        while (toRemove) {
+          const next = toRemove.nextSibling;
+          const isTarget = (toRemove === curLine);
+          toRemove.remove();
+          if (isTarget) break;
+          toRemove = next;
+        }
+
+        const newLine = document.createElement('div');
+        newLine.className = 'live-line min-h-[1.5em] my-0.5';
+        newLine.innerHTML = '<br>';
+        parent.insertBefore(newLine, codeBlockEl.nextSibling);
+
+        const r = document.createRange();
+        r.setStart(newLine, 0);
+        r.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(r);
+
+        triggerUpdate?.();
+        return;
+      }
+    }
+
+    // B. Opening Code Fence (```lang) -> Auto-insert closing fence and code line
+    const openCodeMatch = lineRaw.match(/^```([a-zA-Z0-9_-]*)$/);
+    if (openCodeMatch) {
+      const codeLine = document.createElement('div');
+      codeLine.className = 'live-line min-h-[1.5em] my-0.5 font-mono text-sm';
+      codeLine.innerHTML = '<br>';
+
+      const closeFenceLine = document.createElement('div');
+      closeFenceLine.className = 'live-line min-h-[1.5em] my-0.5 font-mono text-sm';
+      closeFenceLine.textContent = '```';
+
+      curLine.parentNode.insertBefore(codeLine, curLine.nextSibling);
+      curLine.parentNode.insertBefore(closeFenceLine, codeLine.nextSibling);
+
+      const r = document.createRange();
+      r.setStart(codeLine, 0);
+      r.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(r);
+
+      triggerUpdate?.();
+      return;
+    }
+
+    // C. Closing Display Math ($$) -> Compile multi-line display math!
+    if (lineRaw === '$$') {
+      let openLine = null;
+      const mathLines = [];
+      let prev = curLine.previousElementSibling;
+      while (prev) {
+        if (prev.classList.contains('obsidian-display-math') || prev.getAttribute('data-is-raw-block') === 'true') {
+          break;
+        }
+        const prevText = getLineRawText(prev);
+        if (prevText.trim() === '$$') {
+          openLine = prev;
+          break;
+        }
+        mathLines.unshift(prevText);
+        prev = prev.previousElementSibling;
+      }
+
+      if (openLine) {
+        const content = mathLines.join('\n');
+        const fullRaw = `$$\n${content}\n$$`;
+        const mathEl = createLiveBlockElement({
+          type: 'display_math',
+          content,
+          raw: fullRaw
+        }, editModeOptions);
+
+        const parent = curLine.parentNode;
+        parent.replaceChild(mathEl, openLine);
+
+        let toRemove = mathEl.nextSibling;
+        while (toRemove) {
+          const next = toRemove.nextSibling;
+          const isTarget = (toRemove === curLine);
+          toRemove.remove();
+          if (isTarget) break;
+          toRemove = next;
+        }
+
+        const newLine = document.createElement('div');
+        newLine.className = 'live-line min-h-[1.5em] my-0.5';
+        newLine.innerHTML = '<br>';
+        parent.insertBefore(newLine, mathEl.nextSibling);
+
+        const r = document.createRange();
+        r.setStart(newLine, 0);
+        r.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(r);
+
+        triggerUpdate?.();
+        return;
+      }
+
+      // If no matching openLine, auto-insert empty math line and closing $$
+      const mathLine = document.createElement('div');
+      mathLine.className = 'live-line min-h-[1.5em] my-0.5 font-mono text-sm';
+      mathLine.innerHTML = '<br>';
+
+      const closeMathLine = document.createElement('div');
+      closeMathLine.className = 'live-line min-h-[1.5em] my-0.5 font-mono text-sm';
+      closeMathLine.textContent = '$$';
+
+      curLine.parentNode.insertBefore(mathLine, curLine.nextSibling);
+      curLine.parentNode.insertBefore(closeMathLine, mathLine.nextSibling);
+
+      const r = document.createRange();
+      r.setStart(mathLine, 0);
+      r.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(r);
+
+      triggerUpdate?.();
+      return;
+    }
+
+    // D. Single-line Display Math ($$...$$)
+    const singleMathMatch = lineRaw.match(/^\$\$([^\n]+?)\$\$$/);
+    if (singleMathMatch) {
+      const mathContent = singleMathMatch[1];
+      const mathEl = createLiveBlockElement({
+        type: 'display_math',
+        content: mathContent,
+        raw: lineRaw
+      }, editModeOptions);
+
+      const parent = curLine.parentNode;
+      parent.replaceChild(mathEl, curLine);
+
+      const newLine = document.createElement('div');
+      newLine.className = 'live-line min-h-[1.5em] my-0.5';
+      newLine.innerHTML = '<br>';
+      parent.insertBefore(newLine, mathEl.nextSibling);
+
+      const r = document.createRange();
+      r.setStart(newLine, 0);
+      r.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(r);
+
+      triggerUpdate?.();
+      return;
+    }
+
+    // E. Horizontal Rule (---, ***, ___)
+    if (/^(-{3,}|\*{3,}|_{3,})$/.test(lineRaw)) {
+      const hrEl = createLiveBlockElement({
+        type: 'horizontal_rule',
+        raw: lineRaw
+      }, editModeOptions);
+
+      const parent = curLine.parentNode;
+      parent.replaceChild(hrEl, curLine);
+
+      const newLine = document.createElement('div');
+      newLine.className = 'live-line min-h-[1.5em] my-0.5';
+      newLine.innerHTML = '<br>';
+      parent.insertBefore(newLine, hrEl.nextSibling);
+
+      const r = document.createRange();
+      r.setStart(newLine, 0);
+      r.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(r);
+
+      triggerUpdate?.();
+      return;
+    }
+
+    // F. Heading on Enter -> ensures formatted heading and cleanly creates normal empty line below
+    const headingPrefixMatch = getLineRawText(curLine).match(/^(#{1,6})\s+(.*)$/);
+    if (curLine.classList.contains('live-heading') || headingPrefixMatch) {
+      let targetHeadingEl = curLine;
+      if (!curLine.classList.contains('live-heading') && headingPrefixMatch) {
+        targetHeadingEl = renderSingleLineToDom(getLineRawText(curLine), editModeOptions);
+        curLine.parentNode.replaceChild(targetHeadingEl, curLine);
+      }
+
+      const newLine = document.createElement('div');
+      newLine.className = 'live-line min-h-[1.5em] my-0.5';
+      newLine.innerHTML = '<br>';
+      targetHeadingEl.parentNode.insertBefore(newLine, targetHeadingEl.nextSibling);
+
+      const r = document.createRange();
+      r.setStart(newLine, 0);
+      r.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(r);
+
       triggerUpdate?.();
       return;
     }
@@ -1029,3 +1314,186 @@ export const handleTextBlockKeyDown = (e, ctx) => {
     triggerUpdate?.();
   }
 };
+
+/**
+ * Scans liveSurface to compile any complete, closed blocks (fenced code blocks, display math,
+ * horizontal rules, headings) that are not currently being edited by the caret.
+ */
+export const scanAndCompileCompletedBlocks = (liveSurface, editModeOptions, triggerUpdate) => {
+  if (!liveSurface) return;
+
+  const sel = window.getSelection();
+  const activeNode = (sel && sel.rangeCount > 0) ? sel.anchorNode : null;
+  const activeLine = activeNode ? getContainingLine(activeNode, liveSurface) : null;
+
+  const children = Array.from(liveSurface.children);
+  let changed = false;
+
+  for (let i = 0; i < children.length; i++) {
+    const el = children[i];
+    if (!el || !el.parentNode) continue;
+
+    // Skip elements that are already live block widgets or raw block editors
+    if (el.classList.contains('obsidian-code-block') ||
+        el.classList.contains('obsidian-display-math') ||
+        el.classList.contains('obsidian-table-block') ||
+        el.classList.contains('obsidian-callout') ||
+        el.classList.contains('live-hr') ||
+        el.getAttribute('data-is-raw-block') === 'true') {
+      continue;
+    }
+
+    const raw = getLineRawText(el);
+    const trimmed = raw.trim();
+
+    // 1. Single-line Horizontal Rule (---, ***, ___)
+    if (/^(-{3,}|\*{3,}|_{3,})$/.test(trimmed)) {
+      if (el !== activeLine) {
+        const hrEl = createLiveBlockElement({ type: 'horizontal_rule', raw: trimmed }, editModeOptions);
+        liveSurface.replaceChild(hrEl, el);
+        changed = true;
+        continue;
+      }
+    }
+
+    // 2. Single-line Display Math ($$...$$)
+    const singleMathMatch = trimmed.match(/^\$\$([^\n]+?)\$\$$/);
+    if (singleMathMatch) {
+      if (el !== activeLine) {
+        const mathEl = createLiveBlockElement({
+          type: 'display_math',
+          content: singleMathMatch[1],
+          raw: trimmed
+        }, editModeOptions);
+        liveSurface.replaceChild(mathEl, el);
+        changed = true;
+        continue;
+      }
+    }
+
+    // 3. Headings (# Heading)
+    const headingMatch = raw.match(/^(#{1,6})\s+(.*)$/);
+    if (headingMatch && !el.classList.contains('live-heading')) {
+      if (el !== activeLine) {
+        const headingEl = renderSingleLineToDom(raw, editModeOptions);
+        liveSurface.replaceChild(headingEl, el);
+        changed = true;
+        continue;
+      }
+    }
+
+    // 4. Multi-line Fenced Code Block (```lang ... ```)
+    const codeOpenMatch = trimmed.match(/^```([a-zA-Z0-9_-]*)$/);
+    if (codeOpenMatch) {
+      const lang = codeOpenMatch[1] || '';
+      let closeIdx = -1;
+      for (let j = i + 1; j < children.length; j++) {
+        const nextEl = children[j];
+        if (!nextEl || !nextEl.parentNode) break;
+        if (nextEl.classList.contains('obsidian-code-block') || nextEl.getAttribute('data-is-raw-block') === 'true') {
+          break;
+        }
+        const nextRaw = getLineRawText(nextEl).trim();
+        if (/^```$/.test(nextRaw)) {
+          closeIdx = j;
+          break;
+        }
+      }
+
+      if (closeIdx !== -1) {
+        let isCaretInside = false;
+        if (activeLine) {
+          for (let k = i; k <= closeIdx; k++) {
+            if (children[k] === activeLine) {
+              isCaretInside = true;
+              break;
+            }
+          }
+        }
+
+        if (!isCaretInside) {
+          const codeLines = [];
+          for (let k = i + 1; k < closeIdx; k++) {
+            codeLines.push(getLineRawText(children[k]));
+          }
+          const content = codeLines.join('\n');
+          const fullRaw = `\`\`\`${lang}\n${content}\n\`\`\``;
+          const codeBlockEl = createLiveBlockElement({
+            type: 'code_block',
+            language: lang,
+            content,
+            raw: fullRaw
+          }, editModeOptions);
+
+          liveSurface.replaceChild(codeBlockEl, children[i]);
+          for (let k = i + 1; k <= closeIdx; k++) {
+            if (children[k] && children[k].parentNode === liveSurface) {
+              children[k].remove();
+            }
+          }
+          changed = true;
+          i = closeIdx;
+          continue;
+        }
+      }
+    }
+
+    // 5. Multi-line Display Math ($$ ... $$)
+    if (trimmed === '$$') {
+      let closeIdx = -1;
+      for (let j = i + 1; j < children.length; j++) {
+        const nextEl = children[j];
+        if (!nextEl || !nextEl.parentNode) break;
+        if (nextEl.classList.contains('obsidian-display-math') || nextEl.getAttribute('data-is-raw-block') === 'true') {
+          break;
+        }
+        const nextRaw = getLineRawText(nextEl).trim();
+        if (nextRaw === '$$') {
+          closeIdx = j;
+          break;
+        }
+      }
+
+      if (closeIdx !== -1) {
+        let isCaretInside = false;
+        if (activeLine) {
+          for (let k = i; k <= closeIdx; k++) {
+            if (children[k] === activeLine) {
+              isCaretInside = true;
+              break;
+            }
+          }
+        }
+
+        if (!isCaretInside) {
+          const mathLines = [];
+          for (let k = i + 1; k < closeIdx; k++) {
+            mathLines.push(getLineRawText(children[k]));
+          }
+          const content = mathLines.join('\n');
+          const fullRaw = `$$\n${content}\n$$`;
+          const mathEl = createLiveBlockElement({
+            type: 'display_math',
+            content,
+            raw: fullRaw
+          }, editModeOptions);
+
+          liveSurface.replaceChild(mathEl, children[i]);
+          for (let k = i + 1; k <= closeIdx; k++) {
+            if (children[k] && children[k].parentNode === liveSurface) {
+              children[k].remove();
+            }
+          }
+          changed = true;
+          i = closeIdx;
+          continue;
+        }
+      }
+    }
+  }
+
+  if (changed) {
+    triggerUpdate?.();
+  }
+};
+

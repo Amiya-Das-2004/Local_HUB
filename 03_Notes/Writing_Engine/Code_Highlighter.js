@@ -27,7 +27,7 @@ export function syncHighlightTheme() {
     link.setAttribute('href', targetUrl);
   }
 
-  // Inject transparent hljs background reset once so container themes seamlessly
+  // Inject transparent hljs background and theme-adaptive code block styling once
   if (!document.getElementById('hljs-transparent-style')) {
     const style = document.createElement('style');
     style.id = 'hljs-transparent-style';
@@ -36,6 +36,37 @@ export function syncHighlightTheme() {
       code.hljs {
         background: transparent !important;
         padding: 0 !important;
+      }
+      .obsidian-highlighted-code-block {
+        background-color: #202332;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        color: #abb2bf;
+        transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+      }
+      .obsidian-code-disguised-btn {
+        background-color: #141622;
+        color: #94a3b8;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        transition: all 0.15s ease;
+      }
+      .obsidian-code-disguised-btn:hover {
+        background-color: #0d0f17;
+        color: #f8fafc;
+      }
+
+      [data-theme="light"] .obsidian-highlighted-code-block {
+        background-color: #f3f4f8;
+        border: 1px solid #e0e2ea;
+        color: #1f2937;
+      }
+      [data-theme="light"] .obsidian-code-disguised-btn {
+        background-color: #e2e5ec;
+        color: #475569;
+        border: 1px solid #d1d5e0;
+      }
+      [data-theme="light"] .obsidian-code-disguised-btn:hover {
+        background-color: #d8dce6;
+        color: #0f172a;
       }
     `;
     document.head.appendChild(style);
@@ -89,36 +120,64 @@ export function highlightCode(code, language = 'javascript') {
 }
 
 export function createHighlightedCodeBlock(code, language = 'javascript', title = '') {
+  ensureHighlightJsLoaded();
   const container = document.createElement('div');
-  container.className = 'my-1 rounded-lg overflow-hidden border border-[var(--border)] bg-[#1e2233] text-xs font-mono';
+  container.className = 'obsidian-highlighted-code-block group relative my-2 rounded-lg text-xs font-mono select-text overflow-hidden';
 
-  const header = document.createElement('div');
-  header.className = 'flex justify-between items-center px-3 py-1.5 bg-[#181b27] border-b border-[var(--border)] text-gray-400 select-none';
-  header.innerHTML = `
-    <span class="font-bold uppercase tracking-wider text-[10px] text-purple-400">${escapeHtml(title || language)}</span>
-    <button class="copy-btn hover:text-white transition-colors" type="button" title="Copy code">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-    </button>
-  `;
+  // Language display in top-right corner, disguised as a copy button
+  const displayLang = title || language || '';
+  const copyBtn = document.createElement('button');
+  copyBtn.type = 'button';
+  copyBtn.className = 'obsidian-code-disguised-btn absolute top-2 right-2.5 z-10 px-2.5 py-0.5 rounded text-[11px] font-mono select-none cursor-pointer flex items-center gap-1 shadow-2xs';
+  copyBtn.title = 'Copy code';
+
+  const renderBadgeContent = (text, isCopy = false) => {
+    if (isCopy) {
+      return `
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        <span>Copy</span>
+      `;
+    }
+    return `<span>${escapeHtml(text || 'Copy')}</span>`;
+  };
+
+  copyBtn.innerHTML = renderBadgeContent(displayLang, !displayLang);
+
+  if (displayLang) {
+    copyBtn.addEventListener('mouseenter', () => {
+      if (copyBtn.getAttribute('data-copied') !== 'true') {
+        copyBtn.innerHTML = renderBadgeContent('Copy', true);
+      }
+    });
+    copyBtn.addEventListener('mouseleave', () => {
+      if (copyBtn.getAttribute('data-copied') !== 'true') {
+        copyBtn.innerHTML = renderBadgeContent(displayLang, false);
+      }
+    });
+  }
+
+  copyBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(code);
+    }
+    copyBtn.setAttribute('data-copied', 'true');
+    copyBtn.innerHTML = '<span class="text-green-500 font-bold">Copied!</span>';
+    setTimeout(() => {
+      copyBtn.removeAttribute('data-copied');
+      copyBtn.innerHTML = renderBadgeContent(displayLang, !displayLang);
+    }, 1300);
+  });
 
   const pre = document.createElement('pre');
-  pre.className = 'p-3 overflow-x-auto text-[#abb2bf] m-0';
+  pre.className = 'p-3.5 pr-20 overflow-x-auto m-0 text-xs leading-relaxed font-mono select-text bg-transparent';
   const codeEl = document.createElement('code');
-  codeEl.className = `language-${language}`;
+  codeEl.className = `language-${language} select-text`;
   codeEl.innerHTML = highlightCode(code, language);
   pre.appendChild(codeEl);
 
-  container.appendChild(header);
+  container.appendChild(copyBtn);
   container.appendChild(pre);
-
-  const copyBtn = header.querySelector('.copy-btn');
-  copyBtn.addEventListener('click', () => {
-    navigator.clipboard.writeText(code);
-    copyBtn.innerHTML = '<span class="text-green-400 font-bold">✓</span>';
-    setTimeout(() => {
-      copyBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
-    }, 1500);
-  });
 
   return container;
 }

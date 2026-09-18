@@ -289,11 +289,24 @@ export function fixTikzSvgGlyphs(container) {
   const textElements = container.querySelectorAll('text');
   textElements.forEach(el => {
     const style = el.getAttribute('style') || '';
+
+    // 1. cmsy10 / cmbsy10 font encoding fixes:
+    // In BaKoMa cmsy, ASCII 124 maps to glyph 18 ('club' ♣), while 106 ('j') maps to | and 107 ('k') maps to ||.
     if (/font-family:\s*(?:cmbsy|cmsy)\d*/i.test(style) || /cmsy/i.test(el.style?.fontFamily || '')) {
       if (el.innerHTML && (/&#124;|\||&#8741;|\u2225/.test(el.innerHTML) || /\||\u2225/.test(el.textContent || ''))) {
         el.innerHTML = el.innerHTML
           .replace(/&#124;|\|/g, '&#106;')
           .replace(/&#8741;|\u2225/g, '&#107;');
+      }
+    }
+
+    // 2. cmmi10 / cmmib10 vector arrow (\vec) encoding fix:
+    // TikZJax maps DVI char 126 (\vec accent) to Unicode &#8407; (U+20D7).
+    // In BaKoMa cmmi TrueType fonts, codepoint 8407 is unmapped; the authentic 'vector' glyph is at ASCII 126 (~).
+    if (/font-family:\s*(?:cmmib|cmmi)\d*/i.test(style) || /cmmi/i.test(el.style?.fontFamily || '')) {
+      if (el.innerHTML && (/&#8407;|\u20D7/.test(el.innerHTML) || /\u20D7/.test(el.textContent || ''))) {
+        el.innerHTML = el.innerHTML
+          .replace(/&#8407;|\u20D7/g, '&#126;');
       }
     }
   });
