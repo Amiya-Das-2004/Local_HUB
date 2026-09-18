@@ -4,7 +4,7 @@
  */
 
 import { createLiveWidget } from './Text_Widgets.js';
-import { parseTextToFragment, renderSingleLineToDom, getNumberForLineAtIndent, isBulletMathSymbol } from './Text_Parser.js';
+import { parseTextToFragment, renderSingleLineToDom, getNumberForLineAtIndent, isBulletMathSymbol, deleteSelectionAndHeal } from './Text_Parser.js';
 import { createLiveBlockElement } from './Text_Block_Markdown.js';
 import { renderKatex } from '../../../Writing_Engine/Math_Renderer.js';
 
@@ -63,8 +63,23 @@ export const renumberSubsequentListItems = (startLineEl) => {
 };
 
 // Helper to find the containing line <div> of any node
-export const getContainingLine = (node, rootEl) => {
-  if (!node) return null;
+export const getContainingLine = (node, rootEl, offset = 0) => {
+  if (!node || !rootEl) return null;
+  if (node === rootEl) {
+    if (rootEl.childNodes.length > 0) {
+      const idx = Math.min(Math.max(0, offset), rootEl.childNodes.length - 1);
+      const target = rootEl.childNodes[idx];
+      return (target && target.nodeType === Node.ELEMENT_NODE) ? target : rootEl.firstElementChild;
+    }
+    return null;
+  }
+  if (node.parentNode === rootEl && node.nodeType === Node.TEXT_NODE) {
+    const line = document.createElement('div');
+    line.className = 'live-line min-h-[1.5em] my-0.5';
+    rootEl.replaceChild(line, node);
+    line.appendChild(node);
+    return line;
+  }
   let el = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
   while (el && el !== rootEl) {
     if (el.parentNode === rootEl) return el;
@@ -657,6 +672,13 @@ export const handleTextBlockKeyDown = (e, ctx) => {
     }
   }
 
+  // 4.5. SELECTION DELETION: Cleanly delete and heal lines when text is selected
+  if ((e.key === 'Backspace' || e.key === 'Delete') && !range.collapsed) {
+    e.preventDefault();
+    deleteSelectionAndHeal(range, liveSurface, editModeOptions, triggerUpdate);
+    return;
+  }
+
   // 5. BACKSPACE UNDO: Deleting inside empty tokens deletes entire wrapper cleanly
   if (e.key === 'Backspace' && range.collapsed) {
     const curLine = getContainingLine(node, liveSurface);
@@ -757,7 +779,8 @@ export const handleTextBlockKeyDown = (e, ctx) => {
 
         const isCaretAtPrefixJunction = (
           (node.nodeType === Node.TEXT_NODE && offset === 0 && node.previousSibling === prefix) ||
-          (node === curLine && offset === (Array.from(curLine.childNodes).indexOf(prefix) + 1))
+          (node === curLine && offset <= (Array.from(curLine.childNodes).indexOf(prefix) + 1)) ||
+          (prefix.contains(node))
         );
 
         if (isCaretAtPrefixJunction || !remainingText.trim()) {
@@ -822,6 +845,13 @@ export const handleTextBlockKeyDown = (e, ctx) => {
 
           triggerUpdate?.();
           return;
+        } else {
+          // Solitary line in block: preserve container and <br>
+          e.preventDefault();
+          if (!curLine.firstChild || curLine.innerHTML === '') {
+            curLine.innerHTML = '<br>';
+          }
+          return;
         }
       }
 
@@ -851,45 +881,52 @@ export const handleTextBlockKeyDown = (e, ctx) => {
         return false;
       })();
 
-      if (isAtLineStart && curLine.previousElementSibling && !curLine.querySelector('.live-bullet') && !curLine.querySelector('.live-checkbox') && !curLine.querySelector('.heading-marker')) {
-        e.preventDefault();
-        const prev = curLine.previousElementSibling;
-        if (prev.querySelector('br') && !getLineRawText(prev) && !prev.querySelector('.live-widget')) {
-          prev.innerHTML = '';
-        }
-
-        const lastChild = prev.lastChild;
-        let targetCaretNode = null;
-        let targetCaretOffset = 0;
-
-        if (lastChild && lastChild.nodeType === Node.TEXT_NODE) {
-          targetCaretNode = lastChild;
-          targetCaretOffset = lastChild.nodeValue.length;
-        } else {
-          const bridge = document.createTextNode('');
-          prev.appendChild(bridge);
-          targetCaretNode = bridge;
-          targetCaretOffset = 0;
-        }
-
-        while (curLine.firstChild) {
-          const child = curLine.firstChild;
-          if (child.tagName === 'BR' && curLine.childNodes.length > 1) {
-            child.remove();
-          } else {
-            prev.appendChild(child);
+      if (isAtLineStart) {
+        if (curLine.previousElementSibling && !curLine.querySelector('.live-bullet') && !curLine.querySelector('.live-checkbox') && !curLine.querySelector('.heading-marker')) {
+          e.preventDefault();
+          const prev = curLine.previousElementSibling;
+          if (prev.querySelector('br') && !getLineRawText(prev) && !prev.querySelector('.live-widget')) {
+            prev.innerHTML = '';
           }
+
+          const lastChild = prev.lastChild;
+          let targetCaretNode = null;
+          let targetCaretOffset = 0;
+
+          if (lastChild && lastChild.nodeType === Node.TEXT_NODE) {
+            targetCaretNode = lastChild;
+            targetCaretOffset = lastChild.nodeValue.length;
+          } else {
+            const bridge = document.createTextNode('');
+            prev.appendChild(bridge);
+            targetCaretNode = bridge;
+            targetCaretOffset = 0;
+          }
+
+          while (curLine.firstChild) {
+            const child = curLine.firstChild;
+            if (child.tagName === 'BR' && curLine.childNodes.length > 1) {
+              child.remove();
+            } else {
+              prev.appendChild(child);
+            }
+          }
+          curLine.remove();
+
+          const newRange = document.createRange();
+          newRange.setStart(targetCaretNode, targetCaretOffset);
+          newRange.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+
+          triggerUpdate?.();
+          return;
+        } else if (!curLine.previousElementSibling && !curLine.querySelector('.live-bullet') && !curLine.querySelector('.live-checkbox') && !curLine.querySelector('.heading-marker')) {
+          // Line 1 is the first line! Caret is at offset 0 and there is no previous line.
+          // Intercept to prevent browser from unwrapping or destroying Line 1's container.
+          e.preventDefault();
+          return;
         }
-        curLine.remove();
-
-        const newRange = document.createRange();
-        newRange.setStart(targetCaretNode, targetCaretOffset);
-        newRange.collapse(true);
-        sel.removeAllRanges();
-        sel.addRange(newRange);
-
-        triggerUpdate?.();
-        return;
       }
     }
   }
@@ -903,18 +940,27 @@ export const handleTextBlockKeyDown = (e, ctx) => {
       const isLineEmpty = hasOnlyBr || (!lineText && !curLine.querySelector('.live-widget') && !curLine.querySelector('.heading-marker'));
 
       // If curLine is empty and there is a next line, delete curLine and focus next line
-      if (isLineEmpty && curLine.nextElementSibling) {
-        e.preventDefault();
-        const next = curLine.nextElementSibling;
-        curLine.remove();
-        renumberSubsequentListItems(next);
-        const newRange = document.createRange();
-        newRange.selectNodeContents(next);
-        newRange.collapse(true);
-        sel.removeAllRanges();
-        sel.addRange(newRange);
-        triggerUpdate?.();
-        return;
+      if (isLineEmpty) {
+        if (curLine.nextElementSibling) {
+          e.preventDefault();
+          const next = curLine.nextElementSibling;
+          curLine.remove();
+          renumberSubsequentListItems(next);
+          const newRange = document.createRange();
+          newRange.selectNodeContents(next);
+          newRange.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+          triggerUpdate?.();
+          return;
+        } else {
+          // Solitary line in block: preserve container and <br>
+          e.preventDefault();
+          if (!curLine.firstChild || curLine.innerHTML === '') {
+            curLine.innerHTML = '<br>';
+          }
+          return;
+        }
       }
 
       // If caret is at the end of curLine and there is a next line, merge next line into curLine
@@ -1046,7 +1092,10 @@ export const handleTextBlockKeyDown = (e, ctx) => {
       collapseExpandedNode?.();
     }
 
-    const curLine = getContainingLine(node, liveSurface);
+    let curLine = getContainingLine(node, liveSurface, offset);
+    if (!curLine) {
+      curLine = liveSurface.firstElementChild;
+    }
     if (!curLine) {
       const newLine = document.createElement('div');
       newLine.className = 'live-line min-h-[1.5em] my-0.5';

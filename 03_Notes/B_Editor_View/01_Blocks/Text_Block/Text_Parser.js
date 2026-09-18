@@ -83,6 +83,12 @@ export const serializeElement = (rootEl) => {
           }
         }
         if (n.tagName === 'BR') {
+          if (n.parentNode === node && node.childNodes.length === 1) {
+            return;
+          }
+          if (n.parentNode === node && n === node.lastChild && node.childNodes.length > 1) {
+            return;
+          }
           result += '\n';
           return;
         }
@@ -334,4 +340,292 @@ export const renderSingleLineToDom = (rawLine, options = {}) => {
   // Normal line with inline tokens
   lineEl.appendChild(parseTextToFragment(rawLine, options));
   return lineEl;
+};
+
+/**
+ * Finds the top-level containing line element inside rootEl for any node
+ */
+export const getContainingLine = (node, rootEl, offset = 0) => {
+  if (!node || !rootEl) return null;
+  if (node === rootEl) {
+    if (rootEl.childNodes.length > 0) {
+      const idx = Math.min(Math.max(0, offset), rootEl.childNodes.length - 1);
+      const target = rootEl.childNodes[idx];
+      return (target && target.nodeType === Node.ELEMENT_NODE) ? target : rootEl.firstElementChild;
+    }
+    return null;
+  }
+  if (node.parentNode === rootEl && node.nodeType === Node.TEXT_NODE) {
+    const line = document.createElement('div');
+    line.className = 'live-line min-h-[1.5em] my-0.5';
+    rootEl.replaceChild(line, node);
+    line.appendChild(node);
+    return line;
+  }
+  let el = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
+  while (el && el !== rootEl) {
+    if (el.parentNode === rootEl) return el;
+    el = el.parentElement;
+  }
+  return null;
+};
+
+/**
+ * Extracts raw markdown text from any DOM node or line element preserving data-raw tokens
+ */
+export const getLineRawText = (node) => {
+  if (!node) return '';
+  let result = '';
+  const traverse = (n) => {
+    if (n.nodeType === Node.TEXT_NODE) {
+      result += n.nodeValue;
+      return;
+    }
+    if (n.nodeType === Node.ELEMENT_NODE) {
+      if (n !== node && n.classList && (n.classList.contains('live-widget') || n.hasAttribute('data-raw'))) {
+        const raw = n.getAttribute('data-raw');
+        if (raw !== null) {
+          result += raw;
+          return;
+        }
+      }
+      if (n.tagName === 'BR') return;
+      for (let i = 0; i < n.childNodes.length; i++) {
+        traverse(n.childNodes[i]);
+      }
+    }
+  };
+  traverse(node);
+  return result;
+};
+
+/**
+ * Accurately positions the selection caret at a specific character offset in a rendered line element
+ */
+export const setCaretAtOffsetInLine = (lineEl, targetCharOffset) => {
+  if (!lineEl) return;
+  const sel = window.getSelection();
+  if (!sel) return;
+
+  let accumulated = 0;
+  let targetNode = null;
+  let targetOffset = 0;
+
+  const traverse = (node) => {
+    if (targetNode) return;
+
+    if (node.nodeType === Node.TEXT_NODE) {
+      const len = (node.nodeValue || '').length;
+      if (accumulated + len >= targetCharOffset) {
+        targetNode = node;
+        targetOffset = Math.max(0, Math.min(len, targetCharOffset - accumulated));
+        return;
+      }
+      accumulated += len;
+      return;
+    }
+
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      if (node !== lineEl && node.classList && (node.classList.contains('live-widget') || node.hasAttribute('data-raw'))) {
+        const raw = node.getAttribute('data-raw') || '';
+        const len = raw.length;
+        if (accumulated + len >= targetCharOffset) {
+          if (node.parentNode) {
+            const childIdx = Array.from(node.parentNode.childNodes).indexOf(node);
+            if (targetCharOffset >= accumulated + Math.ceil(len / 2)) {
+              targetNode = node.parentNode;
+              targetOffset = childIdx + 1;
+            } else {
+              targetNode = node.parentNode;
+              targetOffset = childIdx;
+            }
+          }
+          return;
+        }
+        accumulated += len;
+        return;
+      }
+
+      for (let i = 0; i < node.childNodes.length; i++) {
+        traverse(node.childNodes[i]);
+        if (targetNode) return;
+      }
+    }
+  };
+
+  traverse(lineEl);
+
+  const range = document.createRange();
+  if (targetNode) {
+    try {
+      range.setStart(targetNode, targetOffset);
+      range.collapse(true);
+    } catch (e) {
+      range.selectNodeContents(lineEl);
+      range.collapse(false);
+    }
+  } else {
+    range.selectNodeContents(lineEl);
+    range.collapse(false);
+  }
+
+  sel.removeAllRanges();
+  sel.addRange(range);
+};
+
+/**
+ * Splits a line's raw markdown text into beforeCaret and afterCaret strings at the given anchor point
+ */
+export const getLineCaretSplit = (lineEl, anchorNode, anchorOffset = 0) => {
+  if (!lineEl) return { beforeText: '', afterText: '' };
+
+  let beforeText = '';
+  let afterText = '';
+  let reachedCaret = false;
+
+  const traverse = (node) => {
+    if (reachedCaret) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        afterText += node.nodeValue;
+        return;
+      }
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        if (node !== lineEl && node.classList && (node.classList.contains('live-widget') || node.hasAttribute('data-raw'))) {
+          afterText += node.getAttribute('data-raw') || '';
+          return;
+        }
+        if (node.tagName === 'BR') return;
+        for (let i = 0; i < node.childNodes.length; i++) {
+          traverse(node.childNodes[i]);
+        }
+      }
+      return;
+    }
+
+    if (node === anchorNode) {
+      reachedCaret = true;
+      if (node.nodeType === Node.TEXT_NODE) {
+        const val = node.nodeValue || '';
+        const offset = Math.max(0, Math.min(val.length, anchorOffset));
+        beforeText += val.slice(0, offset);
+        afterText += val.slice(offset);
+      } else if (node.nodeType === Node.ELEMENT_NODE) {
+        for (let i = 0; i < node.childNodes.length; i++) {
+          if (i < anchorOffset) {
+            beforeText += getLineRawText(node.childNodes[i]);
+          } else {
+            afterText += getLineRawText(node.childNodes[i]);
+          }
+        }
+      }
+      return;
+    }
+
+    if (node.nodeType === Node.TEXT_NODE) {
+      beforeText += node.nodeValue;
+      return;
+    }
+
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      if (node !== lineEl && node.classList && (node.classList.contains('live-widget') || node.hasAttribute('data-raw'))) {
+        beforeText += node.getAttribute('data-raw') || '';
+        return;
+      }
+      if (node.tagName === 'BR') return;
+      for (let i = 0; i < node.childNodes.length; i++) {
+        traverse(node.childNodes[i]);
+      }
+    }
+  };
+
+  traverse(lineEl);
+
+  if (!reachedCaret) {
+    return { beforeText: getLineRawText(lineEl), afterText: '' };
+  }
+
+  return { beforeText, afterText };
+};
+
+/**
+ * Extracts clean, pristine markdown from any selection range inside rootEl,
+ * preventing KaTeX DOM / MathML fragment leakage.
+ */
+export const serializeSelection = (range, rootEl) => {
+  if (!range || range.collapsed) return '';
+
+  const startLine = getContainingLine(range.startContainer, rootEl) || rootEl.firstChild;
+  const endLine = getContainingLine(range.endContainer, rootEl) || rootEl.lastChild;
+
+  if (!startLine || !endLine) return '';
+
+  if (startLine === endLine) {
+    const splitStart = getLineCaretSplit(startLine, range.startContainer, range.startOffset);
+    const splitEnd = getLineCaretSplit(startLine, range.endContainer, range.endOffset);
+
+    const afterLen = splitEnd.afterText.length;
+    if (afterLen > 0) {
+      return splitStart.afterText.slice(0, splitStart.afterText.length - afterLen);
+    }
+    return splitStart.afterText;
+  }
+
+  // Multiline selection
+  const firstPart = getLineCaretSplit(startLine, range.startContainer, range.startOffset).afterText;
+  const lastPart = getLineCaretSplit(endLine, range.endContainer, range.endOffset).beforeText;
+
+  const intermediateParts = [];
+  let cur = startLine.nextElementSibling;
+  while (cur && cur !== endLine) {
+    intermediateParts.push(getLineRawText(cur));
+    cur = cur.nextElementSibling;
+  }
+
+  return [firstPart, ...intermediateParts, lastPart].join('\n');
+};
+
+/**
+ * Deletes a selection range cleanly across single or multiple lines,
+ * merging line boundaries and re-rendering to heal formatting.
+ */
+export const deleteSelectionAndHeal = (range, rootEl, editModeOptions = {}, triggerUpdate = null) => {
+  if (!range || range.collapsed) return;
+
+  const startLine = getContainingLine(range.startContainer, rootEl) || rootEl.firstChild;
+  const endLine = getContainingLine(range.endContainer, rootEl) || rootEl.lastChild;
+
+  if (!startLine || !endLine) return;
+
+  if (startLine === endLine) {
+    const splitStart = getLineCaretSplit(startLine, range.startContainer, range.startOffset);
+    const splitEnd = getLineCaretSplit(startLine, range.endContainer, range.endOffset);
+
+    const newLineText = splitStart.beforeText + splitEnd.afterText;
+    const newLineEl = renderSingleLineToDom(newLineText, editModeOptions);
+    rootEl.replaceChild(newLineEl, startLine);
+
+    setCaretAtOffsetInLine(newLineEl, splitStart.beforeText.length);
+    triggerUpdate?.();
+    return;
+  }
+
+  // Cross-line selection
+  const splitStart = getLineCaretSplit(startLine, range.startContainer, range.startOffset);
+  const splitEnd = getLineCaretSplit(endLine, range.endContainer, range.endOffset);
+
+  const mergedLineText = splitStart.beforeText + splitEnd.afterText;
+  const mergedLineEl = renderSingleLineToDom(mergedLineText, editModeOptions);
+
+  let cur = startLine.nextSibling;
+  while (cur) {
+    const next = cur.nextSibling;
+    const isEnd = (cur === endLine);
+    cur.remove();
+    if (isEnd) break;
+    cur = next;
+  }
+
+  rootEl.replaceChild(mergedLineEl, startLine);
+  setCaretAtOffsetInLine(mergedLineEl, splitStart.beforeText.length);
+  triggerUpdate?.();
 };

@@ -20,7 +20,11 @@ import {
   getNumberForLineAtIndent,
   serializeElement,
   parseTextToFragment,
-  renderSingleLineToDom
+  renderSingleLineToDom,
+  serializeSelection,
+  getLineCaretSplit,
+  deleteSelectionAndHeal,
+  setCaretAtOffsetInLine
 } from './Text_Block/Text_Parser.js';
 
 import {
@@ -473,7 +477,44 @@ export function renderTextBlock(
     });
   });
 
+  const ensureSurfaceDomIntegrity = () => {
+    if (!liveSurface.childNodes.length) {
+      const line = document.createElement('div');
+      line.className = 'live-line min-h-[1.5em] my-0.5';
+      line.innerHTML = '<br>';
+      liveSurface.appendChild(line);
+      const r = document.createRange();
+      r.setStart(line, 0);
+      r.collapse(true);
+      const sel = window.getSelection();
+      if (sel) {
+        sel.removeAllRanges();
+        sel.addRange(r);
+      }
+      return;
+    }
+
+    Array.from(liveSurface.childNodes).forEach((child) => {
+      if (child.nodeType === Node.TEXT_NODE) {
+        if (child.nodeValue.length > 0) {
+          const line = document.createElement('div');
+          line.className = 'live-line min-h-[1.5em] my-0.5';
+          liveSurface.replaceChild(line, child);
+          line.appendChild(child);
+        } else {
+          child.remove();
+        }
+      } else if (child.nodeType === Node.ELEMENT_NODE && child.tagName === 'BR') {
+        const line = document.createElement('div');
+        line.className = 'live-line min-h-[1.5em] my-0.5';
+        line.innerHTML = '<br>';
+        liveSurface.replaceChild(line, child);
+      }
+    });
+  };
+
   liveSurface.addEventListener('input', () => {
+    ensureSurfaceDomIntegrity();
     updateKatexPill();
     checkAutoCollapseTokensNearCaret({
       editModeOptions,
@@ -488,91 +529,22 @@ export function renderTextBlock(
     triggerUpdate();
   });
 
-  // Native Clean Paste Handler: captures plain text (chats, Obsidian .md files) without browser HTML distortion
-  liveSurface.addEventListener('paste', (e) => {
+  // Seamless clean cut handler: extracts pure markdown and cleanly heals line boundaries
+  liveSurface.addEventListener('cut', (e) => {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
+
+    const range = sel.getRangeAt(0);
+    const cleanMd = serializeSelection(range, liveSurface);
+    if (!cleanMd) return;
+
     e.preventDefault();
-    const pastedText = (e.clipboardData || window.clipboardData).getData('text/plain');
-    if (!pastedText) return;
+    e.clipboardData.setData('text/plain', cleanMd);
 
-    const hasMarkdownBlocks = /(^|\n)(```|---|===|\$\$|\|[^\n]+\|\n\|[-:\s|]+\||> \[!)/m.test(pastedText);
-
-    if (hasMarkdownBlocks) {
-      // Paste contains full markdown blocks (fenced code blocks, math environments, tables, callouts)
-      const blocks = lexMarkdownBlocks(pastedText);
-      const sel = window.getSelection();
-      const curLine = (sel && sel.rangeCount > 0)
-        ? (getContainingLine(sel.anchorNode, liveSurface) || liveSurface.firstChild)
-        : liveSurface.firstChild;
-
-      let insertTarget = curLine;
-      const isCurrentEmpty = !curLine || !curLine.textContent || curLine.textContent.trim() === '';
-
-      blocks.forEach((blk, bIdx) => {
-        const blkEl = createLiveBlockElement(blk, editModeOptions);
-        if (bIdx === 0 && isCurrentEmpty && curLine && curLine.parentNode === liveSurface) {
-          liveSurface.replaceChild(blkEl, curLine);
-          insertTarget = blkEl;
-        } else if (insertTarget && insertTarget.parentNode === liveSurface) {
-          liveSurface.insertBefore(blkEl, insertTarget.nextSibling);
-          insertTarget = blkEl;
-        } else {
-          liveSurface.appendChild(blkEl);
-          insertTarget = blkEl;
-        }
-      });
-
-      if (insertTarget) {
-        const newRange = document.createRange();
-        newRange.selectNodeContents(insertTarget);
-        newRange.collapse(false);
-        const curSel = window.getSelection();
-        if (curSel) {
-          curSel.removeAllRanges();
-          curSel.addRange(newRange);
-        }
-      }
-    } else if (pastedText.includes('\n')) {
-      const sel = window.getSelection();
-      if (!sel || sel.rangeCount === 0) return;
-      const range = sel.getRangeAt(0);
-      range.deleteContents();
-
-      const pastedLines = pastedText.split('\n');
-      const curLine = getContainingLine(sel.anchorNode, liveSurface) || liveSurface.firstChild;
-
-      if (curLine && curLine.parentNode === liveSurface) {
-        const isCurrentEmpty = !curLine.textContent || curLine.textContent.trim() === '';
-        let insertTarget = curLine;
-
-        pastedLines.forEach((pLine, pIdx) => {
-          const newLineEl = renderSingleLineToDom(pLine, editModeOptions);
-          if (pIdx === 0 && isCurrentEmpty) {
-            liveSurface.replaceChild(newLineEl, curLine);
-            insertTarget = newLineEl;
-          } else {
-            liveSurface.insertBefore(newLineEl, insertTarget.nextSibling);
-            insertTarget = newLineEl;
-          }
-        });
-
-        const newRange = document.createRange();
-        newRange.selectNodeContents(insertTarget);
-        newRange.collapse(false);
-        sel.removeAllRanges();
-        sel.addRange(newRange);
-      } else {
-        pastedLines.forEach((pLine) => {
-          liveSurface.appendChild(renderSingleLineToDom(pLine, editModeOptions));
-        });
-      }
-    } else {
-      document.execCommand('insertText', false, pastedText);
-    }
-
-    triggerUpdate();
+    deleteSelectionAndHeal(range, liveSurface, editModeOptions, triggerUpdate);
   });
 
-  // Seamless clean copy handler: when text inside liveSurface is copied, output clean markdown
+  // Seamless clean copy handler: extracts pure markdown without KaTeX DOM/MathML distortion
   liveSurface.addEventListener('copy', (e) => {
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
@@ -586,14 +558,124 @@ export function renderTextBlock(
       return;
     }
 
-    const cloned = range.cloneContents();
-    const tempDiv = document.createElement('div');
-    tempDiv.appendChild(cloned);
-    const cleanMd = serializeElement(tempDiv);
+    const cleanMd = serializeSelection(range, liveSurface);
     if (cleanMd) {
       e.preventDefault();
       e.clipboardData.setData('text/plain', cleanMd);
     }
+  });
+
+  // Clean, context-aware paste handler: handles inline markdown hydration, multiline splitting, and blocks
+  liveSurface.addEventListener('paste', (e) => {
+    e.preventDefault();
+    let pastedText = (e.clipboardData || window.clipboardData).getData('text/plain');
+    if (!pastedText) return;
+
+    // Normalize Windows/Mac line endings (CRLF -> LF, CR -> LF)
+    pastedText = pastedText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0);
+
+    // If text was selected prior to pasting, delete and heal first
+    if (!range.collapsed) {
+      deleteSelectionAndHeal(range, liveSurface, editModeOptions, null);
+    }
+
+    const freshSel = window.getSelection();
+    if (!freshSel || freshSel.rangeCount === 0) return;
+    const curRange = freshSel.getRangeAt(0);
+
+    const curLine = getContainingLine(curRange.startContainer, liveSurface) || liveSurface.firstChild;
+    if (!curLine || curLine.parentNode !== liveSurface) {
+      const newEl = renderSingleLineToDom(pastedText, editModeOptions);
+      liveSurface.appendChild(newEl);
+      setCaretAtOffsetInLine(newEl, pastedText.length);
+      triggerUpdate();
+      return;
+    }
+
+    // Check if paste contains full markdown blocks (code fences, tables, display math, callouts)
+    const hasMarkdownBlocks = /(^|\n)(```|---|===|\$\$|\|[^\n]+\|\n\|[-:\s|]+\||> \[!)/m.test(pastedText);
+
+    if (hasMarkdownBlocks) {
+      const split = getLineCaretSplit(curLine, curRange.startContainer, curRange.startOffset);
+      const blocks = lexMarkdownBlocks(pastedText);
+
+      const isBeforeEmpty = !split.beforeText.trim();
+      const isAfterEmpty = !split.afterText.trim();
+
+      let insertTarget = curLine;
+      if (!isBeforeEmpty) {
+        const beforeEl = renderSingleLineToDom(split.beforeText, editModeOptions);
+        liveSurface.replaceChild(beforeEl, curLine);
+        insertTarget = beforeEl;
+      }
+
+      blocks.forEach((blk, bIdx) => {
+        const blkEl = createLiveBlockElement(blk, editModeOptions);
+        if (bIdx === 0 && isBeforeEmpty && isAfterEmpty && curLine.parentNode === liveSurface) {
+          liveSurface.replaceChild(blkEl, curLine);
+          insertTarget = blkEl;
+        } else {
+          liveSurface.insertBefore(blkEl, insertTarget.nextSibling);
+          insertTarget = blkEl;
+        }
+      });
+
+      if (!isAfterEmpty) {
+        const afterEl = renderSingleLineToDom(split.afterText, editModeOptions);
+        liveSurface.insertBefore(afterEl, insertTarget.nextSibling);
+      }
+
+      const newR = document.createRange();
+      newR.selectNodeContents(insertTarget);
+      newR.collapse(false);
+      freshSel.removeAllRanges();
+      freshSel.addRange(newR);
+      triggerUpdate();
+      return;
+    }
+
+    // Multiline paste (split existing line at caret)
+    if (pastedText.includes('\n')) {
+      const split = getLineCaretSplit(curLine, curRange.startContainer, curRange.startOffset);
+      const pastedLines = pastedText.split('\n');
+
+      const firstLineText = split.beforeText + pastedLines[0];
+      const lastLineText = pastedLines[pastedLines.length - 1] + split.afterText;
+
+      const firstEl = renderSingleLineToDom(firstLineText, editModeOptions);
+      liveSurface.replaceChild(firstEl, curLine);
+
+      let prevEl = firstEl;
+      for (let i = 1; i < pastedLines.length - 1; i++) {
+        const midEl = renderSingleLineToDom(pastedLines[i], editModeOptions);
+        liveSurface.insertBefore(midEl, prevEl.nextSibling);
+        prevEl = midEl;
+      }
+
+      const lastEl = renderSingleLineToDom(lastLineText, editModeOptions);
+      liveSurface.insertBefore(lastEl, prevEl.nextSibling);
+
+      const caretOffsetInLastLine = pastedLines[pastedLines.length - 1].length;
+      setCaretAtOffsetInLine(lastEl, caretOffsetInLastLine);
+
+      triggerUpdate();
+      return;
+    }
+
+    // Single-line paste (immediate token hydration & caret positioning)
+    const split = getLineCaretSplit(curLine, curRange.startContainer, curRange.startOffset);
+    const combinedLineText = split.beforeText + pastedText + split.afterText;
+    const combinedEl = renderSingleLineToDom(combinedLineText, editModeOptions);
+    liveSurface.replaceChild(combinedEl, curLine);
+
+    const targetCaretOffset = split.beforeText.length + pastedText.length;
+    setCaretAtOffsetInLine(combinedEl, targetCaretOffset);
+
+    triggerUpdate();
   });
 
   // Track cursor movement to update math pill and collapse out-of-focus expanded node/block

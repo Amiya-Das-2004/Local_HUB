@@ -597,14 +597,14 @@
 | `../../../00_Components/06_Color_Selector.js` | `CreateColorSelector` | `renderTextBlock()` |
 | `../../Writing_Engine/Math_Renderer.js` | `renderKatex` | `renderTextBlock()` |
 | `./Block_Actions.js` | `getBlockActionsHTML`, `initBlockActions` | `renderTextBlock()` |
-| `./Text_Block/Text_Parser.js` | `LINE_SPACING_OPTIONS`, `getSpacingValue`, `getSpacingLabel`, `getNumberForLineAtIndent`, `serializeElement`, `parseTextToFragment`, `renderSingleLineToDom` | `renderTextBlock()` |
+| `./Text_Block/Text_Parser.js` | `LINE_SPACING_OPTIONS`, `getSpacingValue`, `getSpacingLabel`, `getNumberForLineAtIndent`, `serializeElement`, `parseTextToFragment`, `renderSingleLineToDom`, `serializeSelection`, `getLineCaretSplit`, `deleteSelectionAndHeal`, `setCaretAtOffsetInLine` | `renderTextBlock()` |
 | `./Text_Block/Text_Widgets.js` | `renderBulletIcon`, `createLiveWidget` | `renderTextBlock()` |
 | `./Text_Block/Text_Keyboard.js` | `getContainingLine`, `getLineRawText`, `checkAutoCollapseTokensNearCaret`, `checkAutoBulletConversion`, `handleTextBlockKeyDown`, `scanAndCompileCompletedBlocks` | `renderTextBlock()` (`getLineRawText` unused) |
 | `./Text_Block/Text_Block_Markdown.js` | `renderObsidianMarkdown`, `createLiveBlockElement`, `lexMarkdownBlocks` | `renderTextBlock()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `renderTextBlock(block, isEditing = false, onUpdate = null, allNotes = [], options = {})` | 60 - 1030 | Main rich text block component featuring permanent Live Preview mode (no preview button toggle needed), top floating window formatting dock (`#notes-text-floating-dock`), in-place click-to-expand raw code for fenced code blocks, $$ math, tables, callouts, blockquotes, and dividers, auto-collapse on navigating away, 5-icon block action toolbar (tick, up, down, copy, delete), smart markdown-block paste compilation, live typing auto-compilation for code blocks and headings, pure HTML/Unicode bullet markers (disc, circle, square, triangle, dash, arrow, star, diamond, numbered, checkbox), dynamic font size scaling, line spacing selector, interactive checkboxes, and keyboard navigation. |
+| `renderTextBlock(block, isEditing = false, onUpdate = null, allNotes = [], options = {})` | 64 - 1072 | Main rich text block component featuring permanent Live Preview mode, top floating window formatting dock (`#notes-text-floating-dock`), in-place click-to-expand raw code, auto-collapse on navigating away, 5-icon block action toolbar, clean KaTeX-safe cut and copy serialization (`serializeSelection`), context-aware single & multiline paste splitting and instant inline markdown token hydration, pure HTML/Unicode bullet markers, dynamic font size scaling, line spacing selector, interactive checkboxes, and keyboard navigation. |
 
 **Tikz_Block.js**
 
@@ -661,13 +661,13 @@
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
 | `renumberSubsequentListItems(startLineEl)` | 12 - 63 | Renumbers downstream ordered list items sequentially when an item is added, indented, or deleted. |
-| `getContainingLine(node, rootEl)` | 66 - 74 | Helper to locate the containing line element of any DOM node within the text block. |
-| `getLineRawText(lineEl)` | 77 - 99 | Extracts the unformatted raw text representation of a single line element. |
-| `checkAutoCollapseTokensNearCaret(options)` | 101 - 167 | Automatically converts Markdown tokens near caret (e.g. **bold**, *italic*, `code`) into live formatted inline widgets. |
-| `checkAutoBulletConversion(options)` | 169 - 288 | Automatically detects list prefixes (e.g. - , * , 1. , [ ], or HTML/Unicode bullets •○■▸–➔✦◆) and heading markers (# to ######) and converts the line into a list item widget or styled heading with dimmed marker. |
-| `tryCollapseTokenAtCaretOnEnter(options)` | 290 - 476 | Handles Enter key behavior by collapsing uncollapsed tokens at or before the caret before inserting a new line. |
-| `handleTextBlockKeyDown(e, ctx)` | 478 - 1490 | Master keydown handler for text blocks managing Enter, Backspace, Delete, Tab, Shift+Tab, navigation shortcuts, live closing code fence compilation, opening code fence auto-completion, display math, horizontal rules, and heading Enter/Backspace navigation. |
-| `scanAndCompileCompletedBlocks(liveSurface, editModeOptions, triggerUpdate)` | 1496 - 1673 | Scans and compiles any completed closed blocks (fenced code blocks, display math, horizontal rules, headings) that are not currently focused by the caret. |
+| `getContainingLine(node, rootEl, offset)` | 66 - 89 | Helper to locate the containing line element of any DOM node, with self-healing for direct text nodes and root selection. |
+| `getLineRawText(lineEl)` | 92 - 114 | Extracts the unformatted raw text representation of a single line element. |
+| `checkAutoCollapseTokensNearCaret(options)` | 116 - 182 | Automatically converts Markdown tokens near caret (e.g. **bold**, *italic*, `code`) into live formatted inline widgets. |
+| `checkAutoBulletConversion(options)` | 184 - 303 | Automatically detects list prefixes (e.g. - , * , 1. , [ ], or HTML/Unicode bullets •○■▸–➔✦◆) and heading markers (# to ######) and converts the line into a list item widget or styled heading with dimmed marker. |
+| `tryCollapseTokenAtCaretOnEnter(options)` | 305 - 491 | Handles Enter key behavior by collapsing uncollapsed tokens at or before the caret before inserting a new line. |
+| `handleTextBlockKeyDown(e, ctx)` | 493 - 1530 | Master keydown handler for text blocks managing Enter, Backspace, Delete, Tab, Shift+Tab, navigation shortcuts, live closing code fence compilation, opening code fence auto-completion, display math, horizontal rules, heading Enter/Backspace navigation, and solitary line / Line 1 unwrap protection. |
+| `scanAndCompileCompletedBlocks(liveSurface, editModeOptions, triggerUpdate)` | 1535 - 1715 | Scans and compiles any completed closed blocks (fenced code blocks, display math, horizontal rules, headings) that are not currently focused by the caret. |
 
 **Text_Markdown.js / Text_Block_Markdown.js**
 
@@ -700,9 +700,15 @@
 | `getSpacingValue(key)` | 29 - 32 | Returns CSS line-height multiplier corresponding to a line spacing key. |
 | `getSpacingLabel(key)` | 34 - 37 | Returns human-readable label for a line spacing option. |
 | `getNumberForLineAtIndent(lineEl, targetIndent)` | 39 - 62 | Finds the previous numbered list item at the same indentation level to determine the next sequence number. |
-| `serializeElement(rootEl)` | 64 - 165 | Serializes rendered DOM line elements, inline widgets, and selection fragments back into a clean plain text/markdown string while accurately distinguishing inline text from block-level lines. |
-| `parseTextToFragment(text, options)` | 167 - 246 | Parses text into a DocumentFragment containing styled line elements, inline widgets, and HTML formatting tags (<u>, <b>, <i>, <mark>, <code>). |
-| `renderSingleLineToDom(rawLine, options)` | 248 - 337 | Parses and renders a single line of text with styled headings (# with subtle dimmed marker), dividers (---), bullet icons (HTML/Unicode •○■▸–➔✦◆ or standard markers), tasks, inline math, HTML tags, and live widgets into a DOM <div>. |
+| `serializeElement(rootEl)` | 64 - 171 | Serializes rendered DOM line elements, inline widgets, and selection fragments back into a clean plain text/markdown string while accurately ignoring solitary/trailing BR placeholders and distinguishing inline text from block-level lines. |
+| `parseTextToFragment(text, options)` | 173 - 252 | Parses text into a DocumentFragment containing styled line elements, inline widgets, and HTML formatting tags (<u>, <b>, <i>, <mark>, <code>). |
+| `renderSingleLineToDom(rawLine, options)` | 254 - 343 | Parses and renders a single line of text with styled headings (# with subtle dimmed marker), dividers (---), bullet icons (HTML/Unicode •○■▸–➔✦◆ or standard markers), tasks, inline math, HTML tags, and live widgets into a DOM <div>. |
+| `getContainingLine(node, rootEl, offset)` | 348 - 371 | Locates the containing top-level line element within rootEl for any DOM node or selection point, with root fallback and loose text node healing. |
+| `getLineRawText(node)` | 376 - 400 | Extracts raw markdown text from any DOM subtree or line element preserving data-raw tokens. |
+| `setCaretAtOffsetInLine(lineEl, targetCharOffset)` | 405 - 474 | Accurately positions the selection caret at a specific character offset within a rendered line element. |
+| `getLineCaretSplit(lineEl, anchorNode, anchorOffset)` | 479 - 549 | Splits a line's raw markdown text into beforeCaret and afterCaret strings at the anchor point. |
+| `serializeSelection(range, rootEl)` | 555 - 585 | Extracts clean, pure markdown from any selection range across single or multiple lines, eliminating KaTeX DOM/MathML leakage. |
+| `deleteSelectionAndHeal(range, rootEl, editModeOptions, triggerUpdate)` | 591 - 633 | Deletes a selection range cleanly across single or multiple lines, merging line boundaries and re-rendering to heal formatting. |
 
 **Text_Widgets.js**
 
