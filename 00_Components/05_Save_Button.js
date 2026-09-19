@@ -70,6 +70,7 @@ export function GetSaveButtonHTML() {
 // Automatically syncs all DOM <script type="application/json"> blocks with live window states and localStorage caches
 function syncAllStatesToDOM(doc) {
   if (typeof window === 'undefined') return;
+  if (typeof window.flushNotesSave === 'function') window.flushNotesSave();
 
   const now = Date.now();
   const dataScripts = doc.querySelectorAll('script[type="application/json"][id]');
@@ -242,6 +243,7 @@ export async function SaveAndDownloadApp() {
       '03_Notes/Writing_Engine/Link_Parser.js',
       '03_Notes/Writing_Engine/Highlight_Sync.js',
       '03_Notes/Writing_Engine/Table_Parser.js',
+      '03_Notes/Writing_Engine/Block_History.js',
       '03_Notes/B_Editor_View/01_Blocks/Block_Actions.js',
       '03_Notes/B_Editor_View/01_Blocks/Figure_Utils.js',
       '03_Notes/B_Editor_View/01_Blocks/Block_Textarea.js',
@@ -443,6 +445,14 @@ export function ClearAllLocalCaches() {
       }
     }
   } catch (e) { }
+
+  // 3. Clear per-block undo/redo history stacks from memory
+  if (typeof window !== 'undefined' && window.__blockHistories) {
+    try {
+      window.__blockHistories.clear();
+    } catch (e) { }
+  }
+
   console.log('[Save] All unsaved local caches flushed successfully.');
 }
 

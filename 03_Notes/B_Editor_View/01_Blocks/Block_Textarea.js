@@ -4,10 +4,13 @@
  * Eliminates cursor drag stutter/rubber-banding by scoping CSS transitions to border-color/box-shadow only.
  */
 
+import { attachBlockHistory } from '../../Writing_Engine/Block_History.js';
+
 /**
  * Creates and returns a smoothly resizable editor textarea element.
  * 
  * @param {Object} options
+ * @param {string} [options.blockId=''] - Block ID for isolated undo/redo history
  * @param {string} options.value - Initial text value
  * @param {string} options.placeholder - Placeholder text
  * @param {string} [options.minHeight='100px'] - Minimum height
@@ -19,6 +22,7 @@
  * @returns {HTMLTextAreaElement}
  */
 export function createBlockTextarea({
+  blockId = '',
   value = '',
   placeholder = '',
   minHeight = '100px',
@@ -47,6 +51,11 @@ export function createBlockTextarea({
   textarea.style.scrollbarWidth = 'thin';
   textarea.style.fontFamily = 'var(--note-font-family, inherit)';
   textarea.style.transition = 'border-color 0.15s ease, box-shadow 0.15s ease';
+  textarea.style.whiteSpace = 'pre-wrap';
+  textarea.style.wordBreak = 'break-word';
+  textarea.style.overflowWrap = 'anywhere';
+  textarea.style.overflowX = 'hidden';
+  textarea.style.overflowY = 'auto';
 
   if (onInput) {
     textarea.addEventListener('input', (e) => onInput(textarea.value, e));
@@ -58,6 +67,16 @@ export function createBlockTextarea({
 
   if (onKeyDown) {
     textarea.addEventListener('keydown', onKeyDown);
+  }
+
+  if (blockId) {
+    attachBlockHistory(textarea, {
+      blockId,
+      onUpdate: (val) => {
+        if (onInput) onInput(val);
+        if (onChange) onChange(val);
+      }
+    });
   }
 
   return textarea;
@@ -358,6 +377,11 @@ function ensureCodeEditorStyles() {
       background-color: transparent !important;
       color: var(--text, #e8eaf2) !important;
       caret-color: var(--accent, #8b6dff);
+      white-space: pre-wrap !important;
+      word-break: break-word !important;
+      overflow-wrap: anywhere !important;
+      overflow-x: hidden !important;
+      overflow-y: auto !important;
     }
     [data-theme="light"] .code-editor-textarea {
       color: #1a1d2e !important;
@@ -416,6 +440,7 @@ function ensureCodeEditorStyles() {
 }
 
 export function createCodeEditor({
+  blockId = '',
   value = '',
   placeholder = '',
   badge = 'LaTeX',
@@ -477,7 +502,7 @@ export function createCodeEditor({
 
   // Textarea Editor Surface
   const textarea = document.createElement('textarea');
-  textarea.className = 'code-editor-textarea flex-1 p-2.5 font-mono text-xs outline-none resize-none border-none box-border whitespace-pre select-text';
+  textarea.className = 'code-editor-textarea flex-1 p-2.5 font-mono text-xs outline-none resize-none border-none box-border whitespace-pre-wrap break-words select-text';
   textarea.spellcheck = false;
   textarea.autocapitalize = 'off';
   textarea.autocomplete = 'off';
@@ -490,11 +515,30 @@ export function createCodeEditor({
   textarea.style.scrollbarWidth = 'thin';
   textarea.style.minHeight = '100%';
   textarea.style.height = '100%';
+  textarea.style.overflowX = 'hidden';
+  textarea.style.overflowY = 'auto';
+  textarea.style.whiteSpace = 'pre-wrap';
+  textarea.style.wordBreak = 'break-word';
+  textarea.style.overflowWrap = 'anywhere';
 
   body.appendChild(gutter);
   body.appendChild(textarea);
   container.appendChild(header);
   container.appendChild(body);
+
+  // Hidden offscreen mirror element to calculate dynamic heights of wrapped lines for accurate gutter sync
+  const mirrorMeasurer = document.createElement('div');
+  mirrorMeasurer.className = 'code-editor-measurer';
+  mirrorMeasurer.style.cssText = "position:absolute;visibility:hidden;pointer-events:none;top:-9999px;left:-9999px;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;box-sizing:border-box;padding:0;margin:0;line-height:24px;font-size:12.5px;font-family:'JetBrains Mono','Fira Code','Cascadia Code',Menlo,Monaco,Consolas,'Liberation Mono',ui-monospace,monospace;";
+  container.appendChild(mirrorMeasurer);
+
+  if (typeof ResizeObserver !== 'undefined') {
+    const ro = new ResizeObserver(() => {
+      syncGutter();
+    });
+    ro.observe(textarea);
+    container.__ro = ro;
+  }
 
   // ---------------------------------------------------------------------------
   // 3. Line Numbering, Indent Guide & Folding Synchronization
@@ -509,17 +553,29 @@ export function createCodeEditor({
     gutter.innerHTML = '';
     const gutterFrag = document.createDocumentFragment();
 
+    const availWidth = textarea.clientWidth ? (textarea.clientWidth - 20) : 0;
+    if (availWidth > 40) mirrorMeasurer.style.width = availWidth + 'px';
+
+    const getLineHeight = (lineText) => {
+      if (availWidth > 40 && lineText) {
+        mirrorMeasurer.textContent = lineText;
+        return Math.max(24, mirrorMeasurer.offsetHeight || 24);
+      }
+      return 24;
+    };
+
     if (!enableFolding) {
       gutter.style.width = '38px';
       for (let i = 0; i < visibleLines.length; i++) {
         const lineNum = i + 1;
+        const lineH = getLineHeight(visibleLines[i]);
         const row = document.createElement('div');
-        row.className = 'gutter-row flex items-center justify-end px-1.5';
-        row.style.height = '24px';
-        row.style.minHeight = '24px';
+        row.className = 'gutter-row flex items-start justify-end px-1.5';
+        row.style.height = `${lineH}px`;
+        row.style.minHeight = `${lineH}px`;
 
         const numSpan = document.createElement('span');
-        numSpan.className = 'line-num text-[11px] tabular-nums font-mono';
+        numSpan.className = 'line-num text-[11px] tabular-nums font-mono leading-[24px]';
         numSpan.textContent = String(lineNum);
         row.appendChild(numSpan);
 
@@ -541,16 +597,17 @@ export function createCodeEditor({
       const origLineNum = curOrigLine;
       const isFolded = foldedLineMap.has(origLineNum);
       const foldMeta = startLinesWithFold.get(origLineNum);
+      const lineH = getLineHeight(visibleLines[v]);
 
       const row = document.createElement('div');
-      row.className = 'gutter-row flex items-center justify-between px-1';
-      row.style.height = '24px';
-      row.style.minHeight = '24px';
+      row.className = 'gutter-row flex items-start justify-between px-1';
+      row.style.height = `${lineH}px`;
+      row.style.minHeight = `${lineH}px`;
 
       if (foldMeta || isFolded) {
         const activeFoldMeta = foldMeta || foldedLineMap.get(origLineNum);
         const foldBtn = document.createElement('span');
-        foldBtn.className = 'fold-indicator cursor-pointer text-[11px] font-bold select-none text-center transition-colors';
+        foldBtn.className = 'fold-indicator cursor-pointer text-[11px] font-bold select-none text-center transition-colors leading-[24px]';
         foldBtn.style.width = '14px';
         foldBtn.style.lineHeight = '24px';
         foldBtn.textContent = isFolded ? '>' : '▾';
@@ -570,7 +627,7 @@ export function createCodeEditor({
       }
 
       const numSpan = document.createElement('span');
-      numSpan.className = 'line-num text-[11px] tabular-nums font-mono text-right flex-1 pr-0.5';
+      numSpan.className = 'line-num text-[11px] tabular-nums font-mono text-right flex-1 pr-0.5 leading-[24px]';
       numSpan.textContent = String(origLineNum);
       row.appendChild(numSpan);
 
@@ -769,6 +826,35 @@ export function createCodeEditor({
   container.isFolded = () => foldedLineMap.size > 0;
   container.unfoldAll = unfoldAll;
   container.focus = () => textarea.focus();
+
+  if (blockId) {
+    const detachHistory = attachBlockHistory(textarea, {
+      blockId,
+      getValue: () => fullCode,
+      setValue: (newVal) => {
+        container.setValue(newVal);
+      },
+      onUpdate: (newVal) => {
+        if (onInput) onInput(newVal);
+        if (onChange) onChange(newVal);
+      }
+    });
+
+    container.__cleanup = () => {
+      if (typeof detachHistory === 'function') detachHistory();
+      if (container.__ro) {
+        container.__ro.disconnect();
+        container.__ro = null;
+      }
+    };
+  } else {
+    container.__cleanup = () => {
+      if (container.__ro) {
+        container.__ro.disconnect();
+        container.__ro = null;
+      }
+    };
+  }
 
   return container;
 }

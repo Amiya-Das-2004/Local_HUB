@@ -215,6 +215,7 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
   const editorMount = editWrap.querySelector('.tikz-editor-mount');
 
   const codeEditor = createCodeEditor({
+    blockId: block.id,
     value: tikzCode,
     placeholder: '\\begin{tikzpicture}[...]\n  \\draw (0,0) circle (1);\n\\end{tikzpicture}',
     badge: 'TikZ',
@@ -405,6 +406,48 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
   // Initial compile on block load
   compile(false);
 
+  // Copy Block TikZ Code Handler with 2-second green tick confirmation
+  const handleCopyBlock = async (btn) => {
+    const codeToCopy = codeEditor.getValue ? codeEditor.getValue() : textarea.value;
+    const origHtml = btn.innerHTML;
+    const origTitle = btn.title;
+    const showCopied = () => {
+      btn.innerHTML = `
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="text-green-400">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+      `;
+      btn.title = 'Copied!';
+      setTimeout(() => {
+        btn.innerHTML = origHtml;
+        btn.title = origTitle || 'Copy block TikZ code';
+      }, 2000);
+    };
+
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(codeToCopy);
+      } else {
+        throw new Error('Clipboard API unavailable');
+      }
+      showCopied();
+    } catch (err) {
+      const ta = document.createElement('textarea');
+      ta.value = codeToCopy;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        showCopied();
+      } catch (e) {
+        console.error('Failed to copy TikZ code: ', e);
+      }
+      ta.remove();
+    }
+  };
+
   // Top Right Action Buttons (Shared Action Bar)
   initBlockActions(editWrap, {
     onDone: () => {
@@ -428,6 +471,7 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
       }
       if (onDone) onDone();
     },
+    onCopy: handleCopyBlock,
     onMoveUp,
     onMoveDown,
     onDelete

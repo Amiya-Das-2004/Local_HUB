@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en"><head>
+<html lang="en" data-theme="light"><head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Local HUB</title>
@@ -10,21 +10,14 @@
   <script defer="" src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 
   <!-- THE VAULT: Data is stored here -->
-  <script type="application/json" id="LandingPageData">{
-  "tabs": [
+  <script type="application/json" id="LandingPageData">
     {
-      "Name": "BOOKMARK",
-      "Url": "#Bookmarks",
-      "Color": 14037359
-    },
-    {
-      "Name": "NOTES",
-      "Url": "#Notes",
-      "Color": 4048447
+      "tabs": [
+        { "Name": "BOOKMARK", "Url": "#Bookmarks", "Color": 14037359 },
+        { "Name": "NOTES", "Url": "#Notes", "Color": 4048447 }
+      ]
     }
-  ],
-  "_lastSaved": 1789720729498
-}</script>
+  </script>
   <script type="application/json" id="Bookmarks">
     {
       "bookmarks": [
@@ -37,7 +30,7 @@
   "vaultMeta": {
     "title": "Notes Vault",
     "version": "1.0.0",
-    "lastSaved": 1789720729498
+    "lastSaved": 1789798611291
   },
   "globalMacros": {
     "equation": "\\newcommand{\\mb}[1]{\\mathbf{#1}}\n\\newcommand{\\comment}[1]{\\textcolor{#dc2626|#f87171}{[#1]}}\n\\newcommand{\\R}{\\mathbb{R}}\n\\newcommand{\\C}{\\mathbb{C}}\n\\newcommand{\\N}{\\mathbb{N}}\n\\newcommand{\\Z}{\\mathbb{Z}}",
@@ -369,8 +362,7 @@
         {
           "id": "b_fas_t1",
           "type": "text",
-          "content": "This note visualizes the duality and relationship between **concrete function spaces** on a bounded domain $\\Omega \\subset \\mathbb{R}^n$ and the **abstract hierarchy of complete spaces** (Vector, Normed, Inner-Product, Banach, and Hilbert spaces).",
-          "lineSpacing": "normal"
+          "content": "This note visualizes the duality and relationship between **concrete function spaces** on a bounded domain $\\Omega \\subset \\mathbb{R}^n$ and the **abstract hierarchy of complete spaces** (Vector, Normed, Inner-Product, Banach, and Hilbert spaces)."
         },
         {
           "id": "b_fas_tikz1",
@@ -379,8 +371,7 @@
           "caption": "Concrete Sobolev & Lebesgue function spaces on a bounded domain $\\Omega$ alongside the abstract completeness hierarchy of Banach and Hilbert spaces.",
           "hasBorder": true,
           "allowNumbering": true,
-          "tag": "function-spaces-hierarchy",
-          "content": "\\begin{tikzpicture}[\n  font=\\sffamily\\footnotesize,\n  panel/.style={rounded corners=8pt, draw=#1!65!black, fill=#1!3,\n                line width=0.8pt},\n  panel/.default=teal,\n  paneltitle/.style={font=\\sffamily\\bfseries\\small, text=#1!45!black},\n  space/.style={ellipse, draw=black!32, fill=#1,\n                line width=0.75pt, align=center, inner sep=1.5pt},\n  hierarchy/.style={rounded corners=4pt, draw=black!30, fill=#1,\n                    line width=0.7pt, align=center, minimum height=10mm,\n                    text width=31mm, inner sep=3pt},\n  note/.style={rounded corners=3pt, draw=black!22, fill=white,\n               align=center, inner sep=3pt, font=\\sffamily\\scriptsize},\n  flow/.style={-{Stealth[length=2.4mm,width=1.6mm]}, line width=0.8pt,\n               draw=black!60},\n  link/.style={-{Stealth[length=2.4mm,width=1.6mm]}, dashed,\n               line width=1pt, draw=orange!75!black},\n  caption/.style={font=\\sffamily\\scriptsize, text=black!68, align=center},\n]\n% --------------------------------------------------------------------\n% Panel backgrounds and titles\n% --------------------------------------------------------------------\n\\draw[panel=teal] (-8.0,-4.75) rectangle (-0.35,5.15);\n\\draw[panel=blue] (0.35,-4.75) rectangle (8.0,5.15);\n\\node[paneltitle=teal] at (-4.175,4.72)\n      {Concrete spaces on a bounded domain $\\Omega$};\n\\node[caption] at (-4.175,4.30)\n      {Nested sets encode increasing regularity.};\n\\draw[teal!35, line width=0.5pt] (-7.65,4.02) -- (-0.70,4.02);\n\\node[paneltitle=blue] at (4.175,4.72)\n      {Abstract hierarchy of complete spaces};\n\\node[caption] at (4.175,4.30)\n      {Inner products induce norms; completeness names the space.};\n\\draw[blue!30, line width=0.5pt] (0.70,4.02) -- (7.65,4.02);\n% --------------------------------------------------------------------\n% Left panel: nested function spaces\n% --------------------------------------------------------------------\n\\node[space=teal!9, minimum width=6.45cm, minimum height=7.10cm]\n      (Lone) at (-4.15,-0.05) {};\n\\node[space=cyan!13, minimum width=5.30cm, minimum height=5.75cm]\n      (Ltwo) at (-4.15,-0.52) {};\n\\node[space=orange!18, minimum width=4.10cm, minimum height=4.35cm]\n      (Hone) at (-4.15,-0.96) {};\n\\node[space=orange!32, minimum width=2.75cm, minimum height=2.60cm]\n      (Htwo) at (-4.15,-1.38) {};\n\\node[space=orange!55, minimum width=1.55cm, minimum height=0.80cm]\n      (Cinf) at (-4.15,-1.78) {$C^\\infty(\\overline\\Omega)$};\n\\node[caption, text=teal!45!black] at (-4.15,3.10)\n      {\\textbf{$L^1(\\Omega)$}\\quad $\\displaystyle\\int_\\Omega |u|\\,\\mathrm d x<\\infty$};\n\\node[caption, text=cyan!35!black] at (-4.15,1.95)\n      {\\textbf{$L^2(\\Omega)$}\\quad\n       $\\langle u,v\\rangle_{L^2}=\\displaystyle\\int_\\Omega uv\\,\\mathrm d x$};\n\\node[caption, text=orange!55!black] at (-4.15,0.72)\n      {\\textbf{$H^1(\\Omega)$}\\quad\n       $\\displaystyle\\int_\\Omega\\bigl(|u|^2+|\\nabla u|^2\\bigr)\\,\\mathrm d x<\\infty$};\n\\node[caption, text=orange!65!black] at (-4.15,-0.48)\n      {\\textbf{$H^2(\\Omega)$}\\quad weak derivatives through order $2$};\n\\draw[flow, draw=teal!55!black] (-7.32,2.55) -- (-7.32,-2.45);\n\\node[rotate=90, font=\\sffamily\\tiny\\bfseries, text=teal!55!black]\n      at (-7.55,0.05) {INCREASING REGULARITY};\n\\node[note, draw=orange!50, fill=orange!6, text width=34mm]\n      (velocity) at (-5.15,-4.03)\n      {$\\star$ The velocity $V$ belongs to $H^1(\\Omega)$ in the model.};\n\\draw[link] (velocity.north) to[bend left=12] (Hone.248);\n\\node[note, dashed, draw=purple!55, fill=purple!4, text width=25mm]\n      (Hneg) at (-1.95,-4.03)\n      {$H^{-1}(\\Omega)=(H_0^1(\\Omega))'$\\\\[-1pt]\n       dual / rough-data space};\n\\draw[flow, dashed, draw=purple!65!black]\n      (Hneg.north west) to[bend right=16] (Hone.325);\n% --------------------------------------------------------------------\n% Right panel: abstract hierarchy\n% --------------------------------------------------------------------\n\\node[hierarchy=blue!12, text width=39mm] (vector) at (4.18,3.25)\n      {\\textbf{Vector space}\\\\[-1pt]\n       addition and scalar multiplication};\n\\node[hierarchy=blue!11] (normed) at (2.25,1.65)\n      {\\textbf{Normed space}\\\\ length $\\|u\\|$};\n\\node[hierarchy=orange!13] (inner) at (6.10,1.65)\n      {\\textbf{Inner-product space}\\\\ angle $\\langle u,v\\rangle$};\n\\node[hierarchy=blue!24] (banach) at (2.25,-0.15)\n      {\\textbf{BANACH}\\\\ normed $+$ complete};\n\\node[hierarchy=orange!32] (hilbert) at (6.10,-0.15)\n      {\\textbf{HILBERT}\\\\ inner product $+$ complete};\n\\draw[flow] (vector.south) -- ++(0,-0.25) -| (normed.north);\n\\draw[flow] (vector.south) -- ++(0,-0.25) -| (inner.north);\n\\draw[flow] (normed) -- (banach);\n\\draw[flow] (inner) -- (hilbert);\n% FIXED: changed \\node to node\n\\draw[link] (hilbert.north west) to[bend right=16] (banach.north east)\n      node[midway, above=1pt, fill=white, inner sep=1.5pt,\n           font=\\sffamily\\tiny\\bfseries, text=orange!65!black]\n      {Hilbert $\\Longrightarrow$ Banach};\n\\node[note, draw=blue!45, fill=blue!4, text width=31mm]\n      (banachex) at (2.25,-2.05)\n      {Typical Banach examples\\\\[1pt]\n       $L^p(\\Omega)$ for $p\\ne2$\\\\\n       $C^0$ with the supremum norm};\n\\node[note, draw=orange!55, fill=orange!5, text width=31mm]\n      (hilbertex) at (6.10,-2.05)\n      {Typical Hilbert examples\\\\[1pt]\n       $L^2(\\Omega)$ and $H^k(\\Omega)$\\\\\n       with their standard inner products};\n\\draw[flow, draw=blue!55!black] (banach) -- (banachex);\n\\draw[flow, draw=orange!65!black] (hilbert) -- (hilbertex);\n\\node[note, fill=blue!3, text width=61mm] at (4.18,-3.75)\n      {\\textbf{Completeness:} every Cauchy sequence converges to an element\n       of the same space---there are no missing limit points.};\n% --------------------------------------------------------------------\n% Shared conclusion\n% --------------------------------------------------------------------\n\\node[rounded corners=5pt, draw=orange!60!black, fill=orange!10,\n      line width=0.8pt, minimum width=15.25cm, minimum height=9mm,\n      align=center, font=\\sffamily\\scriptsize, text=black!78]\n      at (0,-5.35)\n      {\\textbf{Key relation (for bounded $\\Omega$):}\\quad\n       $C^\\infty(\\overline\\Omega)\\subset H^2(\\Omega)\\subset H^1(\\Omega)\n       \\subset L^2(\\Omega)\\subset L^1(\\Omega)$.\\quad\n       In particular, $L^2$ and the Sobolev spaces $H^k$ are Hilbert spaces.};\n\\end{tikzpicture}"
+          "tag": "function-spaces-hierarchy"
         },
         {
           "id": "b_fas_h2",
@@ -407,39 +398,333 @@
     }
   ]
 }</script>
-<style>*, ::before, ::after{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }/* ! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com */*,::after,::before{box-sizing:border-box;border-width:0;border-style:solid;border-color:#e5e7eb}::after,::before{--tw-content:''}:host,html{line-height:1.5;-webkit-text-size-adjust:100%;-moz-tab-size:4;tab-size:4;font-family:ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";font-feature-settings:normal;font-variation-settings:normal;-webkit-tap-highlight-color:transparent}body{margin:0;line-height:inherit}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,pre,samp{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;font-feature-settings:normal;font-variation-settings:normal;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}button,input,optgroup,select,textarea{font-family:inherit;font-feature-settings:inherit;font-variation-settings:inherit;font-size:100%;font-weight:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:transparent;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dd,dl,figure,h1,h2,h3,h4,h5,h6,hr,p,pre{margin:0}fieldset{margin:0;padding:0}legend{padding:0}menu,ol,ul{list-style:none;margin:0;padding:0}dialog{padding:0}textarea{resize:vertical}input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}[role=button],button{cursor:pointer}:disabled{cursor:default}audio,canvas,embed,iframe,img,object,svg,video{display:block;vertical-align:middle}img,video{max-width:100%;height:auto}[hidden]:where(:not([hidden=until-found])){display:none}.pointer-events-none{pointer-events:none}.pointer-events-auto{pointer-events:auto}.fixed{position:fixed}.inset-0{inset:0px}.bottom-0{bottom:0px}.left-0{left:0px}.right-0{right:0px}.top-0{top:0px}.z-10{z-index:10}.z-20{z-index:20}.mb-1{margin-bottom:0.25rem}.mb-2{margin-bottom:0.5rem}.flex{display:flex}.h-2{height:0.5rem}.w-2{width:0.5rem}.w-\[140px\]{width:140px}.w-full{width:100%}.cursor-pointer{cursor:pointer}.select-none{-webkit-user-select:none;user-select:none}.items-start{align-items:flex-start}.items-center{align-items:center}.justify-between{justify-content:space-between}.gap-2{gap:0.5rem}.gap-3{gap:0.75rem}.rounded-full{border-radius:9999px}.bg-\[--accent\]{background-color:var(--accent)}.p-6{padding:1.5rem}.text-center{text-align:center}.text-\[10px\]{font-size:10px}.tracking-\[0\.3em\]{letter-spacing:0.3em}.tracking-\[0\.4em\]{letter-spacing:0.4em}.text-\[--accent\]{color:var(--accent)}.text-\[--muted\]{color:var(--muted)}.transition-colors{transition-property:color, background-color, border-color, fill, stroke, -webkit-text-decoration-color;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke, -webkit-text-decoration-color;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.duration-300{transition-duration:300ms}.hover\:text-\[--accent\]:hover{color:var(--accent)}</style><style id="landing-theme-style">
-  :root {
-    --bg: #03010a;
-    --fg: #e2e8f0;
-    --accent: #6b8cff;
-    --muted: #475569;
-    --border: rgba(107, 140, 255, 0.2);
-  }
+<style>*, ::before, ::after{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }/* ! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com */*,::after,::before{box-sizing:border-box;border-width:0;border-style:solid;border-color:#e5e7eb}::after,::before{--tw-content:''}:host,html{line-height:1.5;-webkit-text-size-adjust:100%;-moz-tab-size:4;tab-size:4;font-family:ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";font-feature-settings:normal;font-variation-settings:normal;-webkit-tap-highlight-color:transparent}body{margin:0;line-height:inherit}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,pre,samp{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;font-feature-settings:normal;font-variation-settings:normal;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}button,input,optgroup,select,textarea{font-family:inherit;font-feature-settings:inherit;font-variation-settings:inherit;font-size:100%;font-weight:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:transparent;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dd,dl,figure,h1,h2,h3,h4,h5,h6,hr,p,pre{margin:0}fieldset{margin:0;padding:0}legend{padding:0}menu,ol,ul{list-style:none;margin:0;padding:0}dialog{padding:0}textarea{resize:vertical}input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}[role=button],button{cursor:pointer}:disabled{cursor:default}audio,canvas,embed,iframe,img,object,svg,video{display:block;vertical-align:middle}img,video{max-width:100%;height:auto}[hidden]:where(:not([hidden=until-found])){display:none}.fixed{position:fixed}.absolute{position:absolute}.relative{position:relative}.inset-x-2{left:0.5rem;right:0.5rem}.bottom-3{bottom:0.75rem}.left-1\/2{left:50%}.right-2{right:0.5rem}.top-2{top:0.5rem}.z-10{z-index:10}.z-20{z-index:20}.z-40{z-index:40}.mx-auto{margin-left:auto;margin-right:auto}.my-0\.5{margin-top:0.125rem;margin-bottom:0.125rem}.my-1{margin-top:0.25rem;margin-bottom:0.25rem}.my-1\.5{margin-top:0.375rem;margin-bottom:0.375rem}.my-2\.5{margin-top:0.625rem;margin-bottom:0.625rem}.my-\[-3px\]{margin-top:-3px;margin-bottom:-3px}.mb-1{margin-bottom:0.25rem}.mb-1\.5{margin-bottom:0.375rem}.mb-2{margin-bottom:0.5rem}.mb-4{margin-bottom:1rem}.mr-1\.5{margin-right:0.375rem}.mt-0\.5{margin-top:0.125rem}.mt-1{margin-top:0.25rem}.mt-2{margin-top:0.5rem}.mt-3\.5{margin-top:0.875rem}.mt-5{margin-top:1.25rem}.box-border{box-sizing:border-box}.flex{display:flex}.inline-flex{display:inline-flex}.hidden{display:none}.h-16{height:4rem}.h-4{height:1rem}.h-5{height:1.25rem}.h-6{height:1.5rem}.h-8{height:2rem}.h-\[1\.5px\]{height:1.5px}.h-\[72px\]{height:72px}.min-h-\[1\.5em\]{min-height:1.5em}.w-16{width:4rem}.w-4{width:1rem}.w-6{width:1.5rem}.w-\[1px\]{width:1px}.w-\[72px\]{width:72px}.w-full{width:100%}.max-w-\[130px\]{max-width:130px}.max-w-\[220px\]{max-width:220px}.max-w-\[calc\(100vw-16px\)\]{max-width:calc(100vw - 16px)}.max-w-full{max-width:100%}.flex-1{flex:1 1 0%}.flex-shrink-0{flex-shrink:0}.-translate-x-1\/2{--tw-translate-x:-50%;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.scale-90{--tw-scale-x:.9;--tw-scale-y:.9;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}@keyframes spin{to{transform:rotate(360deg)}}.animate-spin{animation:spin 1s linear infinite}.cursor-pointer{cursor:pointer}.select-none{-webkit-user-select:none;user-select:none}.select-text{-webkit-user-select:text;user-select:text}.flex-col{flex-direction:column}.flex-wrap{flex-wrap:wrap}.items-start{align-items:flex-start}.items-center{align-items:center}.items-baseline{align-items:baseline}.justify-center{justify-content:center}.justify-between{justify-content:space-between}.gap-1{gap:0.25rem}.gap-1\.5{gap:0.375rem}.gap-2\.5{gap:0.625rem}.gap-3{gap:0.75rem}.gap-6{gap:1.5rem}.space-y-0\.5 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(0.125rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(0.125rem * var(--tw-space-y-reverse))}.overflow-x-auto{overflow-x:auto}.truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rounded{border-radius:0.25rem}.rounded-2xl{border-radius:1rem}.rounded-full{border-radius:9999px}.rounded-lg{border-radius:0.5rem}.rounded-md{border-radius:0.375rem}.rounded-xl{border-radius:0.75rem}.border{border-width:1px}.border-b{border-bottom-width:1px}.border-t-0{border-top-width:0px}.border-\[var\(--border\)\]{border-color:var(--border)}.border-purple-500\/60{border-color:rgb(168 85 247 / 0.6)}.border-transparent{border-color:transparent}.bg-\[var\(--card\)\]{background-color:var(--card)}.bg-\[var\(--surface\)\]{background-color:var(--surface)}.bg-purple-500\/0{background-color:rgb(168 85 247 / 0)}.bg-transparent{background-color:transparent}.p-1{padding:0.25rem}.p-3{padding:0.75rem}.p-4{padding:1rem}.px-1{padding-left:0.25rem;padding-right:0.25rem}.px-2{padding-left:0.5rem;padding-right:0.5rem}.px-2\.5{padding-left:0.625rem;padding-right:0.625rem}.py-0\.5{padding-top:0.125rem;padding-bottom:0.125rem}.py-1{padding-top:0.25rem;padding-bottom:0.25rem}.py-1\.5{padding-top:0.375rem;padding-bottom:0.375rem}.py-2{padding-top:0.5rem;padding-bottom:0.5rem}.pb-0\.5{padding-bottom:0.125rem}.pb-1\.5{padding-bottom:0.375rem}.pb-24{padding-bottom:6rem}.pb-3{padding-bottom:0.75rem}.pr-1{padding-right:0.25rem}.pr-2{padding-right:0.5rem}.pt-0{padding-top:0px}.pt-2{padding-top:0.5rem}.text-center{text-align:center}.align-middle{vertical-align:middle}.font-mono{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace}.font-serif{font-family:ui-serif, Georgia, Cambria, "Times New Roman", Times, serif}.text-2xl{font-size:1.5rem;line-height:2rem}.text-\[10px\]{font-size:10px}.text-\[11px\]{font-size:11px}.text-sm{font-size:0.875rem;line-height:1.25rem}.text-xs{font-size:0.75rem;line-height:1rem}.font-bold{font-weight:700}.font-extrabold{font-weight:800}.font-medium{font-weight:500}.font-semibold{font-weight:600}.uppercase{text-transform:uppercase}.leading-none{line-height:1}.leading-snug{line-height:1.375}.leading-tight{line-height:1.25}.tracking-tight{letter-spacing:-0.025em}.tracking-wider{letter-spacing:0.05em}.tracking-widest{letter-spacing:0.1em}.text-\[var\(--accent\2c \#8b6dff\)\]{color:var(--accent,#8b6dff)}.text-\[var\(--text\)\]{color:var(--text)}.text-\[var\(--text-dim\)\]{color:var(--text-dim)}.text-\[var\(--text-secondary\)\]{color:var(--text-secondary)}.text-\[var\(--text-secondary\2c \#a0a4b8\)\]{color:var(--text-secondary,#a0a4b8)}.text-purple-300{--tw-text-opacity:1;color:rgb(216 180 254 / var(--tw-text-opacity, 1))}.text-purple-400{--tw-text-opacity:1;color:rgb(192 132 252 / var(--tw-text-opacity, 1))}.overline{-webkit-text-decoration-line:overline;text-decoration-line:overline}.opacity-0{opacity:0}.opacity-25{opacity:0.25}.opacity-75{opacity:0.75}.shadow-2xl{--tw-shadow:0 25px 50px -12px rgb(0 0 0 / 0.25);--tw-shadow-colored:0 25px 50px -12px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-md{--tw-shadow:0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);--tw-shadow-colored:0 4px 6px -1px var(--tw-shadow-color), 0 2px 4px -2px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-sm{--tw-shadow:0 1px 2px 0 rgb(0 0 0 / 0.05);--tw-shadow-colored:0 1px 2px 0 var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.outline-none{outline:2px solid transparent;outline-offset:2px}.backdrop-blur-md{--tw-backdrop-blur:blur(12px);-webkit-backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)}.transition-all{transition-property:all;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.transition-colors{transition-property:color, background-color, border-color, fill, stroke, -webkit-text-decoration-color;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke, -webkit-text-decoration-color;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.transition-opacity{transition-property:opacity;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.duration-200{transition-duration:200ms}.ease-out{transition-timing-function:cubic-bezier(0, 0, 0.2, 1)}.hover\:border-\[var\(--border\)\]:hover{border-color:var(--border)}.hover\:border-purple-400:hover{--tw-border-opacity:1;border-color:rgb(192 132 252 / var(--tw-border-opacity, 1))}.hover\:border-purple-500:hover{--tw-border-opacity:1;border-color:rgb(168 85 247 / var(--tw-border-opacity, 1))}.hover\:border-purple-500\/50:hover{border-color:rgb(168 85 247 / 0.5)}.hover\:bg-purple-500\/10:hover{background-color:rgb(168 85 247 / 0.1)}.hover\:bg-purple-600:hover{--tw-bg-opacity:1;background-color:rgb(147 51 234 / var(--tw-bg-opacity, 1))}.hover\:text-purple-400:hover{--tw-text-opacity:1;color:rgb(192 132 252 / var(--tw-text-opacity, 1))}.hover\:text-white:hover{--tw-text-opacity:1;color:rgb(255 255 255 / var(--tw-text-opacity, 1))}.hover\:opacity-80:hover{opacity:0.8}.group:hover .group-hover\:scale-100{--tw-scale-x:1;--tw-scale-y:1;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.group:hover .group-hover\:bg-purple-500\/50{background-color:rgb(168 85 247 / 0.5)}.group:hover .group-hover\:opacity-100{opacity:1}@media (min-width: 640px){.sm\:inset-x-6{left:1.5rem;right:1.5rem}.sm\:bottom-4{bottom:1rem}.sm\:gap-2{gap:0.5rem}.sm\:p-1\.5{padding:0.375rem}.sm\:p-6{padding:1.5rem}.sm\:px-3{padding-left:0.75rem;padding-right:0.75rem}}@media (min-width: 768px){.md\:p-8{padding:2rem}.md\:text-3xl{font-size:1.875rem;line-height:2.25rem}}</style><div id="note-fig-citation-handler" style="display: none;"></div><style id="note-code-style">
+    .live-code, .note-inline-code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.85em;
+      padding: 0.15em 0.4em;
+      border-radius: 4px;
+      background-color: rgba(139, 92, 246, 0.15);
+      color: #c084fc;
+      border: 1px solid rgba(139, 92, 246, 0.25);
+      vertical-align: baseline;
+    }
+    [data-theme="light"] .live-code,
+    [data-theme="light"] .note-inline-code,
+    .light .live-code,
+    .light .note-inline-code {
+      background-color: #f3e8ff !important;
+      color: #581c87 !important;
+      border-color: #d8b4fe !important;
+      font-weight: 600 !important;
+    }
+    .obsidian-raw-block-editor {
+      background-color: #141622;
+      color: #e2e8f0;
+      border: 1px solid rgba(139, 92, 246, 0.4);
+      transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    }
+    [data-theme="light"] .obsidian-raw-block-editor,
+    .light .obsidian-raw-block-editor {
+      background-color: #f3f4f8 !important;
+      color: #1a1d2e !important;
+      border: 1px solid #d1d5e0 !important;
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+    }
+    .floating-katex-pill {
+      background-color: rgba(22, 25, 38, 0.95);
+      color: #d8b4fe;
+      border: 1px solid rgba(139, 92, 246, 0.4);
+    }
+    [data-theme="light"] .floating-katex-pill,
+    .light .floating-katex-pill {
+      background-color: rgba(255, 255, 255, 0.95) !important;
+      color: #581c87 !important;
+      border: 1px solid #d8b4fe !important;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+    }
+    .live-line {
+      min-height: 1.5em;
+      line-height: var(--note-line-height, 1.7);
+    }
+    .live-widget.live-bullet {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      vertical-align: middle;
+      line-height: 1;
+    }
+    .live-widget.live-checkbox {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      vertical-align: middle;
+      line-height: 1;
+    }
+    .live-widget.live-checkbox .note-task-checkbox {
+      margin: 0;
+      vertical-align: middle;
+    }
+    .live-widget.live-math {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      vertical-align: middle;
+      line-height: 1;
+    }
+    .live-widget.live-math .katex {
+      display: inline-flex;
+      align-items: center;
+      vertical-align: middle;
+      line-height: normal;
+    }
+    .live-widget.live-math .katex-html {
+      display: inline-flex;
+      align-items: center;
+      vertical-align: middle;
+    }
+    .live-widget.live-wikilink {
+      cursor: pointer;
+      display: inline;
+    }
+  </style><style id="tikz-block-animation-styles">
+    @keyframes tikzWorkspaceFadeIn {
+      0% {
+        opacity: 0;
+        transform: translateY(-4px);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
 
-  body {
-    margin: 0;
-    padding: 0;
-    background-color: var(--bg);
-    color: var(--fg);
-    font-family: 'Space Grotesk', sans-serif;
-  }
+    @keyframes tikzHeaderSlideDown {
+      0% {
+        opacity: 0;
+        transform: translateY(-3px);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
 
-  .mono {
-    font-family: 'JetBrains Mono', monospace;
-  }
+    @keyframes tikzTextareaExpand {
+      0% {
+        opacity: 0;
+        transform: scaleY(0.98);
+      }
+      100% {
+        opacity: 1;
+        transform: scaleY(1);
+      }
+    }
 
-  .vignette {
-    position: fixed;
-    inset: 0;
-    z-index: 5;
-    pointer-events: none;
-    background: radial-gradient(circle at center, transparent 30%, rgba(3, 1, 10, 0.8) 100%);
-  }
+    .tikz-edit-workspace {
+      animation: tikzWorkspaceFadeIn 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      will-change: transform, opacity;
+    }
 
-  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&family=JetBrains+Mono:wght@300;400;600;700&display=swap');
-  </style></head>
+    .tikz-edit-header {
+      animation: tikzHeaderSlideDown 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      will-change: transform, opacity;
+    }
 
-<body style="cursor: default;">
+    .tikz-edit-code-drawer {
+      animation: tikzTextareaExpand 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      will-change: transform, opacity;
+    }
+  </style><style id="notes-code-block-styles">
+    .notes-code-card {
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      background-color: var(--surface);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .notes-code-header {
+      background-color: #161926;
+      color: #e2e8f0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    }
+    [data-theme="light"] .notes-code-header {
+      background-color: #eaecf5;
+      color: #1e293b;
+      border-bottom: 1px solid var(--border);
+    }
+    .code-header-btn {
+      background-color: rgba(255, 255, 255, 0.08);
+      color: #cbd5e1;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      transition: all 0.18s ease;
+    }
+    .code-header-btn:hover {
+      background-color: rgba(255, 255, 255, 0.2);
+      color: #ffffff;
+    }
+    [data-theme="light"] .code-header-btn {
+      background-color: rgba(0, 0, 0, 0.05);
+      color: #475569;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+    }
+    [data-theme="light"] .code-header-btn:hover {
+      background-color: rgba(0, 0, 0, 0.12);
+      color: #0f172a;
+    }
+    .code-header-del-btn:hover {
+      background-color: #ef4444 !important;
+      color: #ffffff !important;
+      border-color: #ef4444 !important;
+    }
+    .code-title-input {
+      color: #e2e8f0;
+    }
+    [data-theme="light"] .code-title-input {
+      color: #1e293b;
+    }
+    .code-title-input:focus {
+      color: #ffffff;
+    }
+    [data-theme="light"] .code-title-input:focus {
+      color: #0f172a;
+    }
+    .code-title-static {
+      color: #e2e8f0;
+    }
+    [data-theme="light"] .code-title-static {
+      color: #1e293b;
+    }
+    .notes-code-body {
+      background-color: #12141e;
+      color: #abb2bf;
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+    [data-theme="light"] .notes-code-body {
+      background-color: #f8fafc;
+      color: #1e293b;
+    }
+    .notes-code-body pre {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12.5px;
+      line-height: 1.6;
+      tab-size: 2;
+      margin: 0;
+      padding: 12px 14px;
+      white-space: pre;
+      word-break: normal;
+      overflow-x: auto;
+    }
+    .notes-code-textarea {
+      width: 100%;
+      border: none;
+      outline: none;
+      background: transparent;
+      color: inherit;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12.5px;
+      line-height: 1.6;
+      tab-size: 2;
+      padding: 12px 14px;
+      margin: 0;
+      box-sizing: border-box;
+      resize: none;
+      display: block;
+      overflow-y: hidden;
+      overflow-x: hidden;
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+  </style><style id="notes-multicolumn-styles">
+    .notes-multi-col-wrapper {
+      container-type: inline-size;
+      container-name: notesmulticol;
+      width: 100%;
+    }
+    .notes-multi-col-grid {
+      display: grid;
+      gap: 0.875rem;
+      width: 100%;
+      align-items: stretch;
+    }
+    .notes-col-item {
+      min-width: 0;
+      overflow-x: auto;
+      scrollbar-width: thin;
+    }
+    /* Suppress child block's own Done/Up/Down/Del buttons when rendered inside column editor slots */
+    .notes-col-slot .done-btn,
+    .notes-col-slot .up-btn,
+    .notes-col-slot .down-btn,
+    .notes-col-slot .del-btn {
+      display: none !important;
+    }
+    /* Responsive Breakpoints via Container Queries */
+    @container notesmulticol (max-width: 560px) {
+      .notes-multi-col-grid {
+        grid-template-columns: 1fr !important;
+      }
+    }
+    @container notesmulticol (max-width: 780px) {
+      .notes-multi-col-grid[data-col-count="3"],
+      .notes-multi-col-grid[data-col-count="4"],
+      .notes-multi-col-grid[data-col-count="5"] {
+        grid-template-columns: 1fr !important;
+      }
+    }
+    @container notesmulticol (max-width: 980px) {
+      .notes-multi-col-grid[data-col-count="4"],
+      .notes-multi-col-grid[data-col-count="5"] {
+        grid-template-columns: 1fr !important;
+      }
+    }
+    @media (max-width: 640px) {
+      .notes-multi-col-grid {
+        grid-template-columns: 1fr !important;
+      }
+    }
+  </style><link id="hljs-css" rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.8.0/build/styles/atom-one-light.min.css"><style id="hljs-transparent-style">
+      pre code.hljs,
+      code.hljs {
+        background: transparent !important;
+        padding: 0 !important;
+      }
+      .obsidian-highlighted-code-block {
+        background-color: #202332;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        color: #abb2bf;
+        transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+      }
+      .obsidian-code-disguised-btn {
+        background-color: #141622;
+        color: #94a3b8;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        transition: all 0.15s ease;
+      }
+      .obsidian-code-disguised-btn:hover {
+        background-color: #0d0f17;
+        color: #f8fafc;
+      }
+
+      [data-theme="light"] .obsidian-highlighted-code-block {
+        background-color: #f3f4f8;
+        border: 1px solid #e0e2ea;
+        color: #1f2937;
+      }
+      [data-theme="light"] .obsidian-code-disguised-btn {
+        background-color: #e2e5ec;
+        color: #475569;
+        border: 1px solid #d1d5e0;
+      }
+      [data-theme="light"] .obsidian-code-disguised-btn:hover {
+        background-color: #d8dce6;
+        color: #0f172a;
+      }
+    </style><link id="tikzjax-css" rel="stylesheet" href="https://tikzjax.com/v1/fonts.css"><script id="tikzjax-js" src="https://tikzjax.com/v1/tikzjax.js"></script></head>
+
+<body>
   <div id="root"></div>
 
   <!-- Tailwind CDN -->
@@ -560,8 +845,35 @@ function InitLogoLogic() {
 
 
 /* --- 00_Components/02_Theme_Toggle.js --- */
+const THEME_SUN_ICON_SVG = `
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="5" />
+    <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+  </svg>
+`.trim();
+
+const THEME_MOON_ICON_SVG = `
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+  </svg>
+`.trim();
+
+function updateThemeToggleButtons(theme) {
+  const isLight = theme === 'light';
+  const btns = document.querySelectorAll('#theme-toggle-btn');
+  btns.forEach(btn => {
+    btn.innerHTML = isLight ? THEME_SUN_ICON_SVG : THEME_MOON_ICON_SVG;
+    btn.title = isLight ? 'Current: Light Theme (Click for Dark Theme)' : 'Current: Dark Theme (Click for Light Theme)';
+    btn.setAttribute('aria-label', isLight ? 'Current: Light Theme (Click for Dark Theme)' : 'Current: Dark Theme (Click for Light Theme)');
+  });
+}
+
 // GetThemeToggleHTML(): HTML and CSS string for the theme button with a sun/moon icon.
 function GetThemeToggleHTML() {
+  const isLight = typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light';
+  const iconSvg = isLight ? THEME_SUN_ICON_SVG : THEME_MOON_ICON_SVG;
+  const titleText = isLight ? 'Current: Light Theme (Click for Dark Theme)' : 'Current: Dark Theme (Click for Light Theme)';
+
   return `
     <style>
       /* Option A: Instant Theme Switch - Disables transition lag during theme toggle */
@@ -613,11 +925,8 @@ function GetThemeToggleHTML() {
       }
     </style>
 
-    <button class="icon-btn" id="theme-toggle-btn" title="Toggle theme (Light / Dark)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="5" />
-        <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-      </svg>
+    <button class="icon-btn" id="theme-toggle-btn" title="${titleText}" aria-label="${titleText}">
+      ${iconSvg}
     </button>
   `;
 }
@@ -629,6 +938,7 @@ function InitThemeToggleLogic() {
   // Load saved theme or default to dark
   const savedTheme = localStorage.getItem('lh_theme') || 'dark';
   document.documentElement.setAttribute('data-theme', savedTheme);
+  updateThemeToggleButtons(savedTheme);
 
   if (btn) {
     btn.addEventListener('click', () => {
@@ -639,6 +949,7 @@ function InitThemeToggleLogic() {
       document.documentElement.classList.add('theme-switching');
       document.documentElement.setAttribute('data-theme', next);
       localStorage.setItem('lh_theme', next);
+      updateThemeToggleButtons(next);
 
       // Re-enable transitions on the next animation frame for normal hover effects
       requestAnimationFrame(() => {
@@ -1164,6 +1475,7 @@ function GetSaveButtonHTML() {
 // Automatically syncs all DOM <script type="application/json"> blocks with live window states and localStorage caches
 function syncAllStatesToDOM(doc) {
   if (typeof window === 'undefined') return;
+  if (typeof window.flushNotesSave === 'function') window.flushNotesSave();
 
   const now = Date.now();
   const dataScripts = doc.querySelectorAll('script[type="application/json"][id]');
@@ -1336,6 +1648,7 @@ async function SaveAndDownloadApp() {
       '03_Notes/Writing_Engine/Link_Parser.js',
       '03_Notes/Writing_Engine/Highlight_Sync.js',
       '03_Notes/Writing_Engine/Table_Parser.js',
+      '03_Notes/Writing_Engine/Block_History.js',
       '03_Notes/B_Editor_View/01_Blocks/Block_Actions.js',
       '03_Notes/B_Editor_View/01_Blocks/Figure_Utils.js',
       '03_Notes/B_Editor_View/01_Blocks/Block_Textarea.js',
@@ -1537,6 +1850,14 @@ function ClearAllLocalCaches() {
       }
     }
   } catch (e) { }
+
+  // 3. Clear per-block undo/redo history stacks from memory
+  if (typeof window !== 'undefined' && window.__blockHistories) {
+    try {
+      window.__blockHistories.clear();
+    } catch (e) { }
+  }
+
   console.log('[Save] All unsaved local caches flushed successfully.');
 }
 
@@ -5401,14 +5722,12 @@ function LoadNotesState() {
   return NotesState;
 }
 
-// Persists active notes, syncs folder/tag lists, and updates HTML vault & unsaved localStorage cache
-function SaveNotesState(newState = null) {
-  if (newState) NotesState = newState;
+let notesSaveDebounceTimer = null;
 
-  // Sync folders and tags to currently active notes
-  if (Array.isArray(NotesState.notes)) {
-    NotesState.folders = Array.from(new Set(NotesState.notes.map(n => n.folder || 'General').filter(Boolean)));
-    NotesState.tags = Array.from(new Set(NotesState.notes.flatMap(n => n.tags || []).filter(Boolean)));
+function persistNotesToStorageImmediate() {
+  if (notesSaveDebounceTimer) {
+    clearTimeout(notesSaveDebounceTimer);
+    notesSaveDebounceTimer = null;
   }
 
   // 1. Write to DOM <script id="NotesData">
@@ -5417,12 +5736,7 @@ function SaveNotesState(newState = null) {
     dataBlock.textContent = JSON.stringify(NotesState, null, 2);
   }
 
-  // 2. Keep window.NotesState in sync
-  if (typeof window !== 'undefined') {
-    window.NotesState = NotesState;
-  }
-
-  // 3. Persist to browser Local Storage as active unsaved working buffer
+  // 2. Persist to browser Local Storage as active unsaved working buffer (compact unindented JSON for speed)
   try {
     if (typeof localStorage !== 'undefined') {
       const cachePayload = {
@@ -5437,14 +5751,63 @@ function SaveNotesState(newState = null) {
   }
 }
 
+// Immediately flushes any pending debounced state writes to DOM & localStorage
+function flushNotesSave() {
+  persistNotesToStorageImmediate();
+}
+
+if (typeof window !== 'undefined') {
+  window.flushNotesSave = flushNotesSave;
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', () => {
+    if (notesSaveDebounceTimer) {
+      persistNotesToStorageImmediate();
+    }
+  });
+}
+
+// Persists active notes, syncs folder/tag lists, and updates HTML vault & unsaved localStorage cache with debouncing
+function SaveNotesState(newState = null, { immediate = false } = {}) {
+  if (newState) NotesState = newState;
+
+  // Sync folders and tags to currently active notes
+  if (Array.isArray(NotesState.notes)) {
+    NotesState.folders = Array.from(new Set(NotesState.notes.map(n => n.folder || 'General').filter(Boolean)));
+    NotesState.tags = Array.from(new Set(NotesState.notes.flatMap(n => n.tags || []).filter(Boolean)));
+  }
+
+  // Keep window.NotesState synchronously in sync
+  if (typeof window !== 'undefined') {
+    window.NotesState = NotesState;
+  }
+
+  if (immediate) {
+    persistNotesToStorageImmediate();
+  } else {
+    if (notesSaveDebounceTimer) clearTimeout(notesSaveDebounceTimer);
+    notesSaveDebounceTimer = setTimeout(() => {
+      persistNotesToStorageImmediate();
+    }, 280);
+  }
+}
+
 // Function to empty/clear unsaved cache after downloading / saving standalone HTML
 function ClearNotesLocalCache() {
+  if (notesSaveDebounceTimer) {
+    clearTimeout(notesSaveDebounceTimer);
+    notesSaveDebounceTimer = null;
+  }
   try {
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem('NotesData_Local_Cache');
     }
   } catch (e) {
     console.warn('Failed to clear NotesData_Local_Cache:', e);
+  }
+  if (typeof clearAllBlockHistory === 'function') {
+    clearAllBlockHistory();
   }
 }
 
@@ -6742,7 +7105,7 @@ function getActiveTikzPreamble(note = null) {
  * Helper to wait for TikzJax to asynchronously process the <script type="text/tikz"> tag
  * and replace it with the rendered <svg> element.
  */
-function waitForTikzSvg(targetContainer, renderId, timeoutMs = 20000) {
+function waitForTikzSvg(targetContainer, renderId, timeoutMs = 25000) {
   return new Promise((resolve, reject) => {
     // 1. If SVG is already present
     const existingSvg = targetContainer.querySelector('svg');
@@ -6753,36 +7116,63 @@ function waitForTikzSvg(targetContainer, renderId, timeoutMs = 20000) {
 
     const startTime = Date.now();
     let isSettled = false;
+    let observer = null;
+    let checkInterval = null;
 
-    const observer = new MutationObserver(() => {
-      if (targetContainer.__tikzRenderId !== renderId) {
-        isSettled = true;
+    const cleanup = () => {
+      isSettled = true;
+      if (observer) {
         observer.disconnect();
+        observer = null;
+      }
+      if (checkInterval) {
+        clearInterval(checkInterval);
+        checkInterval = null;
+      }
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('unhandledrejection', rejectionHandler);
+      }
+    };
+
+    const rejectionHandler = (ev) => {
+      if (targetContainer.__tikzRenderId !== renderId) return;
+      const msg = ev?.reason?.message || String(ev?.reason || '');
+      if (msg.includes('sample.dvi') || msg.includes('TeX') || msg.includes('wasm') || msg.includes('Inflate')) {
+        cleanup();
+        const cleanMsg = msg.includes('sample.dvi')
+          ? 'LaTeX syntax error or missing semicolon inside TikZ environment.'
+          : msg;
+        reject(new Error(`TikZ compilation failed in TeX engine: ${cleanMsg}`));
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('unhandledrejection', rejectionHandler);
+    }
+
+    observer = new MutationObserver(() => {
+      if (targetContainer.__tikzRenderId !== renderId) {
+        cleanup();
         return;
       }
       const svg = targetContainer.querySelector('svg');
       if (svg && !isSettled) {
-        isSettled = true;
-        observer.disconnect();
+        cleanup();
         resolve(svg);
       }
     });
 
     observer.observe(targetContainer, { childList: true, subtree: true });
 
-    const checkInterval = setInterval(() => {
+    checkInterval = setInterval(() => {
       if (targetContainer.__tikzRenderId !== renderId) {
-        isSettled = true;
-        clearInterval(checkInterval);
-        observer.disconnect();
+        cleanup();
         return;
       }
 
       const svg = targetContainer.querySelector('svg');
       if (svg && !isSettled) {
-        isSettled = true;
-        clearInterval(checkInterval);
-        observer.disconnect();
+        cleanup();
         resolve(svg);
         return;
       }
@@ -6791,20 +7181,16 @@ function waitForTikzSvg(targetContainer, renderId, timeoutMs = 20000) {
       const script = targetContainer.querySelector('script[type="text/tikz"]');
       if (!script && !isSettled) {
         const divReplacement = targetContainer.querySelector('div.page') || targetContainer.querySelector('div[style*="display: flex"]');
-        if (divReplacement && !divReplacement.querySelector('svg') && (Date.now() - startTime > 1200)) {
-          isSettled = true;
-          clearInterval(checkInterval);
-          observer.disconnect();
+        if (divReplacement && !divReplacement.querySelector('svg') && (Date.now() - startTime > 1500)) {
+          cleanup();
           reject(new Error('TikZ compilation completed but no SVG was generated. Please check syntax and semicolons.'));
           return;
         }
       }
 
       if (Date.now() - startTime > timeoutMs && !isSettled) {
-        isSettled = true;
-        clearInterval(checkInterval);
-        observer.disconnect();
-        reject(new Error('TikZ compilation timed out.'));
+        cleanup();
+        reject(new Error('TikZ compilation timed out. Please check your internet connection to tikzjax.com CDN.'));
       }
     }, 100);
   });
@@ -6833,11 +7219,50 @@ function healTikzCode(code) {
 
 /**
  * Fixes TikZJax BaKoMa font encoding mismatch for math symbols:
- * In BaKoMa cmsy10/cmbsy10 fonts, ASCII 124 maps to glyph 18 ('club' ♣),
- * while ASCII 106 ('j') maps to glyph 47 ('bar' |), and ASCII 107 ('k') maps to glyph 44 ('bardbl' ||).
- * TikZJax translates DVI char 106 into '&#124;' and DVI char 107 into '&#8741;' but leaves font-family as cmsy10.
- * Correcting &#124; to &#106; and &#8741; to &#107; inside cmsy elements restores authentic TeX vertical bars.
+ * 1. In BaKoMa cmsy10/cmbsy10 fonts, ASCII 124 maps to glyph 18 ('club' ♣),
+ *    while ASCII 106 ('j') maps to glyph 47 ('bar' |), and ASCII 107 ('k') maps to glyph 44 ('bardbl' ||).
+ *    TikZJax translates DVI char 106 into '&#124;' and DVI char 107 into '&#8741;' but leaves font-family as cmsy10.
+ *    Correcting &#124; to &#106; and &#8741; to &#107; inside cmsy elements restores authentic TeX vertical bars.
+ * 2. In BaKoMa cmex10 font, TikZJax misassigns cmex to tex256 (T1 text encoding), converting DVI 0 (\bigl()
+ *    to 96 (`) which BaKoMa cmex10.ttf renders as glyph 10 (coproducttext ∐).
+ *    Mapping tex256 codepoints to authentic BaKoMa cmex10 glyph indices restores authentic TeX delimiters.
  */
+const CMEX_GLYPH_FIX_MAP = {
+  96: 161,    // DVI 000 parenleftbig (\bigl()
+  180: 162,   // DVI 001 parenrightbig (\bigr))
+  710: 163,   // DVI 002 bracketleftbig (\bigl[)
+  732: 164,   // DVI 003 bracketrightbig (\bigr])
+  168: 165,   // DVI 004 floorleftbig (\bigl\lfloor)
+  733: 166,   // DVI 005 floorrightbig (\bigr\rfloor)
+  730: 167,   // DVI 006 ceilingleftbig (\bigl\lceil)
+  711: 168,   // DVI 007 ceilingrightbig (\bigr\rceil)
+  728: 169,   // DVI 008 braceleftbig (\bigl\{)
+  175: 170,   // DVI 009 bracerightbig (\bigr\})
+  729: 173,   // DVI 010 angbracketleftbig (\bigl\langle)
+  184: 174,   // DVI 011 angbracketrightbig (\bigr\rangle)
+  731: 175,   // DVI 012 vextendsingle
+  8218: 176,  // DVI 013 vextenddouble
+  8249: 177,  // DVI 014 slashbig
+  8250: 178,  // DVI 015 backslashbig
+  8220: 179,  // DVI 016 parenleftBig (\Bigl()
+  8221: 180,  // DVI 017 parenrightBig (\Bigr))
+  8222: 181,  // DVI 018 parenleftbigg (\biggl()
+  171: 182,   // DVI 019 parenrightbigg (\biggr))
+  187: 8729,  // DVI 020 bracketleftbigg (\biggl[)
+  8211: 184,  // DVI 021 bracketrightbigg (\biggr])
+  8212: 185,  // DVI 022 floorleftbigg
+  8204: 186,  // DVI 023 floorrightbigg
+  8240: 187,  // DVI 024 ceilingleftbigg
+  305: 188,   // DVI 025 ceilingrightbigg
+  567: 189,   // DVI 026 braceleftbigg
+  64256: 190, // DVI 027 bracerightbigg
+  64257: 191, // DVI 028 angbracketleftbigg
+  64258: 192, // DVI 029 angbracketrightbigg
+  64259: 193, // DVI 030 slashbigg
+  64260: 194, // DVI 031 backslashbigg
+  32: 195,    // DVI 032 parenleftBigg (\Biggl()
+  173: 196    // DVI 127 arrowdblbt
+};
 function fixTikzSvgGlyphs(container) {
   if (!container) return;
   const textElements = container.querySelectorAll('text');
@@ -6862,6 +7287,31 @@ function fixTikzSvgGlyphs(container) {
         el.innerHTML = el.innerHTML
           .replace(/&#8407;|\u20D7/g, '&#126;');
       }
+    }
+
+    // 3. cmex10 / cmex math extension delimiter fixes (\bigl(, \bigr), \Bigl, \Biggl, etc.):
+    if (/font-family:\s*(?:cmex)\d*/i.test(style) || /cmex/i.test(el.style?.fontFamily || '')) {
+      const walkAndFix = (node) => {
+        if (!node) return;
+        if (node.nodeType === 3) {
+          const text = node.nodeValue || '';
+          if (text) {
+            let replaced = false;
+            const fixed = Array.from(text).map(ch => {
+              const cp = ch.codePointAt(0);
+              if (CMEX_GLYPH_FIX_MAP[cp]) {
+                replaced = true;
+                return String.fromCodePoint(CMEX_GLYPH_FIX_MAP[cp]);
+              }
+              return ch;
+            }).join('');
+            if (replaced) node.nodeValue = fixed;
+          }
+        } else if (node.childNodes && node.childNodes.length > 0) {
+          Array.from(node.childNodes).forEach(walkAndFix);
+        }
+      };
+      walkAndFix(el);
     }
   });
 }
@@ -6960,35 +7410,17 @@ function renderTikzToElement(tikzCode, targetContainer, onComplete = null, noteC
         targetContainer.appendChild(scriptEl);
 
         const runner = window.__tikzjax_runner || (typeof window.onload === 'function' ? window.onload : null);
-        let runnerPromise = null;
         if (typeof runner === 'function') {
           window.__tikzjax_runner = runner;
           try {
-            runnerPromise = runner();
+            runner();
           } catch (e) {
-            runnerPromise = Promise.reject(e);
+            console.error('TikZJax runner invocation error:', e);
           }
         }
 
-        // Asynchronously wait for TikzJax to finish compilation and mount the SVG,
-        // or fail fast if the runner throws an error instead of waiting 20s
-        const svgEl = await Promise.race([
-          waitForTikzSvg(targetContainer, currentRenderId, 20000),
-          (async () => {
-            if (runnerPromise) {
-              try {
-                await runnerPromise;
-              } catch (err) {
-                throw new Error(`TikZ compilation failed in TeX engine: ${err?.message || err}`);
-              }
-            }
-            await new Promise(r => setTimeout(r, 600));
-            if (!targetContainer.querySelector('svg') && targetContainer.__tikzRenderId === currentRenderId) {
-              throw new Error('TikZ compilation completed without producing an SVG. Check syntax and missing semicolons.');
-            }
-            return new Promise(() => {});
-          })()
-        ]);
+        // Asynchronously wait for TikzJax to finish compilation and mount the SVG
+        const svgEl = await waitForTikzSvg(targetContainer, currentRenderId, 25000);
         if (targetContainer.__tikzRenderId !== currentRenderId) return;
 
         if (svgEl) {
@@ -8327,6 +8759,256 @@ function parseMarkdownTable(markdown) {
 }
 
 
+/* --- 03_Notes/Writing_Engine/Block_History.js --- */
+/**
+ * 03_Notes/Writing_Engine/Block_History.js
+ * Isolated per-block undo/redo history engine for note blocks (Text, TikZ, Code, Math, Table).
+ * Preserves independent edit stacks across block open/close (Done) cycles.
+ * History is retained in browser memory until the user clicks 'SAVE APPLICATION'
+ * and downloads the standalone HTML, at which point caches and history are cleared.
+ */
+
+const blockHistories = new Map();
+
+if (typeof window !== 'undefined') {
+  window.__blockHistories = blockHistories;
+}
+
+/**
+ * Retrieves or initializes the history record for a specific block ID.
+ * @param {string} blockId 
+ * @param {string} [initialText=''] 
+ * @returns {{ undoStack: Array<{ text: string, cursorStart: number, cursorEnd: number }>, redoStack: Array<{ text: string, cursorStart: number, cursorEnd: number }>, lastRecordTime: number, typingTimer: any }}
+ */
+function getOrCreateHistory(blockId, initialText = '') {
+  if (!blockHistories.has(blockId)) {
+    const textStr = String(initialText ?? '');
+    blockHistories.set(blockId, {
+      undoStack: [{ text: textStr, cursorStart: textStr.length, cursorEnd: textStr.length }],
+      redoStack: [],
+      lastRecordTime: Date.now(),
+      typingTimer: null
+    });
+  }
+  return blockHistories.get(blockId);
+}
+
+/**
+ * Records a text snapshot for a block.
+ * Uses a debounced capture for continuous typing and immediate capture for manual/bulk edits.
+ * 
+ * @param {string} blockId 
+ * @param {string} text 
+ * @param {number} [cursorStart=0] 
+ * @param {number} [cursorEnd=0] 
+ * @param {Object} [options={}]
+ * @param {boolean} [options.force=false]
+ * @param {boolean} [options.immediate=false]
+ */
+function recordBlockSnapshot(blockId, text, cursorStart = 0, cursorEnd = 0, { force = false, immediate = false } = {}) {
+  if (!blockId) return;
+  const history = getOrCreateHistory(blockId, text);
+  const textStr = String(text ?? '');
+
+  const top = history.undoStack[history.undoStack.length - 1];
+  if (top && top.text === textStr) {
+    top.cursorStart = cursorStart;
+    top.cursorEnd = cursorEnd;
+    return;
+  }
+
+  const performPush = () => {
+    history.undoStack.push({
+      text: textStr,
+      cursorStart: cursorStart,
+      cursorEnd: cursorEnd
+    });
+    // Cap history size to prevent memory bloat
+    if (history.undoStack.length > 80) {
+      history.undoStack.shift();
+    }
+    history.redoStack = [];
+    history.lastRecordTime = Date.now();
+  };
+
+  const now = Date.now();
+  if (force || immediate || now - history.lastRecordTime > 500) {
+    if (history.typingTimer) {
+      clearTimeout(history.typingTimer);
+      history.typingTimer = null;
+    }
+    performPush();
+  } else {
+    if (history.typingTimer) clearTimeout(history.typingTimer);
+    history.typingTimer = setTimeout(() => {
+      performPush();
+      history.typingTimer = null;
+    }, 380);
+  }
+}
+
+/**
+ * Performs an undo operation for a block.
+ * @param {string} blockId 
+ * @param {string} currentText 
+ * @returns {{ text: string, cursorStart: number, cursorEnd: number } | null}
+ */
+function undoBlockHistory(blockId, currentText) {
+  if (!blockId) return null;
+  const history = blockHistories.get(blockId);
+  if (!history || history.undoStack.length <= 1) return null;
+
+  if (history.typingTimer) {
+    clearTimeout(history.typingTimer);
+    history.typingTimer = null;
+  }
+
+  const textStr = String(currentText ?? '');
+  const top = history.undoStack[history.undoStack.length - 1];
+
+  // If current editor text is newer than top of stack, push current state to redo first
+  if (top && top.text !== textStr) {
+    history.redoStack.push({ text: textStr, cursorStart: 0, cursorEnd: 0 });
+    return top;
+  }
+
+  const popped = history.undoStack.pop();
+  history.redoStack.push(popped);
+
+  const prev = history.undoStack[history.undoStack.length - 1];
+  return prev || null;
+}
+
+/**
+ * Performs a redo operation for a block.
+ * @param {string} blockId 
+ * @param {string} currentText 
+ * @returns {{ text: string, cursorStart: number, cursorEnd: number } | null}
+ */
+function redoBlockHistory(blockId, currentText) {
+  if (!blockId) return null;
+  const history = blockHistories.get(blockId);
+  if (!history || history.redoStack.length === 0) return null;
+
+  if (history.typingTimer) {
+    clearTimeout(history.typingTimer);
+    history.typingTimer = null;
+  }
+
+  const next = history.redoStack.pop();
+  history.undoStack.push(next);
+  return next;
+}
+
+/**
+ * Binds per-block history tracking and Ctrl+Z / Ctrl+Y keyboard shortcuts to an editor/textarea element.
+ * 
+ * @param {HTMLElement} element - Target textarea or input element
+ * @param {Object} config
+ * @param {string} config.blockId - Block ID
+ * @param {Function} [config.getValue] - Optional custom value getter
+ * @param {Function} [config.setValue] - Optional custom value setter
+ * @param {Function} [config.onUpdate] - Optional callback fired when undo/redo changes value
+ * @returns {Function} cleanup function
+ */
+function attachBlockHistory(element, { blockId = '', getValue = null, setValue = null, onUpdate = null } = {}) {
+  if (!element || !blockId) return () => {};
+
+  const currentVal = getValue ? getValue() : (element.value || '');
+  getOrCreateHistory(blockId, currentVal);
+
+  const handleInput = () => {
+    const val = getValue ? getValue() : element.value;
+    const start = element.selectionStart !== undefined ? element.selectionStart : val.length;
+    const end = element.selectionEnd !== undefined ? element.selectionEnd : start;
+    recordBlockSnapshot(blockId, val, start, end);
+  };
+
+  const handleKeyDown = (e) => {
+    const isCtrlOrMeta = e.ctrlKey || e.metaKey;
+    if (!isCtrlOrMeta) return;
+
+    const key = (e.key || '').toLowerCase();
+
+    // 1. Undo: Ctrl+Z (without Shift)
+    if (key === 'z' && !e.shiftKey) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const current = getValue ? getValue() : element.value;
+      const prev = undoBlockHistory(blockId, current);
+      if (prev) {
+        if (setValue) {
+          setValue(prev.text);
+        } else {
+          element.value = prev.text;
+        }
+
+        if (element.setSelectionRange && typeof prev.cursorStart === 'number') {
+          try {
+            element.setSelectionRange(prev.cursorStart, prev.cursorEnd ?? prev.cursorStart);
+          } catch (_) {}
+        }
+
+        if (onUpdate) onUpdate(prev.text);
+      }
+      return;
+    }
+
+    // 2. Redo: Ctrl+Y or Ctrl+Shift+Z
+    if (key === 'y' || (key === 'z' && e.shiftKey)) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const current = getValue ? getValue() : element.value;
+      const next = redoBlockHistory(blockId, current);
+      if (next) {
+        if (setValue) {
+          setValue(next.text);
+        } else {
+          element.value = next.text;
+        }
+
+        if (element.setSelectionRange && typeof next.cursorStart === 'number') {
+          try {
+            element.setSelectionRange(next.cursorStart, next.cursorEnd ?? next.cursorStart);
+          } catch (_) {}
+        }
+
+        if (onUpdate) onUpdate(next.text);
+      }
+      return;
+    }
+  };
+
+  element.addEventListener('input', handleInput);
+  element.addEventListener('keydown', handleKeyDown);
+
+  return () => {
+    element.removeEventListener('input', handleInput);
+    element.removeEventListener('keydown', handleKeyDown);
+  };
+}
+
+/**
+ * Clears all per-block history stacks from memory.
+ * Invoked when saving and downloading the application HTML.
+ */
+function clearAllBlockHistory() {
+  blockHistories.clear();
+  console.log('[History] All per-block history stacks cleared.');
+}
+
+/**
+ * Returns raw history for a block (useful for inspection/tests).
+ * @param {string} blockId 
+ * @returns {Object|null}
+ */
+function getBlockHistory(blockId) {
+  return blockHistories.get(blockId) || null;
+}
+
+
 /* --- 03_Notes/B_Editor_View/01_Blocks/Block_Actions.js --- */
 /**
  * 03_Notes/B_Editor_View/01_Blocks/Block_Actions.js
@@ -8521,6 +9203,7 @@ function getFigureCaptionText(caption, figNumber, allowNumbering) {
  * Creates and returns a smoothly resizable editor textarea element.
  * 
  * @param {Object} options
+ * @param {string} [options.blockId=''] - Block ID for isolated undo/redo history
  * @param {string} options.value - Initial text value
  * @param {string} options.placeholder - Placeholder text
  * @param {string} [options.minHeight='100px'] - Minimum height
@@ -8532,6 +9215,7 @@ function getFigureCaptionText(caption, figNumber, allowNumbering) {
  * @returns {HTMLTextAreaElement}
  */
 function createBlockTextarea({
+  blockId = '',
   value = '',
   placeholder = '',
   minHeight = '100px',
@@ -8560,6 +9244,11 @@ function createBlockTextarea({
   textarea.style.scrollbarWidth = 'thin';
   textarea.style.fontFamily = 'var(--note-font-family, inherit)';
   textarea.style.transition = 'border-color 0.15s ease, box-shadow 0.15s ease';
+  textarea.style.whiteSpace = 'pre-wrap';
+  textarea.style.wordBreak = 'break-word';
+  textarea.style.overflowWrap = 'anywhere';
+  textarea.style.overflowX = 'hidden';
+  textarea.style.overflowY = 'auto';
 
   if (onInput) {
     textarea.addEventListener('input', (e) => onInput(textarea.value, e));
@@ -8571,6 +9260,16 @@ function createBlockTextarea({
 
   if (onKeyDown) {
     textarea.addEventListener('keydown', onKeyDown);
+  }
+
+  if (blockId) {
+    attachBlockHistory(textarea, {
+      blockId,
+      onUpdate: (val) => {
+        if (onInput) onInput(val);
+        if (onChange) onChange(val);
+      }
+    });
   }
 
   return textarea;
@@ -8871,6 +9570,11 @@ function ensureCodeEditorStyles() {
       background-color: transparent !important;
       color: var(--text, #e8eaf2) !important;
       caret-color: var(--accent, #8b6dff);
+      white-space: pre-wrap !important;
+      word-break: break-word !important;
+      overflow-wrap: anywhere !important;
+      overflow-x: hidden !important;
+      overflow-y: auto !important;
     }
     [data-theme="light"] .code-editor-textarea {
       color: #1a1d2e !important;
@@ -8928,6 +9632,7 @@ function ensureCodeEditorStyles() {
   document.head.appendChild(style);
 }
 function createCodeEditor({
+  blockId = '',
   value = '',
   placeholder = '',
   badge = 'LaTeX',
@@ -8989,7 +9694,7 @@ function createCodeEditor({
 
   // Textarea Editor Surface
   const textarea = document.createElement('textarea');
-  textarea.className = 'code-editor-textarea flex-1 p-2.5 font-mono text-xs outline-none resize-none border-none box-border whitespace-pre select-text';
+  textarea.className = 'code-editor-textarea flex-1 p-2.5 font-mono text-xs outline-none resize-none border-none box-border whitespace-pre-wrap break-words select-text';
   textarea.spellcheck = false;
   textarea.autocapitalize = 'off';
   textarea.autocomplete = 'off';
@@ -9002,11 +9707,30 @@ function createCodeEditor({
   textarea.style.scrollbarWidth = 'thin';
   textarea.style.minHeight = '100%';
   textarea.style.height = '100%';
+  textarea.style.overflowX = 'hidden';
+  textarea.style.overflowY = 'auto';
+  textarea.style.whiteSpace = 'pre-wrap';
+  textarea.style.wordBreak = 'break-word';
+  textarea.style.overflowWrap = 'anywhere';
 
   body.appendChild(gutter);
   body.appendChild(textarea);
   container.appendChild(header);
   container.appendChild(body);
+
+  // Hidden offscreen mirror element to calculate dynamic heights of wrapped lines for accurate gutter sync
+  const mirrorMeasurer = document.createElement('div');
+  mirrorMeasurer.className = 'code-editor-measurer';
+  mirrorMeasurer.style.cssText = "position:absolute;visibility:hidden;pointer-events:none;top:-9999px;left:-9999px;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;box-sizing:border-box;padding:0;margin:0;line-height:24px;font-size:12.5px;font-family:'JetBrains Mono','Fira Code','Cascadia Code',Menlo,Monaco,Consolas,'Liberation Mono',ui-monospace,monospace;";
+  container.appendChild(mirrorMeasurer);
+
+  if (typeof ResizeObserver !== 'undefined') {
+    const ro = new ResizeObserver(() => {
+      syncGutter();
+    });
+    ro.observe(textarea);
+    container.__ro = ro;
+  }
 
   // ---------------------------------------------------------------------------
   // 3. Line Numbering, Indent Guide & Folding Synchronization
@@ -9021,17 +9745,29 @@ function createCodeEditor({
     gutter.innerHTML = '';
     const gutterFrag = document.createDocumentFragment();
 
+    const availWidth = textarea.clientWidth ? (textarea.clientWidth - 20) : 0;
+    if (availWidth > 40) mirrorMeasurer.style.width = availWidth + 'px';
+
+    const getLineHeight = (lineText) => {
+      if (availWidth > 40 && lineText) {
+        mirrorMeasurer.textContent = lineText;
+        return Math.max(24, mirrorMeasurer.offsetHeight || 24);
+      }
+      return 24;
+    };
+
     if (!enableFolding) {
       gutter.style.width = '38px';
       for (let i = 0; i < visibleLines.length; i++) {
         const lineNum = i + 1;
+        const lineH = getLineHeight(visibleLines[i]);
         const row = document.createElement('div');
-        row.className = 'gutter-row flex items-center justify-end px-1.5';
-        row.style.height = '24px';
-        row.style.minHeight = '24px';
+        row.className = 'gutter-row flex items-start justify-end px-1.5';
+        row.style.height = `${lineH}px`;
+        row.style.minHeight = `${lineH}px`;
 
         const numSpan = document.createElement('span');
-        numSpan.className = 'line-num text-[11px] tabular-nums font-mono';
+        numSpan.className = 'line-num text-[11px] tabular-nums font-mono leading-[24px]';
         numSpan.textContent = String(lineNum);
         row.appendChild(numSpan);
 
@@ -9053,16 +9789,17 @@ function createCodeEditor({
       const origLineNum = curOrigLine;
       const isFolded = foldedLineMap.has(origLineNum);
       const foldMeta = startLinesWithFold.get(origLineNum);
+      const lineH = getLineHeight(visibleLines[v]);
 
       const row = document.createElement('div');
-      row.className = 'gutter-row flex items-center justify-between px-1';
-      row.style.height = '24px';
-      row.style.minHeight = '24px';
+      row.className = 'gutter-row flex items-start justify-between px-1';
+      row.style.height = `${lineH}px`;
+      row.style.minHeight = `${lineH}px`;
 
       if (foldMeta || isFolded) {
         const activeFoldMeta = foldMeta || foldedLineMap.get(origLineNum);
         const foldBtn = document.createElement('span');
-        foldBtn.className = 'fold-indicator cursor-pointer text-[11px] font-bold select-none text-center transition-colors';
+        foldBtn.className = 'fold-indicator cursor-pointer text-[11px] font-bold select-none text-center transition-colors leading-[24px]';
         foldBtn.style.width = '14px';
         foldBtn.style.lineHeight = '24px';
         foldBtn.textContent = isFolded ? '>' : '▾';
@@ -9082,7 +9819,7 @@ function createCodeEditor({
       }
 
       const numSpan = document.createElement('span');
-      numSpan.className = 'line-num text-[11px] tabular-nums font-mono text-right flex-1 pr-0.5';
+      numSpan.className = 'line-num text-[11px] tabular-nums font-mono text-right flex-1 pr-0.5 leading-[24px]';
       numSpan.textContent = String(origLineNum);
       row.appendChild(numSpan);
 
@@ -9281,6 +10018,35 @@ function createCodeEditor({
   container.isFolded = () => foldedLineMap.size > 0;
   container.unfoldAll = unfoldAll;
   container.focus = () => textarea.focus();
+
+  if (blockId) {
+    const detachHistory = attachBlockHistory(textarea, {
+      blockId,
+      getValue: () => fullCode,
+      setValue: (newVal) => {
+        container.setValue(newVal);
+      },
+      onUpdate: (newVal) => {
+        if (onInput) onInput(newVal);
+        if (onChange) onChange(newVal);
+      }
+    });
+
+    container.__cleanup = () => {
+      if (typeof detachHistory === 'function') detachHistory();
+      if (container.__ro) {
+        container.__ro.disconnect();
+        container.__ro = null;
+      }
+    };
+  } else {
+    container.__cleanup = () => {
+      if (container.__ro) {
+        container.__ro.disconnect();
+        container.__ro = null;
+      }
+    };
+  }
 
   return container;
 }
@@ -10452,6 +11218,31 @@ if (typeof document !== 'undefined') {
       border-color: #d8b4fe !important;
       font-weight: 600 !important;
     }
+    .obsidian-raw-block-editor {
+      background-color: #141622;
+      color: #e2e8f0;
+      border: 1px solid rgba(139, 92, 246, 0.4);
+      transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    }
+    [data-theme="light"] .obsidian-raw-block-editor,
+    .light .obsidian-raw-block-editor {
+      background-color: #f3f4f8 !important;
+      color: #1a1d2e !important;
+      border: 1px solid #d1d5e0 !important;
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+    }
+    .floating-katex-pill {
+      background-color: rgba(22, 25, 38, 0.95);
+      color: #d8b4fe;
+      border: 1px solid rgba(139, 92, 246, 0.4);
+    }
+    [data-theme="light"] .floating-katex-pill,
+    .light .floating-katex-pill {
+      background-color: rgba(255, 255, 255, 0.95) !important;
+      color: #581c87 !important;
+      border: 1px solid #d8b4fe !important;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+    }
     .live-line {
       min-height: 1.5em;
       line-height: var(--note-line-height, 1.7);
@@ -11232,9 +12023,6 @@ const deleteSelectionAndHeal = (range, rootEl, editModeOptions = {}, triggerUpda
  * In-place keyboard interactions, token expansion/collapse, and bullet navigation.
  */
 
-
-
-
 // Helper to renumber downstream ordered list items sequentially
 const renumberSubsequentListItems = (startLineEl) => {
   if (!startLineEl) return;
@@ -11287,57 +12075,6 @@ const renumberSubsequentListItems = (startLineEl) => {
     }
     break;
   }
-};
-
-// Helper to find the containing line <div> of any node
-const getContainingLine = (node, rootEl, offset = 0) => {
-  if (!node || !rootEl) return null;
-  if (node === rootEl) {
-    if (rootEl.childNodes.length > 0) {
-      const idx = Math.min(Math.max(0, offset), rootEl.childNodes.length - 1);
-      const target = rootEl.childNodes[idx];
-      return (target && target.nodeType === Node.ELEMENT_NODE) ? target : rootEl.firstElementChild;
-    }
-    return null;
-  }
-  if (node.parentNode === rootEl && node.nodeType === Node.TEXT_NODE) {
-    const line = document.createElement('div');
-    line.className = 'live-line min-h-[1.5em] my-0.5';
-    rootEl.replaceChild(line, node);
-    line.appendChild(node);
-    return line;
-  }
-  let el = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
-  while (el && el !== rootEl) {
-    if (el.parentNode === rootEl) return el;
-    el = el.parentElement;
-  }
-  return null;
-};
-
-// Helper to get raw text of a line element
-const getLineRawText = (lineEl) => {
-  if (!lineEl) return '';
-  let text = '';
-  const traverse = (node) => {
-    if (node.nodeType === Node.TEXT_NODE) {
-      text += node.nodeValue;
-      return;
-    }
-    if (node.nodeType === Node.ELEMENT_NODE) {
-      if (node !== lineEl && node.classList && (node.classList.contains('live-widget') || node.hasAttribute('data-raw'))) {
-        const raw = node.getAttribute('data-raw');
-        if (raw !== null) {
-          text += raw;
-          return;
-        }
-      }
-      if (node.tagName === 'BR') return;
-      node.childNodes.forEach(traverse);
-    }
-  };
-  traverse(lineEl);
-  return text;
 };
 const checkAutoCollapseTokensNearCaret = ({ editModeOptions, hideKatexPill, triggerUpdate }) => {
   const sel = window.getSelection();
@@ -13583,6 +14320,7 @@ function renderObsidianMarkdown(markdownText = '', options = {}) {
 
 
 
+
 // Re-export parser, widget, and markdown utilities for full backward compatibility
 function renderTextBlock(
   block,
@@ -13665,7 +14403,7 @@ function renderTextBlock(
     <!-- In-Place Live Preview Workspace Container -->
     <div class="unified-workspace-container relative w-full mt-1">
       <!-- Clean Live Floating KaTeX Math Pill (NO 'Preview:' label) -->
-      <div class="floating-katex-pill hidden absolute pointer-events-none z-30 px-2.5 py-1 rounded-lg border border-purple-500/40 bg-[#161926]/95 text-purple-300 shadow-xl text-sm flex items-center justify-center backdrop-blur-xs transition-all duration-75"></div>
+      <div class="floating-katex-pill hidden absolute pointer-events-none z-30 px-2.5 py-1 rounded-lg border shadow-xl text-sm flex items-center justify-center backdrop-blur-xs transition-all duration-75"></div>
 
       <!-- In-Place Live Surface (Editable) -->
       <div class="obsidian-live-surface w-full px-1 py-1 rounded-lg outline-none transition-all box-border text-[var(--text)] min-h-[90px] cursor-text select-text" contenteditable="true" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" style="font-family: var(--note-font-family, inherit); font-size: var(--note-font-size, 1rem); line-height: var(--note-line-height, ${currentLineHeight}); white-space: pre-wrap; word-break: break-word;"></div>
@@ -13800,7 +14538,7 @@ function renderTextBlock(
     collapseExpandedNode();
 
     const rawContainer = document.createElement('div');
-    rawContainer.className = 'obsidian-raw-block-editor w-full font-mono text-xs sm:text-sm p-2.5 rounded-lg border border-purple-500/50 bg-[#12131c] text-purple-200 outline-none my-2 transition-all shadow-inner select-text';
+    rawContainer.className = 'obsidian-raw-block-editor w-full font-mono text-xs sm:text-sm p-2.5 rounded-lg border outline-none my-2 transition-all shadow-inner select-text';
     rawContainer.setAttribute('contenteditable', 'true');
     rawContainer.setAttribute('data-is-raw-block', 'true');
     rawContainer.setAttribute('data-raw', raw);
@@ -14550,8 +15288,28 @@ function renderTextBlock(
     }
   }, 50);
 
+  // Attach isolated per-block undo/redo history
+  const detachHistory = attachBlockHistory(liveSurface, {
+    blockId: block.id,
+    getValue: () => serializeSurface(),
+    setValue: (newMarkdown) => {
+      collapseExpandedBlock();
+      collapseExpandedNode();
+      liveSurface.innerHTML = '';
+      const rendered = renderObsidianMarkdown(newMarkdown, editModeOptions);
+      while (rendered.firstChild) {
+        liveSurface.appendChild(rendered.firstChild);
+      }
+      ensureSurfaceDomIntegrity();
+    },
+    onUpdate: () => {
+      triggerUpdate();
+    }
+  });
+
   container.__blockCleanup = () => {
     cleanupFloatingDock();
+    if (typeof detachHistory === 'function') detachHistory();
   };
 
   const handleCopyBlock = async (btn) => {
@@ -14569,7 +15327,7 @@ function renderTextBlock(
       setTimeout(() => {
         btn.innerHTML = origHtml;
         btn.title = 'Copy block markdown code';
-      }, 1200);
+      }, 2000);
     };
 
     try {
@@ -14705,6 +15463,7 @@ function renderEquationBlock(block, isEditing = false, onUpdate = null, { onDone
   const editorMount = editWrap.querySelector('.eq-editor-mount');
 
   const codeEditor = createCodeEditor({
+    blockId: block.id,
     value: rawTex,
     placeholder: 'Enter LaTeX equation code (e.g. \\nabla \\times \\mathbf{E} = -\\frac{\\partial \\mathbf{B}}{\\partial t})...',
     badge: 'LaTeX',
@@ -14991,6 +15750,7 @@ function renderTikzBlock(block, isEditing = false, onUpdate = null, { onDone = n
   const editorMount = editWrap.querySelector('.tikz-editor-mount');
 
   const codeEditor = createCodeEditor({
+    blockId: block.id,
     value: tikzCode,
     placeholder: '\\begin{tikzpicture}[...]\n  \\draw (0,0) circle (1);\n\\end{tikzpicture}',
     badge: 'TikZ',
@@ -15181,6 +15941,48 @@ function renderTikzBlock(block, isEditing = false, onUpdate = null, { onDone = n
   // Initial compile on block load
   compile(false);
 
+  // Copy Block TikZ Code Handler with 2-second green tick confirmation
+  const handleCopyBlock = async (btn) => {
+    const codeToCopy = codeEditor.getValue ? codeEditor.getValue() : textarea.value;
+    const origHtml = btn.innerHTML;
+    const origTitle = btn.title;
+    const showCopied = () => {
+      btn.innerHTML = `
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="text-green-400">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+      `;
+      btn.title = 'Copied!';
+      setTimeout(() => {
+        btn.innerHTML = origHtml;
+        btn.title = origTitle || 'Copy block TikZ code';
+      }, 2000);
+    };
+
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(codeToCopy);
+      } else {
+        throw new Error('Clipboard API unavailable');
+      }
+      showCopied();
+    } catch (err) {
+      const ta = document.createElement('textarea');
+      ta.value = codeToCopy;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        showCopied();
+      } catch (e) {
+        console.error('Failed to copy TikZ code: ', e);
+      }
+      ta.remove();
+    }
+  };
+
   // Top Right Action Buttons (Shared Action Bar)
   initBlockActions(editWrap, {
     onDone: () => {
@@ -15204,6 +16006,7 @@ function renderTikzBlock(block, isEditing = false, onUpdate = null, { onDone = n
       }
       if (onDone) onDone();
     },
+    onCopy: handleCopyBlock,
     onMoveUp,
     onMoveDown,
     onDelete
@@ -15798,6 +16601,7 @@ Ampere-Maxwell & Magnetism & $\nabla \times \mathbf{B} = \mu_0 \mathbf{J} + \mu_
 
   // Create Monospace Code Editor with Line Numbers & Comfortable Spacing (Folding Disabled)
   const codeEditor = createCodeEditor({
+    blockId: block.id,
     value: rawTable,
     placeholder: 'Enter LaTeX tabular code (\\begin{tabular}...\\end{tabular}) or Markdown table...',
     badge: 'Table',
@@ -15877,6 +16681,7 @@ Ampere-Maxwell & Magnetism & $\nabla \times \mathbf{B} = \mu_0 \mathbf{J} + \mu_
  * - Body: Theme-dynamic (light in light mode, dark in dark mode)
  * - Single Area: Preserves pasted code exactly as pasted; click to edit, blur to highlight
  */
+
 
 
 // Inject code card styling once
@@ -15980,7 +16785,10 @@ if (typeof document !== 'undefined' && !document.getElementById('notes-code-bloc
       resize: none;
       display: block;
       overflow-y: hidden;
-      white-space: pre;
+      overflow-x: hidden;
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow-wrap: anywhere;
     }
   `;
   document.head.appendChild(style);
@@ -16218,6 +17026,19 @@ function renderCodeBlock(
       });
 
       textarea.addEventListener('click', (e) => e.stopPropagation());
+
+      attachBlockHistory(textarea, {
+        blockId: block.id,
+        onUpdate: (val) => {
+          currentCode = val;
+          block.code = currentCode;
+          block.content = currentCode;
+          autoResize();
+          if (onUpdate) {
+            onUpdate({ code: currentCode, content: currentCode, title: currentTitle, language });
+          }
+        }
+      });
 
       textarea.addEventListener('blur', () => {
         currentCode = textarea.value;
@@ -18377,13 +19198,16 @@ function RenderLaTeXEditor(container, noteId, isEditMode = true) {
     activeSelectorIndex = -1;
     SaveNotesState();
     renderBlocks();
-    refreshSidebar();
+    if (type === 'heading') {
+      refreshSidebar();
+    }
   }
 
   // In-Place Block Selector Popover Component
   function createBlockSelector(targetIndex) {
     const selectorWrap = document.createElement('div');
     selectorWrap.className = 'notes-block-selector-popover my-2 p-2 sm:p-2.5 rounded-xl border border-purple-500/60 bg-[var(--surface)] shadow-xl animate-fade-in flex flex-col gap-2 z-30 select-none';
+    selectorWrap.dataset.selectorIndex = targetIndex;
     selectorWrap.innerHTML = `
       <div class="flex items-center justify-between pb-1.5 border-b border-[var(--border)] text-xs text-[var(--text-secondary)] font-mono">
         <span class="flex items-center gap-1.5 text-purple-400 font-semibold">
@@ -18404,8 +19228,7 @@ function RenderLaTeXEditor(container, noteId, isEditMode = true) {
 
     selectorWrap.querySelector('.close-selector-btn').addEventListener('click', (e) => {
       e.stopPropagation();
-      activeSelectorIndex = -1;
-      renderBlocks();
+      closeBlockSelectorInPlace();
     });
 
     selectorWrap.addEventListener('click', (e) => {
@@ -18435,11 +19258,160 @@ function RenderLaTeXEditor(container, noteId, isEditMode = true) {
 
     divider.addEventListener('click', (e) => {
       e.stopPropagation();
-      activeSelectorIndex = insertIndex;
-      renderBlocks();
+      openBlockSelectorInPlace(insertIndex);
     });
 
     return divider;
+  }
+
+  function openBlockSelectorInPlace(insertIndex) {
+    if (activeSelectorIndex === insertIndex) return;
+    if (activeSelectorIndex !== -1) {
+      closeBlockSelectorInPlace();
+    }
+    activeSelectorIndex = insertIndex;
+    const dividerEl = blocksContainer.querySelector(`.notes-insert-divider-zone[data-insert-index="${insertIndex}"]`);
+    if (dividerEl) {
+      const selectorEl = createBlockSelector(insertIndex);
+      blocksContainer.replaceChild(selectorEl, dividerEl);
+    } else {
+      renderBlocks();
+    }
+  }
+
+  function closeBlockSelectorInPlace() {
+    if (activeSelectorIndex === -1) return;
+    const currentIdx = activeSelectorIndex;
+    activeSelectorIndex = -1;
+    const selectorEl = blocksContainer.querySelector('.notes-block-selector-popover');
+    if (selectorEl) {
+      const newDivider = createHoverDivider(currentIdx);
+      blocksContainer.replaceChild(newDivider, selectorEl);
+    }
+  }
+
+  function createConfiguredBlockItem(block, idx, isEditing, prefixMap, figureMap) {
+    const blocks = note.blocks || [];
+    const prefix = prefixMap ? (prefixMap.get(block.id || idx) || '') : '';
+    const figureInfo = figureMap ? (figureMap.get(block.id || idx) || null) : null;
+
+    const blockEl = CreateBlockItem({
+      block: block,
+      index: idx,
+      totalBlocks: blocks.length,
+      isEditing: isEditing,
+      isEditMode: isEditMode,
+      allNotes: allNotes,
+      prefix: prefix,
+      figureInfo: figureInfo,
+      note: note,
+      pickerState: pickerState,
+      onPickBlock: (pickedBlock, pickedIdx) => {
+        handlePickBlock(pickedBlock, pickedIdx);
+      },
+      onStartPicking: (targetColBlock, targetSlotIdx, neededCount) => {
+        startPicking(targetColBlock, targetSlotIdx, neededCount);
+      },
+      onCancelPicking: () => {
+        cancelPicking();
+      },
+      onConfigUpdate: () => {
+        SaveNotesState();
+        renderBlocks();
+        refreshSidebar();
+      },
+      onUpdate: (fields) => {
+        Object.assign(block, fields);
+        SaveNotesState();
+        if (block.type === 'heading') {
+          refreshSidebar();
+        }
+      },
+      onSelect: () => {
+        setActiveBlock(idx);
+      },
+      onDone: () => {
+        setActiveBlock(-1);
+      },
+      onMoveUp: () => {
+        document.getElementById('notes-text-floating-dock')?.remove();
+        const temp = blocks[idx];
+        blocks[idx] = blocks[idx - 1];
+        blocks[idx - 1] = temp;
+        activeBlockIndex = idx - 1;
+        SaveNotesState();
+        renderBlocks();
+        refreshSidebar();
+      },
+      onMoveDown: () => {
+        document.getElementById('notes-text-floating-dock')?.remove();
+        const temp = blocks[idx];
+        blocks[idx] = blocks[idx + 1];
+        blocks[idx + 1] = temp;
+        activeBlockIndex = idx + 1;
+        SaveNotesState();
+        renderBlocks();
+        refreshSidebar();
+      },
+      onDelete: () => {
+        blocks.splice(idx, 1);
+        activeBlockIndex = -1;
+        activeSelectorIndex = -1;
+        SaveNotesState();
+        renderBlocks();
+        refreshSidebar();
+      },
+      onInsertBelow: (blockIdx) => {
+        openBlockSelectorInPlace(blockIdx + 1);
+      }
+    });
+
+    blockEl.dataset.blockIndex = idx;
+    blockEl.dataset.blockId = block.id || idx;
+    return blockEl;
+  }
+
+  function updateSingleBlockInPlace(idx, isEditing) {
+    const blocks = note.blocks || [];
+    const block = blocks[idx];
+    if (!block) return;
+
+    const existingEl = blocksContainer.querySelector(`[data-block-index="${idx}"]`);
+    if (!existingEl) {
+      renderBlocks();
+      return;
+    }
+
+    if (typeof existingEl.__blockCleanup === 'function') {
+      existingEl.__blockCleanup();
+    }
+
+    const prefixMap = computeHeadingPrefixes(blocks, note.autoNumbering);
+    const { figureMap, tagMap } = computeFigureNumbers(blocks);
+    setActiveFigureTagMap(tagMap);
+
+    const newBlockEl = createConfiguredBlockItem(block, idx, isEditing, prefixMap, figureMap);
+    blocksContainer.replaceChild(newBlockEl, existingEl);
+  }
+
+  function setActiveBlock(newIdx) {
+    if (activeBlockIndex === newIdx) return;
+    const oldIdx = activeBlockIndex;
+    activeBlockIndex = newIdx;
+
+    document.getElementById('notes-text-floating-dock')?.remove();
+
+    if (activeSelectorIndex !== -1) {
+      closeBlockSelectorInPlace();
+    }
+
+    const blocks = note.blocks || [];
+    if (oldIdx !== -1 && oldIdx < blocks.length) {
+      updateSingleBlockInPlace(oldIdx, false);
+    }
+    if (newIdx !== -1 && newIdx < blocks.length) {
+      updateSingleBlockInPlace(newIdx, true);
+    }
   }
 
   function startPicking(targetBlock, targetSlotIdx = null, neededCount = 1) {
@@ -18580,86 +19552,7 @@ function RenderLaTeXEditor(container, noteId, isEditMode = true) {
 
       // 2. Render block item
       const isEditing = isEditMode && (idx === activeBlockIndex);
-      const prefix = prefixMap.get(block.id || idx) || '';
-      const figureInfo = figureMap.get(block.id || idx) || null;
-
-      const blockEl = CreateBlockItem({
-        block: block,
-        index: idx,
-        totalBlocks: blocks.length,
-        isEditing: isEditing,
-        isEditMode: isEditMode,
-        allNotes: allNotes,
-        prefix: prefix,
-        figureInfo: figureInfo,
-        note: note,
-        pickerState: pickerState,
-        onPickBlock: (pickedBlock, pickedIdx) => {
-          handlePickBlock(pickedBlock, pickedIdx);
-        },
-        onStartPicking: (targetColBlock, targetSlotIdx, neededCount) => {
-          startPicking(targetColBlock, targetSlotIdx, neededCount);
-        },
-        onCancelPicking: () => {
-          cancelPicking();
-        },
-        onConfigUpdate: () => {
-          SaveNotesState();
-          renderBlocks();
-          refreshSidebar();
-        },
-        onUpdate: (fields) => {
-          Object.assign(block, fields);
-          SaveNotesState();
-          if (block.type === 'heading') {
-            refreshSidebar();
-          }
-        },
-        onSelect: () => {
-          document.getElementById('notes-text-floating-dock')?.remove();
-          activeBlockIndex = idx;
-          activeSelectorIndex = -1;
-          renderBlocks();
-        },
-        onDone: () => {
-          document.getElementById('notes-text-floating-dock')?.remove();
-          activeBlockIndex = -1;
-          renderBlocks();
-        },
-        onMoveUp: () => {
-          document.getElementById('notes-text-floating-dock')?.remove();
-          const temp = blocks[idx];
-          blocks[idx] = blocks[idx - 1];
-          blocks[idx - 1] = temp;
-          activeBlockIndex = idx - 1;
-          SaveNotesState();
-          renderBlocks();
-          refreshSidebar();
-        },
-        onMoveDown: () => {
-          document.getElementById('notes-text-floating-dock')?.remove();
-          const temp = blocks[idx];
-          blocks[idx] = blocks[idx + 1];
-          blocks[idx + 1] = temp;
-          activeBlockIndex = idx + 1;
-          SaveNotesState();
-          renderBlocks();
-          refreshSidebar();
-        },
-        onDelete: () => {
-          blocks.splice(idx, 1);
-          activeBlockIndex = -1;
-          activeSelectorIndex = -1;
-          SaveNotesState();
-          renderBlocks();
-          refreshSidebar();
-        },
-        onInsertBelow: (blockIdx) => {
-          activeSelectorIndex = blockIdx + 1;
-          renderBlocks();
-        }
-      });
-
+      const blockEl = createConfiguredBlockItem(block, idx, isEditing, prefixMap, figureMap);
       blocksContainer.appendChild(blockEl);
     });
 
@@ -18750,15 +19643,14 @@ function RenderLaTeXEditor(container, noteId, isEditMode = true) {
       }
     }
     if ((e.key === 'Escape' || (e.ctrlKey && e.key === 'Enter')) && activeBlockIndex !== -1) {
-      activeBlockIndex = -1;
-      activeSelectorIndex = -1;
-      renderBlocks();
+      setActiveBlock(-1);
     }
   };
   document.addEventListener('keydown', onDocKeyDown);
 
   // Register teardown callback to prevent listener leaks on future renders
   container.__editorCleanup = () => {
+    flushNotesSave();
     const oldDock = document.getElementById('notes-text-floating-dock');
     if (oldDock) {
       if (typeof oldDock.__cleanup === 'function') oldDock.__cleanup();

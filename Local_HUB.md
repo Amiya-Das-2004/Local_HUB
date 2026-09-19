@@ -5,8 +5,8 @@
 | :--- | :--- | :--- |
 | `01_Local_HUB_Logo.js` | `GetLogoHTML()` | Returns HTML markup and styles for the main Local HUB logo button. |
 |  | `InitLogoLogic()` | Attaches click listener to navigate back to the Landing Page. |
-| `02_Theme_Toggle.js` | `GetThemeToggleHTML()` | Returns HTML markup and SVG for the theme toggle icon button. |
-|  | `InitThemeToggleLogic()` | Loads saved theme from localStorage and toggles between light/dark themes. |
+| `02_Theme_Toggle.js` | `GetThemeToggleHTML()` | Returns HTML markup and dynamic Sun/Moon SVG for the theme toggle icon button. |
+|  | `InitThemeToggleLogic()` | Loads saved theme from localStorage, alternates between Sun and Moon SVG icons, and toggles between light/dark themes. |
 | `03_Scrollbar.js` | `GetScrollbarStyles()` | Returns universal 4px thin scrollbar CSS styles adapting to light/dark themes. |
 |  | `InitScrollbar()` | Injects scrollbar stylesheet into document head if not present. |
 | `04_Import_Export.js` | `GetImportButtonHTML()` | Returns icon button HTML for importing JSON. |
@@ -96,7 +96,8 @@
 | `00_State.js` | `NotesState` | In-memory application state object storing all notes, folder trees, tags, and vault metadata (`{ vaultMeta, folders, tags, notes }`). |
 |  | `sanitizeNote(n, idx)` | Validates the schema of note objects and populates default fallbacks for missing properties (id, slug, title, folder, tags, blocks, meta, autoNumbering). |
 |  | `LoadNotesState()` | Reads notes from DOM vault (`#NotesData`) and localStorage (`NotesData_Local_Cache`), merges edits with base reference notes, auto-extracts folders and tags, and exposes `window.NotesState`. |
-|  | `SaveNotesState(newState)` | Re-derives folders/tags from active notes to eliminate phantom entries, serializes state into `#NotesData`, updates `window.NotesState`, and persists to localStorage. |
+|  | `SaveNotesState(newState, options)` | Re-derives folders/tags from active notes to eliminate phantom entries, synchronizes `window.NotesState`, and persists to `#NotesData` and localStorage with high-speed debouncing. |
+|  | `flushNotesSave()` | Immediately flushes any pending debounced state writes to DOM `#NotesData` and localStorage. |
 | <hr style="border: 1px solid #333;"> | <hr style="border: 1px solid #333;"> | <hr style="border: 1px solid #333;"> |
 | `01_Header.js` | `GetHeaderHTML()` | Generates sticky top header with logo, center title ("NOTES"), edit toggle, graph toggle, and action buttons. |
 |  | `GetCenterTitleHTML()` | Renders center title brand markup with custom book/LaTeX glyph SVG and link to `#Notes`. |

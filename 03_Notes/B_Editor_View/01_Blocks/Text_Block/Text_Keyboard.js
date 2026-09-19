@@ -4,7 +4,17 @@
  */
 
 import { createLiveWidget } from './Text_Widgets.js';
-import { parseTextToFragment, renderSingleLineToDom, getNumberForLineAtIndent, isBulletMathSymbol, deleteSelectionAndHeal } from './Text_Parser.js';
+import {
+  parseTextToFragment,
+  renderSingleLineToDom,
+  getNumberForLineAtIndent,
+  isBulletMathSymbol,
+  deleteSelectionAndHeal,
+  getContainingLine,
+  getLineRawText
+} from './Text_Parser.js';
+
+export { getContainingLine, getLineRawText };
 import { createLiveBlockElement } from './Text_Block_Markdown.js';
 import { renderKatex } from '../../../Writing_Engine/Math_Renderer.js';
 
@@ -62,56 +72,6 @@ export const renumberSubsequentListItems = (startLineEl) => {
   }
 };
 
-// Helper to find the containing line <div> of any node
-export const getContainingLine = (node, rootEl, offset = 0) => {
-  if (!node || !rootEl) return null;
-  if (node === rootEl) {
-    if (rootEl.childNodes.length > 0) {
-      const idx = Math.min(Math.max(0, offset), rootEl.childNodes.length - 1);
-      const target = rootEl.childNodes[idx];
-      return (target && target.nodeType === Node.ELEMENT_NODE) ? target : rootEl.firstElementChild;
-    }
-    return null;
-  }
-  if (node.parentNode === rootEl && node.nodeType === Node.TEXT_NODE) {
-    const line = document.createElement('div');
-    line.className = 'live-line min-h-[1.5em] my-0.5';
-    rootEl.replaceChild(line, node);
-    line.appendChild(node);
-    return line;
-  }
-  let el = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
-  while (el && el !== rootEl) {
-    if (el.parentNode === rootEl) return el;
-    el = el.parentElement;
-  }
-  return null;
-};
-
-// Helper to get raw text of a line element
-export const getLineRawText = (lineEl) => {
-  if (!lineEl) return '';
-  let text = '';
-  const traverse = (node) => {
-    if (node.nodeType === Node.TEXT_NODE) {
-      text += node.nodeValue;
-      return;
-    }
-    if (node.nodeType === Node.ELEMENT_NODE) {
-      if (node !== lineEl && node.classList && (node.classList.contains('live-widget') || node.hasAttribute('data-raw'))) {
-        const raw = node.getAttribute('data-raw');
-        if (raw !== null) {
-          text += raw;
-          return;
-        }
-      }
-      if (node.tagName === 'BR') return;
-      node.childNodes.forEach(traverse);
-    }
-  };
-  traverse(lineEl);
-  return text;
-};
 
 export const checkAutoCollapseTokensNearCaret = ({ editModeOptions, hideKatexPill, triggerUpdate }) => {
   const sel = window.getSelection();

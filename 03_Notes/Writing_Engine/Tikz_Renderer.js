@@ -188,7 +188,7 @@ export function getActiveTikzPreamble(note = null) {
  * Helper to wait for TikzJax to asynchronously process the <script type="text/tikz"> tag
  * and replace it with the rendered <svg> element.
  */
-function waitForTikzSvg(targetContainer, renderId, timeoutMs = 20000) {
+function waitForTikzSvg(targetContainer, renderId, timeoutMs = 25000) {
   return new Promise((resolve, reject) => {
     // 1. If SVG is already present
     const existingSvg = targetContainer.querySelector('svg');
@@ -199,36 +199,63 @@ function waitForTikzSvg(targetContainer, renderId, timeoutMs = 20000) {
 
     const startTime = Date.now();
     let isSettled = false;
+    let observer = null;
+    let checkInterval = null;
 
-    const observer = new MutationObserver(() => {
-      if (targetContainer.__tikzRenderId !== renderId) {
-        isSettled = true;
+    const cleanup = () => {
+      isSettled = true;
+      if (observer) {
         observer.disconnect();
+        observer = null;
+      }
+      if (checkInterval) {
+        clearInterval(checkInterval);
+        checkInterval = null;
+      }
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('unhandledrejection', rejectionHandler);
+      }
+    };
+
+    const rejectionHandler = (ev) => {
+      if (targetContainer.__tikzRenderId !== renderId) return;
+      const msg = ev?.reason?.message || String(ev?.reason || '');
+      if (msg.includes('sample.dvi') || msg.includes('TeX') || msg.includes('wasm') || msg.includes('Inflate')) {
+        cleanup();
+        const cleanMsg = msg.includes('sample.dvi')
+          ? 'LaTeX syntax error or missing semicolon inside TikZ environment.'
+          : msg;
+        reject(new Error(`TikZ compilation failed in TeX engine: ${cleanMsg}`));
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('unhandledrejection', rejectionHandler);
+    }
+
+    observer = new MutationObserver(() => {
+      if (targetContainer.__tikzRenderId !== renderId) {
+        cleanup();
         return;
       }
       const svg = targetContainer.querySelector('svg');
       if (svg && !isSettled) {
-        isSettled = true;
-        observer.disconnect();
+        cleanup();
         resolve(svg);
       }
     });
 
     observer.observe(targetContainer, { childList: true, subtree: true });
 
-    const checkInterval = setInterval(() => {
+    checkInterval = setInterval(() => {
       if (targetContainer.__tikzRenderId !== renderId) {
-        isSettled = true;
-        clearInterval(checkInterval);
-        observer.disconnect();
+        cleanup();
         return;
       }
 
       const svg = targetContainer.querySelector('svg');
       if (svg && !isSettled) {
-        isSettled = true;
-        clearInterval(checkInterval);
-        observer.disconnect();
+        cleanup();
         resolve(svg);
         return;
       }
@@ -237,20 +264,16 @@ function waitForTikzSvg(targetContainer, renderId, timeoutMs = 20000) {
       const script = targetContainer.querySelector('script[type="text/tikz"]');
       if (!script && !isSettled) {
         const divReplacement = targetContainer.querySelector('div.page') || targetContainer.querySelector('div[style*="display: flex"]');
-        if (divReplacement && !divReplacement.querySelector('svg') && (Date.now() - startTime > 1200)) {
-          isSettled = true;
-          clearInterval(checkInterval);
-          observer.disconnect();
+        if (divReplacement && !divReplacement.querySelector('svg') && (Date.now() - startTime > 1500)) {
+          cleanup();
           reject(new Error('TikZ compilation completed but no SVG was generated. Please check syntax and semicolons.'));
           return;
         }
       }
 
       if (Date.now() - startTime > timeoutMs && !isSettled) {
-        isSettled = true;
-        clearInterval(checkInterval);
-        observer.disconnect();
-        reject(new Error('TikZ compilation timed out.'));
+        cleanup();
+        reject(new Error('TikZ compilation timed out. Please check your internet connection to tikzjax.com CDN.'));
       }
     }, 100);
   });
@@ -279,11 +302,51 @@ export function healTikzCode(code) {
 
 /**
  * Fixes TikZJax BaKoMa font encoding mismatch for math symbols:
- * In BaKoMa cmsy10/cmbsy10 fonts, ASCII 124 maps to glyph 18 ('club' ♣),
- * while ASCII 106 ('j') maps to glyph 47 ('bar' |), and ASCII 107 ('k') maps to glyph 44 ('bardbl' ||).
- * TikZJax translates DVI char 106 into '&#124;' and DVI char 107 into '&#8741;' but leaves font-family as cmsy10.
- * Correcting &#124; to &#106; and &#8741; to &#107; inside cmsy elements restores authentic TeX vertical bars.
+ * 1. In BaKoMa cmsy10/cmbsy10 fonts, ASCII 124 maps to glyph 18 ('club' ♣),
+ *    while ASCII 106 ('j') maps to glyph 47 ('bar' |), and ASCII 107 ('k') maps to glyph 44 ('bardbl' ||).
+ *    TikZJax translates DVI char 106 into '&#124;' and DVI char 107 into '&#8741;' but leaves font-family as cmsy10.
+ *    Correcting &#124; to &#106; and &#8741; to &#107; inside cmsy elements restores authentic TeX vertical bars.
+ * 2. In BaKoMa cmex10 font, TikZJax misassigns cmex to tex256 (T1 text encoding), converting DVI 0 (\bigl()
+ *    to 96 (`) which BaKoMa cmex10.ttf renders as glyph 10 (coproducttext ∐).
+ *    Mapping tex256 codepoints to authentic BaKoMa cmex10 glyph indices restores authentic TeX delimiters.
  */
+const CMEX_GLYPH_FIX_MAP = {
+  96: 161,    // DVI 000 parenleftbig (\bigl()
+  180: 162,   // DVI 001 parenrightbig (\bigr))
+  710: 163,   // DVI 002 bracketleftbig (\bigl[)
+  732: 164,   // DVI 003 bracketrightbig (\bigr])
+  168: 165,   // DVI 004 floorleftbig (\bigl\lfloor)
+  733: 166,   // DVI 005 floorrightbig (\bigr\rfloor)
+  730: 167,   // DVI 006 ceilingleftbig (\bigl\lceil)
+  711: 168,   // DVI 007 ceilingrightbig (\bigr\rceil)
+  728: 169,   // DVI 008 braceleftbig (\bigl\{)
+  175: 170,   // DVI 009 bracerightbig (\bigr\})
+  729: 173,   // DVI 010 angbracketleftbig (\bigl\langle)
+  184: 174,   // DVI 011 angbracketrightbig (\bigr\rangle)
+  731: 175,   // DVI 012 vextendsingle
+  8218: 176,  // DVI 013 vextenddouble
+  8249: 177,  // DVI 014 slashbig
+  8250: 178,  // DVI 015 backslashbig
+  8220: 179,  // DVI 016 parenleftBig (\Bigl()
+  8221: 180,  // DVI 017 parenrightBig (\Bigr))
+  8222: 181,  // DVI 018 parenleftbigg (\biggl()
+  171: 182,   // DVI 019 parenrightbigg (\biggr))
+  187: 8729,  // DVI 020 bracketleftbigg (\biggl[)
+  8211: 184,  // DVI 021 bracketrightbigg (\biggr])
+  8212: 185,  // DVI 022 floorleftbigg
+  8204: 186,  // DVI 023 floorrightbigg
+  8240: 187,  // DVI 024 ceilingleftbigg
+  305: 188,   // DVI 025 ceilingrightbigg
+  567: 189,   // DVI 026 braceleftbigg
+  64256: 190, // DVI 027 bracerightbigg
+  64257: 191, // DVI 028 angbracketleftbigg
+  64258: 192, // DVI 029 angbracketrightbigg
+  64259: 193, // DVI 030 slashbigg
+  64260: 194, // DVI 031 backslashbigg
+  32: 195,    // DVI 032 parenleftBigg (\Biggl()
+  173: 196    // DVI 127 arrowdblbt
+};
+
 export function fixTikzSvgGlyphs(container) {
   if (!container) return;
   const textElements = container.querySelectorAll('text');
@@ -308,6 +371,31 @@ export function fixTikzSvgGlyphs(container) {
         el.innerHTML = el.innerHTML
           .replace(/&#8407;|\u20D7/g, '&#126;');
       }
+    }
+
+    // 3. cmex10 / cmex math extension delimiter fixes (\bigl(, \bigr), \Bigl, \Biggl, etc.):
+    if (/font-family:\s*(?:cmex)\d*/i.test(style) || /cmex/i.test(el.style?.fontFamily || '')) {
+      const walkAndFix = (node) => {
+        if (!node) return;
+        if (node.nodeType === 3) {
+          const text = node.nodeValue || '';
+          if (text) {
+            let replaced = false;
+            const fixed = Array.from(text).map(ch => {
+              const cp = ch.codePointAt(0);
+              if (CMEX_GLYPH_FIX_MAP[cp]) {
+                replaced = true;
+                return String.fromCodePoint(CMEX_GLYPH_FIX_MAP[cp]);
+              }
+              return ch;
+            }).join('');
+            if (replaced) node.nodeValue = fixed;
+          }
+        } else if (node.childNodes && node.childNodes.length > 0) {
+          Array.from(node.childNodes).forEach(walkAndFix);
+        }
+      };
+      walkAndFix(el);
     }
   });
 }
@@ -406,35 +494,17 @@ export function renderTikzToElement(tikzCode, targetContainer, onComplete = null
         targetContainer.appendChild(scriptEl);
 
         const runner = window.__tikzjax_runner || (typeof window.onload === 'function' ? window.onload : null);
-        let runnerPromise = null;
         if (typeof runner === 'function') {
           window.__tikzjax_runner = runner;
           try {
-            runnerPromise = runner();
+            runner();
           } catch (e) {
-            runnerPromise = Promise.reject(e);
+            console.error('TikZJax runner invocation error:', e);
           }
         }
 
-        // Asynchronously wait for TikzJax to finish compilation and mount the SVG,
-        // or fail fast if the runner throws an error instead of waiting 20s
-        const svgEl = await Promise.race([
-          waitForTikzSvg(targetContainer, currentRenderId, 20000),
-          (async () => {
-            if (runnerPromise) {
-              try {
-                await runnerPromise;
-              } catch (err) {
-                throw new Error(`TikZ compilation failed in TeX engine: ${err?.message || err}`);
-              }
-            }
-            await new Promise(r => setTimeout(r, 600));
-            if (!targetContainer.querySelector('svg') && targetContainer.__tikzRenderId === currentRenderId) {
-              throw new Error('TikZ compilation completed without producing an SVG. Check syntax and missing semicolons.');
-            }
-            return new Promise(() => {});
-          })()
-        ]);
+        // Asynchronously wait for TikzJax to finish compilation and mount the SVG
+        const svgEl = await waitForTikzSvg(targetContainer, currentRenderId, 25000);
         if (targetContainer.__tikzRenderId !== currentRenderId) return;
 
         if (svgEl) {

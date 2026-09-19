@@ -11,8 +11,9 @@
 | `NotesState` | 45 - 53 | Central in-memory reactive state object holding vault metadata, global macros, table templates, tikz templates, folders, tags, and notes. |
 | `sanitizeNote(n, idx = 0)` | 56 - 85 | Validates note object schema, fills missing fallback properties (id, slug, title, folder, tags, blocks, macros, autoNumbering), and prevents data corruption. |
 | `LoadNotesState()` | 88 - 172 | Reads and parses notes from the DOM script vault (#NotesData), recovers newer uncommitted edits from localStorage (NotesData_Local_Cache), and assigns window.NotesState. |
-| `SaveNotesState(newState = null)` | 175 - 208 | Re-derives active folder/tag lists, serializes state into DOM #NotesData vault, synchronizes window.NotesState, and persists unsaved buffer to localStorage. |
-| `ClearNotesLocalCache()` | 211 - 219 | Clears the unsaved localStorage recovery cache (NotesData_Local_Cache) after downloading or saving standalone application HTML. |
+| `SaveNotesState(newState = null, { immediate = false } = {})` | 217 - 245 | Re-derives active folder/tag lists, synchronizes window.NotesState, and persists unsaved buffer to DOM vault and localStorage with debouncing (~280ms) for high-speed typing. |
+| `flushNotesSave()` | 204 - 208 | Immediately flushes any pending debounced state writes to DOM #NotesData and localStorage. |
+| `ClearNotesLocalCache()` | 248 - 258 | Clears the unsaved localStorage recovery cache (NotesData_Local_Cache) after downloading or saving standalone application HTML. |
 
 **01_Header.js**
 
@@ -73,6 +74,21 @@
 | `BLOCK_DEF_MAP` | 149 | Fast lookup Map mapping block type string keys to their corresponding block schema definitions. |
 | `createNewBlock(type, options = {})` | 154 - 161 | Instantiates a new note block object with a unique timestamped ID, block type, and default payload schema. |
 | `insertBlockAt(blocks = [], newBlock, targetIndex = -1)` | 168 - 176 | Inserts a block object into a blocks array at a specified index or appends it to the end if index is out of bounds. |
+
+**Block_History.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| - | - | - |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `recordBlockSnapshot(blockId, text, cursorStart, cursorEnd, options)` | 49 - 90 | Records debounced or immediate text snapshots into an isolated undo stack keyed by block ID. |
+| `undoBlockHistory(blockId, currentText)` | 98 - 122 | Performs undo by stepping back to previous snapshot, pushing current state to redo stack. |
+| `redoBlockHistory(blockId, currentText)` | 130 - 144 | Performs redo by popping from redo stack and pushing back to undo stack. |
+| `attachBlockHistory(element, config)` | 156 - 229 | Binds input listeners and intercepts Ctrl+Z and Ctrl+Y/Ctrl+Shift+Z on an editor/textarea element. |
+| `clearAllBlockHistory()` | 235 - 238 | Clears all in-memory per-block history stacks upon standalone HTML file save and download. |
+| `getBlockHistory(blockId)` | 244 - 246 | Retrieves the raw history stack object for a given block ID. |
 
 **Bullet_Engine.js**
 
@@ -203,8 +219,9 @@
 | `getCachedTikzSvg(code, theme)` | 77 - 84 | Retrieves cached SVG output for a given TikZ code string and color theme. |
 | `whenConnected(element, callback)` | 123 - 155 | Ensures target DOM container is attached to document body before triggering TikZJax script execution. |
 | `getActiveTikzPreamble(note)` | 160 - 185 | Combines default TikZ libraries, global vault preambles, and note-level local TikZ styles with theme color tokens. |
-| `waitForTikzSvg(targetContainer, renderId, timeoutMs)` | 191 - 257 | Polls and uses MutationObserver to wait until TikZJax replaces the script tag with compiled SVG vector markup. |
-| `renderTikzToElement(tikzCode, targetContainer, onComplete, noteContext)` | 266 - 429 | Compiles TikZ code into an SVG element within the target container, utilizing caching and reporting completion status. |
+| `waitForTikzSvg(targetContainer, renderId, timeoutMs)` | 191 - 279 | Polls, listens for TeX engine unhandled rejections, and uses MutationObserver to wait until TikZJax replaces the script tag with compiled SVG markup. |
+| `fixTikzSvgGlyphs(container)` | 350 - 401 | Corrects BaKoMa font encoding mismatches for cmsy bars, cmmi vector accents, and cmex delimiter glyphs. |
+| `renderTikzToElement(tikzCode, targetContainer, onComplete, noteContext)` | 410 - 580 | Compiles TikZ code into an SVG element within the target container, utilizing caching, resilient cold-start lifecycle, and reporting completion status. |
 
 ## A_Notes_Card_View
 **01_Navbar.js**
@@ -385,7 +402,7 @@
 
 | Import Location | Functions Imported | used in Functions |
 | :--- | :--- | :--- |
-| `../00_State.js` | `NotesState`, `SaveNotesState` | `RenderLaTeXEditor()` |
+| `../00_State.js` | `NotesState`, `SaveNotesState`, `flushNotesSave` | `RenderLaTeXEditor()` |
 | `../Writing_Engine/Numbering_Engine.js` | `computeHeadingPrefixes`, `computeFigureNumbers` | `RenderLaTeXEditor()` |
 | `../Writing_Engine/Block_Engine.js` | `createNewBlock`, `insertBlockAt`, `BLOCK_DEFINITIONS`, `GLOBAL_FONT_FAMILIES`, `GLOBAL_FONT_SIZES` | `RenderLaTeXEditor()` |
 | `./02_Sidebar/02_Sidebar_TOC.js` | `CreateSidebarTOC` | `RenderLaTeXEditor()` |
@@ -398,7 +415,7 @@
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `RenderLaTeXEditor(container, noteId, isEditMode = true)` | 24 - 554 | Master LaTeX editor module connecting sidebar outline, document header, reactive block deck, in-between insertion indicators, font customizer, and study mode rendering. |
+| `RenderLaTeXEditor(container, noteId, isEditMode = true)` | 24 - 625 | Master LaTeX editor module connecting sidebar outline, document header, reactive block deck, zero-lag in-place block activation/closing, isolated divider insertion, font customizer, and study mode rendering. |
 
 ## B_Editor_View/01_Blocks
 **Block_Actions.js**
@@ -463,8 +480,8 @@
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `createBlockTextarea(options)` | 21 - 64 | Creates and returns a smoothly resizable editor textarea element with input, change, and keydown listeners. |
-| `createCodeEditor(options)` | 418 - 774 | Creates an Obsidian/VS-Code grade code editor featuring dynamic light/dark theme adaptation, left line numbering gutter, clean monospace code typography, line spacing (1.6x), safe non-destructive multiline code folding for TikZ ({...}, [...], (...), \begin...\end), and drawer collapse toggle without Fold All button. |
+| `createBlockTextarea(options)` | 21 - 69 | Creates and returns a smoothly resizable editor textarea element with soft text-wrapping and input, change, and keydown listeners. |
+| `createCodeEditor(options)` | 423 - 820 | Creates an Obsidian/VS-Code grade code editor featuring soft-wrapping without horizontal scroll, dynamic line-numbered gutter height synchronization via offscreen measurer, ResizeObserver adaptation, safe non-destructive multiline code folding for TikZ ({...}, [...], (...), \begin...\end), and drawer collapse toggle. |
 
 **Code_Block.js**
 
@@ -483,7 +500,6 @@
 | :--- | :--- | :--- |
 | `../../Writing_Engine/Math_Renderer.js` | `renderKatex` | `renderEquationBlock()` |
 | `../../Writing_Engine/Highlight_Sync.js` | `attachHighlightSync` | `renderEquationBlock()` |
-| `../../02_Utils.js` | `escapeHtml` | `renderEquationBlock()` |
 | `../../../00_Components/06_Color_Selector.js` | `CreateColorSelector` | `renderEquationBlock()` |
 | `./Block_Actions.js` | `getBlockActionsHTML`, `initBlockActions` | `renderEquationBlock()` |
 | `./Block_Textarea.js` | `createCodeEditor` | `renderEquationBlock()` |
@@ -599,7 +615,7 @@
 | `./Block_Actions.js` | `getBlockActionsHTML`, `initBlockActions` | `renderTextBlock()` |
 | `./Text_Block/Text_Parser.js` | `LINE_SPACING_OPTIONS`, `getSpacingValue`, `getSpacingLabel`, `getNumberForLineAtIndent`, `serializeElement`, `parseTextToFragment`, `renderSingleLineToDom`, `serializeSelection`, `getLineCaretSplit`, `deleteSelectionAndHeal`, `setCaretAtOffsetInLine` | `renderTextBlock()` |
 | `./Text_Block/Text_Widgets.js` | `renderBulletIcon`, `createLiveWidget` | `renderTextBlock()` |
-| `./Text_Block/Text_Keyboard.js` | `getContainingLine`, `getLineRawText`, `checkAutoCollapseTokensNearCaret`, `checkAutoBulletConversion`, `handleTextBlockKeyDown`, `scanAndCompileCompletedBlocks` | `renderTextBlock()` (`getLineRawText` unused) |
+| `./Text_Block/Text_Keyboard.js` | `getContainingLine`, `checkAutoCollapseTokensNearCaret`, `checkAutoBulletConversion`, `handleTextBlockKeyDown`, `scanAndCompileCompletedBlocks` | `renderTextBlock()` |
 | `./Text_Block/Text_Block_Markdown.js` | `renderObsidianMarkdown`, `createLiveBlockElement`, `lexMarkdownBlocks` | `renderTextBlock()` |
 
 | Functions | Line Range | Description |
@@ -654,22 +670,21 @@
 | Import Location | Functions Imported | used in Functions |
 | :--- | :--- | :--- |
 | `./Text_Widgets.js` | `createLiveWidget` | `checkAutoCollapseTokensNearCaret()`, `checkAutoBulletConversion()`, `tryCollapseTokenAtCaretOnEnter()`, `handleTextBlockKeyDown()` |
-| `./Text_Parser.js` | `parseTextToFragment`, `renderSingleLineToDom`, `getNumberForLineAtIndent`, `isBulletMathSymbol` | `checkAutoBulletConversion()`, `handleTextBlockKeyDown()`, `scanAndCompileCompletedBlocks()` (`parseTextToFragment` unused) |
+| `./Text_Parser.js` | `getContainingLine`, `getLineRawText`, `parseTextToFragment`, `renderSingleLineToDom`, `getNumberForLineAtIndent`, `isBulletMathSymbol`, `deleteSelectionAndHeal` | `checkAutoBulletConversion()`, `handleTextBlockKeyDown()`, `scanAndCompileCompletedBlocks()`, Re-exported (`parseTextToFragment` unused) |
 | `./Text_Block_Markdown.js` | `createLiveBlockElement` | `handleTextBlockKeyDown()`, `scanAndCompileCompletedBlocks()` |
 | `../../../Writing_Engine/Math_Renderer.js` | `renderKatex` | `checkAutoBulletConversion()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `renumberSubsequentListItems(startLineEl)` | 12 - 63 | Renumbers downstream ordered list items sequentially when an item is added, indented, or deleted. |
-| `getContainingLine(node, rootEl, offset)` | 66 - 89 | Helper to locate the containing line element of any DOM node, with self-healing for direct text nodes and root selection. |
-| `getLineRawText(lineEl)` | 92 - 114 | Extracts the unformatted raw text representation of a single line element. |
-| `checkAutoCollapseTokensNearCaret(options)` | 116 - 182 | Automatically converts Markdown tokens near caret (e.g. **bold**, *italic*, `code`) into live formatted inline widgets. |
-| `checkAutoBulletConversion(options)` | 184 - 303 | Automatically detects list prefixes (e.g. - , * , 1. , [ ], or HTML/Unicode bullets •○■▸–➔✦◆) and heading markers (# to ######) and converts the line into a list item widget or styled heading with dimmed marker. |
-| `tryCollapseTokenAtCaretOnEnter(options)` | 305 - 491 | Handles Enter key behavior by collapsing uncollapsed tokens at or before the caret before inserting a new line. |
-| `handleTextBlockKeyDown(e, ctx)` | 493 - 1530 | Master keydown handler for text blocks managing Enter, Backspace, Delete, Tab, Shift+Tab, navigation shortcuts, live closing code fence compilation, opening code fence auto-completion, display math, horizontal rules, heading Enter/Backspace navigation, and solitary line / Line 1 unwrap protection. |
-| `scanAndCompileCompletedBlocks(liveSurface, editModeOptions, triggerUpdate)` | 1535 - 1715 | Scans and compiles any completed closed blocks (fenced code blocks, display math, horizontal rules, headings) that are not currently focused by the caret. |
+| `getContainingLine`, `getLineRawText` | 16 | Re-exported from `./Text_Parser.js` for backwards compatibility. |
+| `renumberSubsequentListItems(startLineEl)` | 22 - 73 | Renumbers downstream ordered list items sequentially when an item is added, indented, or deleted. |
+| `checkAutoCollapseTokensNearCaret(options)` | 76 - 142 | Automatically converts Markdown tokens near caret (e.g. **bold**, *italic*, `code`) into live formatted inline widgets. |
+| `checkAutoBulletConversion(options)` | 144 - 263 | Automatically detects list prefixes (e.g. - , * , 1. , [ ], or HTML/Unicode bullets •○■▸–➔✦◆) and heading markers (# to ######) and converts the line into a list item widget or styled heading with dimmed marker. |
+| `tryCollapseTokenAtCaretOnEnter(options)` | 265 - 451 | Handles Enter key behavior by collapsing uncollapsed tokens at or before the caret before inserting a new line. |
+| `handleTextBlockKeyDown(e, ctx)` | 453 - 1500 | Master keydown handler for text blocks managing Enter, Backspace, Delete, Tab, Shift+Tab, navigation shortcuts, live closing code fence compilation, opening code fence auto-completion, display math, horizontal rules, heading Enter/Backspace navigation, and solitary line / Line 1 unwrap protection. |
+| `scanAndCompileCompletedBlocks(liveSurface, editModeOptions, triggerUpdate)` | 1505 - 1675 | Scans and compiles any completed closed blocks (fenced code blocks, display math, horizontal rules, headings) that are not currently focused by the caret. |
 
-**Text_Markdown.js / Text_Block_Markdown.js**
+**Text_Block_Markdown.js**
 
 | Import Location | Functions Imported | used in Functions |
 | :--- | :--- | :--- |

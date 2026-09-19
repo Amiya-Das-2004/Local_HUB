@@ -11,6 +11,7 @@
 import { escapeHtml } from '../../02_Utils.js';
 import { CreateColorSelector } from '../../../00_Components/06_Color_Selector.js';
 import { renderKatex } from '../../Writing_Engine/Math_Renderer.js';
+import { attachBlockHistory } from '../../Writing_Engine/Block_History.js';
 import { getBlockActionsHTML, initBlockActions } from './Block_Actions.js';
 
 import {
@@ -34,7 +35,6 @@ import {
 
 import {
   getContainingLine,
-  getLineRawText,
   checkAutoCollapseTokensNearCaret,
   checkAutoBulletConversion,
   handleTextBlockKeyDown,
@@ -144,7 +144,7 @@ export function renderTextBlock(
     <!-- In-Place Live Preview Workspace Container -->
     <div class="unified-workspace-container relative w-full mt-1">
       <!-- Clean Live Floating KaTeX Math Pill (NO 'Preview:' label) -->
-      <div class="floating-katex-pill hidden absolute pointer-events-none z-30 px-2.5 py-1 rounded-lg border border-purple-500/40 bg-[#161926]/95 text-purple-300 shadow-xl text-sm flex items-center justify-center backdrop-blur-xs transition-all duration-75"></div>
+      <div class="floating-katex-pill hidden absolute pointer-events-none z-30 px-2.5 py-1 rounded-lg border shadow-xl text-sm flex items-center justify-center backdrop-blur-xs transition-all duration-75"></div>
 
       <!-- In-Place Live Surface (Editable) -->
       <div class="obsidian-live-surface w-full px-1 py-1 rounded-lg outline-none transition-all box-border text-[var(--text)] min-h-[90px] cursor-text select-text" contenteditable="true" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" style="font-family: var(--note-font-family, inherit); font-size: var(--note-font-size, 1rem); line-height: var(--note-line-height, ${currentLineHeight}); white-space: pre-wrap; word-break: break-word;"></div>
@@ -279,7 +279,7 @@ export function renderTextBlock(
     collapseExpandedNode();
 
     const rawContainer = document.createElement('div');
-    rawContainer.className = 'obsidian-raw-block-editor w-full font-mono text-xs sm:text-sm p-2.5 rounded-lg border border-purple-500/50 bg-[#12131c] text-purple-200 outline-none my-2 transition-all shadow-inner select-text';
+    rawContainer.className = 'obsidian-raw-block-editor w-full font-mono text-xs sm:text-sm p-2.5 rounded-lg border outline-none my-2 transition-all shadow-inner select-text';
     rawContainer.setAttribute('contenteditable', 'true');
     rawContainer.setAttribute('data-is-raw-block', 'true');
     rawContainer.setAttribute('data-raw', raw);
@@ -1029,8 +1029,28 @@ export function renderTextBlock(
     }
   }, 50);
 
+  // Attach isolated per-block undo/redo history
+  const detachHistory = attachBlockHistory(liveSurface, {
+    blockId: block.id,
+    getValue: () => serializeSurface(),
+    setValue: (newMarkdown) => {
+      collapseExpandedBlock();
+      collapseExpandedNode();
+      liveSurface.innerHTML = '';
+      const rendered = renderObsidianMarkdown(newMarkdown, editModeOptions);
+      while (rendered.firstChild) {
+        liveSurface.appendChild(rendered.firstChild);
+      }
+      ensureSurfaceDomIntegrity();
+    },
+    onUpdate: () => {
+      triggerUpdate();
+    }
+  });
+
   container.__blockCleanup = () => {
     cleanupFloatingDock();
+    if (typeof detachHistory === 'function') detachHistory();
   };
 
   const handleCopyBlock = async (btn) => {
@@ -1048,7 +1068,7 @@ export function renderTextBlock(
       setTimeout(() => {
         btn.innerHTML = origHtml;
         btn.title = 'Copy block markdown code';
-      }, 1200);
+      }, 2000);
     };
 
     try {

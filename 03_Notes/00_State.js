@@ -1,3 +1,5 @@
+import { clearAllBlockHistory } from './Writing_Engine/Block_History.js';
+
 export const DEFAULT_GLOBAL_MACROS = {
   equation: `\\newcommand{\\mb}[1]{\\mathbf{#1}}
 \\newcommand{\\comment}[1]{\\textcolor{#dc2626|#f87171}{[#1]}}
@@ -171,14 +173,12 @@ export function LoadNotesState() {
   return NotesState;
 }
 
-// Persists active notes, syncs folder/tag lists, and updates HTML vault & unsaved localStorage cache
-export function SaveNotesState(newState = null) {
-  if (newState) NotesState = newState;
+let notesSaveDebounceTimer = null;
 
-  // Sync folders and tags to currently active notes
-  if (Array.isArray(NotesState.notes)) {
-    NotesState.folders = Array.from(new Set(NotesState.notes.map(n => n.folder || 'General').filter(Boolean)));
-    NotesState.tags = Array.from(new Set(NotesState.notes.flatMap(n => n.tags || []).filter(Boolean)));
+function persistNotesToStorageImmediate() {
+  if (notesSaveDebounceTimer) {
+    clearTimeout(notesSaveDebounceTimer);
+    notesSaveDebounceTimer = null;
   }
 
   // 1. Write to DOM <script id="NotesData">
@@ -187,12 +187,7 @@ export function SaveNotesState(newState = null) {
     dataBlock.textContent = JSON.stringify(NotesState, null, 2);
   }
 
-  // 2. Keep window.NotesState in sync
-  if (typeof window !== 'undefined') {
-    window.NotesState = NotesState;
-  }
-
-  // 3. Persist to browser Local Storage as active unsaved working buffer
+  // 2. Persist to browser Local Storage as active unsaved working buffer (compact unindented JSON for speed)
   try {
     if (typeof localStorage !== 'undefined') {
       const cachePayload = {
@@ -207,14 +202,63 @@ export function SaveNotesState(newState = null) {
   }
 }
 
+// Immediately flushes any pending debounced state writes to DOM & localStorage
+export function flushNotesSave() {
+  persistNotesToStorageImmediate();
+}
+
+if (typeof window !== 'undefined') {
+  window.flushNotesSave = flushNotesSave;
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', () => {
+    if (notesSaveDebounceTimer) {
+      persistNotesToStorageImmediate();
+    }
+  });
+}
+
+// Persists active notes, syncs folder/tag lists, and updates HTML vault & unsaved localStorage cache with debouncing
+export function SaveNotesState(newState = null, { immediate = false } = {}) {
+  if (newState) NotesState = newState;
+
+  // Sync folders and tags to currently active notes
+  if (Array.isArray(NotesState.notes)) {
+    NotesState.folders = Array.from(new Set(NotesState.notes.map(n => n.folder || 'General').filter(Boolean)));
+    NotesState.tags = Array.from(new Set(NotesState.notes.flatMap(n => n.tags || []).filter(Boolean)));
+  }
+
+  // Keep window.NotesState synchronously in sync
+  if (typeof window !== 'undefined') {
+    window.NotesState = NotesState;
+  }
+
+  if (immediate) {
+    persistNotesToStorageImmediate();
+  } else {
+    if (notesSaveDebounceTimer) clearTimeout(notesSaveDebounceTimer);
+    notesSaveDebounceTimer = setTimeout(() => {
+      persistNotesToStorageImmediate();
+    }, 280);
+  }
+}
+
 // Function to empty/clear unsaved cache after downloading / saving standalone HTML
 export function ClearNotesLocalCache() {
+  if (notesSaveDebounceTimer) {
+    clearTimeout(notesSaveDebounceTimer);
+    notesSaveDebounceTimer = null;
+  }
   try {
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem('NotesData_Local_Cache');
     }
   } catch (e) {
     console.warn('Failed to clear NotesData_Local_Cache:', e);
+  }
+  if (typeof clearAllBlockHistory === 'function') {
+    clearAllBlockHistory();
   }
 }
 

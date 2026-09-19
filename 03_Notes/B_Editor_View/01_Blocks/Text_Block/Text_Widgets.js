@@ -35,6 +35,31 @@ if (typeof document !== 'undefined') {
       border-color: #d8b4fe !important;
       font-weight: 600 !important;
     }
+    .obsidian-raw-block-editor {
+      background-color: #141622;
+      color: #e2e8f0;
+      border: 1px solid rgba(139, 92, 246, 0.4);
+      transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    }
+    [data-theme="light"] .obsidian-raw-block-editor,
+    .light .obsidian-raw-block-editor {
+      background-color: #f3f4f8 !important;
+      color: #1a1d2e !important;
+      border: 1px solid #d1d5e0 !important;
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+    }
+    .floating-katex-pill {
+      background-color: rgba(22, 25, 38, 0.95);
+      color: #d8b4fe;
+      border: 1px solid rgba(139, 92, 246, 0.4);
+    }
+    [data-theme="light"] .floating-katex-pill,
+    .light .floating-katex-pill {
+      background-color: rgba(255, 255, 255, 0.95) !important;
+      color: #581c87 !important;
+      border: 1px solid #d8b4fe !important;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+    }
     .live-line {
       min-height: 1.5em;
       line-height: var(--note-line-height, 1.7);

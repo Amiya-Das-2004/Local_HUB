@@ -9,6 +9,7 @@
  */
 
 import { highlightCode, ensureHighlightJsLoaded } from '../../Writing_Engine/Code_Highlighter.js';
+import { attachBlockHistory } from '../../Writing_Engine/Block_History.js';
 import { escapeHtml } from '../../02_Utils.js';
 
 // Inject code card styling once
@@ -112,7 +113,10 @@ if (typeof document !== 'undefined' && !document.getElementById('notes-code-bloc
       resize: none;
       display: block;
       overflow-y: hidden;
-      white-space: pre;
+      overflow-x: hidden;
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow-wrap: anywhere;
     }
   `;
   document.head.appendChild(style);
@@ -351,6 +355,19 @@ export function renderCodeBlock(
       });
 
       textarea.addEventListener('click', (e) => e.stopPropagation());
+
+      attachBlockHistory(textarea, {
+        blockId: block.id,
+        onUpdate: (val) => {
+          currentCode = val;
+          block.code = currentCode;
+          block.content = currentCode;
+          autoResize();
+          if (onUpdate) {
+            onUpdate({ code: currentCode, content: currentCode, title: currentTitle, language });
+          }
+        }
+      });
 
       textarea.addEventListener('blur', () => {
         currentCode = textarea.value;

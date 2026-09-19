@@ -4,7 +4,7 @@
  * Connects Sidebar Outline, Document Header, Block Engine, In-Between Block Hover Inserters, and Contextual Insertion.
  */
 
-import { NotesState, SaveNotesState } from '../00_State.js';
+import { NotesState, SaveNotesState, flushNotesSave } from '../00_State.js';
 import { computeHeadingPrefixes, computeFigureNumbers } from '../Writing_Engine/Numbering_Engine.js';
 import {
   createNewBlock,
@@ -155,13 +155,16 @@ export function RenderLaTeXEditor(container, noteId, isEditMode = true) {
     activeSelectorIndex = -1;
     SaveNotesState();
     renderBlocks();
-    refreshSidebar();
+    if (type === 'heading') {
+      refreshSidebar();
+    }
   }
 
   // In-Place Block Selector Popover Component
   function createBlockSelector(targetIndex) {
     const selectorWrap = document.createElement('div');
     selectorWrap.className = 'notes-block-selector-popover my-2 p-2 sm:p-2.5 rounded-xl border border-purple-500/60 bg-[var(--surface)] shadow-xl animate-fade-in flex flex-col gap-2 z-30 select-none';
+    selectorWrap.dataset.selectorIndex = targetIndex;
     selectorWrap.innerHTML = `
       <div class="flex items-center justify-between pb-1.5 border-b border-[var(--border)] text-xs text-[var(--text-secondary)] font-mono">
         <span class="flex items-center gap-1.5 text-purple-400 font-semibold">
@@ -182,8 +185,7 @@ export function RenderLaTeXEditor(container, noteId, isEditMode = true) {
 
     selectorWrap.querySelector('.close-selector-btn').addEventListener('click', (e) => {
       e.stopPropagation();
-      activeSelectorIndex = -1;
-      renderBlocks();
+      closeBlockSelectorInPlace();
     });
 
     selectorWrap.addEventListener('click', (e) => {
@@ -213,11 +215,160 @@ export function RenderLaTeXEditor(container, noteId, isEditMode = true) {
 
     divider.addEventListener('click', (e) => {
       e.stopPropagation();
-      activeSelectorIndex = insertIndex;
-      renderBlocks();
+      openBlockSelectorInPlace(insertIndex);
     });
 
     return divider;
+  }
+
+  function openBlockSelectorInPlace(insertIndex) {
+    if (activeSelectorIndex === insertIndex) return;
+    if (activeSelectorIndex !== -1) {
+      closeBlockSelectorInPlace();
+    }
+    activeSelectorIndex = insertIndex;
+    const dividerEl = blocksContainer.querySelector(`.notes-insert-divider-zone[data-insert-index="${insertIndex}"]`);
+    if (dividerEl) {
+      const selectorEl = createBlockSelector(insertIndex);
+      blocksContainer.replaceChild(selectorEl, dividerEl);
+    } else {
+      renderBlocks();
+    }
+  }
+
+  function closeBlockSelectorInPlace() {
+    if (activeSelectorIndex === -1) return;
+    const currentIdx = activeSelectorIndex;
+    activeSelectorIndex = -1;
+    const selectorEl = blocksContainer.querySelector('.notes-block-selector-popover');
+    if (selectorEl) {
+      const newDivider = createHoverDivider(currentIdx);
+      blocksContainer.replaceChild(newDivider, selectorEl);
+    }
+  }
+
+  function createConfiguredBlockItem(block, idx, isEditing, prefixMap, figureMap) {
+    const blocks = note.blocks || [];
+    const prefix = prefixMap ? (prefixMap.get(block.id || idx) || '') : '';
+    const figureInfo = figureMap ? (figureMap.get(block.id || idx) || null) : null;
+
+    const blockEl = CreateBlockItem({
+      block: block,
+      index: idx,
+      totalBlocks: blocks.length,
+      isEditing: isEditing,
+      isEditMode: isEditMode,
+      allNotes: allNotes,
+      prefix: prefix,
+      figureInfo: figureInfo,
+      note: note,
+      pickerState: pickerState,
+      onPickBlock: (pickedBlock, pickedIdx) => {
+        handlePickBlock(pickedBlock, pickedIdx);
+      },
+      onStartPicking: (targetColBlock, targetSlotIdx, neededCount) => {
+        startPicking(targetColBlock, targetSlotIdx, neededCount);
+      },
+      onCancelPicking: () => {
+        cancelPicking();
+      },
+      onConfigUpdate: () => {
+        SaveNotesState();
+        renderBlocks();
+        refreshSidebar();
+      },
+      onUpdate: (fields) => {
+        Object.assign(block, fields);
+        SaveNotesState();
+        if (block.type === 'heading') {
+          refreshSidebar();
+        }
+      },
+      onSelect: () => {
+        setActiveBlock(idx);
+      },
+      onDone: () => {
+        setActiveBlock(-1);
+      },
+      onMoveUp: () => {
+        document.getElementById('notes-text-floating-dock')?.remove();
+        const temp = blocks[idx];
+        blocks[idx] = blocks[idx - 1];
+        blocks[idx - 1] = temp;
+        activeBlockIndex = idx - 1;
+        SaveNotesState();
+        renderBlocks();
+        refreshSidebar();
+      },
+      onMoveDown: () => {
+        document.getElementById('notes-text-floating-dock')?.remove();
+        const temp = blocks[idx];
+        blocks[idx] = blocks[idx + 1];
+        blocks[idx + 1] = temp;
+        activeBlockIndex = idx + 1;
+        SaveNotesState();
+        renderBlocks();
+        refreshSidebar();
+      },
+      onDelete: () => {
+        blocks.splice(idx, 1);
+        activeBlockIndex = -1;
+        activeSelectorIndex = -1;
+        SaveNotesState();
+        renderBlocks();
+        refreshSidebar();
+      },
+      onInsertBelow: (blockIdx) => {
+        openBlockSelectorInPlace(blockIdx + 1);
+      }
+    });
+
+    blockEl.dataset.blockIndex = idx;
+    blockEl.dataset.blockId = block.id || idx;
+    return blockEl;
+  }
+
+  function updateSingleBlockInPlace(idx, isEditing) {
+    const blocks = note.blocks || [];
+    const block = blocks[idx];
+    if (!block) return;
+
+    const existingEl = blocksContainer.querySelector(`[data-block-index="${idx}"]`);
+    if (!existingEl) {
+      renderBlocks();
+      return;
+    }
+
+    if (typeof existingEl.__blockCleanup === 'function') {
+      existingEl.__blockCleanup();
+    }
+
+    const prefixMap = computeHeadingPrefixes(blocks, note.autoNumbering);
+    const { figureMap, tagMap } = computeFigureNumbers(blocks);
+    setActiveFigureTagMap(tagMap);
+
+    const newBlockEl = createConfiguredBlockItem(block, idx, isEditing, prefixMap, figureMap);
+    blocksContainer.replaceChild(newBlockEl, existingEl);
+  }
+
+  function setActiveBlock(newIdx) {
+    if (activeBlockIndex === newIdx) return;
+    const oldIdx = activeBlockIndex;
+    activeBlockIndex = newIdx;
+
+    document.getElementById('notes-text-floating-dock')?.remove();
+
+    if (activeSelectorIndex !== -1) {
+      closeBlockSelectorInPlace();
+    }
+
+    const blocks = note.blocks || [];
+    if (oldIdx !== -1 && oldIdx < blocks.length) {
+      updateSingleBlockInPlace(oldIdx, false);
+    }
+    if (newIdx !== -1 && newIdx < blocks.length) {
+      updateSingleBlockInPlace(newIdx, true);
+    }
   }
 
   function startPicking(targetBlock, targetSlotIdx = null, neededCount = 1) {
@@ -358,86 +509,7 @@ export function RenderLaTeXEditor(container, noteId, isEditMode = true) {
 
       // 2. Render block item
       const isEditing = isEditMode && (idx === activeBlockIndex);
-      const prefix = prefixMap.get(block.id || idx) || '';
-      const figureInfo = figureMap.get(block.id || idx) || null;
-
-      const blockEl = CreateBlockItem({
-        block: block,
-        index: idx,
-        totalBlocks: blocks.length,
-        isEditing: isEditing,
-        isEditMode: isEditMode,
-        allNotes: allNotes,
-        prefix: prefix,
-        figureInfo: figureInfo,
-        note: note,
-        pickerState: pickerState,
-        onPickBlock: (pickedBlock, pickedIdx) => {
-          handlePickBlock(pickedBlock, pickedIdx);
-        },
-        onStartPicking: (targetColBlock, targetSlotIdx, neededCount) => {
-          startPicking(targetColBlock, targetSlotIdx, neededCount);
-        },
-        onCancelPicking: () => {
-          cancelPicking();
-        },
-        onConfigUpdate: () => {
-          SaveNotesState();
-          renderBlocks();
-          refreshSidebar();
-        },
-        onUpdate: (fields) => {
-          Object.assign(block, fields);
-          SaveNotesState();
-          if (block.type === 'heading') {
-            refreshSidebar();
-          }
-        },
-        onSelect: () => {
-          document.getElementById('notes-text-floating-dock')?.remove();
-          activeBlockIndex = idx;
-          activeSelectorIndex = -1;
-          renderBlocks();
-        },
-        onDone: () => {
-          document.getElementById('notes-text-floating-dock')?.remove();
-          activeBlockIndex = -1;
-          renderBlocks();
-        },
-        onMoveUp: () => {
-          document.getElementById('notes-text-floating-dock')?.remove();
-          const temp = blocks[idx];
-          blocks[idx] = blocks[idx - 1];
-          blocks[idx - 1] = temp;
-          activeBlockIndex = idx - 1;
-          SaveNotesState();
-          renderBlocks();
-          refreshSidebar();
-        },
-        onMoveDown: () => {
-          document.getElementById('notes-text-floating-dock')?.remove();
-          const temp = blocks[idx];
-          blocks[idx] = blocks[idx + 1];
-          blocks[idx + 1] = temp;
-          activeBlockIndex = idx + 1;
-          SaveNotesState();
-          renderBlocks();
-          refreshSidebar();
-        },
-        onDelete: () => {
-          blocks.splice(idx, 1);
-          activeBlockIndex = -1;
-          activeSelectorIndex = -1;
-          SaveNotesState();
-          renderBlocks();
-          refreshSidebar();
-        },
-        onInsertBelow: (blockIdx) => {
-          activeSelectorIndex = blockIdx + 1;
-          renderBlocks();
-        }
-      });
-
+      const blockEl = createConfiguredBlockItem(block, idx, isEditing, prefixMap, figureMap);
       blocksContainer.appendChild(blockEl);
     });
 
@@ -528,15 +600,14 @@ export function RenderLaTeXEditor(container, noteId, isEditMode = true) {
       }
     }
     if ((e.key === 'Escape' || (e.ctrlKey && e.key === 'Enter')) && activeBlockIndex !== -1) {
-      activeBlockIndex = -1;
-      activeSelectorIndex = -1;
-      renderBlocks();
+      setActiveBlock(-1);
     }
   };
   document.addEventListener('keydown', onDocKeyDown);
 
   // Register teardown callback to prevent listener leaks on future renders
   container.__editorCleanup = () => {
+    flushNotesSave();
     const oldDock = document.getElementById('notes-text-floating-dock');
     if (oldDock) {
       if (typeof oldDock.__cleanup === 'function') oldDock.__cleanup();

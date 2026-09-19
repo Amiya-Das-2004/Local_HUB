@@ -168,6 +168,7 @@ Ampere-Maxwell & Magnetism & $\nabla \times \mathbf{B} = \mu_0 \mathbf{J} + \mu_
 
   // Create Monospace Code Editor with Line Numbers & Comfortable Spacing (Folding Disabled)
   const codeEditor = createCodeEditor({
+    blockId: block.id,
     value: rawTable,
     placeholder: 'Enter LaTeX tabular code (\\begin{tabular}...\\end{tabular}) or Markdown table...',
     badge: 'Table',

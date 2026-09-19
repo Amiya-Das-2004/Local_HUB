@@ -10,7 +10,6 @@
 
 import { renderKatex } from '../../Writing_Engine/Math_Renderer.js';
 import { attachHighlightSync } from '../../Writing_Engine/Highlight_Sync.js';
-import { escapeHtml } from '../../02_Utils.js';
 import { CreateColorSelector } from '../../../00_Components/06_Color_Selector.js';
 import { getBlockActionsHTML, initBlockActions } from './Block_Actions.js';
 import { createCodeEditor } from './Block_Textarea.js';
@@ -83,6 +82,7 @@ export function renderEquationBlock(block, isEditing = false, onUpdate = null, {
   const editorMount = editWrap.querySelector('.eq-editor-mount');
 
   const codeEditor = createCodeEditor({
+    blockId: block.id,
     value: rawTex,
     placeholder: 'Enter LaTeX equation code (e.g. \\nabla \\times \\mathbf{E} = -\\frac{\\partial \\mathbf{B}}{\\partial t})...',
     badge: 'LaTeX',
