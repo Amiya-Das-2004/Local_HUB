@@ -87,7 +87,26 @@ function sanitizeNote(n, idx = 0) {
 }
 
 // Loads notes from HTML vault (#NotesData) and optionally recovers uncommitted edits from localStorage
-export function LoadNotesState() {
+export function LoadNotesState(forceReload = false) {
+  // Reuse in-memory state if already loaded and not stale to avoid multi-MB JSON parsing on every route change
+  if (!forceReload && NotesState.notes && NotesState.notes.length > 0) {
+    try {
+      const cached = typeof localStorage !== 'undefined' ? localStorage.getItem('NotesData_Local_Cache') : null;
+      if (cached) {
+        const parsedCache = JSON.parse(cached);
+        const cacheTimestamp = parsedCache?._savedAt || 0;
+        const currentTimestamp = NotesState.vaultMeta?.lastSaved || 0;
+        if (cacheTimestamp <= currentTimestamp && !parsedCache._unsaved) {
+          return NotesState;
+        }
+      } else {
+        return NotesState;
+      }
+    } catch (e) {
+      return NotesState;
+    }
+  }
+
   const dataBlock = typeof document !== 'undefined' ? document.getElementById('NotesData') : null;
   let domState = null;
 

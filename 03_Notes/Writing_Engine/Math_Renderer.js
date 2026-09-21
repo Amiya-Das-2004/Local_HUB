@@ -170,6 +170,13 @@ export function ensureKatexLoaded() {
   }
 }
 
+const katexCache = new Map();
+const MAX_KATEX_CACHE = 800;
+
+export function clearKatexCache() {
+  katexCache.clear();
+}
+
 export function renderKatex(tex, isDisplayMode = false, noteContext = null) {
   ensureKatexLoaded();
   const rawClean = (tex || '').trim();
@@ -177,15 +184,30 @@ export function renderKatex(tex, isDisplayMode = false, noteContext = null) {
   const cleanTex = resolveThemeColors(rawClean);
 
   if (typeof window.katex !== 'undefined') {
+    const isLight = typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light';
+    const theme = isLight ? 'light' : 'dark';
+    const ctxId = noteContext?.id || (activeNoteContext ? activeNoteContext.id : 'global');
+    const cacheKey = `${theme}:${ctxId}:${isDisplayMode ? 'D' : 'I'}:${cleanTex}`;
+
+    if (katexCache.has(cacheKey)) {
+      return katexCache.get(cacheKey);
+    }
+
     const macros = getActiveKatexMacros(noteContext);
     try {
-      return window.katex.renderToString(cleanTex, {
+      const rendered = window.katex.renderToString(cleanTex, {
         displayMode: isDisplayMode,
         throwOnError: false,
         output: 'htmlAndMathml',
         macros: macros,
         trust: true
       });
+      if (katexCache.size >= MAX_KATEX_CACHE) {
+        const firstKey = katexCache.keys().next().value;
+        katexCache.delete(firstKey);
+      }
+      katexCache.set(cacheKey, rendered);
+      return rendered;
     } catch (e) {
       return `<span class="text-red-400 font-mono text-xs">[KaTeX Error: ${escapeHtml(e.message)}]</span>`;
     }

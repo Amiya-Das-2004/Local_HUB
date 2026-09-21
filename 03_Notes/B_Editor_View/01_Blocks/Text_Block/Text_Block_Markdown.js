@@ -607,10 +607,12 @@ export function renderObsidianMarkdown(markdownText = '', options = {}) {
   container.style.lineHeight = 'var(--note-line-height, 1.6)';
 
   if (!markdownText || !markdownText.trim()) {
-    const emptyNotice = document.createElement('div');
-    emptyNotice.className = 'italic text-[var(--text-dim)] text-xs select-none py-1';
-    emptyNotice.textContent = 'Empty text block. Click to write...';
-    container.appendChild(emptyNotice);
+    if (options.isViewMode) {
+      const emptyNotice = document.createElement('div');
+      emptyNotice.className = 'obsidian-empty-notice-placeholder empty-notice italic text-[var(--text-dim)] text-xs select-none py-1';
+      emptyNotice.textContent = 'Empty text block. Click to write...';
+      container.appendChild(emptyNotice);
+    }
     return container;
   }
 

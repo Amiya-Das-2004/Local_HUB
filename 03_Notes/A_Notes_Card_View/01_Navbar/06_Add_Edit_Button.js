@@ -423,6 +423,10 @@ export function CloseNoteModal() {
   if (modal) modal.classList.add('hidden');
   const folderDropdown = document.getElementById('notes-modal-folder-dropdown');
   if (folderDropdown) folderDropdown.classList.add('hidden');
+  document.querySelectorAll('#notes-text-floating-dock').forEach(el => {
+    if (typeof el.__cleanup === 'function') el.__cleanup();
+    el.remove();
+  });
   EditingNoteId = null;
 }
 

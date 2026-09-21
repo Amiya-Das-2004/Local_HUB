@@ -100,6 +100,10 @@ export function InitCenterTitleLogic() {
   if (btn) {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
+      document.querySelectorAll('#notes-text-floating-dock').forEach(el => {
+        if (typeof el.__cleanup === 'function') el.__cleanup();
+        el.remove();
+      });
       window.location.hash = '#Notes';
     });
   }

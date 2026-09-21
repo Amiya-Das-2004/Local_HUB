@@ -74,6 +74,11 @@ export function renderTextBlock(
   container.className = 'w-full';
 
   let rawContent = block.content || '';
+  // Self-heal legacy notes where placeholder notice was saved into block.content:
+  if (rawContent.startsWith('Empty text block. Click to write...')) {
+    rawContent = rawContent.replace(/^Empty text block\. Click to write\.\.\.\n?/, '');
+    block.content = rawContent;
+  }
   let currentLineSpacing = block.lineSpacing || 'normal';
   let currentLineHeight = getSpacingValue(currentLineSpacing);
 
@@ -85,7 +90,7 @@ export function renderTextBlock(
   if (!isEditing) {
     if (!rawContent || !rawContent.trim()) {
       const emptyNotice = document.createElement('div');
-      emptyNotice.className = 'italic text-[var(--text-dim)] text-xs select-none py-1';
+      emptyNotice.className = 'obsidian-empty-notice-placeholder empty-notice italic text-[var(--text-dim)] text-xs select-none py-1';
       emptyNotice.textContent = 'Empty text block. Click to write...';
       container.appendChild(emptyNotice);
       return container;
@@ -225,6 +230,11 @@ export function renderTextBlock(
     </div>
   `;
 
+  // Remove any previously orphaned floating docks before mounting
+  document.querySelectorAll('#notes-text-floating-dock').forEach(el => {
+    if (typeof el.__cleanup === 'function') el.__cleanup();
+    el.remove();
+  });
   document.body.appendChild(floatingDock);
 
   // Prevent toolbar clicks from losing focus/selection in liveSurface (allow color pickers to open)
@@ -995,7 +1005,13 @@ export function renderTextBlock(
     }
   };
 
+  const onHashChange = () => {
+    cleanupFloatingDock();
+  };
+  window.addEventListener('hashchange', onHashChange);
+
   const cleanupFloatingDock = () => {
+    window.removeEventListener('hashchange', onHashChange);
     document.removeEventListener('click', onDocClick);
     hideFloatingDock();
   };
@@ -1037,9 +1053,16 @@ export function renderTextBlock(
       collapseExpandedBlock();
       collapseExpandedNode();
       liveSurface.innerHTML = '';
-      const rendered = renderObsidianMarkdown(newMarkdown, editModeOptions);
-      while (rendered.firstChild) {
-        liveSurface.appendChild(rendered.firstChild);
+      if (!newMarkdown || !newMarkdown.trim()) {
+        const emptyLine = document.createElement('div');
+        emptyLine.className = 'live-line min-h-[1.5em] my-0.5';
+        emptyLine.innerHTML = '<br>';
+        liveSurface.appendChild(emptyLine);
+      } else {
+        const rendered = renderObsidianMarkdown(newMarkdown, editModeOptions);
+        while (rendered.firstChild) {
+          liveSurface.appendChild(rendered.firstChild);
+        }
       }
       ensureSurfaceDomIntegrity();
     },

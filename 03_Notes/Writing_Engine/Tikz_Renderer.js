@@ -70,8 +70,29 @@ export function setActiveTikzNoteContext(note) {
  */
 const tikzSvgCache = new Map();
 
+function hashString(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return String(hash);
+}
+
 export function clearTikzSvgCache() {
   tikzSvgCache.clear();
+  try {
+    if (typeof sessionStorage !== 'undefined') {
+      const keysToRemove = [];
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (key && key.startsWith('LocalHUB_Tikz_')) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(k => sessionStorage.removeItem(k));
+    }
+  } catch (e) {}
 }
 
 export function getCachedTikzSvg(code, theme = null) {
@@ -80,7 +101,19 @@ export function getCachedTikzSvg(code, theme = null) {
   const currentTheme = isLight ? 'light' : 'dark';
   const rawClean = code.trim();
   const cacheKey = `${currentTheme}:::${rawClean}`;
-  return tikzSvgCache.get(cacheKey) || null;
+  if (tikzSvgCache.has(cacheKey)) {
+    return tikzSvgCache.get(cacheKey);
+  }
+  try {
+    if (typeof sessionStorage !== 'undefined') {
+      const sessionVal = sessionStorage.getItem(`LocalHUB_Tikz_${hashString(cacheKey)}`);
+      if (sessionVal) {
+        tikzSvgCache.set(cacheKey, sessionVal);
+        return sessionVal;
+      }
+    }
+  } catch (e) {}
+  return null;
 }
 
 /**
@@ -427,8 +460,20 @@ export function renderTikzToElement(tikzCode, targetContainer, onComplete = null
   const currentTheme = isLight ? 'light' : 'dark';
   const cacheKey = `${currentTheme}:::${rawClean}`;
 
-  if (tikzSvgCache.has(cacheKey)) {
-    targetContainer.innerHTML = tikzSvgCache.get(cacheKey);
+  let cachedHtml = tikzSvgCache.get(cacheKey);
+  if (!cachedHtml) {
+    try {
+      if (typeof sessionStorage !== 'undefined') {
+        cachedHtml = sessionStorage.getItem(`LocalHUB_Tikz_${hashString(cacheKey)}`);
+        if (cachedHtml) {
+          tikzSvgCache.set(cacheKey, cachedHtml);
+        }
+      }
+    } catch (e) {}
+  }
+
+  if (cachedHtml) {
+    targetContainer.innerHTML = cachedHtml;
     if (onComplete) onComplete(true);
     return;
   }
@@ -557,6 +602,11 @@ export function renderTikzToElement(tikzCode, targetContainer, onComplete = null
 
           // Cache the fully rendered and responsive container HTML for this theme and code
           tikzSvgCache.set(cacheKey, targetContainer.innerHTML);
+          try {
+            if (typeof sessionStorage !== 'undefined') {
+              sessionStorage.setItem(`LocalHUB_Tikz_${hashString(cacheKey)}`, targetContainer.innerHTML);
+            }
+          } catch (e) {}
 
           if (onComplete) onComplete(true);
         }

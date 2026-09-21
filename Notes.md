@@ -10,10 +10,10 @@
 | `DEFAULT_GLOBAL_MACROS` | 1 - 42 | Default LaTeX macros dictionary containing predefined equation shortcuts (`\mb`, `\comment`, `\R`, `\C`, `\N`, `\Z`) and TikZ styles/libraries. |
 | `NotesState` | 45 - 53 | Central in-memory reactive state object holding vault metadata, global macros, table templates, tikz templates, folders, tags, and notes. |
 | `sanitizeNote(n, idx = 0)` | 56 - 85 | Validates note object schema, fills missing fallback properties (id, slug, title, folder, tags, blocks, macros, autoNumbering), and prevents data corruption. |
-| `LoadNotesState()` | 88 - 172 | Reads and parses notes from the DOM script vault (#NotesData), recovers newer uncommitted edits from localStorage (NotesData_Local_Cache), and assigns window.NotesState. |
-| `SaveNotesState(newState = null, { immediate = false } = {})` | 217 - 245 | Re-derives active folder/tag lists, synchronizes window.NotesState, and persists unsaved buffer to DOM vault and localStorage with debouncing (~280ms) for high-speed typing. |
-| `flushNotesSave()` | 204 - 208 | Immediately flushes any pending debounced state writes to DOM #NotesData and localStorage. |
-| `ClearNotesLocalCache()` | 248 - 258 | Clears the unsaved localStorage recovery cache (NotesData_Local_Cache) after downloading or saving standalone application HTML. |
+| `LoadNotesState(forceReload = false)` | 90 - 192 | Reads and parses notes from DOM script vault (#NotesData), recovers newer uncommitted edits from localStorage, and reuses in-memory state when not stale to eliminate multi-MB JSON re-parsing on route changes. |
+| `SaveNotesState(newState = null, { immediate = false } = {})` | 237 - 265 | Re-derives active folder/tag lists, synchronizes window.NotesState, and persists unsaved buffer to DOM vault and localStorage with debouncing (~280ms) for high-speed typing. |
+| `flushNotesSave()` | 224 - 228 | Immediately flushes any pending debounced state writes to DOM #NotesData and localStorage. |
+| `ClearNotesLocalCache()` | 268 - 278 | Clears the unsaved localStorage recovery cache (NotesData_Local_Cache) after downloading or saving standalone application HTML. |
 
 **01_Header.js**
 
@@ -27,9 +27,9 @@
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
 | `GetCenterTitleHTML()` | 7 - 95 | Generates HTML markup and responsive styles for the center "NOTES" title button with custom journal SVG icon. |
-| `InitCenterTitleLogic()` | 98 - 106 | Attaches click event listener to the center title button to navigate back to the main #Notes card deck. |
-| `GetHeaderHTML()` | 109 - 225 | Returns complete sticky app header HTML markup, responsive styles, and slots for logo, center title, and right-side utility buttons. |
-| `InitHeader()` | 228 - 234 | Initializes click handlers and logic for all header controls (Logo, Center Title, Import/Export, Save App, and Theme Toggle). |
+| `InitCenterTitleLogic()` | 98 - 110 | Attaches click event listener to center title button to clean up floating text docks and navigate back to main #Notes card deck. |
+| `GetHeaderHTML()` | 113 - 229 | Returns complete sticky app header HTML markup, responsive styles, and slots for logo, center title, and right-side utility buttons. |
+| `InitHeader()` | 232 - 238 | Initializes click handlers and logic for all header controls (Logo, Center Title, Import/Export, Save App, and Theme Toggle). |
 
 **02_Utils.js**
 
@@ -42,8 +42,8 @@
 | `escapeHtml(str)` | 12 - 14 | Sanitizes raw strings by escaping HTML special characters (&, <, >, ") to prevent XSS vulnerabilities and markup layout breaks. |
 | `toggleTaskInRawText(rawText, targetIndex, isChecked)` | 17 - 28 | Toggles the completion state of a markdown task checkbox ([ ] or [x]) at a specific zero-based index within raw text. |
 | `formatNoteDescription(rawText, { fallbackText = '' } = {})` | 31 - 37 | Formats raw markdown and LaTeX math note descriptions with optional fallback placeholder text for live preview rendering. |
-| `getNoteRawDescription(note)` | 40 - 60 | Extracts raw string representation of a note's description from description field, flashcard text, or constituent content blocks. |
-| `getAvailableFolders(state)` | 63 - 76 | Extracts and deduplicates all available folder/group names across active notes and state, ensuring "General" is always present. |
+| `getNoteRawDescription(note, { forPreview = false } = {})` | 40 - 87 | Extracts raw string representation of a note's description; supports lightweight preview extraction (~300 chars) for card decks to prevent full-document KaTeX compilation. |
+| `getAvailableFolders(state)` | 90 - 103 | Extracts and deduplicates all available folder/group names across active notes and state, ensuring "General" is always present. |
 
 **Notes.js**
 
@@ -169,10 +169,11 @@
 | `parseLatexMacrosIntoObject(macroString, targetMacros = {})` | 82 - 110 | Parses `\newcommand`, `\renewcommand`, and `\def` statements from a macro string into a target KaTeX macro dictionary. |
 | `getActiveKatexMacros(note = null)` | 115 - 130 | Merges built-in macros, global vault macros, and note-specific local macros into a unified KaTeX macro object. |
 | `ensureKatexLoaded()` | 132 - 171 | Asynchronously injects KaTeX CSS and JS from CDN and re-renders elements with pending math placeholders once loaded. |
-| `renderKatex(tex, isDisplayMode = false, noteContext = null)` | 173 - 196 | Synchronously compiles a LaTeX formula to HTML/MathML using KaTeX, returning an error span or deferred placeholder if loading. |
-| `parseAndRenderMathInText(rawText = '')` | 198 - 200 | Convenience wrapper calling formatRichTextWithMath to parse and render inline math within text. |
-| `formatRichTextWithMath(rawText = '', options = {})` | 209 - 431 | Full-featured text compiler handling display math ($$...$$), inline math ($...$), task checkboxes ([ ], [x]), bullet lists, and markdown formatting. |
-| `parseInlineMarkdownAndLatex(str)` | 433 - 458 | Parses inline formatting tokens (bold, italic, strikethrough, code), `\fig` citations, and LaTeX text styling (`\textcolor`, `\underline`, `\cancel`). |
+| `clearKatexCache()` | 176 - 178 | Clears the in-memory KaTeX compilation cache (`katexCache`). |
+| `renderKatex(tex, isDisplayMode = false, noteContext = null)` | 180 - 221 | Synchronously compiles a LaTeX formula to HTML/MathML using KaTeX, utilizing a bounded LRU cache `katexCache` for 0ms re-rendering. |
+| `parseAndRenderMathInText(rawText = '')` | 223 - 225 | Convenience wrapper calling formatRichTextWithMath to parse and render inline math within text. |
+| `formatRichTextWithMath(rawText = '', options = {})` | 234 - 456 | Full-featured text compiler handling display math ($$...$$), inline math ($...$), task checkboxes ([ ], [x]), bullet lists, and markdown formatting. |
+| `parseInlineMarkdownAndLatex(str)` | 458 - 483 | Parses inline formatting tokens (bold, italic, strikethrough, code), `\fig` citations, and LaTeX text styling (`\textcolor`, `\underline`, `\cancel`). |
 
 **Numbering_Engine.js**
 
@@ -215,13 +216,13 @@
 | :--- | :--- | :--- |
 | `ensureTikzJaxLoaded(callback)` | 6 - 56 | Loads TikZJax scripts dynamically from CDN, patches browser process variables, and configures isolated SVG rendering. |
 | `setActiveTikzNoteContext(note)` | 63 - 65 | Sets the active note context for note-level TikZ preamble and style customization. |
-| `clearTikzSvgCache()` | 73 - 75 | Clears the in-memory cache of rendered TikZ SVG graphics. |
-| `getCachedTikzSvg(code, theme)` | 77 - 84 | Retrieves cached SVG output for a given TikZ code string and color theme. |
-| `whenConnected(element, callback)` | 123 - 155 | Ensures target DOM container is attached to document body before triggering TikZJax script execution. |
-| `getActiveTikzPreamble(note)` | 160 - 185 | Combines default TikZ libraries, global vault preambles, and note-level local TikZ styles with theme color tokens. |
-| `waitForTikzSvg(targetContainer, renderId, timeoutMs)` | 191 - 279 | Polls, listens for TeX engine unhandled rejections, and uses MutationObserver to wait until TikZJax replaces the script tag with compiled SVG markup. |
-| `fixTikzSvgGlyphs(container)` | 350 - 401 | Corrects BaKoMa font encoding mismatches for cmsy bars, cmmi vector accents, and cmex delimiter glyphs. |
-| `renderTikzToElement(tikzCode, targetContainer, onComplete, noteContext)` | 410 - 580 | Compiles TikZ code into an SVG element within the target container, utilizing caching, resilient cold-start lifecycle, and reporting completion status. |
+| `clearTikzSvgCache()` | 81 - 96 | Clears the in-memory cache and sessionStorage of rendered TikZ SVG graphics. |
+| `getCachedTikzSvg(code, theme)` | 98 - 117 | Retrieves cached SVG output for a given TikZ code string and color theme from in-memory Map or sessionStorage. |
+| `whenConnected(element, callback)` | 144 - 176 | Ensures target DOM container is attached to document body before triggering TikZJax script execution. |
+| `getActiveTikzPreamble(note)` | 181 - 206 | Combines default TikZ libraries, global vault preambles, and note-level local TikZ styles with theme color tokens. |
+| `waitForTikzSvg(targetContainer, renderId, timeoutMs)` | 212 - 300 | Polls, listens for TeX engine unhandled rejections, and uses MutationObserver to wait until TikZJax replaces the script tag with compiled SVG markup. |
+| `fixTikzSvgGlyphs(container)` | 371 - 422 | Corrects BaKoMa font encoding mismatches for cmsy bars, cmmi vector accents, and cmex delimiter glyphs. |
+| `renderTikzToElement(tikzCode, targetContainer, onComplete, noteContext)` | 443 - 625 | Compiles TikZ code into an SVG element within target container, utilizing 2-tier in-memory and sessionStorage caching for 0ms re-rendering without re-invoking TeX WASM. |
 
 ## A_Notes_Card_View
 **01_Navbar.js**

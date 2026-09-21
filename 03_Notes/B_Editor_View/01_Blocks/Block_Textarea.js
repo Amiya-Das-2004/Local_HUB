@@ -338,9 +338,22 @@ function ensureCodeEditorStyles() {
     .code-editor-body {
       background-color: #0e1018;
       transition: background-color 0.2s ease;
+      resize: vertical;
+      overflow: hidden;
+      min-height: 80px;
+      max-height: 85vh;
+    }
+    .code-editor-body::-webkit-resizer {
+      border-bottom: 2px solid var(--accent, #8b6dff);
+      border-right: 2px solid var(--accent, #8b6dff);
+      background: transparent;
     }
     [data-theme="light"] .code-editor-body {
       background-color: #fbfbfe;
+    }
+    [data-theme="light"] .code-editor-body::-webkit-resizer {
+      border-bottom: 2px solid var(--accent, #4f6ef7);
+      border-right: 2px solid var(--accent, #4f6ef7);
     }
 
     .code-editor-gutter {
@@ -489,7 +502,7 @@ export function createCodeEditor({
   // 2. Editor Body: Gutter + Monospace Textarea
   // ---------------------------------------------------------------------------
   const body = document.createElement('div');
-  body.className = 'code-editor-body relative flex w-full transition-all overflow-hidden';
+  body.className = 'code-editor-body relative flex w-full overflow-hidden';
   body.style.minHeight = minHeight;
   body.style.height = height;
 
@@ -532,9 +545,15 @@ export function createCodeEditor({
   mirrorMeasurer.style.cssText = "position:absolute;visibility:hidden;pointer-events:none;top:-9999px;left:-9999px;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;box-sizing:border-box;padding:0;margin:0;line-height:24px;font-size:12.5px;font-family:'JetBrains Mono','Fira Code','Cascadia Code',Menlo,Monaco,Consolas,'Liberation Mono',ui-monospace,monospace;";
   container.appendChild(mirrorMeasurer);
 
+  let lastMeasuredWidth = 0;
   if (typeof ResizeObserver !== 'undefined') {
-    const ro = new ResizeObserver(() => {
-      syncGutter();
+    const ro = new ResizeObserver((entries) => {
+      const currentWidth = textarea.clientWidth;
+      // Only re-sync gutter when width changes (wrapping changes) to avoid layout thrashing during vertical drag
+      if (currentWidth && Math.abs(currentWidth - lastMeasuredWidth) > 2) {
+        lastMeasuredWidth = currentWidth;
+        syncGutter();
+      }
     });
     ro.observe(textarea);
     container.__ro = ro;
@@ -556,10 +575,17 @@ export function createCodeEditor({
     const availWidth = textarea.clientWidth ? (textarea.clientWidth - 20) : 0;
     if (availWidth > 40) mirrorMeasurer.style.width = availWidth + 'px';
 
+    const cachedLineHeights = new Map();
     const getLineHeight = (lineText) => {
-      if (availWidth > 40 && lineText) {
+      if (!lineText) return 24;
+      if (cachedLineHeights.has(lineText)) {
+        return cachedLineHeights.get(lineText);
+      }
+      if (availWidth > 40) {
         mirrorMeasurer.textContent = lineText;
-        return Math.max(24, mirrorMeasurer.offsetHeight || 24);
+        const h = Math.max(24, mirrorMeasurer.offsetHeight || 24);
+        cachedLineHeights.set(lineText, h);
+        return h;
       }
       return 24;
     };

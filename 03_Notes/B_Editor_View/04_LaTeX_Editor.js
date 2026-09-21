@@ -497,31 +497,33 @@ export function RenderLaTeXEditor(container, noteId, isEditMode = true) {
       return;
     }
 
+    const fragment = document.createDocumentFragment();
     blocks.forEach((block, idx) => {
       // 1. In-between hover divider before this block
       if (isEditMode) {
         if (activeSelectorIndex === idx) {
-          blocksContainer.appendChild(createBlockSelector(idx));
+          fragment.appendChild(createBlockSelector(idx));
         } else {
-          blocksContainer.appendChild(createHoverDivider(idx));
+          fragment.appendChild(createHoverDivider(idx));
         }
       }
 
       // 2. Render block item
       const isEditing = isEditMode && (idx === activeBlockIndex);
       const blockEl = createConfiguredBlockItem(block, idx, isEditing, prefixMap, figureMap);
-      blocksContainer.appendChild(blockEl);
+      fragment.appendChild(blockEl);
     });
 
     // 3. Trailing hover divider after the last block
     if (isEditMode) {
       const endIdx = blocks.length;
       if (activeSelectorIndex === endIdx) {
-        blocksContainer.appendChild(createBlockSelector(endIdx));
+        fragment.appendChild(createBlockSelector(endIdx));
       } else {
-        blocksContainer.appendChild(createHoverDivider(endIdx));
+        fragment.appendChild(createHoverDivider(endIdx));
       }
     }
+    blocksContainer.appendChild(fragment);
   }
 
   // Bottom Floating Dock Toolbar (Sidebar Toggle, Study Toggle, Note Fonts, Font Size, Macros)

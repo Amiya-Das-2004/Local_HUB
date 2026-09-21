@@ -9,6 +9,10 @@ import { InitFooter } from './07_Footer.js';
 import { InitLoading } from './08_Loading.js';
 
 export function initLandingPage() {
+  document.querySelectorAll('#notes-text-floating-dock').forEach(el => {
+    if (typeof el.__cleanup === 'function') el.__cleanup();
+    el.remove();
+  });
   LoadLandingState();
   const root = document.getElementById('root');
   if (!root) return;

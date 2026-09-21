@@ -75,6 +75,12 @@ export const serializeElement = (rootEl) => {
         return;
       }
       if (n.nodeType === Node.ELEMENT_NODE) {
+        if (n.classList && (n.classList.contains('obsidian-empty-notice-placeholder') || n.classList.contains('empty-notice'))) {
+          return;
+        }
+        if ((n.textContent || '').trim() === 'Empty text block. Click to write...') {
+          return;
+        }
         if (n !== node && n.classList && (n.classList.contains('live-widget') || n.hasAttribute('data-raw'))) {
           const raw = n.getAttribute('data-raw');
           if (raw !== null) {
@@ -102,6 +108,12 @@ export const serializeElement = (rootEl) => {
   // Determine if a node represents an independent block / line
   const isBlockElement = (el) => {
     if (!el || el.nodeType !== Node.ELEMENT_NODE) return false;
+    if (el.classList && (el.classList.contains('obsidian-empty-notice-placeholder') || el.classList.contains('empty-notice'))) {
+      return false;
+    }
+    if ((el.textContent || '').trim() === 'Empty text block. Click to write...') {
+      return false;
+    }
     if (el.classList && (
       el.classList.contains('live-line') ||
       el.classList.contains('obsidian-code-block') ||
@@ -141,6 +153,12 @@ export const serializeElement = (rootEl) => {
   };
 
   childNodes.forEach((lineNode) => {
+    if (lineNode.nodeType === Node.ELEMENT_NODE && (
+      (lineNode.classList && (lineNode.classList.contains('obsidian-empty-notice-placeholder') || lineNode.classList.contains('empty-notice'))) ||
+      (lineNode.textContent || '').trim() === 'Empty text block. Click to write...'
+    )) {
+      return;
+    }
     if (isBlockElement(lineNode)) {
       flushInline();
 

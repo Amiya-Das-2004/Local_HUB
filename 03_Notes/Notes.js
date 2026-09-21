@@ -294,6 +294,14 @@ export function initNotesApp() {
 
   const mainContainer = document.getElementById('notes-main-container');
 
+  // Remove any leftover floating text dock when outside an individual note
+  if (!noteId) {
+    document.querySelectorAll('#notes-text-floating-dock').forEach(el => {
+      if (typeof el.__cleanup === 'function') el.__cleanup();
+      el.remove();
+    });
+  }
+
   // 3. Active View Router
   if (noteId) {
     // Note View:

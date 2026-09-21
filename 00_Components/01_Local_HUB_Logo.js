@@ -94,6 +94,10 @@ export function InitLogoLogic() {
   if (logoBtn) {
     logoBtn.addEventListener('click', (e) => {
       e.preventDefault();
+      document.querySelectorAll('#notes-text-floating-dock').forEach(el => {
+        if (typeof el.__cleanup === 'function') el.__cleanup();
+        el.remove();
+      });
       // Navigate back to the Landing Page by clearing hash
       window.location.hash = '';
     });
