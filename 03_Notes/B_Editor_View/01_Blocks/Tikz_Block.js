@@ -96,6 +96,10 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
   \draw[->, purple, thick] (0,90) -- (20,90);
 \end{tikzpicture}`;
 
+  const rawWidth = (block.width !== undefined && block.width !== null && block.width !== '') ? block.width : 100;
+  const parsedWidth = parseInt(rawWidth, 10);
+  const fitPercent = (!isNaN(parsedWidth) && parsedWidth >= 10 && parsedWidth <= 100) ? parsedWidth : 100;
+
   // 1. View Mode
   if (!isEditing) {
     const wrap = document.createElement('figure');
@@ -108,7 +112,9 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
     applyFigureAttributes(wrap, { tag, figNumber });
 
     const svgWrap = document.createElement('div');
-    svgWrap.className = 'w-full flex flex-col items-center justify-center';
+    svgWrap.className = 'flex flex-col items-center justify-center transition-all';
+    svgWrap.style.width = `${fitPercent}%`;
+    svgWrap.style.maxWidth = '100%';
     const cachedSvg = getCachedTikzSvg(tikzCode);
     if (cachedSvg) {
       svgWrap.innerHTML = cachedSvg;
@@ -128,6 +134,7 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
   editWrap.className = 'tikz-edit-workspace flex flex-col gap-2 my-0.5 w-full relative';
 
   let currentBorderState = hasBorder;
+  let currentFitPercent = fitPercent;
 
   editWrap.innerHTML = `
     <!-- Top Row: Title & Tools (Left) | Actions (Right) -->
@@ -143,6 +150,13 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
           </svg>
           <span>Border</span>
         </button>
+
+        <!-- Fit % Control Group -->
+        <div class="fit-control-wrap flex items-center gap-1 h-7 px-2 rounded-md border border-[var(--border)] bg-[var(--surface)] text-xs text-[var(--text-secondary)] select-none" title="Figure Width Percentage (10% - 100%)">
+          <span class="text-[11px] font-semibold text-[var(--text-dim)] select-none">Fit:</span>
+          <input type="number" min="10" max="100" step="5" class="fit-percent-input w-11 h-5 text-center font-mono text-xs font-semibold text-[var(--text)] bg-transparent border-none outline-none p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" placeholder="50-100" value="${currentFitPercent}" />
+          <span class="text-[11px] font-mono font-bold text-[var(--text-dim)] select-none">%</span>
+        </div>
 
         <!-- Templates Dropdown Toggle -->
         <button type="button" class="btn-templates-toggle notes-ghost-btn h-7 px-2.5 py-0 text-[11px] font-medium flex items-center gap-1.5" title="Browse and insert TikZ templates">
@@ -186,7 +200,9 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
     ${GetTikzTemplatesModalHTML()}
 
     <!-- Middle: Live TikZ SVG Preview Pane -->
-    <div class="preview-pane w-full p-4 rounded-xl ${currentBorderState ? 'border border-[var(--border)] bg-[var(--surface)] shadow-xs' : 'border border-transparent bg-transparent'} flex flex-col items-center justify-center select-text transition-all box-border" style="scrollbar-width: thin;"></div>
+    <div class="preview-pane w-full p-4 rounded-xl ${currentBorderState ? 'border border-[var(--border)] bg-[var(--surface)] shadow-xs' : 'border border-transparent bg-transparent'} flex flex-col items-center justify-center select-text transition-all box-border" style="scrollbar-width: thin;">
+      <div class="preview-inner flex flex-col items-center justify-center transition-all" style="width: ${currentFitPercent}%; max-width: 100%;"></div>
+    </div>
 
     <!-- Bottom: Monospace TikZ Code Editor with Line Numbers, Spacing & Folding -->
     <div class="tikz-editor-mount w-full"></div>
@@ -208,6 +224,7 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
   `;
 
   const preview = editWrap.querySelector('.preview-pane');
+  const previewInner = editWrap.querySelector('.preview-inner');
   const allowNumberingCb = editWrap.querySelector('.allow-numbering-cb');
   const tagInput = editWrap.querySelector('.tag-input');
   const captionInput = editWrap.querySelector('.caption-input');
@@ -224,12 +241,12 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
     enableFolding: true,
     onInput: (val) => {
       if (onUpdate) {
-        onUpdate({ code: val, content: val });
+        onUpdate({ code: val, content: val, width: currentFitPercent });
       }
     },
     onChange: (val) => {
       if (onUpdate) {
-        onUpdate({ code: val, content: val });
+        onUpdate({ code: val, content: val, width: currentFitPercent });
       }
     }
   });
@@ -239,8 +256,8 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
 
   // Synchronously populate cached SVG if available so preview doesn't flash or jump
   const cachedSvg = getCachedTikzSvg(tikzCode);
-  if (cachedSvg) {
-    preview.innerHTML = cachedSvg;
+  if (cachedSvg && previewInner) {
+    previewInner.innerHTML = cachedSvg;
   }
 
   // Single-block compile executor
@@ -261,7 +278,8 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
       btnCompile.disabled = true;
     }
 
-    renderTikzToElement(val, preview, () => {
+    const compileTarget = previewInner || preview;
+    renderTikzToElement(val, compileTarget, () => {
       if (showVisualFeedback && btnCompile) {
         btnCompile.innerHTML = `
           <svg viewBox="0 0 24 24" fill="currentColor" class="w-3 h-3">
@@ -273,7 +291,7 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
     });
 
     if (onUpdate) {
-      onUpdate({ code: val, content: val });
+      onUpdate({ code: val, content: val, width: currentFitPercent });
     }
   };
 
@@ -351,7 +369,52 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
   };
 
   // Provide code getter for dynamic theme re-rendering
-  preview.__getTikzCode = () => (codeEditor.getValue ? codeEditor.getValue() : textarea.value);
+  const getTikzSource = () => (codeEditor.getValue ? codeEditor.getValue() : textarea.value);
+  preview.__getTikzCode = getTikzSource;
+  if (previewInner) previewInner.__getTikzCode = getTikzSource;
+
+  // Fit % Width Handling
+  const fitInput = editWrap.querySelector('.fit-percent-input');
+
+  const updateFitWidth = (newVal) => {
+    currentFitPercent = newVal;
+    block.width = currentFitPercent;
+    if (previewInner) previewInner.style.width = `${currentFitPercent}%`;
+    if (onUpdate) {
+      onUpdate({
+        code: textarea.value,
+        content: textarea.value,
+        allowNumbering: block.allowNumbering,
+        tag: block.tag,
+        caption: block.caption,
+        hasBorder: currentBorderState,
+        width: currentFitPercent
+      });
+    }
+  };
+
+  fitInput?.addEventListener('input', () => {
+    const val = parseInt(fitInput.value, 10);
+    if (!isNaN(val) && val >= 10 && val <= 100) {
+      updateFitWidth(val);
+    }
+  });
+
+  fitInput?.addEventListener('change', () => {
+    let val = parseInt(fitInput.value, 10);
+    if (isNaN(val) || val < 10) val = 10;
+    if (val > 100) val = 100;
+    fitInput.value = val;
+    updateFitWidth(val);
+  });
+
+  fitInput?.addEventListener('blur', () => {
+    let val = parseInt(fitInput.value, 10);
+    if (isNaN(val) || val < 10) val = 10;
+    if (val > 100) val = 100;
+    fitInput.value = val;
+    updateFitWidth(val);
+  });
 
   // Border Toggle Action
   const borderToggleBtn = editWrap.querySelector('.btn-border-toggle');
@@ -377,7 +440,8 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
         allowNumbering: block.allowNumbering,
         tag: block.tag,
         caption: block.caption,
-        hasBorder: currentBorderState
+        hasBorder: currentBorderState,
+        width: currentFitPercent
       });
     }
   });
@@ -387,6 +451,7 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
     block.tag = tagInput?.value.trim() || '';
     block.caption = captionInput?.value || '';
     block.hasBorder = currentBorderState;
+    block.width = currentFitPercent;
     if (onUpdate) {
       onUpdate({
         code: textarea.value,
@@ -394,7 +459,8 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
         allowNumbering: block.allowNumbering,
         tag: block.tag,
         caption: block.caption,
-        hasBorder: currentBorderState
+        hasBorder: currentBorderState,
+        width: currentFitPercent
       });
     }
   };
@@ -459,6 +525,7 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
       block.tag = tagInput?.value.trim() || '';
       block.caption = captionInput?.value || '';
       block.hasBorder = currentBorderState;
+      block.width = currentFitPercent;
       if (onUpdate) {
         onUpdate({
           code: currentVal,
@@ -466,7 +533,8 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
           allowNumbering: block.allowNumbering,
           tag: block.tag,
           caption: block.caption,
-          hasBorder: currentBorderState
+          hasBorder: currentBorderState,
+          width: currentFitPercent
         });
       }
       if (onDone) onDone();

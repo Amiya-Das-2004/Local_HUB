@@ -8,6 +8,35 @@
   <!-- KaTeX Math CDN -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
   <script defer="" src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <style>
+    .lh-cancelto {
+      position: relative !important;
+      display: inline-block !important;
+      vertical-align: baseline !important;
+    }
+    .lh-cancelto-base {
+      display: inline-block !important;
+    }
+    .lh-cancelto-svg {
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      overflow: visible !important;
+      pointer-events: none !important;
+      z-index: 2 !important;
+    }
+    .lh-cancelto-val {
+      position: absolute !important;
+      white-space: nowrap !important;
+      pointer-events: none !important;
+      z-index: 3 !important;
+      line-height: 1 !important;
+      font-family: KaTeX_Main, "Times New Roman", serif !important;
+      color: currentColor !important;
+    }
+  </style>
 
   <!-- THE VAULT: Data is stored here -->
   <script type="application/json" id="LandingPageData">{
@@ -23,7 +52,7 @@
       "Color": 4048447
     }
   ],
-  "_lastSaved": 1790142882316
+  "_lastSaved": 1790175837185
 }</script>
   <script type="application/json" id="Bookmarks">
     {
@@ -37,7 +66,7 @@
   "vaultMeta": {
     "title": "Notes Vault",
     "version": "1.0.0",
-    "lastSaved": 1790142882316
+    "lastSaved": 1790175837185
   },
   "globalMacros": {
     "equation": "\\newcommand{\\mb}[1]{\\mathbf{#1}}\n\\newcommand{\\comment}[1]{\\textcolor{#dc2626|#f87171}{[#1]}}\n\\newcommand{\\R}{\\mathbb{R}}\n\\newcommand{\\C}{\\mathbb{C}}\n\\newcommand{\\N}{\\mathbb{N}}\n\\newcommand{\\Z}{\\mathbb{Z}}",
@@ -46,7 +75,6 @@
   "tableTemplates": [],
   "tikzTemplates": [],
   "folders": [
-    "General",
     "LaTex"
   ],
   "tags": [
@@ -62,49 +90,6 @@
     "banach-spaces"
   ],
   "notes": [
-    {
-      "id": "note_1790142802089",
-      "slug": "test",
-      "title": "test",
-      "folder": "General",
-      "tags": [],
-      "description": "",
-      "meta": {
-        "created": "2026-09-23",
-        "author": "User"
-      },
-      "flashcard": {
-        "isFlashcard": true,
-        "front": "",
-        "back": ""
-      },
-      "blocks": [
-        {
-          "id": "b_1790142805353_8z0o",
-          "type": "text",
-          "content": "hi",
-          "bulletStyle": "disc",
-          "lineSpacing": "normal"
-        },
-        {
-          "id": "b_1790142813560_m6ii",
-          "type": "equation",
-          "tex": "\\mathbf{F} = m\\mathbf{a}\n\\\\[10pt]\n\\mathbf{F} = m\\mathbf{a}\n\\\\[10pt]\n\\mathbf{F} = m\\mathbf{a}\n\\\\[10pt]\n\\mathbf{F} = m\\mathbf{a}",
-          "hasBorder": true,
-          "content": "\\mathbf{F} = m\\mathbf{a}\n\\\\[10pt]\n\\mathbf{F} = m\\mathbf{a}\n\\\\[10pt]\n\\mathbf{F} = m\\mathbf{a}\n\\\\[10pt]\n\\mathbf{F} = m\\mathbf{a}"
-        }
-      ],
-      "autoNumbering": {
-        "h1": "numeric",
-        "h2": "numeric",
-        "h3": "numeric"
-      },
-      "logo": null,
-      "macros": {
-        "equation": "",
-        "tikz": ""
-      }
-    },
     {
       "id": "note_latex_complete_reference_01",
       "slug": "latex-mathematical-environments-and-symbols-reference",
@@ -165,8 +150,7 @@
         {
           "id": "b_lat_eq1",
           "type": "equation",
-          "tex": "\\begin{aligned}\n\\nabla \\cdot \\mathbf{E} &= \\frac{\\rho}{\\varepsilon_0} \\\\\n\\nabla \\cdot \\mathbf{B} &= 0 \\\\\n\\nabla \\times \\mathbf{E} &= -\\frac{\\partial \\mathbf{B}}{\\partial t} \\\\\n\\nabla \\times \\mathbf{B} &= \\mu_0 \\mathbf{J} + \\mu_0 \\varepsilon_0 \\frac{\\partial \\mathbf{E}}{\\partial t}\n\\end{aligned}",
-          "content": "\\begin{aligned}\n\\nabla \\cdot \\mathbf{E} &= \\frac{\\rho}{\\varepsilon_0} \\\\\n\\nabla \\cdot \\mathbf{B} &= 0 \\\\\n\\nabla \\times \\mathbf{E} &= -\\frac{\\partial \\mathbf{B}}{\\partial t} \\\\\n\\nabla \\times \\mathbf{B} &= \\mu_0 \\mathbf{J} + \\mu_0 \\varepsilon_0 \\frac{\\partial \\mathbf{E}}{\\partial t}\n\\end{aligned}"
+          "tex": "\\begin{aligned}\n\\nabla \\cdot \\mathbf{E} &= \\frac{\\rho}{\\varepsilon_0} \\\\\n\\nabla \\cdot \\mathbf{B} &= 0 \\\\\n\\nabla \\times \\mathbf{E} &= -\\frac{\\partial \\mathbf{B}}{\\partial t} \\\\\n\\nabla \\times \\mathbf{B} &= \\mu_0 \\mathbf{J} + \\mu_0 \\varepsilon_0 \\frac{\\partial \\mathbf{E}}{\\partial t}\n\\end{aligned}"
         },
         {
           "id": "b_lat_t3_1",
@@ -409,12 +393,7 @@
           "id": "b_fas_h1",
           "type": "heading",
           "level": "h1",
-          "title": "Function Spaces & Abstract Completeness Hierarchy"
-        },
-        {
-          "id": "b_fas_t1",
-          "type": "text",
-          "content": "This note visualizes the duality and relationship between **concrete function spaces** on a bounded domain $\\Omega \\subset \\mathbb{R}^n$ and the **abstract hierarchy of complete spaces** (Vector, Normed, Inner-Product, Banach, and Hilbert spaces)."
+          "title": "Project Overview"
         },
         {
           "id": "b_fas_tikz1",
@@ -423,7 +402,9 @@
           "caption": "Concrete Sobolev & Lebesgue function spaces on a bounded domain $\\Omega$ alongside the abstract completeness hierarchy of Banach and Hilbert spaces.",
           "hasBorder": true,
           "allowNumbering": true,
-          "tag": "function-spaces-hierarchy"
+          "tag": "function-spaces-hierarchy",
+          "content": "\\begin{tikzpicture}[\n  font=\\sffamily\\footnotesize,\n  panel/.style={rounded corners=8pt, draw=#1!65!black, fill=#1!3,\n                line width=0.8pt},\n  panel/.default=teal,\n  paneltitle/.style={font=\\sffamily\\bfseries\\small, text=#1!45!black},\n  space/.style={ellipse, draw=black!32, fill=#1,\n                line width=0.75pt, align=center, inner sep=1.5pt},\n  hierarchy/.style={rounded corners=4pt, draw=black!30, fill=#1,\n                    line width=0.7pt, align=center, minimum height=10mm,\n                    text width=31mm, inner sep=3pt},\n  note/.style={rounded corners=3pt, draw=black!22, fill=white,\n               align=center, inner sep=3pt, font=\\sffamily\\scriptsize},\n  flow/.style={-{Stealth[length=2.4mm,width=1.6mm]}, line width=0.8pt,\n               draw=black!60},\n  link/.style={-{Stealth[length=2.4mm,width=1.6mm]}, dashed,\n               line width=1pt, draw=orange!75!black},\n  caption/.style={font=\\sffamily\\scriptsize, text=black!68, align=center},\n]\n% --------------------------------------------------------------------\n% Panel backgrounds and titles\n% --------------------------------------------------------------------\n\\draw[panel=teal] (-8.0,-4.75) rectangle (-0.35,5.15);\n\\draw[panel=blue] (0.35,-4.75) rectangle (8.0,5.15);\n\\node[paneltitle=teal] at (-4.175,4.72)\n      {Concrete spaces on a bounded domain $\\Omega$};\n\\node[caption] at (-4.175,4.30)\n      {Nested sets encode increasing regularity.};\n\\draw[teal!35, line width=0.5pt] (-7.65,4.02) -- (-0.70,4.02);\n\\node[paneltitle=blue] at (4.175,4.72)\n      {Abstract hierarchy of complete spaces};\n\\node[caption] at (4.175,4.30)\n      {Inner products induce norms; completeness names the space.};\n\\draw[blue!30, line width=0.5pt] (0.70,4.02) -- (7.65,4.02);\n% --------------------------------------------------------------------\n% Left panel: nested function spaces\n% --------------------------------------------------------------------\n\\node[space=teal!9, minimum width=6.45cm, minimum height=7.10cm]\n      (Lone) at (-4.15,-0.05) {};\n\\node[space=cyan!13, minimum width=5.30cm, minimum height=5.75cm]\n      (Ltwo) at (-4.15,-0.52) {};\n\\node[space=orange!18, minimum width=4.10cm, minimum height=4.35cm]\n      (Hone) at (-4.15,-0.96) {};\n\\node[space=orange!32, minimum width=2.75cm, minimum height=2.60cm]\n      (Htwo) at (-4.15,-1.38) {};\n\\node[space=orange!55, minimum width=1.55cm, minimum height=0.80cm]\n      (Cinf) at (-4.15,-1.78) {$C^\\infty(\\overline\\Omega)$};\n\\node[caption, text=teal!45!black] at (-4.15,3.10)\n      {\\textbf{$L^1(\\Omega)$}\\quad $\\displaystyle\\int_\\Omega |u|\\,\\mathrm d x<\\infty$};\n\\node[caption, text=cyan!35!black] at (-4.15,1.95)\n      {\\textbf{$L^2(\\Omega)$}\\quad\n       $\\langle u,v\\rangle_{L^2}=\\displaystyle\\int_\\Omega uv\\,\\mathrm d x$};\n\\node[caption, text=orange!55!black] at (-4.15,0.72)\n      {\\textbf{$H^1(\\Omega)$}\\quad\n       $\\displaystyle\\int_\\Omega\\bigl(|u|^2+|\\nabla u|^2\\bigr)\\,\\mathrm d x<\\infty$};\n\\node[caption, text=orange!65!black] at (-4.15,-0.48)\n      {\\textbf{$H^2(\\Omega)$}\\quad weak derivatives through order $2$};\n\\draw[flow, draw=teal!55!black] (-7.32,2.55) -- (-7.32,-2.45);\n\\node[rotate=90, font=\\sffamily\\tiny\\bfseries, text=teal!55!black]\n      at (-7.55,0.05) {INCREASING REGULARITY};\n\\node[note, draw=orange!50, fill=orange!6, text width=34mm]\n      (velocity) at (-5.15,-4.03)\n      {$\\star$ The velocity $V$ belongs to $H^1(\\Omega)$ in the model.};\n\\draw[link] (velocity.north) to[bend left=12] (Hone.248);\n\\node[note, dashed, draw=purple!55, fill=purple!4, text width=25mm]\n      (Hneg) at (-1.95,-4.03)\n      {$H^{-1}(\\Omega)=(H_0^1(\\Omega))'$\\\\[-1pt]\n       dual / rough-data space};\n\\draw[flow, dashed, draw=purple!65!black]\n      (Hneg.north west) to[bend right=16] (Hone.325);\n% --------------------------------------------------------------------\n% Right panel: abstract hierarchy\n% --------------------------------------------------------------------\n\\node[hierarchy=blue!12, text width=39mm] (vector) at (4.18,3.25)\n      {\\textbf{Vector space}\\\\[-1pt]\n       addition and scalar multiplication};\n\\node[hierarchy=blue!11] (normed) at (2.25,1.65)\n      {\\textbf{Normed space}\\\\ length $\\|u\\|$};\n\\node[hierarchy=orange!13] (inner) at (6.10,1.65)\n      {\\textbf{Inner-product space}\\\\ angle $\\langle u,v\\rangle$};\n\\node[hierarchy=blue!24] (banach) at (2.25,-0.15)\n      {\\textbf{BANACH}\\\\ normed $+$ complete};\n\\node[hierarchy=orange!32] (hilbert) at (6.10,-0.15)\n      {\\textbf{HILBERT}\\\\ inner product $+$ complete};\n\\draw[flow] (vector.south) -- ++(0,-0.25) -| (normed.north);\n\\draw[flow] (vector.south) -- ++(0,-0.25) -| (inner.north);\n\\draw[flow] (normed) -- (banach);\n\\draw[flow] (inner) -- (hilbert);\n% FIXED: changed \\node to node\n\\draw[link] (hilbert.north west) to[bend right=16] (banach.north east)\n      node[midway, above=1pt, fill=white, inner sep=1.5pt,\n           font=\\sffamily\\tiny\\bfseries, text=orange!65!black]\n      {Hilbert $\\Longrightarrow$ Banach};\n\\node[note, draw=blue!45, fill=blue!4, text width=31mm]\n      (banachex) at (2.25,-2.05)\n      {Typical Banach examples\\\\[1pt]\n       $L^p(\\Omega)$ for $p\\ne2$\\\\\n       $C^0$ with the supremum norm};\n\\node[note, draw=orange!55, fill=orange!5, text width=31mm]\n      (hilbertex) at (6.10,-2.05)\n      {Typical Hilbert examples\\\\[1pt]\n       $L^2(\\Omega)$ and $H^k(\\Omega)$\\\\\n       with their standard inner products};\n\\draw[flow, draw=blue!55!black] (banach) -- (banachex);\n\\draw[flow, draw=orange!65!black] (hilbert) -- (hilbertex);\n\\node[note, fill=blue!3, text width=61mm] at (4.18,-3.75)\n      {\\textbf{Completeness:} every Cauchy sequence converges to an element\n       of the same space---there are no missing limit points.};\n% --------------------------------------------------------------------\n% Shared conclusion\n% --------------------------------------------------------------------\n\\node[rounded corners=5pt, draw=orange!60!black, fill=orange!10,\n      line width=0.8pt, minimum width=15.25cm, minimum height=9mm,\n      align=center, font=\\sffamily\\scriptsize, text=black!78]\n      at (0,-5.35)\n      {\\textbf{Key relation (for bounded $\\Omega$):}\\quad\n       $C^\\infty(\\overline\\Omega)\\subset H^2(\\Omega)\\subset H^1(\\Omega)\n       \\subset L^2(\\Omega)\\subset L^1(\\Omega)$.\\quad\n       In particular, $L^2$ and the Sobolev spaces $H^k$ are Hilbert spaces.};\n\\end{tikzpicture}",
+          "width": 60
         },
         {
           "id": "b_fas_h2",
@@ -450,37 +431,7 @@
     }
   ]
 }</script>
-<style>*, ::before, ::after{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }/* ! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com */*,::after,::before{box-sizing:border-box;border-width:0;border-style:solid;border-color:#e5e7eb}::after,::before{--tw-content:''}:host,html{line-height:1.5;-webkit-text-size-adjust:100%;-moz-tab-size:4;tab-size:4;font-family:ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";font-feature-settings:normal;font-variation-settings:normal;-webkit-tap-highlight-color:transparent}body{margin:0;line-height:inherit}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,pre,samp{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;font-feature-settings:normal;font-variation-settings:normal;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}button,input,optgroup,select,textarea{font-family:inherit;font-feature-settings:inherit;font-variation-settings:inherit;font-size:100%;font-weight:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:transparent;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dd,dl,figure,h1,h2,h3,h4,h5,h6,hr,p,pre{margin:0}fieldset{margin:0;padding:0}legend{padding:0}menu,ol,ul{list-style:none;margin:0;padding:0}dialog{padding:0}textarea{resize:vertical}input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}[role=button],button{cursor:pointer}:disabled{cursor:default}audio,canvas,embed,iframe,img,object,svg,video{display:block;vertical-align:middle}img,video{max-width:100%;height:auto}[hidden]:where(:not([hidden=until-found])){display:none}.pointer-events-none{pointer-events:none}.pointer-events-auto{pointer-events:auto}.fixed{position:fixed}.absolute{position:absolute}.relative{position:relative}.inset-0{inset:0px}.inset-x-2{left:0.5rem;right:0.5rem}.bottom-0{bottom:0px}.left-0{left:0px}.right-0{right:0px}.top-0{top:0px}.bottom-3{bottom:0.75rem}.left-1\/2{left:50%}.right-2{right:0.5rem}.top-2{top:0.5rem}.bottom-0\.5{bottom:0.125rem}.right-0\.5{right:0.125rem}.top-\[84px\]{top:84px}.top-full{top:100%}.z-10{z-index:10}.z-20{z-index:20}.z-40{z-index:40}.z-30{z-index:30}.z-\[100\]{z-index:100}.z-\[60\]{z-index:60}.my-1{margin-top:0.25rem;margin-bottom:0.25rem}.mx-auto{margin-left:auto;margin-right:auto}.my-0\.5{margin-top:0.125rem;margin-bottom:0.125rem}.my-1\.5{margin-top:0.375rem;margin-bottom:0.375rem}.my-2\.5{margin-top:0.625rem;margin-bottom:0.625rem}.my-\[-3px\]{margin-top:-3px;margin-bottom:-3px}.my-4{margin-top:1rem;margin-bottom:1rem}.my-2{margin-top:0.5rem;margin-bottom:0.5rem}.mb-1{margin-bottom:0.25rem}.mb-2{margin-bottom:0.5rem}.mb-1\.5{margin-bottom:0.375rem}.mb-4{margin-bottom:1rem}.mr-1\.5{margin-right:0.375rem}.mt-0\.5{margin-top:0.125rem}.mt-1{margin-top:0.25rem}.mt-2{margin-top:0.5rem}.mt-3{margin-top:0.75rem}.mt-3\.5{margin-top:0.875rem}.mt-4{margin-top:1rem}.mt-5{margin-top:1.25rem}.mt-6{margin-top:1.5rem}.box-border{box-sizing:border-box}.inline-block{display:inline-block}.flex{display:flex}.inline-flex{display:inline-flex}.grid{display:grid}.hidden{display:none}.h-2{height:0.5rem}.h-16{height:4rem}.h-4{height:1rem}.h-5{height:1.25rem}.h-6{height:1.5rem}.h-8{height:2rem}.h-\[1\.5px\]{height:1.5px}.h-\[72px\]{height:72px}.h-1{height:0.25rem}.h-3{height:0.75rem}.h-3\.5{height:0.875rem}.h-7{height:1.75rem}.h-\[25px\]{height:25px}.h-full{height:100%}.max-h-72{max-height:18rem}.min-h-\[1\.5em\]{min-height:1.5em}.min-h-\[90px\]{min-height:90px}.min-h-\[44px\]{min-height:44px}.w-2{width:0.5rem}.w-\[140px\]{width:140px}.w-full{width:100%}.w-16{width:4rem}.w-6{width:1.5rem}.w-\[1px\]{width:1px}.w-\[72px\]{width:72px}.w-1{width:0.25rem}.w-3{width:0.75rem}.w-7{width:1.75rem}.w-\[25px\]{width:25px}.min-w-\[170px\]{min-width:170px}.min-w-\[220px\]{min-width:220px}.min-w-0{min-width:0px}.max-w-\[130px\]{max-width:130px}.max-w-\[220px\]{max-width:220px}.max-w-\[calc\(100vw-16px\)\]{max-width:calc(100vw - 16px)}.max-w-full{max-width:100%}.max-w-\[calc\(100vw-24px\)\]{max-width:calc(100vw - 24px)}.flex-1{flex:1 1 0%}.flex-shrink-0{flex-shrink:0}.-translate-x-1\/2{--tw-translate-x:-50%;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.scale-90{--tw-scale-x:.9;--tw-scale-y:.9;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.cursor-pointer{cursor:pointer}.cursor-text{cursor:text}.select-none{-webkit-user-select:none;user-select:none}.select-text{-webkit-user-select:text;user-select:text}.resize-none{resize:none}.grid-cols-3{grid-template-columns:repeat(3, minmax(0, 1fr))}.flex-col{flex-direction:column}.flex-wrap{flex-wrap:wrap}.items-start{align-items:flex-start}.items-center{align-items:center}.items-baseline{align-items:baseline}.justify-end{justify-content:flex-end}.justify-center{justify-content:center}.justify-between{justify-content:space-between}.gap-2{gap:0.5rem}.gap-3{gap:0.75rem}.gap-1{gap:0.25rem}.gap-1\.5{gap:0.375rem}.gap-6{gap:1.5rem}.gap-0\.5{gap:0.125rem}.space-y-0\.5 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(0.125rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(0.125rem * var(--tw-space-y-reverse))}.overflow-hidden{overflow:hidden}.overflow-visible{overflow:visible}.overflow-x-auto{overflow-x:auto}.overflow-y-auto{overflow-y:auto}.truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.whitespace-pre-wrap{white-space:pre-wrap}.break-words{overflow-wrap:break-word}.rounded-full{border-radius:9999px}.rounded{border-radius:0.25rem}.rounded-2xl{border-radius:1rem}.rounded-lg{border-radius:0.5rem}.rounded-md{border-radius:0.375rem}.rounded-xl{border-radius:0.75rem}.rounded-l-full{border-top-left-radius:9999px;border-bottom-left-radius:9999px}.rounded-r-full{border-top-right-radius:9999px;border-bottom-right-radius:9999px}.border{border-width:1px}.border-b{border-bottom-width:1px}.border-t{border-top-width:1px}.border-t-0{border-top-width:0px}.border-dashed{border-style:dashed}.border-none{border-style:none}.border-\[var\(--border\)\]{border-color:var(--border)}.border-purple-500\/60{border-color:rgb(168 85 247 / 0.6)}.border-transparent{border-color:transparent}.border-black\/25{border-color:rgb(0 0 0 / 0.25)}.border-white\/30{border-color:rgb(255 255 255 / 0.3)}.border-purple-500{--tw-border-opacity:1;border-color:rgb(168 85 247 / var(--tw-border-opacity, 1))}.border-amber-500\/30{border-color:rgb(245 158 11 / 0.3)}.bg-\[--accent\]{background-color:var(--accent)}.bg-\[var\(--card\)\]{background-color:var(--card)}.bg-\[var\(--surface\)\]{background-color:var(--surface)}.bg-purple-500\/0{background-color:rgb(168 85 247 / 0)}.bg-transparent{background-color:transparent}.bg-\[var\(--border\)\]{background-color:var(--border)}.bg-amber-400{--tw-bg-opacity:1;background-color:rgb(251 191 36 / var(--tw-bg-opacity, 1))}.bg-amber-500\/20{background-color:rgb(245 158 11 / 0.2)}.bg-green-600{--tw-bg-opacity:1;background-color:rgb(22 163 74 / var(--tw-bg-opacity, 1))}.bg-indigo-400{--tw-bg-opacity:1;background-color:rgb(129 140 248 / var(--tw-bg-opacity, 1))}.bg-purple-500\/15{background-color:rgb(168 85 247 / 0.15)}.bg-amber-500\/15{background-color:rgb(245 158 11 / 0.15)}.p-6{padding:1.5rem}.p-1{padding:0.25rem}.p-3{padding:0.75rem}.p-4{padding:1rem}.p-1\.5{padding:0.375rem}.p-2{padding:0.5rem}.p-2\.5{padding:0.625rem}.px-1{padding-left:0.25rem;padding-right:0.25rem}.px-2{padding-left:0.5rem;padding-right:0.5rem}.px-2\.5{padding-left:0.625rem;padding-right:0.625rem}.px-3{padding-left:0.75rem;padding-right:0.75rem}.py-0\.5{padding-top:0.125rem;padding-bottom:0.125rem}.py-1{padding-top:0.25rem;padding-bottom:0.25rem}.py-1\.5{padding-top:0.375rem;padding-bottom:0.375rem}.py-2{padding-top:0.5rem;padding-bottom:0.5rem}.px-1\.5{padding-left:0.375rem;padding-right:0.375rem}.py-14{padding-top:3.5rem;padding-bottom:3.5rem}.py-0{padding-top:0px;padding-bottom:0px}.py-2\.5{padding-top:0.625rem;padding-bottom:0.625rem}.pb-0\.5{padding-bottom:0.125rem}.pb-1{padding-bottom:0.25rem}.pb-1\.5{padding-bottom:0.375rem}.pb-24{padding-bottom:6rem}.pb-3{padding-bottom:0.75rem}.pr-1{padding-right:0.25rem}.pr-2{padding-right:0.5rem}.pt-0{padding-top:0px}.pt-2{padding-top:0.5rem}.pt-3{padding-top:0.75rem}.pl-1\.5{padding-left:0.375rem}.pl-2\.5{padding-left:0.625rem}.pr-1\.5{padding-right:0.375rem}.pr-2\.5{padding-right:0.625rem}.text-center{text-align:center}.text-right{text-align:right}.align-middle{vertical-align:middle}.font-mono{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace}.font-serif{font-family:ui-serif, Georgia, Cambria, "Times New Roman", Times, serif}.text-\[10px\]{font-size:10px}.text-sm{font-size:0.875rem;line-height:1.25rem}.text-2xl{font-size:1.5rem;line-height:2rem}.text-\[11px\]{font-size:11px}.text-lg{font-size:1.125rem;line-height:1.75rem}.text-xs{font-size:0.75rem;line-height:1rem}.text-\[10\.5px\]{font-size:10.5px}.font-bold{font-weight:700}.font-extrabold{font-weight:800}.font-medium{font-weight:500}.font-semibold{font-weight:600}.uppercase{text-transform:uppercase}.italic{font-style:italic}.tabular-nums{--tw-numeric-spacing:tabular-nums;font-variant-numeric:var(--tw-ordinal) var(--tw-slashed-zero) var(--tw-numeric-figure) var(--tw-numeric-spacing) var(--tw-numeric-fraction)}.leading-relaxed{line-height:1.625}.leading-snug{line-height:1.375}.leading-none{line-height:1}.leading-tight{line-height:1.25}.leading-\[24px\]{line-height:24px}.tracking-\[0\.3em\]{letter-spacing:0.3em}.tracking-\[0\.4em\]{letter-spacing:0.4em}.tracking-tight{letter-spacing:-0.025em}.tracking-wider{letter-spacing:0.05em}.tracking-widest{letter-spacing:0.1em}.tracking-wide{letter-spacing:0.025em}.text-\[--accent\]{color:var(--accent)}.text-\[--muted\]{color:var(--muted)}.text-\[var\(--text\)\]{color:var(--text)}.text-\[var\(--text-dim\)\]{color:var(--text-dim)}.text-\[var\(--text-secondary\)\]{color:var(--text-secondary)}.text-purple-300{--tw-text-opacity:1;color:rgb(216 180 254 / var(--tw-text-opacity, 1))}.text-purple-400{--tw-text-opacity:1;color:rgb(192 132 252 / var(--tw-text-opacity, 1))}.text-white{--tw-text-opacity:1;color:rgb(255 255 255 / var(--tw-text-opacity, 1))}.text-amber-400{--tw-text-opacity:1;color:rgb(251 191 36 / var(--tw-text-opacity, 1))}.underline{-webkit-text-decoration-line:underline;text-decoration-line:underline}.overline{-webkit-text-decoration-line:overline;text-decoration-line:overline}.line-through{-webkit-text-decoration-line:line-through;text-decoration-line:line-through}.underline-offset-2{text-underline-offset:2px}.opacity-0{opacity:0}.opacity-80{opacity:0.8}.shadow-2xl{--tw-shadow:0 25px 50px -12px rgb(0 0 0 / 0.25);--tw-shadow-colored:0 25px 50px -12px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-md{--tw-shadow:0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);--tw-shadow-colored:0 4px 6px -1px var(--tw-shadow-color), 0 2px 4px -2px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-sm{--tw-shadow:0 1px 2px 0 rgb(0 0 0 / 0.05);--tw-shadow-colored:0 1px 2px 0 var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-xl{--tw-shadow:0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);--tw-shadow-colored:0 20px 25px -5px var(--tw-shadow-color), 0 8px 10px -6px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-lg{--tw-shadow:0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);--tw-shadow-colored:0 10px 15px -3px var(--tw-shadow-color), 0 4px 6px -4px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.outline-none{outline:2px solid transparent;outline-offset:2px}.backdrop-blur-md{--tw-backdrop-blur:blur(12px);-webkit-backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)}.transition-colors{transition-property:color, background-color, border-color, fill, stroke, -webkit-text-decoration-color;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke, -webkit-text-decoration-color;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.transition-all{transition-property:all;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.transition-opacity{transition-property:opacity;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.transition-transform{transition-property:transform;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.duration-300{transition-duration:300ms}.duration-200{transition-duration:200ms}.duration-75{transition-duration:75ms}.duration-150{transition-duration:150ms}.ease-out{transition-timing-function:cubic-bezier(0, 0, 0.2, 1)}.hover\:scale-110:hover{--tw-scale-x:1.1;--tw-scale-y:1.1;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.hover\:border-\[var\(--border\)\]:hover{border-color:var(--border)}.hover\:border-purple-400:hover{--tw-border-opacity:1;border-color:rgb(192 132 252 / var(--tw-border-opacity, 1))}.hover\:border-purple-500:hover{--tw-border-opacity:1;border-color:rgb(168 85 247 / var(--tw-border-opacity, 1))}.hover\:border-purple-500\/50:hover{border-color:rgb(168 85 247 / 0.5)}.hover\:border-purple-500\/40:hover{border-color:rgb(168 85 247 / 0.4)}.hover\:border-purple-500\/70:hover{border-color:rgb(168 85 247 / 0.7)}.hover\:bg-purple-500\/10:hover{background-color:rgb(168 85 247 / 0.1)}.hover\:bg-purple-600:hover{--tw-bg-opacity:1;background-color:rgb(147 51 234 / var(--tw-bg-opacity, 1))}.hover\:bg-\[var\(--card-hover\)\]:hover{background-color:var(--card-hover)}.hover\:bg-\[var\(--surface-hover\)\]:hover{background-color:var(--surface-hover)}.hover\:bg-green-500:hover{--tw-bg-opacity:1;background-color:rgb(34 197 94 / var(--tw-bg-opacity, 1))}.hover\:bg-purple-500\/15:hover{background-color:rgb(168 85 247 / 0.15)}.hover\:text-\[--accent\]:hover{color:var(--accent)}.hover\:text-purple-400:hover{--tw-text-opacity:1;color:rgb(192 132 252 / var(--tw-text-opacity, 1))}.hover\:text-white:hover{--tw-text-opacity:1;color:rgb(255 255 255 / var(--tw-text-opacity, 1))}.hover\:text-purple-300:hover{--tw-text-opacity:1;color:rgb(216 180 254 / var(--tw-text-opacity, 1))}.hover\:text-red-400:hover{--tw-text-opacity:1;color:rgb(248 113 113 / var(--tw-text-opacity, 1))}.hover\:opacity-80:hover{opacity:0.8}.active\:scale-95:active{--tw-scale-x:.95;--tw-scale-y:.95;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.group:hover .group-hover\:scale-100{--tw-scale-x:1;--tw-scale-y:1;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.group:hover .group-hover\:scale-110{--tw-scale-x:1.1;--tw-scale-y:1.1;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.group:hover .group-hover\:bg-purple-500\/50{background-color:rgb(168 85 247 / 0.5)}.group:hover .group-hover\:opacity-100{opacity:1}@media (min-width: 640px){.sm\:inset-x-6{left:1.5rem;right:1.5rem}.sm\:bottom-4{bottom:1rem}.sm\:top-\[90px\]{top:90px}.sm\:h-8{height:2rem}.sm\:w-8{width:2rem}.sm\:grid-cols-5{grid-template-columns:repeat(5, minmax(0, 1fr))}.sm\:gap-2{gap:0.5rem}.sm\:gap-1\.5{gap:0.375rem}.sm\:p-1\.5{padding:0.375rem}.sm\:p-6{padding:1.5rem}.sm\:p-2\.5{padding:0.625rem}.sm\:px-3{padding-left:0.75rem;padding-right:0.75rem}}@media (min-width: 768px){.md\:grid-cols-9{grid-template-columns:repeat(9, minmax(0, 1fr))}.md\:p-8{padding:2rem}.md\:text-3xl{font-size:1.875rem;line-height:2.25rem}}</style><style id="landing-theme-style">
-  :root {
-    --bg: #03010a;
-    --fg: #e2e8f0;
-    --accent: #6b8cff;
-    --muted: #475569;
-    --border: rgba(107, 140, 255, 0.2);
-  }
-
-  body {
-    margin: 0;
-    padding: 0;
-    background-color: var(--bg);
-    color: var(--fg);
-    font-family: 'Space Grotesk', sans-serif;
-  }
-
-  .mono {
-    font-family: 'JetBrains Mono', monospace;
-  }
-
-  .vignette {
-    position: fixed;
-    inset: 0;
-    z-index: 5;
-    pointer-events: none;
-    background: radial-gradient(circle at center, transparent 30%, rgba(3, 1, 10, 0.8) 100%);
-  }
-
-  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&family=JetBrains+Mono:wght@300;400;600;700&display=swap');
-  </style><div id="note-fig-citation-handler" style="display: none;"></div><style id="note-code-style">
+<style>*, ::before, ::after{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }/* ! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com */*,::after,::before{box-sizing:border-box;border-width:0;border-style:solid;border-color:#e5e7eb}::after,::before{--tw-content:''}:host,html{line-height:1.5;-webkit-text-size-adjust:100%;-moz-tab-size:4;tab-size:4;font-family:ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";font-feature-settings:normal;font-variation-settings:normal;-webkit-tap-highlight-color:transparent}body{margin:0;line-height:inherit}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,pre,samp{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;font-feature-settings:normal;font-variation-settings:normal;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}button,input,optgroup,select,textarea{font-family:inherit;font-feature-settings:inherit;font-variation-settings:inherit;font-size:100%;font-weight:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:transparent;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dd,dl,figure,h1,h2,h3,h4,h5,h6,hr,p,pre{margin:0}fieldset{margin:0;padding:0}legend{padding:0}menu,ol,ul{list-style:none;margin:0;padding:0}dialog{padding:0}textarea{resize:vertical}input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}[role=button],button{cursor:pointer}:disabled{cursor:default}audio,canvas,embed,iframe,img,object,svg,video{display:block;vertical-align:middle}img,video{max-width:100%;height:auto}[hidden]:where(:not([hidden=until-found])){display:none}.pointer-events-none{pointer-events:none}.pointer-events-auto{pointer-events:auto}.fixed{position:fixed}.absolute{position:absolute}.relative{position:relative}.inset-0{inset:0px}.inset-x-2{left:0.5rem;right:0.5rem}.bottom-3{bottom:0.75rem}.left-1\/2{left:50%}.right-2{right:0.5rem}.top-2{top:0.5rem}.bottom-0\.5{bottom:0.125rem}.right-0\.5{right:0.125rem}.right-0{right:0px}.top-0{top:0px}.bottom-0{bottom:0px}.left-0{left:0px}.z-10{z-index:10}.z-20{z-index:20}.z-40{z-index:40}.mx-auto{margin-left:auto;margin-right:auto}.my-0\.5{margin-top:0.125rem;margin-bottom:0.125rem}.my-1{margin-top:0.25rem;margin-bottom:0.25rem}.my-1\.5{margin-top:0.375rem;margin-bottom:0.375rem}.my-2\.5{margin-top:0.625rem;margin-bottom:0.625rem}.my-\[-3px\]{margin-top:-3px;margin-bottom:-3px}.mb-1{margin-bottom:0.25rem}.mb-1\.5{margin-bottom:0.375rem}.mb-2{margin-bottom:0.5rem}.mb-2\.5{margin-bottom:0.625rem}.mb-4{margin-bottom:1rem}.mt-0\.5{margin-top:0.125rem}.mt-1{margin-top:0.25rem}.mt-2{margin-top:0.5rem}.mt-3\.5{margin-top:0.875rem}.mt-5{margin-top:1.25rem}.box-border{box-sizing:border-box}.inline-block{display:inline-block}.flex{display:flex}.inline-flex{display:inline-flex}.hidden{display:none}.h-16{height:4rem}.h-4{height:1rem}.h-5{height:1.25rem}.h-6{height:1.5rem}.h-8{height:2rem}.h-\[1\.5px\]{height:1.5px}.h-\[72px\]{height:72px}.h-1{height:0.25rem}.h-3{height:0.75rem}.h-3\.5{height:0.875rem}.h-7{height:1.75rem}.h-\[25px\]{height:25px}.h-full{height:100%}.h-2{height:0.5rem}.min-h-\[1\.5em\]{min-height:1.5em}.min-h-\[44px\]{min-height:44px}.w-16{width:4rem}.w-6{width:1.5rem}.w-\[1px\]{width:1px}.w-\[72px\]{width:72px}.w-full{width:100%}.w-1{width:0.25rem}.w-3{width:0.75rem}.w-\[25px\]{width:25px}.w-2{width:0.5rem}.w-\[140px\]{width:140px}.min-w-0{min-width:0px}.max-w-\[130px\]{max-width:130px}.max-w-\[220px\]{max-width:220px}.max-w-\[calc\(100vw-16px\)\]{max-width:calc(100vw - 16px)}.max-w-full{max-width:100%}.flex-1{flex:1 1 0%}.flex-shrink-0{flex-shrink:0}.-translate-x-1\/2{--tw-translate-x:-50%;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.scale-90{--tw-scale-x:.9;--tw-scale-y:.9;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.cursor-pointer{cursor:pointer}.select-none{-webkit-user-select:none;user-select:none}.select-text{-webkit-user-select:text;user-select:text}.resize-none{resize:none}.flex-col{flex-direction:column}.flex-wrap{flex-wrap:wrap}.items-start{align-items:flex-start}.items-center{align-items:center}.items-baseline{align-items:baseline}.justify-end{justify-content:flex-end}.justify-center{justify-content:center}.justify-between{justify-content:space-between}.gap-1{gap:0.25rem}.gap-1\.5{gap:0.375rem}.gap-2{gap:0.5rem}.gap-3{gap:0.75rem}.gap-6{gap:1.5rem}.space-y-0\.5 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(0.125rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(0.125rem * var(--tw-space-y-reverse))}.overflow-hidden{overflow:hidden}.overflow-x-auto{overflow-x:auto}.truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.whitespace-pre-wrap{white-space:pre-wrap}.break-words{overflow-wrap:break-word}.rounded{border-radius:0.25rem}.rounded-2xl{border-radius:1rem}.rounded-full{border-radius:9999px}.rounded-lg{border-radius:0.5rem}.rounded-md{border-radius:0.375rem}.rounded-xl{border-radius:0.75rem}.border{border-width:1px}.border-b{border-bottom-width:1px}.border-t-0{border-top-width:0px}.border-none{border-style:none}.border-\[var\(--border\)\]{border-color:var(--border)}.border-purple-500\/60{border-color:rgb(168 85 247 / 0.6)}.border-transparent{border-color:transparent}.border-black\/25{border-color:rgb(0 0 0 / 0.25)}.border-purple-500{--tw-border-opacity:1;border-color:rgb(168 85 247 / var(--tw-border-opacity, 1))}.border-white\/30{border-color:rgb(255 255 255 / 0.3)}.border-amber-500\/30{border-color:rgb(245 158 11 / 0.3)}.bg-\[var\(--card\)\]{background-color:var(--card)}.bg-\[var\(--surface\)\]{background-color:var(--surface)}.bg-purple-500\/0{background-color:rgb(168 85 247 / 0)}.bg-transparent{background-color:transparent}.bg-\[var\(--border\)\]{background-color:var(--border)}.bg-amber-400{--tw-bg-opacity:1;background-color:rgb(251 191 36 / var(--tw-bg-opacity, 1))}.bg-amber-500\/20{background-color:rgb(245 158 11 / 0.2)}.bg-green-600{--tw-bg-opacity:1;background-color:rgb(22 163 74 / var(--tw-bg-opacity, 1))}.bg-indigo-400{--tw-bg-opacity:1;background-color:rgb(129 140 248 / var(--tw-bg-opacity, 1))}.bg-purple-500\/15{background-color:rgb(168 85 247 / 0.15)}.bg-amber-500\/15{background-color:rgb(245 158 11 / 0.15)}.bg-\[--accent\]{background-color:var(--accent)}.p-1{padding:0.25rem}.p-2\.5{padding:0.625rem}.p-3{padding:0.75rem}.p-4{padding:1rem}.p-6{padding:1.5rem}.px-1{padding-left:0.25rem;padding-right:0.25rem}.px-2{padding-left:0.5rem;padding-right:0.5rem}.px-2\.5{padding-left:0.625rem;padding-right:0.625rem}.px-3{padding-left:0.75rem;padding-right:0.75rem}.py-0\.5{padding-top:0.125rem;padding-bottom:0.125rem}.py-1{padding-top:0.25rem;padding-bottom:0.25rem}.py-1\.5{padding-top:0.375rem;padding-bottom:0.375rem}.py-2{padding-top:0.5rem;padding-bottom:0.5rem}.px-1\.5{padding-left:0.375rem;padding-right:0.375rem}.py-0{padding-top:0px;padding-bottom:0px}.py-2\.5{padding-top:0.625rem;padding-bottom:0.625rem}.pb-0\.5{padding-bottom:0.125rem}.pb-1\.5{padding-bottom:0.375rem}.pb-24{padding-bottom:6rem}.pb-3{padding-bottom:0.75rem}.pr-1{padding-right:0.25rem}.pr-2{padding-right:0.5rem}.pt-0{padding-top:0px}.pt-2{padding-top:0.5rem}.text-center{text-align:center}.text-right{text-align:right}.align-middle{vertical-align:middle}.font-mono{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace}.font-serif{font-family:ui-serif, Georgia, Cambria, "Times New Roman", Times, serif}.text-2xl{font-size:1.5rem;line-height:2rem}.text-\[10px\]{font-size:10px}.text-\[11px\]{font-size:11px}.text-sm{font-size:0.875rem;line-height:1.25rem}.text-xs{font-size:0.75rem;line-height:1rem}.text-\[10\.5px\]{font-size:10.5px}.font-bold{font-weight:700}.font-extrabold{font-weight:800}.font-medium{font-weight:500}.font-semibold{font-weight:600}.uppercase{text-transform:uppercase}.tabular-nums{--tw-numeric-spacing:tabular-nums;font-variant-numeric:var(--tw-ordinal) var(--tw-slashed-zero) var(--tw-numeric-figure) var(--tw-numeric-spacing) var(--tw-numeric-fraction)}.leading-none{line-height:1}.leading-tight{line-height:1.25}.leading-\[24px\]{line-height:24px}.tracking-tight{letter-spacing:-0.025em}.tracking-wider{letter-spacing:0.05em}.tracking-widest{letter-spacing:0.1em}.tracking-\[0\.3em\]{letter-spacing:0.3em}.tracking-\[0\.4em\]{letter-spacing:0.4em}.text-\[var\(--text\)\]{color:var(--text)}.text-\[var\(--text-dim\)\]{color:var(--text-dim)}.text-\[var\(--text-secondary\)\]{color:var(--text-secondary)}.text-purple-300{--tw-text-opacity:1;color:rgb(216 180 254 / var(--tw-text-opacity, 1))}.text-purple-400{--tw-text-opacity:1;color:rgb(192 132 252 / var(--tw-text-opacity, 1))}.text-purple-400\/90{color:rgb(192 132 252 / 0.9)}.text-white{--tw-text-opacity:1;color:rgb(255 255 255 / var(--tw-text-opacity, 1))}.text-amber-400{--tw-text-opacity:1;color:rgb(251 191 36 / var(--tw-text-opacity, 1))}.text-\[--accent\]{color:var(--accent)}.text-\[--muted\]{color:var(--muted)}.overline{-webkit-text-decoration-line:overline;text-decoration-line:overline}.opacity-0{opacity:0}.opacity-80{opacity:0.8}.shadow-2xl{--tw-shadow:0 25px 50px -12px rgb(0 0 0 / 0.25);--tw-shadow-colored:0 25px 50px -12px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-md{--tw-shadow:0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);--tw-shadow-colored:0 4px 6px -1px var(--tw-shadow-color), 0 2px 4px -2px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-sm{--tw-shadow:0 1px 2px 0 rgb(0 0 0 / 0.05);--tw-shadow-colored:0 1px 2px 0 var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-lg{--tw-shadow:0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);--tw-shadow-colored:0 10px 15px -3px var(--tw-shadow-color), 0 4px 6px -4px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.outline-none{outline:2px solid transparent;outline-offset:2px}.backdrop-blur-md{--tw-backdrop-blur:blur(12px);-webkit-backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)}.transition-all{transition-property:all;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.transition-colors{transition-property:color, background-color, border-color, fill, stroke, -webkit-text-decoration-color;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke, -webkit-text-decoration-color;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.transition-opacity{transition-property:opacity;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.transition-transform{transition-property:transform;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.duration-200{transition-duration:200ms}.duration-150{transition-duration:150ms}.duration-300{transition-duration:300ms}.ease-out{transition-timing-function:cubic-bezier(0, 0, 0.2, 1)}.hover\:scale-110:hover{--tw-scale-x:1.1;--tw-scale-y:1.1;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.hover\:border-\[var\(--border\)\]:hover{border-color:var(--border)}.hover\:border-purple-400:hover{--tw-border-opacity:1;border-color:rgb(192 132 252 / var(--tw-border-opacity, 1))}.hover\:border-purple-500:hover{--tw-border-opacity:1;border-color:rgb(168 85 247 / var(--tw-border-opacity, 1))}.hover\:border-purple-500\/50:hover{border-color:rgb(168 85 247 / 0.5)}.hover\:border-purple-500\/40:hover{border-color:rgb(168 85 247 / 0.4)}.hover\:bg-purple-500\/10:hover{background-color:rgb(168 85 247 / 0.1)}.hover\:bg-purple-600:hover{--tw-bg-opacity:1;background-color:rgb(147 51 234 / var(--tw-bg-opacity, 1))}.hover\:bg-\[var\(--card-hover\)\]:hover{background-color:var(--card-hover)}.hover\:bg-green-500:hover{--tw-bg-opacity:1;background-color:rgb(34 197 94 / var(--tw-bg-opacity, 1))}.hover\:text-purple-400:hover{--tw-text-opacity:1;color:rgb(192 132 252 / var(--tw-text-opacity, 1))}.hover\:text-white:hover{--tw-text-opacity:1;color:rgb(255 255 255 / var(--tw-text-opacity, 1))}.hover\:text-purple-300:hover{--tw-text-opacity:1;color:rgb(216 180 254 / var(--tw-text-opacity, 1))}.hover\:text-red-400:hover{--tw-text-opacity:1;color:rgb(248 113 113 / var(--tw-text-opacity, 1))}.hover\:text-\[--accent\]:hover{color:var(--accent)}.hover\:opacity-80:hover{opacity:0.8}.active\:scale-95:active{--tw-scale-x:.95;--tw-scale-y:.95;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.group:hover .group-hover\:scale-100{--tw-scale-x:1;--tw-scale-y:1;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.group:hover .group-hover\:bg-purple-500\/50{background-color:rgb(168 85 247 / 0.5)}.group:hover .group-hover\:opacity-100{opacity:1}@media (min-width: 640px){.sm\:inset-x-6{left:1.5rem;right:1.5rem}.sm\:bottom-4{bottom:1rem}.sm\:gap-2{gap:0.5rem}.sm\:p-1\.5{padding:0.375rem}.sm\:p-6{padding:1.5rem}.sm\:px-3{padding-left:0.75rem;padding-right:0.75rem}}@media (min-width: 768px){.md\:p-8{padding:2rem}.md\:text-3xl{font-size:1.875rem;line-height:2.25rem}}</style><div id="note-fig-citation-handler" style="display: none;"></div><style id="note-code-style">
     .live-code, .note-inline-code {
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
       font-size: 0.85em;
@@ -767,7 +718,52 @@
         grid-template-columns: 1fr !important;
       }
     }
-  </style><style id="note-task-checkbox-style">
+  </style><style id="universal-scrollbar-styles">
+      /* Universal Thin Opposite-Theme Scrollbars */
+      *,
+      *::before,
+      *::after {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(232, 234, 242, 0.45) transparent;
+      }
+
+      [data-theme="light"] *,
+      [data-theme="light"] *::before,
+      [data-theme="light"] *::after {
+        scrollbar-color: rgba(26, 29, 46, 0.45) transparent;
+      }
+
+      /* WebKit & Chromium Horizontal & Vertical Scrollbars */
+      ::-webkit-scrollbar {
+        width: 4px;
+        height: 4px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: transparent !important;
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: rgba(232, 234, 242, 0.42);
+        border-radius: 9999px;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.85);
+      }
+
+      [data-theme="light"] ::-webkit-scrollbar-thumb {
+        background: rgba(26, 29, 46, 0.42);
+      }
+
+      [data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+        background: rgba(0, 0, 0, 0.85);
+      }
+
+      ::-webkit-scrollbar-corner {
+        background: transparent !important;
+      }
+    </style><style id="note-task-checkbox-style">
       .note-task-item {
         display: flex;
         align-items: flex-start;
@@ -845,6 +841,34 @@
         color: #581c87 !important;
         border-color: #d8b4fe !important;
         font-weight: 600 !important;
+      }
+    </style><style id="lh-cancelto-styles">
+      .lh-cancelto {
+        position: relative !important;
+        display: inline-block !important;
+        vertical-align: baseline !important;
+      }
+      .lh-cancelto-base {
+        display: inline-block !important;
+      }
+      .lh-cancelto-svg {
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        overflow: visible !important;
+        pointer-events: none !important;
+        z-index: 2 !important;
+      }
+      .lh-cancelto-val {
+        position: absolute !important;
+        white-space: nowrap !important;
+        pointer-events: none !important;
+        z-index: 3 !important;
+        line-height: 1 !important;
+        font-family: KaTeX_Main, "Times New Roman", serif !important;
+        color: currentColor !important;
       }
     </style><link id="hljs-css" rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.8.0/build/styles/atom-one-light.min.css"><style id="hljs-transparent-style">
       pre code.hljs,
@@ -1019,6 +1043,36 @@
       border-color: rgba(79, 110, 247, 0.35);
       color: #0f172a;
     }
+  </style><style id="landing-theme-style">
+  :root {
+    --bg: #03010a;
+    --fg: #e2e8f0;
+    --accent: #6b8cff;
+    --muted: #475569;
+    --border: rgba(107, 140, 255, 0.2);
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    background-color: var(--bg);
+    color: var(--fg);
+    font-family: 'Space Grotesk', sans-serif;
+  }
+
+  .mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .vignette {
+    position: fixed;
+    inset: 0;
+    z-index: 5;
+    pointer-events: none;
+    background: radial-gradient(circle at center, transparent 30%, rgba(3, 1, 10, 0.8) 100%);
+  }
+
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&family=JetBrains+Mono:wght@300;400;600;700&display=swap');
   </style></head>
 
 <body style="cursor: default;">
@@ -1376,6 +1430,7 @@ function GetImportButtonHTML() {
 
 const DEFAULT_MACROS = {
   equation: `\\newcommand{\\mb}[1]{\\mathbf{#1}}
+\\newcommand{\\cancelto}[2]{\\htmlClass{lh-cancelto}{\\htmlClass{lh-cancelto-base}{#2}\\htmlClass{lh-cancelto-val}{\\scriptstyle #1}}}
 \\newcommand{\\comment}[1]{\\textcolor{#dc2626|#f87171}{[#1]}}
 \\newcommand{\\R}{\\mathbb{R}}
 \\newcommand{\\C}{\\mathbb{C}}
@@ -5856,6 +5911,7 @@ function LoadNotesPage() {
 /* --- 03_Notes/00_State.js --- */
 const DEFAULT_GLOBAL_MACROS = {
   equation: `\\newcommand{\\mb}[1]{\\mathbf{#1}}
+\\newcommand{\\cancelto}[2]{\\htmlClass{lh-cancelto}{\\htmlClass{lh-cancelto-base}{#2}\\htmlClass{lh-cancelto-val}{\\scriptstyle #1}}}
 \\newcommand{\\comment}[1]{\\textcolor{#dc2626|#f87171}{[#1]}}
 \\newcommand{\\R}{\\mathbb{R}}
 \\newcommand{\\C}{\\mathbb{C}}
@@ -6520,7 +6576,8 @@ const BLOCK_DEFINITIONS = [
     description: 'TikZ vector graphics compiled into SVG',
     createDefault: (opts = {}) => ({
       type: 'tikz',
-      code: opts.code || '\\draw[thick, fill=purple!20] (0,0) circle (1.2);\n\\draw[->, thick, purple] (0,0) -- (1.2,0) node[midway, above] {$r$};\n\\node at (0,-1.6) {Circle diagram};'
+      code: opts.code || '\\draw[thick, fill=purple!20] (0,0) circle (1.2);\n\\draw[->, thick, purple] (0,0) -- (1.2,0) node[midway, above] {$r$};\n\\node at (0,-1.6) {Circle diagram};',
+      width: opts.width || 100
     })
   },
   {
@@ -6534,7 +6591,7 @@ const BLOCK_DEFINITIONS = [
       type: 'image',
       url: opts.url || '',
       caption: opts.caption || '',
-      width: opts.width || '100%',
+      width: opts.width || 100,
       align: 'center'
     })
   },
@@ -6835,7 +6892,8 @@ const KATEX_MACROS = {
   "\\ddddot": "\\overset{\\dots\\dots}{#1}",
   "\\bm": "\\boldsymbol{#1}",
   "\\argmax": "\\operatorname*{argmax}",
-  "\\argmin": "\\operatorname*{argmin}"
+  "\\argmin": "\\operatorname*{argmin}",
+  "\\cancelto": "\\htmlClass{lh-cancelto}{\\htmlClass{lh-cancelto-base}{#2}\\htmlClass{lh-cancelto-val}{\\scriptstyle #1}}"
 };
 
 let isKatexLoading = false;
@@ -6899,26 +6957,32 @@ function parseLatexMacrosIntoObject(macroString, targetMacros = {}) {
   if (!macroString || typeof macroString !== 'string') return targetMacros;
   const resolved = resolveThemeColors(macroString);
 
-  // Match: \newcommand{\name}[num]{expansion} or \renewcommand{\name}[num]{expansion}
-  const cmdWithArgs = /\\(?:newcommand|renewcommand)\s*\{\\([a-zA-Z]+)\}\s*\[(\d+)\]\s*\{((?:[^{}]|\{[^{}]*\})*)\}/g;
+  // Matches \newcommand, \renewcommand, \def, \gdef with optional arguments [num]
+  const regex = /\\(?:newcommand|renewcommand|def|gdef)\s*(?:\{\\([a-zA-Z0-9]+)\}|\\([a-zA-Z0-9]+))(?:\s*\[(\d+)\])?\s*\{/g;
   let match;
-  while ((match = cmdWithArgs.exec(resolved)) !== null) {
-    targetMacros[`\\${match[1]}`] = match[3];
-  }
-
-  // Match: \newcommand{\name}{expansion} or \renewcommand{\name}{expansion}
-  const cmdNoArgs = /\\(?:newcommand|renewcommand)\s*\{\\([a-zA-Z]+)\}\s*\{((?:[^{}]|\{[^{}]*\})*)\}/g;
-  while ((match = cmdNoArgs.exec(resolved)) !== null) {
-    if (!targetMacros[`\\${match[1]}`]) {
-      targetMacros[`\\${match[1]}`] = match[2];
+  while ((match = regex.exec(resolved)) !== null) {
+    const name = match[1] || match[2];
+    const openBraceIdx = regex.lastIndex - 1;
+    let depth = 1;
+    let i = openBraceIdx + 1;
+    for (; i < resolved.length; i++) {
+      const ch = resolved[i];
+      if (ch === '{') {
+        let b = 0, k = i - 1;
+        while (k >= 0 && resolved[k] === '\\') { b++; k--; }
+        if (b % 2 === 0) depth++;
+      } else if (ch === '}') {
+        let b = 0, k = i - 1;
+        while (k >= 0 && resolved[k] === '\\') { b++; k--; }
+        if (b % 2 === 0) {
+          depth--;
+          if (depth === 0) break;
+        }
+      }
     }
-  }
-
-  // Match: \def\name{expansion} or \gdef\name{expansion}
-  const defMatch = /\\(?:def|gdef)\s*\\([a-zA-Z]+)\s*\{((?:[^{}]|\{[^{}]*\})*)\}/g;
-  while ((match = defMatch.exec(resolved)) !== null) {
-    if (!targetMacros[`\\${match[1]}`]) {
-      targetMacros[`\\${match[1]}`] = match[2];
+    if (depth === 0) {
+      targetMacros[`\\${name}`] = resolved.slice(openBraceIdx + 1, i);
+      regex.lastIndex = i + 1;
     }
   }
 
@@ -6962,20 +7026,13 @@ function ensureKatexLoaded() {
     script.src = 'https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js';
     script.onload = () => {
       isKatexLoading = false;
-      const currentMacros = getActiveKatexMacros();
       // Re-render any pending math placeholders once KaTeX finishes loading
       document.querySelectorAll('[data-pending-math]').forEach(el => {
         const tex = el.getAttribute('data-pending-math');
         const isDisplay = el.getAttribute('data-math-display') === 'true';
-        if (tex && window.katex) {
+        if (tex) {
           try {
-            el.innerHTML = window.katex.renderToString(resolveThemeColors(tex), {
-              displayMode: isDisplay,
-              throwOnError: false,
-              output: 'htmlAndMathml',
-              macros: currentMacros,
-              trust: true
-            });
+            el.innerHTML = renderKatex(tex, isDisplay);
             el.removeAttribute('data-pending-math');
           } catch (err) {}
         }
@@ -6985,6 +7042,182 @@ function ensureKatexLoaded() {
   }
 }
 
+let canceltoResizeObserver = null;
+let canceltoMutationObserver = null;
+function layoutCanceltoElement(el) {
+  if (!el || !el.classList || !el.classList.contains('lh-cancelto')) return;
+  if (el.classList.contains('lh-cancelto-base') || el.classList.contains('lh-cancelto-val')) return;
+
+  const base = el.querySelector(':scope > .lh-cancelto-base') || el.querySelector('.lh-cancelto-base');
+  const val = el.querySelector(':scope > .lh-cancelto-val') || el.querySelector('.lh-cancelto-val');
+  if (!base || !val) return;
+
+  const rect = base.getBoundingClientRect();
+  const W = rect.width || base.offsetWidth;
+  const H = rect.height || base.offsetHeight;
+
+  if (!W || !H) {
+    if (typeof requestAnimationFrame !== 'undefined') {
+      requestAnimationFrame(() => {
+        const r = base.getBoundingClientRect();
+        if (r.width && r.height) {
+          layoutCanceltoElement(el);
+        }
+      });
+    }
+    return;
+  }
+
+  const L = Math.hypot(W, H) || 22;
+  const ux = W / L;
+  const uy = H / L;
+
+  // Real LaTeX cancelto overshoot distances
+  const startOvershoot = 6;  // px extending below-left
+  const endOvershoot = 14;   // px extending above-right
+  const gap = 8;             // px clearance gap beyond arrowhead tip
+
+  const x1 = -startOvershoot * ux;
+  const y1 = H + startOvershoot * uy;
+  const x2 = W + endOvershoot * ux;
+  const y2 = -endOvershoot * uy;
+
+  const valX = x2 + gap * ux;
+  const valY = y2 - gap * uy;
+
+  // Ensure only one clean SVG exists inside the cancelto element
+  const existingSvgs = el.querySelectorAll('.lh-cancelto-svg');
+  let svg = existingSvgs[0] || null;
+  for (let i = 1; i < existingSvgs.length; i++) {
+    existingSvgs[i].remove();
+  }
+
+  if (!svg) {
+    svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'lh-cancelto-svg');
+    el.insertBefore(svg, el.firstChild);
+  }
+
+  const markerId = 'cancelto-arr-' + Math.random().toString(36).slice(2, 7);
+  svg.innerHTML = `
+    <defs>
+      <marker id="${markerId}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M 0 1.5 L 8 5 L 0 8.5 L 2 5 z" fill="currentColor"/>
+      </marker>
+    </defs>
+    <line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="currentColor" stroke-width="1.1" marker-end="url(#${markerId})"/>
+  `;
+
+  val.style.left = `${valX.toFixed(1)}px`;
+  val.style.top = `${valY.toFixed(1)}px`;
+
+  const tx = ((1 - ux) * -35 + ux * 0).toFixed(1);
+  const ty = ((1 - uy) * -50 - uy * 85).toFixed(1);
+  val.style.transform = `translate(${tx}%, ${ty}%)`;
+
+  const totalTopExtension = Math.max(0, -y2 + 8);
+  el.style.marginTop = `${totalTopExtension.toFixed(1)}px`;
+}
+
+function getCanceltoElements(root) {
+  if (!root) return [];
+  const list = [];
+  if (root.classList?.contains('lh-cancelto') && !root.classList.contains('lh-cancelto-base') && !root.classList.contains('lh-cancelto-val')) {
+    list.push(root);
+  }
+  if (root.querySelectorAll) {
+    root.querySelectorAll('.lh-cancelto').forEach(el => {
+      if (!el.classList.contains('lh-cancelto-base') && !el.classList.contains('lh-cancelto-val')) {
+        list.push(el);
+      }
+    });
+  }
+  return list;
+}
+function initCanceltoLayoutObserver() {
+  if (typeof document === 'undefined') return;
+
+  if (!canceltoResizeObserver && typeof ResizeObserver !== 'undefined') {
+    canceltoResizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        layoutCanceltoElement(entry.target);
+      }
+    });
+  }
+
+  if (!canceltoMutationObserver && typeof MutationObserver !== 'undefined' && document.body) {
+    canceltoMutationObserver = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        if (m.type === 'childList') {
+          for (const node of m.addedNodes) {
+            if (node.nodeType === 1) {
+              const cancels = getCanceltoElements(node);
+              cancels.forEach(el => {
+                layoutCanceltoElement(el);
+                if (canceltoResizeObserver) canceltoResizeObserver.observe(el);
+              });
+            }
+          }
+        }
+      }
+    });
+    canceltoMutationObserver.observe(document.body, { childList: true, subtree: true });
+  }
+
+  if (document.body) {
+    const cancels = getCanceltoElements(document.body);
+    cancels.forEach(el => {
+      layoutCanceltoElement(el);
+      if (canceltoResizeObserver) canceltoResizeObserver.observe(el);
+    });
+  }
+}
+
+function ensureCanceltoStyles() {
+  if (typeof document === 'undefined') return;
+
+  if (!document.getElementById('lh-cancelto-styles')) {
+    const style = document.createElement('style');
+    style.id = 'lh-cancelto-styles';
+    style.textContent = `
+      .lh-cancelto {
+        position: relative !important;
+        display: inline-block !important;
+        vertical-align: baseline !important;
+      }
+      .lh-cancelto-base {
+        display: inline-block !important;
+      }
+      .lh-cancelto-svg {
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        overflow: visible !important;
+        pointer-events: none !important;
+        z-index: 2 !important;
+      }
+      .lh-cancelto-val {
+        position: absolute !important;
+        white-space: nowrap !important;
+        pointer-events: none !important;
+        z-index: 3 !important;
+        line-height: 1 !important;
+        font-family: KaTeX_Main, "Times New Roman", serif !important;
+        color: currentColor !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  initCanceltoLayoutObserver();
+}
+
+function postProcessKatexHtml(html) {
+  return html;
+}
+
 const katexCache = new Map();
 const MAX_KATEX_CACHE = 800;
 function clearKatexCache() {
@@ -6992,6 +7225,7 @@ function clearKatexCache() {
 }
 function renderKatex(tex, isDisplayMode = false, noteContext = null) {
   ensureKatexLoaded();
+  ensureCanceltoStyles();
   const rawClean = (tex || '').trim();
   if (!rawClean) return '';
   const cleanTex = resolveThemeColors(rawClean);
@@ -7008,13 +7242,14 @@ function renderKatex(tex, isDisplayMode = false, noteContext = null) {
 
     const macros = getActiveKatexMacros(noteContext);
     try {
-      const rendered = window.katex.renderToString(cleanTex, {
+      let rendered = window.katex.renderToString(cleanTex, {
         displayMode: isDisplayMode,
         throwOnError: false,
         output: 'htmlAndMathml',
         macros: macros,
         trust: true
       });
+      rendered = postProcessKatexHtml(rendered);
       if (katexCache.size >= MAX_KATEX_CACHE) {
         const firstKey = katexCache.keys().next().value;
         katexCache.delete(firstKey);
@@ -11584,31 +11819,49 @@ function InitTikzTemplatesLogic(parentEl, { onInsert = null, getCurrentCode = ()
  */
 function renderHeadingBlock(block, isEditing = false, onUpdate = null, { prefix = '', note = null, onConfigUpdate = null, onDone = null, onMoveUp = null, onMoveDown = null, onDelete = null, index = 0, totalBlocks = 1 } = {}) {
   const container = document.createElement('div');
-  container.className = 'w-full';
+  container.className = 'w-full notes-heading-container';
   const level = block.level || 'h1';
   const title = block.title || '';
   const anchorId = (block.id || title || 'section').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  container.id = anchorId;
 
   if (!isEditing) {
     const heading = document.createElement(level === 'h3' ? 'h3' : (level === 'h2' ? 'h2' : 'h1'));
-    heading.id = anchorId;
     const isFirst = index === 0;
     
-    if (level === 'h1') {
-      heading.className = `notes-heading h1 font-bold ${isFirst ? 'mt-1 mb-2 pt-0 border-t-0' : 'mt-6 mb-2 pt-3 pb-1 border-t border-[var(--border)]/30'} flex items-baseline gap-1 select-text leading-tight text-[var(--text)]`;
-      heading.style.fontSize = 'calc(var(--note-font-size, 1rem) * 1.55)';
-    } else if (level === 'h2') {
-      heading.className = `notes-heading h2 font-bold ${isFirst ? 'mt-1 mb-1.5 pt-0' : 'mt-5 mb-1.5 pt-2 pb-0.5'} flex items-baseline gap-1 select-text leading-snug text-[var(--text)]`;
-      heading.style.fontSize = 'calc(var(--note-font-size, 1rem) * 1.3)';
-    } else {
-      heading.className = `notes-heading h3 font-bold ${isFirst ? 'mt-1 mb-1 pt-0' : 'mt-3.5 mb-1 pt-1 pb-0.5'} flex items-baseline gap-1 select-text leading-snug text-[var(--text)]`;
-      heading.style.fontSize = 'calc(var(--note-font-size, 1rem) * 1.1)';
-    }
-    heading.style.fontFamily = 'var(--note-font-family, inherit)';
+    let sizeMultiplier = 1.7;
+    let weightClass = 'font-extrabold';
+    let prefixColor = 'text-purple-400';
+    let spacingClass = isFirst ? 'mt-1 mb-2.5 pt-0 border-t-0' : 'mt-7 mb-2.5 pt-3 pb-1 border-t border-[var(--border)]/35';
+    let tracking = '-0.025em';
 
-    const renderedTitle = title ? formatRichTextWithMath(title, { allowBlockMath: false, note }) : 'Untitled Section';
+    if (level === 'h2') {
+      sizeMultiplier = 1.38;
+      weightClass = 'font-bold';
+      prefixColor = 'text-purple-400/90';
+      spacingClass = isFirst ? 'mt-1 mb-2 pt-0' : 'mt-5 mb-2 pt-2 pb-0.5';
+      tracking = '-0.018em';
+    } else if (level === 'h3') {
+      sizeMultiplier = 1.15;
+      weightClass = 'font-semibold';
+      prefixColor = 'text-purple-400/80';
+      spacingClass = isFirst ? 'mt-1 mb-1.5 pt-0' : 'mt-4 mb-1.5 pt-1 pb-0.5';
+      tracking = '-0.01em';
+    }
+
+    heading.className = `notes-heading ${level} ${weightClass} ${spacingClass} flex items-baseline select-text leading-tight text-[var(--text)] w-full`;
+    heading.style.fontSize = `calc(var(--note-font-size, 1rem) * ${sizeMultiplier})`;
+    heading.style.fontFamily = 'var(--note-font-family, inherit)';
+    heading.style.letterSpacing = tracking;
+
+    const rawTitle = title ? formatRichTextWithMath(title, { allowBlockMath: false, note }) : 'Untitled Section';
+    const cleanTitle = rawTitle.replace(/^<p[^>]*>/, '').replace(/<\/p>$/, '').trim();
+
     heading.innerHTML = `
-      <span class="mr-1.5 font-bold text-purple-400" style="font-family: var(--note-font-family, inherit);">${escapeHtml(prefix)}</span><span>${renderedTitle}</span>
+      <div class="heading-row flex items-baseline gap-2 w-full">
+        ${prefix ? `<span class="heading-prefix font-bold ${prefixColor} flex-shrink-0 select-none" style="font-size: 1em; font-family: var(--note-font-family, inherit);">${escapeHtml(prefix)}</span>` : ''}
+        <span class="heading-title flex-1 min-w-0" style="font-size: inherit; font-family: var(--note-font-family, inherit); line-height: inherit;">${cleanTitle}</span>
+      </div>
     `;
     container.appendChild(heading);
     return container;
@@ -11664,7 +11917,7 @@ function renderHeadingBlock(block, isEditing = false, onUpdate = null, { prefix 
         <option value="h3" ${level === 'h3' ? 'selected' : ''}>Sub-Sub-Section</option>
       </select>
 
-      <input type="text" class="notes-search-input text-sm font-bold flex-1 h-8 px-2.5 py-0 rounded-lg title-input box-border min-w-[120px]" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" value="${escapeHtml(title)}" placeholder="Enter section title..." autofocus />
+      <input type="text" class="notes-search-input text-sm font-bold flex-1 h-8 px-2.5 py-0 rounded-lg title-input box-border min-w-[120px]" style="font-family: var(--note-font-family, inherit);" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" value="${escapeHtml(title)}" placeholder="Enter section title..." autofocus />
     </div>
   `;
 
@@ -16378,6 +16631,10 @@ function renderTikzBlock(block, isEditing = false, onUpdate = null, { onDone = n
   \draw[->, purple, thick] (0,90) -- (20,90);
 \end{tikzpicture}`;
 
+  const rawWidth = (block.width !== undefined && block.width !== null && block.width !== '') ? block.width : 100;
+  const parsedWidth = parseInt(rawWidth, 10);
+  const fitPercent = (!isNaN(parsedWidth) && parsedWidth >= 10 && parsedWidth <= 100) ? parsedWidth : 100;
+
   // 1. View Mode
   if (!isEditing) {
     const wrap = document.createElement('figure');
@@ -16390,7 +16647,9 @@ function renderTikzBlock(block, isEditing = false, onUpdate = null, { onDone = n
     applyFigureAttributes(wrap, { tag, figNumber });
 
     const svgWrap = document.createElement('div');
-    svgWrap.className = 'w-full flex flex-col items-center justify-center';
+    svgWrap.className = 'flex flex-col items-center justify-center transition-all';
+    svgWrap.style.width = `${fitPercent}%`;
+    svgWrap.style.maxWidth = '100%';
     const cachedSvg = getCachedTikzSvg(tikzCode);
     if (cachedSvg) {
       svgWrap.innerHTML = cachedSvg;
@@ -16410,6 +16669,7 @@ function renderTikzBlock(block, isEditing = false, onUpdate = null, { onDone = n
   editWrap.className = 'tikz-edit-workspace flex flex-col gap-2 my-0.5 w-full relative';
 
   let currentBorderState = hasBorder;
+  let currentFitPercent = fitPercent;
 
   editWrap.innerHTML = `
     <!-- Top Row: Title & Tools (Left) | Actions (Right) -->
@@ -16425,6 +16685,13 @@ function renderTikzBlock(block, isEditing = false, onUpdate = null, { onDone = n
           </svg>
           <span>Border</span>
         </button>
+
+        <!-- Fit % Control Group -->
+        <div class="fit-control-wrap flex items-center gap-1 h-7 px-2 rounded-md border border-[var(--border)] bg-[var(--surface)] text-xs text-[var(--text-secondary)] select-none" title="Figure Width Percentage (10% - 100%)">
+          <span class="text-[11px] font-semibold text-[var(--text-dim)] select-none">Fit:</span>
+          <input type="number" min="10" max="100" step="5" class="fit-percent-input w-11 h-5 text-center font-mono text-xs font-semibold text-[var(--text)] bg-transparent border-none outline-none p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" placeholder="50-100" value="${currentFitPercent}" />
+          <span class="text-[11px] font-mono font-bold text-[var(--text-dim)] select-none">%</span>
+        </div>
 
         <!-- Templates Dropdown Toggle -->
         <button type="button" class="btn-templates-toggle notes-ghost-btn h-7 px-2.5 py-0 text-[11px] font-medium flex items-center gap-1.5" title="Browse and insert TikZ templates">
@@ -16468,7 +16735,9 @@ function renderTikzBlock(block, isEditing = false, onUpdate = null, { onDone = n
     ${GetTikzTemplatesModalHTML()}
 
     <!-- Middle: Live TikZ SVG Preview Pane -->
-    <div class="preview-pane w-full p-4 rounded-xl ${currentBorderState ? 'border border-[var(--border)] bg-[var(--surface)] shadow-xs' : 'border border-transparent bg-transparent'} flex flex-col items-center justify-center select-text transition-all box-border" style="scrollbar-width: thin;"></div>
+    <div class="preview-pane w-full p-4 rounded-xl ${currentBorderState ? 'border border-[var(--border)] bg-[var(--surface)] shadow-xs' : 'border border-transparent bg-transparent'} flex flex-col items-center justify-center select-text transition-all box-border" style="scrollbar-width: thin;">
+      <div class="preview-inner flex flex-col items-center justify-center transition-all" style="width: ${currentFitPercent}%; max-width: 100%;"></div>
+    </div>
 
     <!-- Bottom: Monospace TikZ Code Editor with Line Numbers, Spacing & Folding -->
     <div class="tikz-editor-mount w-full"></div>
@@ -16490,6 +16759,7 @@ function renderTikzBlock(block, isEditing = false, onUpdate = null, { onDone = n
   `;
 
   const preview = editWrap.querySelector('.preview-pane');
+  const previewInner = editWrap.querySelector('.preview-inner');
   const allowNumberingCb = editWrap.querySelector('.allow-numbering-cb');
   const tagInput = editWrap.querySelector('.tag-input');
   const captionInput = editWrap.querySelector('.caption-input');
@@ -16506,12 +16776,12 @@ function renderTikzBlock(block, isEditing = false, onUpdate = null, { onDone = n
     enableFolding: true,
     onInput: (val) => {
       if (onUpdate) {
-        onUpdate({ code: val, content: val });
+        onUpdate({ code: val, content: val, width: currentFitPercent });
       }
     },
     onChange: (val) => {
       if (onUpdate) {
-        onUpdate({ code: val, content: val });
+        onUpdate({ code: val, content: val, width: currentFitPercent });
       }
     }
   });
@@ -16521,8 +16791,8 @@ function renderTikzBlock(block, isEditing = false, onUpdate = null, { onDone = n
 
   // Synchronously populate cached SVG if available so preview doesn't flash or jump
   const cachedSvg = getCachedTikzSvg(tikzCode);
-  if (cachedSvg) {
-    preview.innerHTML = cachedSvg;
+  if (cachedSvg && previewInner) {
+    previewInner.innerHTML = cachedSvg;
   }
 
   // Single-block compile executor
@@ -16543,7 +16813,8 @@ function renderTikzBlock(block, isEditing = false, onUpdate = null, { onDone = n
       btnCompile.disabled = true;
     }
 
-    renderTikzToElement(val, preview, () => {
+    const compileTarget = previewInner || preview;
+    renderTikzToElement(val, compileTarget, () => {
       if (showVisualFeedback && btnCompile) {
         btnCompile.innerHTML = `
           <svg viewBox="0 0 24 24" fill="currentColor" class="w-3 h-3">
@@ -16555,7 +16826,7 @@ function renderTikzBlock(block, isEditing = false, onUpdate = null, { onDone = n
     });
 
     if (onUpdate) {
-      onUpdate({ code: val, content: val });
+      onUpdate({ code: val, content: val, width: currentFitPercent });
     }
   };
 
@@ -16633,7 +16904,52 @@ function renderTikzBlock(block, isEditing = false, onUpdate = null, { onDone = n
   };
 
   // Provide code getter for dynamic theme re-rendering
-  preview.__getTikzCode = () => (codeEditor.getValue ? codeEditor.getValue() : textarea.value);
+  const getTikzSource = () => (codeEditor.getValue ? codeEditor.getValue() : textarea.value);
+  preview.__getTikzCode = getTikzSource;
+  if (previewInner) previewInner.__getTikzCode = getTikzSource;
+
+  // Fit % Width Handling
+  const fitInput = editWrap.querySelector('.fit-percent-input');
+
+  const updateFitWidth = (newVal) => {
+    currentFitPercent = newVal;
+    block.width = currentFitPercent;
+    if (previewInner) previewInner.style.width = `${currentFitPercent}%`;
+    if (onUpdate) {
+      onUpdate({
+        code: textarea.value,
+        content: textarea.value,
+        allowNumbering: block.allowNumbering,
+        tag: block.tag,
+        caption: block.caption,
+        hasBorder: currentBorderState,
+        width: currentFitPercent
+      });
+    }
+  };
+
+  fitInput?.addEventListener('input', () => {
+    const val = parseInt(fitInput.value, 10);
+    if (!isNaN(val) && val >= 10 && val <= 100) {
+      updateFitWidth(val);
+    }
+  });
+
+  fitInput?.addEventListener('change', () => {
+    let val = parseInt(fitInput.value, 10);
+    if (isNaN(val) || val < 10) val = 10;
+    if (val > 100) val = 100;
+    fitInput.value = val;
+    updateFitWidth(val);
+  });
+
+  fitInput?.addEventListener('blur', () => {
+    let val = parseInt(fitInput.value, 10);
+    if (isNaN(val) || val < 10) val = 10;
+    if (val > 100) val = 100;
+    fitInput.value = val;
+    updateFitWidth(val);
+  });
 
   // Border Toggle Action
   const borderToggleBtn = editWrap.querySelector('.btn-border-toggle');
@@ -16659,7 +16975,8 @@ function renderTikzBlock(block, isEditing = false, onUpdate = null, { onDone = n
         allowNumbering: block.allowNumbering,
         tag: block.tag,
         caption: block.caption,
-        hasBorder: currentBorderState
+        hasBorder: currentBorderState,
+        width: currentFitPercent
       });
     }
   });
@@ -16669,6 +16986,7 @@ function renderTikzBlock(block, isEditing = false, onUpdate = null, { onDone = n
     block.tag = tagInput?.value.trim() || '';
     block.caption = captionInput?.value || '';
     block.hasBorder = currentBorderState;
+    block.width = currentFitPercent;
     if (onUpdate) {
       onUpdate({
         code: textarea.value,
@@ -16676,7 +16994,8 @@ function renderTikzBlock(block, isEditing = false, onUpdate = null, { onDone = n
         allowNumbering: block.allowNumbering,
         tag: block.tag,
         caption: block.caption,
-        hasBorder: currentBorderState
+        hasBorder: currentBorderState,
+        width: currentFitPercent
       });
     }
   };
@@ -16741,6 +17060,7 @@ function renderTikzBlock(block, isEditing = false, onUpdate = null, { onDone = n
       block.tag = tagInput?.value.trim() || '';
       block.caption = captionInput?.value || '';
       block.hasBorder = currentBorderState;
+      block.width = currentFitPercent;
       if (onUpdate) {
         onUpdate({
           code: currentVal,
@@ -16748,7 +17068,8 @@ function renderTikzBlock(block, isEditing = false, onUpdate = null, { onDone = n
           allowNumbering: block.allowNumbering,
           tag: block.tag,
           caption: block.caption,
-          hasBorder: currentBorderState
+          hasBorder: currentBorderState,
+          width: currentFitPercent
         });
       }
       if (onDone) onDone();
@@ -16884,6 +17205,9 @@ function renderImageBlock(
   const tag = block.tag || '';
   const hasBorder = Boolean(block.hasBorder); // Default: false (OFF)
   const figNumber = figureInfo ? figureInfo.figNumber : null;
+  const rawWidth = (block.width !== undefined && block.width !== null && block.width !== '') ? block.width : 100;
+  const parsedWidth = parseInt(rawWidth, 10);
+  const fitPercent = (!isNaN(parsedWidth) && parsedWidth >= 10 && parsedWidth <= 100) ? parsedWidth : 100;
 
   // =========================================================================
   // 1. VIEW MODE
@@ -16905,8 +17229,8 @@ function renderImageBlock(
       const captionText = formatFigureCaptionText({ caption, allowNumbering, figNumber });
 
       wrap.innerHTML = `
-        <div class="overflow-hidden rounded-xl ${hasBorder ? 'border border-[var(--border)] bg-[var(--surface)] shadow-xs' : 'border border-transparent bg-transparent'} p-1.5 flex justify-center max-w-full transition-all">
-          <img src="${escapeHtml(url)}" alt="${escapeHtml(caption || 'Note Figure')}" class="max-w-full max-h-[550px] w-auto h-auto object-contain block rounded-lg" loading="lazy" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 100 60\\'><rect width=\\'100\\' height=\\'60\\' fill=\\'%23242840\\'/><text x=\\'50\\' y=\\'33\\' fill=\\'%23a0a4b8\\' font-size=\\'8\\' text-anchor=\\'middle\\'>Image failed to load</text></svg>'" />
+        <div class="overflow-hidden rounded-xl ${hasBorder ? 'border border-[var(--border)] bg-[var(--surface)] shadow-xs' : 'border border-transparent bg-transparent'} p-1.5 flex justify-center max-w-full transition-all" style="width: ${fitPercent}%;">
+          <img src="${escapeHtml(url)}" alt="${escapeHtml(caption || 'Note Figure')}" class="w-full h-auto object-contain block rounded-lg transition-all" loading="lazy" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 100 60\\'><rect width=\\'100\\' height=\\'60\\' fill=\\'%23242840\\'/><text x=\\'50\\' y=\\'33\\' fill=\\'%23a0a4b8\\' font-size=\\'8\\' text-anchor=\\'middle\\'>Image failed to load</text></svg>'" />
         </div>
       `;
       if (captionText) {
@@ -16929,6 +17253,7 @@ function renderImageBlock(
   let currentAllowNumbering = allowNumbering;
   let currentTag = tag;
   let currentBorderState = hasBorder;
+  let currentFitPercent = fitPercent;
 
   const renderEditMode = () => {
     const hasImage = Boolean(currentUrl);
@@ -16936,7 +17261,7 @@ function renderImageBlock(
     editWrap.innerHTML = `
       <!-- Top Row: Minimal Header & Action Controls -->
       <div class="flex items-center justify-between gap-1.5 w-full pb-1.5 border-b border-[var(--border)] select-none flex-wrap">
-        <div class="flex items-center gap-1.5">
+        <div class="flex items-center gap-1.5 flex-wrap">
           <span class="text-xs font-bold text-[var(--text)] px-1">Image</span>
 
           <!-- Border Toggle Button (OFF by default) -->
@@ -16946,6 +17271,13 @@ function renderImageBlock(
             </svg>
             <span>Border</span>
           </button>
+
+          <!-- Fit % Control Group -->
+          <div class="fit-control-wrap flex items-center gap-1 h-7 px-2 rounded-md border border-[var(--border)] bg-[var(--surface)] text-xs text-[var(--text-secondary)] select-none" title="Figure Width Percentage (10% - 100%)">
+            <span class="text-[11px] font-semibold text-[var(--text-dim)] select-none">Fit:</span>
+            <input type="number" min="10" max="100" step="5" class="fit-percent-input w-11 h-5 text-center font-mono text-xs font-semibold text-[var(--text)] bg-transparent border-none outline-none p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" placeholder="50-100" value="${currentFitPercent}" />
+            <span class="text-[11px] font-mono font-bold text-[var(--text-dim)] select-none">%</span>
+          </div>
         </div>
 
         ${getBlockActionsHTML({ index, totalBlocks })}
@@ -16973,7 +17305,9 @@ function renderImageBlock(
         <!-- State B: Image Preview & Caption Controls -->
         <div class="image-active-zone flex flex-col gap-2.5 w-full pt-1">
           <div class="image-preview-card w-full p-3 rounded-xl ${currentBorderState ? 'border border-[var(--border)] bg-[var(--surface)] shadow-xs' : 'border border-transparent bg-transparent'} flex flex-col items-center justify-center overflow-hidden transition-all">
-            <img src="${escapeHtml(currentUrl)}" alt="Figure Preview" class="max-w-full max-h-[500px] w-auto h-auto object-contain rounded-lg" onerror="this.parentElement.innerHTML='<span class=\\'text-amber-400 text-xs p-3\\'>Invalid image data</span>'" />
+            <div class="image-preview-fit-box flex justify-center max-w-full transition-all" style="width: ${currentFitPercent}%;">
+              <img src="${escapeHtml(currentUrl)}" alt="Figure Preview" class="w-full h-auto object-contain rounded-lg transition-all" onerror="this.parentElement.innerHTML='<span class=\\'text-amber-400 text-xs p-3\\'>Invalid image data</span>'" />
+            </div>
           </div>
 
           <div class="flex flex-col gap-2 w-full pt-1">
@@ -17009,7 +17343,8 @@ function renderImageBlock(
           block.url = compressed;
           block.content = compressed;
           block.hasBorder = currentBorderState;
-          if (onUpdate) onUpdate({ url: compressed, content: compressed, hasBorder: currentBorderState });
+          block.width = currentFitPercent;
+          if (onUpdate) onUpdate({ url: compressed, content: compressed, hasBorder: currentBorderState, width: currentFitPercent });
           renderEditMode();
         }
       };
@@ -17096,6 +17431,7 @@ function renderImageBlock(
         block.tag = currentTag;
         block.caption = currentCaption;
         block.hasBorder = currentBorderState;
+        block.width = currentFitPercent;
 
         if (onUpdate) {
           onUpdate({
@@ -17104,7 +17440,8 @@ function renderImageBlock(
             caption: currentCaption,
             allowNumbering: currentAllowNumbering,
             tag: currentTag,
-            hasBorder: currentBorderState
+            hasBorder: currentBorderState,
+            width: currentFitPercent
           });
         }
       };
@@ -17113,6 +17450,50 @@ function renderImageBlock(
       tagInput?.addEventListener('input', triggerFieldUpdate);
       captionInput?.addEventListener('input', triggerFieldUpdate);
     }
+
+    // Fit % Width Handling
+    const fitInput = editWrap.querySelector('.fit-percent-input');
+    const previewFitBox = editWrap.querySelector('.image-preview-fit-box');
+
+    const updateFitWidth = (newVal) => {
+      currentFitPercent = newVal;
+      block.width = currentFitPercent;
+      if (previewFitBox) previewFitBox.style.width = `${currentFitPercent}%`;
+      if (onUpdate) {
+        onUpdate({
+          url: currentUrl,
+          content: currentUrl,
+          caption: currentCaption,
+          allowNumbering: currentAllowNumbering,
+          tag: currentTag,
+          hasBorder: currentBorderState,
+          width: currentFitPercent
+        });
+      }
+    };
+
+    fitInput?.addEventListener('input', () => {
+      const val = parseInt(fitInput.value, 10);
+      if (!isNaN(val) && val >= 10 && val <= 100) {
+        updateFitWidth(val);
+      }
+    });
+
+    fitInput?.addEventListener('change', () => {
+      let val = parseInt(fitInput.value, 10);
+      if (isNaN(val) || val < 10) val = 10;
+      if (val > 100) val = 100;
+      fitInput.value = val;
+      updateFitWidth(val);
+    });
+
+    fitInput?.addEventListener('blur', () => {
+      let val = parseInt(fitInput.value, 10);
+      if (isNaN(val) || val < 10) val = 10;
+      if (val > 100) val = 100;
+      fitInput.value = val;
+      updateFitWidth(val);
+    });
 
     // Border Toggle Action
     const borderToggleBtn = editWrap.querySelector('.btn-border-toggle');
@@ -17140,7 +17521,8 @@ function renderImageBlock(
           caption: currentCaption,
           allowNumbering: currentAllowNumbering,
           tag: currentTag,
-          hasBorder: currentBorderState
+          hasBorder: currentBorderState,
+          width: currentFitPercent
         });
       }
     });
@@ -17154,6 +17536,7 @@ function renderImageBlock(
         block.allowNumbering = currentAllowNumbering;
         block.tag = currentTag;
         block.hasBorder = currentBorderState;
+        block.width = currentFitPercent;
         if (onUpdate) {
           onUpdate({
             url: currentUrl,
@@ -17161,7 +17544,8 @@ function renderImageBlock(
             caption: currentCaption,
             allowNumbering: currentAllowNumbering,
             tag: currentTag,
-            hasBorder: currentBorderState
+            hasBorder: currentBorderState,
+            width: currentFitPercent
           });
         }
         if (onDone) onDone();
@@ -19215,20 +19599,59 @@ function OpenSidebarLogoModal(note, onSaveCallback = null) {
  * - Opposite theme vertical scrollbar
  */
 function CreateSidebarTOC(note, { isEditMode = true, onNavigate = null } = {}) {
+  InitScrollbar();
+
   const sidebar = document.createElement('aside');
   sidebar.id = 'notes-sidebar';
   sidebar.className = 'notes-sidebar-drawer';
+
+  // Restore saved width from localStorage if present
+  try {
+    const savedWidth = localStorage.getItem('notes_sidebar_width');
+    if (savedWidth && parseInt(savedWidth, 10) >= 260 && parseInt(savedWidth, 10) <= 600) {
+      sidebar.style.width = `${parseInt(savedWidth, 10)}px`;
+    }
+  } catch (e) {}
 
   sidebar.innerHTML = `
     <style>
       .toc-link-item {
         display: block;
-        line-height: 1.3;
+        line-height: 1.35;
         white-space: normal;
         word-break: break-word;
         overflow-wrap: anywhere;
         transition: color var(--transition, 0.2s), background-color var(--transition, 0.2s);
         user-select: none;
+      }
+
+      .toc-item-row {
+        display: flex;
+        align-items: baseline;
+        gap: 0.35rem;
+        width: 100%;
+      }
+
+      .toc-prefix {
+        font-family: var(--font-serif, Georgia, serif);
+        font-weight: 700;
+        flex-shrink: 0;
+        color: var(--text-secondary);
+        user-select: none;
+      }
+
+      .toc-title {
+        flex: 1;
+        min-width: 0;
+        color: inherit;
+      }
+
+      .toc-link-item p {
+        display: inline !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        line-height: inherit !important;
+        font-size: inherit !important;
       }
 
       /* Section (H1) */
@@ -19251,8 +19674,8 @@ function CreateSidebarTOC(note, { isEditMode = true, onNavigate = null } = {}) {
         font-size: 0.70rem;
         font-weight: 600;
         color: var(--text-secondary);
-        margin-left: 0.6rem;
-        padding: 0.16rem 0.3rem 0.16rem 0.45rem;
+        margin-left: 0.5rem;
+        padding: 0.16rem 0.3rem 0.16rem 0.4rem;
         border-left: 1.5px solid var(--border);
         border-radius: 0 4px 4px 0;
       }
@@ -19262,8 +19685,8 @@ function CreateSidebarTOC(note, { isEditMode = true, onNavigate = null } = {}) {
         font-size: 0.64rem;
         font-weight: 500;
         color: var(--text-dim);
-        margin-left: 1.2rem;
-        padding: 0.12rem 0.25rem 0.12rem 0.45rem;
+        margin-left: 1rem;
+        padding: 0.12rem 0.25rem 0.12rem 0.4rem;
         border-left: 1.5px solid var(--border);
         border-radius: 0 4px 4px 0;
       }
@@ -19272,9 +19695,26 @@ function CreateSidebarTOC(note, { isEditMode = true, onNavigate = null } = {}) {
         color: var(--accent);
         background: var(--accent-soft, rgba(139, 109, 255, 0.08));
       }
+
+      /* Drag-to-Resize Handle on Right Edge */
+      .notes-sidebar-resizer {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 5px;
+        height: 100%;
+        cursor: col-resize;
+        user-select: none;
+        z-index: 50;
+        transition: background 0.15s ease;
+      }
+      .notes-sidebar-resizer:hover,
+      .notes-sidebar-resizer.resizing {
+        background: var(--accent, #8b6dff);
+      }
     </style>
 
-    <div class="notes-sidebar-inner p-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-sm w-full flex flex-col gap-1">
+    <div class="notes-sidebar-inner p-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-sm w-full flex flex-col gap-1">
       <!-- 1. Top Sidebar Logo Mount -->
       <div id="notes-sidebar-logo-container"></div>
 
@@ -19290,6 +19730,60 @@ function CreateSidebarTOC(note, { isEditMode = true, onNavigate = null } = {}) {
       </nav>
     </div>
   `;
+
+  // Resizer Handle Element
+  const resizer = document.createElement('div');
+  resizer.className = 'notes-sidebar-resizer';
+  resizer.title = 'Drag to resize sidebar width (Double-click to reset)';
+  sidebar.appendChild(resizer);
+
+  let isResizing = false;
+  let startX = 0;
+  let startWidth = 0;
+
+  const onMouseMove = (e) => {
+    if (!isResizing) return;
+    const maxAllowed = Math.min(window.innerWidth * 0.85, 560);
+    const newWidth = Math.min(Math.max(260, startWidth + (e.clientX - startX)), maxAllowed);
+    sidebar.style.width = `${newWidth}px`;
+  };
+
+  const onMouseUp = () => {
+    if (!isResizing) return;
+    isResizing = false;
+    resizer.classList.remove('resizing');
+    document.body.style.removeProperty('cursor');
+    document.body.style.removeProperty('user-select');
+    window.removeEventListener('mousemove', onMouseMove);
+    window.removeEventListener('mouseup', onMouseUp);
+
+    const finalWidth = sidebar.offsetWidth;
+    try {
+      localStorage.setItem('notes_sidebar_width', String(finalWidth));
+    } catch (err) {}
+  };
+
+  resizer.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    isResizing = true;
+    startX = e.clientX;
+    startWidth = sidebar.offsetWidth;
+    resizer.classList.add('resizing');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  });
+
+  resizer.addEventListener('dblclick', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    sidebar.style.removeProperty('width');
+    try {
+      localStorage.removeItem('notes_sidebar_width');
+    } catch (err) {}
+  });
 
   // Mount Logo
   const logoMount = sidebar.querySelector('#notes-sidebar-logo-container');
@@ -19317,13 +19811,27 @@ function CreateSidebarTOC(note, { isEditMode = true, onNavigate = null } = {}) {
         else if (level === 'h3') levelClass = 'toc-level-h3';
 
         li.className = `toc-link-item cursor-pointer ${levelClass}`;
-        const renderedTitle = h.title ? formatRichTextWithMath(h.title, { allowBlockMath: false, note }) : 'Untitled Section';
-        li.innerHTML = `<span class="mr-1.5 font-serif font-bold">${escapeHtml(prefix)}</span><span>${renderedTitle}</span>`;
+        const rawRendered = h.title ? formatRichTextWithMath(h.title, { allowBlockMath: false, note }) : 'Untitled Section';
+        const cleanTitle = rawRendered.replace(/^<p[^>]*>/, '').replace(/<\/p>$/, '').trim();
+
+        li.innerHTML = `
+          <div class="toc-item-row flex items-baseline gap-1.5 w-full">
+            ${prefix ? `<span class="toc-prefix font-serif font-bold flex-shrink-0 select-none">${escapeHtml(prefix)}</span>` : ''}
+            <span class="toc-title flex-1 min-w-0">${cleanTitle}</span>
+          </div>
+        `;
 
         li.addEventListener('click', () => {
           const target = document.getElementById(anchorId);
           if (target) {
-            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            const headerEl = document.querySelector('.app-header');
+            const headerHeight = headerEl ? headerEl.offsetHeight : 74;
+            const extraGap = 20; // 20px visual breathing room below header
+            const targetY = target.getBoundingClientRect().top + window.pageYOffset - (headerHeight + extraGap);
+            window.scrollTo({
+              top: Math.max(0, targetY),
+              behavior: 'smooth'
+            });
           }
           if (onNavigate) onNavigate();
           // Auto close mobile drawer if open
@@ -23745,11 +24253,13 @@ function InitHeader() {
 
 
 
+
 let isGlobalEditMode = true;
 function initNotesApp() {
   const root = document.getElementById('root');
   if (!root) return;
 
+  InitScrollbar();
   LoadNotesState();
 
   const currentHash = window.location.hash || '';
@@ -23943,8 +24453,8 @@ function initNotesApp() {
         position: fixed !important;
         top: 0 !important;
         bottom: 0 !important;
-        left: -330px !important;
-        width: 300px !important;
+        left: -100% !important;
+        width: clamp(320px, 22vw, 420px);
         max-width: 85vw !important;
         height: 100vh !important;
         z-index: 100 !important;
@@ -23954,13 +24464,34 @@ function initNotesApp() {
         border-right: 1px solid var(--border) !important;
         transition: left 0.28s cubic-bezier(0.4, 0, 0.2, 1) !important;
         box-shadow: none !important;
-        padding: 12px !important;
+        padding: 10px !important;
         scrollbar-width: thin;
         scrollbar-color: rgba(232, 234, 242, 0.45) transparent;
       }
 
+      .notes-sidebar-drawer::-webkit-scrollbar {
+        width: 4px;
+        height: 4px;
+      }
+      .notes-sidebar-drawer::-webkit-scrollbar-track {
+        background: transparent !important;
+      }
+      .notes-sidebar-drawer::-webkit-scrollbar-thumb {
+        background: rgba(232, 234, 242, 0.42);
+        border-radius: 9999px;
+      }
+      .notes-sidebar-drawer::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.85);
+      }
+
       [data-theme="light"] .notes-sidebar-drawer {
         scrollbar-color: rgba(26, 29, 46, 0.45) transparent;
+      }
+      [data-theme="light"] .notes-sidebar-drawer::-webkit-scrollbar-thumb {
+        background: rgba(26, 29, 46, 0.42);
+      }
+      [data-theme="light"] .notes-sidebar-drawer::-webkit-scrollbar-thumb:hover {
+        background: rgba(0, 0, 0, 0.85);
       }
 
       .notes-sidebar-drawer.visible {
@@ -24002,6 +24533,52 @@ function initNotesApp() {
           padding: 1rem !important;
           border-radius: 12px !important;
         }
+      }
+
+      /* ============================================================
+         HEADING HIERARCHY TYPOGRAPHY & SCROLL OFFSET
+         ============================================================ */
+      html {
+        scroll-padding-top: 96px;
+      }
+
+      .notes-heading-container,
+      .notes-heading {
+        scroll-margin-top: 96px;
+      }
+
+      @media (max-width: 600px) {
+        html {
+          scroll-padding-top: 86px;
+        }
+        .notes-heading-container,
+        .notes-heading {
+          scroll-margin-top: 86px;
+        }
+      }
+
+      @media (max-width: 440px) {
+        html {
+          scroll-padding-top: 80px;
+        }
+        .notes-heading-container,
+        .notes-heading {
+          scroll-margin-top: 80px;
+        }
+      }
+
+      .notes-heading p {
+        display: inline !important;
+        font-size: inherit !important;
+        font-family: inherit !important;
+        font-weight: inherit !important;
+        line-height: inherit !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+
+      .notes-heading .katex {
+        font-size: 0.95em !important;
       }
     </style>
 

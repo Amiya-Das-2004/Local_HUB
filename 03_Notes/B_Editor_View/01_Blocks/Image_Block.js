@@ -120,6 +120,9 @@ export function renderImageBlock(
   const tag = block.tag || '';
   const hasBorder = Boolean(block.hasBorder); // Default: false (OFF)
   const figNumber = figureInfo ? figureInfo.figNumber : null;
+  const rawWidth = (block.width !== undefined && block.width !== null && block.width !== '') ? block.width : 100;
+  const parsedWidth = parseInt(rawWidth, 10);
+  const fitPercent = (!isNaN(parsedWidth) && parsedWidth >= 10 && parsedWidth <= 100) ? parsedWidth : 100;
 
   // =========================================================================
   // 1. VIEW MODE
@@ -141,8 +144,8 @@ export function renderImageBlock(
       const captionText = formatFigureCaptionText({ caption, allowNumbering, figNumber });
 
       wrap.innerHTML = `
-        <div class="overflow-hidden rounded-xl ${hasBorder ? 'border border-[var(--border)] bg-[var(--surface)] shadow-xs' : 'border border-transparent bg-transparent'} p-1.5 flex justify-center max-w-full transition-all">
-          <img src="${escapeHtml(url)}" alt="${escapeHtml(caption || 'Note Figure')}" class="max-w-full max-h-[550px] w-auto h-auto object-contain block rounded-lg" loading="lazy" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 100 60\\'><rect width=\\'100\\' height=\\'60\\' fill=\\'%23242840\\'/><text x=\\'50\\' y=\\'33\\' fill=\\'%23a0a4b8\\' font-size=\\'8\\' text-anchor=\\'middle\\'>Image failed to load</text></svg>'" />
+        <div class="overflow-hidden rounded-xl ${hasBorder ? 'border border-[var(--border)] bg-[var(--surface)] shadow-xs' : 'border border-transparent bg-transparent'} p-1.5 flex justify-center max-w-full transition-all" style="width: ${fitPercent}%;">
+          <img src="${escapeHtml(url)}" alt="${escapeHtml(caption || 'Note Figure')}" class="w-full h-auto object-contain block rounded-lg transition-all" loading="lazy" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 100 60\\'><rect width=\\'100\\' height=\\'60\\' fill=\\'%23242840\\'/><text x=\\'50\\' y=\\'33\\' fill=\\'%23a0a4b8\\' font-size=\\'8\\' text-anchor=\\'middle\\'>Image failed to load</text></svg>'" />
         </div>
       `;
       if (captionText) {
@@ -165,6 +168,7 @@ export function renderImageBlock(
   let currentAllowNumbering = allowNumbering;
   let currentTag = tag;
   let currentBorderState = hasBorder;
+  let currentFitPercent = fitPercent;
 
   const renderEditMode = () => {
     const hasImage = Boolean(currentUrl);
@@ -172,7 +176,7 @@ export function renderImageBlock(
     editWrap.innerHTML = `
       <!-- Top Row: Minimal Header & Action Controls -->
       <div class="flex items-center justify-between gap-1.5 w-full pb-1.5 border-b border-[var(--border)] select-none flex-wrap">
-        <div class="flex items-center gap-1.5">
+        <div class="flex items-center gap-1.5 flex-wrap">
           <span class="text-xs font-bold text-[var(--text)] px-1">Image</span>
 
           <!-- Border Toggle Button (OFF by default) -->
@@ -182,6 +186,13 @@ export function renderImageBlock(
             </svg>
             <span>Border</span>
           </button>
+
+          <!-- Fit % Control Group -->
+          <div class="fit-control-wrap flex items-center gap-1 h-7 px-2 rounded-md border border-[var(--border)] bg-[var(--surface)] text-xs text-[var(--text-secondary)] select-none" title="Figure Width Percentage (10% - 100%)">
+            <span class="text-[11px] font-semibold text-[var(--text-dim)] select-none">Fit:</span>
+            <input type="number" min="10" max="100" step="5" class="fit-percent-input w-11 h-5 text-center font-mono text-xs font-semibold text-[var(--text)] bg-transparent border-none outline-none p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" placeholder="50-100" value="${currentFitPercent}" />
+            <span class="text-[11px] font-mono font-bold text-[var(--text-dim)] select-none">%</span>
+          </div>
         </div>
 
         ${getBlockActionsHTML({ index, totalBlocks })}
@@ -209,7 +220,9 @@ export function renderImageBlock(
         <!-- State B: Image Preview & Caption Controls -->
         <div class="image-active-zone flex flex-col gap-2.5 w-full pt-1">
           <div class="image-preview-card w-full p-3 rounded-xl ${currentBorderState ? 'border border-[var(--border)] bg-[var(--surface)] shadow-xs' : 'border border-transparent bg-transparent'} flex flex-col items-center justify-center overflow-hidden transition-all">
-            <img src="${escapeHtml(currentUrl)}" alt="Figure Preview" class="max-w-full max-h-[500px] w-auto h-auto object-contain rounded-lg" onerror="this.parentElement.innerHTML='<span class=\\'text-amber-400 text-xs p-3\\'>Invalid image data</span>'" />
+            <div class="image-preview-fit-box flex justify-center max-w-full transition-all" style="width: ${currentFitPercent}%;">
+              <img src="${escapeHtml(currentUrl)}" alt="Figure Preview" class="w-full h-auto object-contain rounded-lg transition-all" onerror="this.parentElement.innerHTML='<span class=\\'text-amber-400 text-xs p-3\\'>Invalid image data</span>'" />
+            </div>
           </div>
 
           <div class="flex flex-col gap-2 w-full pt-1">
@@ -245,7 +258,8 @@ export function renderImageBlock(
           block.url = compressed;
           block.content = compressed;
           block.hasBorder = currentBorderState;
-          if (onUpdate) onUpdate({ url: compressed, content: compressed, hasBorder: currentBorderState });
+          block.width = currentFitPercent;
+          if (onUpdate) onUpdate({ url: compressed, content: compressed, hasBorder: currentBorderState, width: currentFitPercent });
           renderEditMode();
         }
       };
@@ -332,6 +346,7 @@ export function renderImageBlock(
         block.tag = currentTag;
         block.caption = currentCaption;
         block.hasBorder = currentBorderState;
+        block.width = currentFitPercent;
 
         if (onUpdate) {
           onUpdate({
@@ -340,7 +355,8 @@ export function renderImageBlock(
             caption: currentCaption,
             allowNumbering: currentAllowNumbering,
             tag: currentTag,
-            hasBorder: currentBorderState
+            hasBorder: currentBorderState,
+            width: currentFitPercent
           });
         }
       };
@@ -349,6 +365,50 @@ export function renderImageBlock(
       tagInput?.addEventListener('input', triggerFieldUpdate);
       captionInput?.addEventListener('input', triggerFieldUpdate);
     }
+
+    // Fit % Width Handling
+    const fitInput = editWrap.querySelector('.fit-percent-input');
+    const previewFitBox = editWrap.querySelector('.image-preview-fit-box');
+
+    const updateFitWidth = (newVal) => {
+      currentFitPercent = newVal;
+      block.width = currentFitPercent;
+      if (previewFitBox) previewFitBox.style.width = `${currentFitPercent}%`;
+      if (onUpdate) {
+        onUpdate({
+          url: currentUrl,
+          content: currentUrl,
+          caption: currentCaption,
+          allowNumbering: currentAllowNumbering,
+          tag: currentTag,
+          hasBorder: currentBorderState,
+          width: currentFitPercent
+        });
+      }
+    };
+
+    fitInput?.addEventListener('input', () => {
+      const val = parseInt(fitInput.value, 10);
+      if (!isNaN(val) && val >= 10 && val <= 100) {
+        updateFitWidth(val);
+      }
+    });
+
+    fitInput?.addEventListener('change', () => {
+      let val = parseInt(fitInput.value, 10);
+      if (isNaN(val) || val < 10) val = 10;
+      if (val > 100) val = 100;
+      fitInput.value = val;
+      updateFitWidth(val);
+    });
+
+    fitInput?.addEventListener('blur', () => {
+      let val = parseInt(fitInput.value, 10);
+      if (isNaN(val) || val < 10) val = 10;
+      if (val > 100) val = 100;
+      fitInput.value = val;
+      updateFitWidth(val);
+    });
 
     // Border Toggle Action
     const borderToggleBtn = editWrap.querySelector('.btn-border-toggle');
@@ -376,7 +436,8 @@ export function renderImageBlock(
           caption: currentCaption,
           allowNumbering: currentAllowNumbering,
           tag: currentTag,
-          hasBorder: currentBorderState
+          hasBorder: currentBorderState,
+          width: currentFitPercent
         });
       }
     });
@@ -390,6 +451,7 @@ export function renderImageBlock(
         block.allowNumbering = currentAllowNumbering;
         block.tag = currentTag;
         block.hasBorder = currentBorderState;
+        block.width = currentFitPercent;
         if (onUpdate) {
           onUpdate({
             url: currentUrl,
@@ -397,7 +459,8 @@ export function renderImageBlock(
             caption: currentCaption,
             allowNumbering: currentAllowNumbering,
             tag: currentTag,
-            hasBorder: currentBorderState
+            hasBorder: currentBorderState,
+            width: currentFitPercent
           });
         }
         if (onDone) onDone();

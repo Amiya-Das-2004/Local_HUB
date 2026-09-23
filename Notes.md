@@ -7,7 +7,7 @@
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `DEFAULT_GLOBAL_MACROS` | 1 - 42 | Default LaTeX macros dictionary containing predefined equation shortcuts (`\mb`, `\comment`, `\R`, `\C`, `\N`, `\Z`) and TikZ styles/libraries. |
+| `DEFAULT_GLOBAL_MACROS` | 3 - 45 | Default LaTeX macros dictionary containing predefined equation shortcuts (`\mb`, `\cancelto`, `\comment`, `\R`, `\C`, `\N`, `\Z`) and TikZ styles/libraries. |
 | `NotesState` | 45 - 53 | Central in-memory reactive state object holding vault metadata, global macros, table templates, tikz templates, folders, tags, and notes. |
 | `sanitizeNote(n, idx = 0)` | 56 - 85 | Validates note object schema, fills missing fallback properties (id, slug, title, folder, tags, blocks, macros, autoNumbering), and prevents data corruption. |
 | `LoadNotesState(forceReload = false)` | 90 - 192 | Reads and parses notes from DOM script vault (#NotesData), recovers newer uncommitted edits from localStorage, and reuses in-memory state when not stale to eliminate multi-MB JSON re-parsing on route changes. |
@@ -71,10 +71,10 @@
 | :--- | :--- | :--- |
 | `GLOBAL_FONT_FAMILIES` | 7 - 15 | Constant dictionary defining supported font families (Serif, Sans-Serif, Garamond, Times, Monospace, Georgia, Courier) and their CSS font stacks. |
 | `GLOBAL_FONT_SIZES` | 17 - 22 | Constant dictionary defining supported font size presets (sm, base, lg, xl) with corresponding rem values and line-height ratios. |
-| `BLOCK_DEFINITIONS` | 24 - 147 | Registry array of available block types (heading, text, equation, tikz, image, table, code, callout block, columns) with icons and default constructors. |
-| `BLOCK_DEF_MAP` | 149 | Fast lookup Map mapping block type string keys to their corresponding block schema definitions. |
-| `createNewBlock(type, options = {})` | 154 - 161 | Instantiates a new note block object with a unique timestamped ID, block type, and default payload schema. |
-| `insertBlockAt(blocks = [], newBlock, targetIndex = -1)` | 168 - 176 | Inserts a block object into a blocks array at a specified index or appends it to the end if index is out of bounds. |
+| `BLOCK_DEFINITIONS` | 24 - 148 | Registry array of available block types (heading, text, equation, tikz, image, table, code, callout block, columns) with icons and default constructors. |
+| `BLOCK_DEF_MAP` | 150 | Fast lookup Map mapping block type string keys to their corresponding block schema definitions. |
+| `createNewBlock(type, options = {})` | 155 - 162 | Instantiates a new note block object with a unique timestamped ID, block type, and default payload schema. |
+| `insertBlockAt(blocks = [], newBlock, targetIndex = -1)` | 169 - 177 | Inserts a block object into a blocks array at a specified index or appends it to the end if index is out of bounds. |
 
 **Block_History.js**
 
@@ -162,19 +162,23 @@
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `KATEX_MACROS` | 13 - 19 | Built-in dictionary of common mathematical KaTeX macro definitions (`\dddot`, `\ddddot`, `\bm`, `\argmax`, `\argmin`). |
-| `setActiveNoteContext(note)` | 25 - 27 | Sets the active note context object used for note-specific local macro resolution and figure citation mapping. |
-| `getActiveNoteContext()` | 29 - 31 | Returns the currently active note context object. |
-| `setActiveFigureTagMap(map)` | 33 - 35 | Sets the active figure tag-to-number citation Map for `\fig{tag}` link resolution. |
-| `getActiveFigureTagMap()` | 37 - 39 | Returns the active figure citation tag Map. |
-| `parseLatexMacrosIntoObject(macroString, targetMacros = {})` | 82 - 110 | Parses `\newcommand`, `\renewcommand`, and `\def` statements from a macro string into a target KaTeX macro dictionary. |
-| `getActiveKatexMacros(note = null)` | 115 - 130 | Merges built-in macros, global vault macros, and note-specific local macros into a unified KaTeX macro object. |
-| `ensureKatexLoaded()` | 132 - 171 | Asynchronously injects KaTeX CSS and JS from CDN and re-renders elements with pending math placeholders once loaded. |
-| `clearKatexCache()` | 176 - 178 | Clears the in-memory KaTeX compilation cache (`katexCache`). |
-| `renderKatex(tex, isDisplayMode = false, noteContext = null)` | 180 - 221 | Synchronously compiles a LaTeX formula to HTML/MathML using KaTeX, utilizing a bounded LRU cache `katexCache` for 0ms re-rendering. |
-| `parseAndRenderMathInText(rawText = '')` | 223 - 225 | Convenience wrapper calling formatRichTextWithMath to parse and render inline math within text. |
-| `formatRichTextWithMath(rawText = '', options = {})` | 234 - 456 | Full-featured text compiler handling display math ($$...$$), inline math ($...$), task checkboxes ([ ], [x]), bullet lists, and markdown formatting. |
-| `parseInlineMarkdownAndLatex(str)` | 458 - 484 | Parses inline formatting tokens (bold, italic, strikethrough, code), `\fig` citations, and LaTeX text styling (`\textcolor`, `\underline`, `\textbf`, `\textit`, `\cancel`). |
+| `KATEX_MACROS` | 13 - 20 | Built-in dictionary of common mathematical KaTeX macro definitions (`\dddot`, `\ddddot`, `\bm`, `\argmax`, `\argmin`, `\cancelto`). |
+| `setActiveNoteContext(note)` | 26 - 28 | Sets the active note context object used for note-specific local macro resolution and figure citation mapping. |
+| `getActiveNoteContext()` | 30 - 32 | Returns the currently active note context object. |
+| `setActiveFigureTagMap(map)` | 34 - 36 | Sets the active figure tag-to-number citation Map for `\fig{tag}` link resolution. |
+| `getActiveFigureTagMap()` | 38 - 40 | Returns the active figure citation tag Map. |
+| `parseLatexMacrosIntoObject(macroString, targetMacros = {})` | 83 - 117 | Parses `\newcommand`, `\renewcommand`, and `\def` statements from a macro string into a target KaTeX macro dictionary. |
+| `getActiveKatexMacros(note = null)` | 122 - 137 | Merges built-in macros, global vault macros, and note-specific local macros into a unified KaTeX macro object. |
+| `ensureKatexLoaded()` | 139 - 171 | Asynchronously injects KaTeX CSS and JS from CDN and re-renders elements with pending math placeholders once loaded. |
+| `layoutCanceltoElement(el)` | 176 - 247 | Dynamically measures expression dimensions and renders continuous extended SVG arrow vector with adaptive target value positioning. |
+| `initCanceltoLayoutObserver()` | 267 - 311 | Observes the DOM with MutationObserver and ResizeObserver to automatically layout and update `\cancelto` elements. |
+| `ensureCanceltoStyles()` | 313 - 351 | Injects CSS rules for `.lh-cancelto`, `.lh-cancelto-base`, `.lh-cancelto-svg`, `.lh-cancelto-val` and boots observers. |
+| `postProcessKatexHtml(html)` | 353 - 355 | Passes through clean KaTeX HTML without regex manipulation. |
+| `clearKatexCache()` | 357 - 359 | Clears the in-memory KaTeX compilation cache (`katexCache`). |
+| `renderKatex(tex, isDisplayMode = false, noteContext = null)` | 361 - 401 | Synchronously compiles a LaTeX formula to HTML/MathML using KaTeX, utilizing a bounded LRU cache `katexCache` for 0ms re-rendering. |
+| `parseAndRenderMathInText(rawText = '')` | 403 - 405 | Convenience wrapper calling formatRichTextWithMath to parse and render inline math within text. |
+| `formatRichTextWithMath(rawText = '', options = {})` | 414 - 636 | Full-featured text compiler handling display math ($$...$$), inline math ($...$), task checkboxes ([ ], [x]), bullet lists, and markdown formatting. |
+| `parseInlineMarkdownAndLatex(str)` | 638 - 667 | Parses inline formatting tokens (bold, italic, strikethrough, code), `\fig` citations, and LaTeX text styling (`\textcolor`, `\underline`, `\textbf`, `\textit`, `\cancel`). |
 
 **Numbering_Engine.js**
 
@@ -548,7 +552,7 @@
 | :--- | :--- | :--- |
 | `processAndCompressImage(fileOrDataUrl)` | 16 - 65 | Downsamples and compresses raster images (PNG/JPG) using an off-screen canvas, keeping vector SVGs intact. |
 | `compressRasterDataUrl(dataUrl, maxDim, quality)` | 67 - 106 | Internal helper compressing image on canvas to JPEG data URL with dimensions constrained to maxDim. |
-| `renderImageBlock(block, isEditing = false, onUpdate = null, options = {})` | 108 - 415 | Renders image figure block supporting file upload, clipboard paste, URL linking, width/alignment styling, scientific captioning, and figure numbering. |
+| `renderImageBlock(block, isEditing = false, onUpdate = null, options = {})` | 108 - 478 | Renders image figure block supporting file upload, clipboard paste, URL linking, customizable Fit % width with auto aspect-ratio height, surrounding border toggle, scientific captioning, and figure numbering. |
 
 **Multi_Column_Block.js**
 
@@ -630,7 +634,7 @@
 
 | Import Location | Functions Imported | used in Functions |
 | :--- | :--- | :--- |
-| `../../Writing_Engine/Tikz_Renderer.js` | `renderTikzToElement`, `getCachedTikzSvg` | `renderTikzBlock()` |
+| `../../Writing_Engine/Tikz_Renderer.js` | `renderTikzToElement`, `getCachedTikzSvg`, `healTikzCode` | `renderTikzBlock()` |
 | `../../02_Utils.js` | `escapeHtml` | `renderTikzBlock()` |
 | `../../../00_Components/06_Color_Selector.js` | `CreateColorSelector` | `renderTikzBlock()` |
 | `./Tikz_Templates_Modal.js` | `GetTikzTemplatesModalHTML`, `InitTikzTemplatesLogic` | `renderTikzBlock()` |
@@ -640,8 +644,7 @@
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `healTikzCode(val)` | 76 - 83 | Automatically wraps raw TikZ commands in a `\begin{tikzpicture}...\end{tikzpicture}` environment if omitted. |
-| `renderTikzBlock(block, isEditing = false, onUpdate = null, options = {})` | 80 - 435 | Main TikZ block renderer supporting live on-demand vector SVG compilation, color selector, template browser modal, scientific captioning, figure numbering, and integrated monospace code editor with line numbering, line spacing, and environment folding. |
+| `renderTikzBlock(block, isEditing = false, onUpdate = null, options = {})` | 71 - 550 | Main TikZ block renderer supporting live on-demand vector SVG compilation, customizable Fit % width with auto aspect-ratio height, dual-theme color selector, surrounding border toggle, template browser modal, scientific captioning, figure numbering, and integrated monospace code editor. |
 
 **Tikz_Templates.js**
 

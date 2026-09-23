@@ -70,7 +70,8 @@ export const BLOCK_DEFINITIONS = [
     description: 'TikZ vector graphics compiled into SVG',
     createDefault: (opts = {}) => ({
       type: 'tikz',
-      code: opts.code || '\\draw[thick, fill=purple!20] (0,0) circle (1.2);\n\\draw[->, thick, purple] (0,0) -- (1.2,0) node[midway, above] {$r$};\n\\node at (0,-1.6) {Circle diagram};'
+      code: opts.code || '\\draw[thick, fill=purple!20] (0,0) circle (1.2);\n\\draw[->, thick, purple] (0,0) -- (1.2,0) node[midway, above] {$r$};\n\\node at (0,-1.6) {Circle diagram};',
+      width: opts.width || 100
     })
   },
   {
@@ -84,7 +85,7 @@ export const BLOCK_DEFINITIONS = [
       type: 'image',
       url: opts.url || '',
       caption: opts.caption || '',
-      width: opts.width || '100%',
+      width: opts.width || 100,
       align: 'center'
     })
   },

@@ -44,6 +44,7 @@ export function GetImportButtonHTML() {
 
 const DEFAULT_MACROS = {
   equation: `\\newcommand{\\mb}[1]{\\mathbf{#1}}
+\\newcommand{\\cancelto}[2]{\\htmlClass{lh-cancelto}{\\htmlClass{lh-cancelto-base}{#2}\\htmlClass{lh-cancelto-val}{\\scriptstyle #1}}}
 \\newcommand{\\comment}[1]{\\textcolor{#dc2626|#f87171}{[#1]}}
 \\newcommand{\\R}{\\mathbb{R}}
 \\newcommand{\\C}{\\mathbb{C}}
