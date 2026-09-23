@@ -11,7 +11,7 @@ import { parseLatexTabular, parseMarkdownTable } from '../../Writing_Engine/Tabl
 import { attachHighlightSync } from '../../Writing_Engine/Highlight_Sync.js';
 import { escapeHtml } from '../../02_Utils.js';
 import { createCodeEditor } from './Block_Textarea.js';
-import { getBlockActionsHTML, initBlockActions } from './Block_Actions.js';
+import { getBlockActionsHTML, initBlockActions, copyBlockTextWithFeedback } from './Block_Actions.js';
 import { GetTableTemplatesModalHTML, InitTableTemplatesLogic } from './Table_Templates_Modal.js';
 
 // Re-export parseLatexTabular for backwards compatibility
@@ -227,6 +227,10 @@ Ampere-Maxwell & Magnetism & $\nabla \times \mathbf{B} = \mu_0 \mathbf{J} + \mu_
   // Top Action Buttons
   initBlockActions(editWrap, {
     onDone,
+    onCopy: (btn) => {
+      const codeToCopy = codeEditor.getValue ? codeEditor.getValue() : textarea.value;
+      copyBlockTextWithFeedback(codeToCopy, btn, 'Copy block table code');
+    },
     onMoveUp,
     onMoveDown,
     onDelete,

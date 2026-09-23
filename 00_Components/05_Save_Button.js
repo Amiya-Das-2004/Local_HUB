@@ -188,7 +188,7 @@ export async function SaveAndDownloadApp() {
         code = code.replace(/^\s*export\s*\{[\s\S]*?\}\s*from\s+['"][^'"]+['"];?\s*$/gm, '');
         code = code.replace(/^\s*export\s*\{[\s\S]*?\};?\s*$/gm, '');
         code = code.replace(/^\s*export\s+default\s+/gm, '');
-        code = code.replace(/^\s*export\s+(async\s+)?(function|const|let|var|class)/gm, '$1$2');
+        code = code.replace(/^\s*export\s+(async\s+)?(function|const|let|var|class)/gm, (m, p1, p2) => (p1 || '') + p2);
         return `\n/* --- ${cleanPath} --- */\n${code}\n`;
       } catch (e) {
         console.warn(`[Bundler] Error reading ${filePath}:`, e);

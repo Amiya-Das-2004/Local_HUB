@@ -11,7 +11,7 @@
 import { renderKatex } from '../../Writing_Engine/Math_Renderer.js';
 import { attachHighlightSync } from '../../Writing_Engine/Highlight_Sync.js';
 import { CreateColorSelector } from '../../../00_Components/06_Color_Selector.js';
-import { getBlockActionsHTML, initBlockActions } from './Block_Actions.js';
+import { getBlockActionsHTML, initBlockActions, copyBlockTextWithFeedback } from './Block_Actions.js';
 import { createCodeEditor } from './Block_Textarea.js';
 
 export { attachHighlightSync as setupBidirectionalHighlight };
@@ -30,6 +30,13 @@ export function renderEquationBlock(block, isEditing = false, onUpdate = null, {
     return renderKatex(trimmed, true);
   };
 
+  const isKatexError = (html) => {
+    if (!html) return false;
+    return html.includes('class="katex-error"') ||
+           html.includes('class="text-red-400') ||
+           html.includes('[KaTeX Error:');
+  };
+
   // 1. View Mode
   if (!isEditing) {
     const eqWrap = document.createElement('div');
@@ -46,6 +53,10 @@ export function renderEquationBlock(block, isEditing = false, onUpdate = null, {
 
   // 2. Edit Mode
   let currentBorderState = hasBorder;
+
+  const initialRender = getRenderedEquationHtml(rawTex);
+  let lastValidHtml = !isKatexError(initialRender) && rawTex.trim() ? initialRender : '';
+  let peakMinHeight = 44;
 
   const editWrap = document.createElement('div');
   editWrap.className = 'flex flex-col gap-1.5 my-0.5 w-full';
@@ -70,7 +81,7 @@ export function renderEquationBlock(block, isEditing = false, onUpdate = null, {
 
     <!-- Middle: Live Compiled Equation Preview (Grows in size, thin horizontal scrollbar) -->
     <div class="preview-pane w-full p-3 rounded-xl text-center overflow-x-auto min-h-[44px] ${currentBorderState ? 'border border-[var(--border)] bg-[var(--surface)]' : 'border border-transparent bg-transparent'}" style="scrollbar-width: thin;">
-      ${getRenderedEquationHtml(rawTex)}
+      ${initialRender}
     </div>
 
     <!-- Bottom: Monospace Code Editor with Line Numbers, Spacing & Folding -->
@@ -81,6 +92,69 @@ export function renderEquationBlock(block, isEditing = false, onUpdate = null, {
   const borderToggleBtn = editWrap.querySelector('.btn-border-toggle');
   const editorMount = editWrap.querySelector('.eq-editor-mount');
 
+  // Lock initial height if preview already has content
+  requestAnimationFrame(() => {
+    if (preview && preview.offsetHeight > peakMinHeight) {
+      peakMinHeight = preview.offsetHeight;
+      preview.style.minHeight = `${peakMinHeight}px`;
+    }
+  });
+
+  const updateLivePreview = (val) => {
+    const trimmed = (val || '').trim();
+    if (!trimmed) {
+      lastValidHtml = '';
+      peakMinHeight = 44;
+      preview.style.minHeight = '44px';
+      preview.innerHTML = '<div class="italic text-[var(--text-dim)] text-xs select-none py-1">Equation preview appears here...</div>';
+      return;
+    }
+
+    const rendered = getRenderedEquationHtml(trimmed);
+    const hasError = isKatexError(rendered);
+
+    // Ensure peakMinHeight retains the maximum height reached so far
+    if (preview.offsetHeight > peakMinHeight) {
+      peakMinHeight = preview.offsetHeight;
+    }
+    preview.style.minHeight = `${peakMinHeight}px`;
+
+    if (!hasError) {
+      lastValidHtml = rendered;
+      preview.innerHTML = rendered;
+      requestAnimationFrame(() => {
+        if (preview.offsetHeight > peakMinHeight) {
+          peakMinHeight = preview.offsetHeight;
+          preview.style.minHeight = `${peakMinHeight}px`;
+        }
+      });
+    } else {
+      // Incomplete LaTeX or syntax error:
+      // Preserve last-known-good render at subtle opacity with a floating indicator
+      if (lastValidHtml) {
+        preview.innerHTML = `
+          <div class="relative w-full">
+            <div class="transition-opacity duration-150" style="opacity: 0.65;">
+              ${lastValidHtml}
+            </div>
+            <div class="absolute top-0 right-0 pointer-events-none">
+              <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono bg-amber-500/15 text-amber-400 border border-amber-500/30 select-none shadow-xs">
+                <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="12"></line>
+                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                <span>LaTeX incomplete...</span>
+              </span>
+            </div>
+          </div>
+        `;
+      } else {
+        preview.innerHTML = rendered;
+      }
+    }
+  };
+
   const codeEditor = createCodeEditor({
     blockId: block.id,
     value: rawTex,
@@ -90,11 +164,11 @@ export function renderEquationBlock(block, isEditing = false, onUpdate = null, {
     height: '140px',
     enableFolding: false,
     onInput: (val) => {
-      preview.innerHTML = getRenderedEquationHtml(val);
+      updateLivePreview(val);
       if (onUpdate) onUpdate({ tex: val, content: val });
     },
     onChange: (val) => {
-      preview.innerHTML = getRenderedEquationHtml(val);
+      updateLivePreview(val);
       if (onUpdate) onUpdate({ tex: val, content: val });
     }
   });
@@ -137,7 +211,7 @@ export function renderEquationBlock(block, isEditing = false, onUpdate = null, {
         textarea.selectionStart = start + insertText.length - 1; // place caret inside {}
         textarea.selectionEnd = start + insertText.length - 1;
         textarea.focus();
-        preview.innerHTML = getRenderedEquationHtml(updatedVal);
+        updateLivePreview(updatedVal);
         if (onUpdate) onUpdate({ tex: updatedVal, content: updatedVal });
       }
     });
@@ -148,7 +222,17 @@ export function renderEquationBlock(block, isEditing = false, onUpdate = null, {
   attachHighlightSync(preview, textarea);
 
   // 4. Action Button Listeners
-  initBlockActions(editWrap, { onDone, onMoveUp, onMoveDown, onDelete, index });
+  initBlockActions(editWrap, {
+    onDone,
+    onCopy: (btn) => {
+      const codeToCopy = codeEditor.getValue ? codeEditor.getValue() : textarea.value;
+      copyBlockTextWithFeedback(codeToCopy, btn, 'Copy block equation code');
+    },
+    onMoveUp,
+    onMoveDown,
+    onDelete,
+    index
+  });
 
   container.appendChild(editWrap);
   return container;

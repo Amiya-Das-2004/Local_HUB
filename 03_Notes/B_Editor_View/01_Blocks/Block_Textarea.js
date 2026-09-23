@@ -791,18 +791,67 @@ export function createCodeEditor({
       const end = textarea.selectionEnd;
       const val = textarea.value;
 
-      if (!e.shiftKey) {
-        // Insert 2 spaces
+      let effectiveEnd = end;
+      if (end > start && val.charAt(end - 1) === '\n') {
+        effectiveEnd = end - 1;
+      }
+
+      const isMultiLine = (start !== end && val.substring(start, effectiveEnd).includes('\n')) || (e.shiftKey && start !== end);
+
+      if (isMultiLine) {
+        // Multi-line indent/outdent
+        const lineStart = val.lastIndexOf('\n', start - 1) + 1;
+        let lineEnd = val.indexOf('\n', effectiveEnd);
+        if (lineEnd === -1) lineEnd = val.length;
+
+        const lines = val.substring(lineStart, lineEnd).split('\n');
+
+        if (!e.shiftKey) {
+          // Tab: Indent all selected lines by 2 spaces
+          const modified = lines.map(line => '  ' + line);
+          textarea.value = val.substring(0, lineStart) + modified.join('\n') + val.substring(lineEnd);
+          textarea.selectionStart = start + 2;
+          textarea.selectionEnd = end + (2 * lines.length);
+        } else {
+          // Shift+Tab: Outdent all selected lines by up to 2 spaces
+          let firstLineRemoved = 0;
+          let totalRemoved = 0;
+
+          const modified = lines.map((line, idx) => {
+            let removed = 0;
+            if (line.startsWith('  ')) {
+              removed = 2;
+            } else if (line.startsWith(' ')) {
+              removed = 1;
+            }
+            if (idx === 0) firstLineRemoved = removed;
+            totalRemoved += removed;
+            return line.substring(removed);
+          });
+
+          textarea.value = val.substring(0, lineStart) + modified.join('\n') + val.substring(lineEnd);
+          const startShift = Math.min(start - lineStart, firstLineRemoved);
+          textarea.selectionStart = Math.max(lineStart, start - startShift);
+          textarea.selectionEnd = Math.max(textarea.selectionStart, end - totalRemoved);
+        }
+      } else if (!e.shiftKey) {
+        // Single line Tab: Insert 2 spaces
         textarea.value = val.substring(0, start) + '  ' + val.substring(end);
         textarea.selectionStart = textarea.selectionEnd = start + 2;
       } else {
-        // Shift+Tab: Outdent
+        // Single line Shift+Tab: Outdent current line
         const before = val.substring(0, start);
         const lineStart = before.lastIndexOf('\n') + 1;
+        let removed = 0;
         if (val.substring(lineStart, lineStart + 2) === '  ') {
-          textarea.value = val.substring(0, lineStart) + val.substring(lineStart + 2);
-          textarea.selectionStart = Math.max(lineStart, start - 2);
-          textarea.selectionEnd = Math.max(lineStart, end - 2);
+          removed = 2;
+        } else if (val.charAt(lineStart) === ' ') {
+          removed = 1;
+        }
+        if (removed > 0) {
+          textarea.value = val.substring(0, lineStart) + val.substring(lineStart + removed);
+          textarea.selectionStart = Math.max(lineStart, start - removed);
+          textarea.selectionEnd = Math.max(lineStart, end - removed);
         }
       }
 

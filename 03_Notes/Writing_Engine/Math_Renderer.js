@@ -466,6 +466,10 @@ function parseInlineMarkdownAndLatex(str) {
   s = s.replace(/\\textcolor\{([#a-zA-Z0-9]+)\}\{([^\}]+)\}/g, '<span style="color:$1;">$2</span>');
   // LaTeX \underline{content}
   s = s.replace(/\\underline\{([^\}]+)\}/g, '<u style="text-decoration:underline;">$1</u>');
+  // LaTeX \textbf{content}
+  s = s.replace(/\\textbf\{((?:[^{}]|\{[^{}]*\})+)\}/g, '<strong>$1</strong>');
+  // LaTeX \textit{content}
+  s = s.replace(/\\textit\{((?:[^{}]|\{[^{}]*\})+)\}/g, '<em>$1</em>');
   // LaTeX \cancel{content} / \sout{content}
   s = s.replace(/\\(?:cancel|sout)\{([^\}]+)\}/g, '<span style="text-decoration:line-through;">$1</span>');
   // Markdown ~~strikethrough~~

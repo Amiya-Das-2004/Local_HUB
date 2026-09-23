@@ -4,6 +4,7 @@
  */
 
 import { escapeHtml } from '../../02_Utils.js';
+import { formatRichTextWithMath } from '../../Writing_Engine/Math_Renderer.js';
 import { getBlockActionsHTML, initBlockActions } from './Block_Actions.js';
 
 export function renderHeadingBlock(block, isEditing = false, onUpdate = null, { prefix = '', note = null, onConfigUpdate = null, onDone = null, onMoveUp = null, onMoveDown = null, onDelete = null, index = 0, totalBlocks = 1 } = {}) {
@@ -30,8 +31,9 @@ export function renderHeadingBlock(block, isEditing = false, onUpdate = null, { 
     }
     heading.style.fontFamily = 'var(--note-font-family, inherit)';
 
+    const renderedTitle = title ? formatRichTextWithMath(title, { allowBlockMath: false, note }) : 'Untitled Section';
     heading.innerHTML = `
-      <span class="mr-1.5 font-bold text-purple-400" style="font-family: var(--note-font-family, inherit);">${escapeHtml(prefix)}</span><span>${escapeHtml(title || 'Untitled Section')}</span>
+      <span class="mr-1.5 font-bold text-purple-400" style="font-family: var(--note-font-family, inherit);">${escapeHtml(prefix)}</span><span>${renderedTitle}</span>
     `;
     container.appendChild(heading);
     return container;

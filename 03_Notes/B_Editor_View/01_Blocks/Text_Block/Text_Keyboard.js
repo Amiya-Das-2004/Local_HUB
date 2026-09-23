@@ -89,6 +89,7 @@ export const checkAutoCollapseTokensNearCaret = ({ editModeOptions, hideKatexPil
     { type: 'math', regex: /(?:^|[^\\])((?<!\\)\$(?!\s)([^\$\n\r]+?)(?<!\s)\$)\s*$/ },
     { type: 'code', regex: /(`([^`\n\r]+?)`)\s*$/ },
     { type: 'bold', regex: /(\*\*([^*]+?)\*\*)\s*$/ },
+    { type: 'bold_latex', regex: /(\\textbf\{((?:[^{}]|\{[^{}]*\})+)\})\s*$/ },
     { type: 'italic', regex: /(?:^|[^*])(\*([^*\n\r]+?)\*)\s*$/ },
     { type: 'underline', regex: /(\\underline\{([^}]+)\})\s*$/ },
     { type: 'strike', regex: /(~~([^~]+)~~)\s*$/ },
@@ -108,7 +109,11 @@ export const checkAutoCollapseTokensNearCaret = ({ editModeOptions, hideKatexPil
       const afterText = text.substring(tokenIdx + fullToken.length);
 
       let contentVal = '';
-      if (p.type === 'math') contentVal = match[2] || fullToken.slice(1, -1);
+      let widgetType = p.type;
+      if (p.type === 'bold_latex') {
+        widgetType = 'bold';
+        contentVal = match[2] || fullToken.slice(8, -1);
+      } else if (p.type === 'math') contentVal = match[2] || fullToken.slice(1, -1);
       else if (p.type === 'code') contentVal = match[2] || fullToken.slice(1, -1);
       else if (p.type === 'bold') contentVal = match[2] || fullToken.slice(2, -2);
       else if (p.type === 'italic') contentVal = match[2] || fullToken.slice(1, -1);
@@ -118,7 +123,7 @@ export const checkAutoCollapseTokensNearCaret = ({ editModeOptions, hideKatexPil
       else if (p.type === 'fig') contentVal = match[2] || fullToken.slice(5, -1);
       else if (p.type === 'wikilink') contentVal = match[2] || fullToken.slice(2, -2);
 
-      const widget = createLiveWidget(p.type, fullToken, contentVal, editModeOptions);
+      const widget = createLiveWidget(widgetType, fullToken, contentVal, editModeOptions);
       const afterNode = document.createTextNode(afterText);
       const parent = node.parentNode;
 
@@ -308,6 +313,9 @@ export const tryCollapseTokenAtCaretOnEnter = ({ node, offset, editModeOptions, 
   if (offset >= 11 && text.substring(offset - 11, offset) === '\\underline{' && text[offset] === '}') {
     return exitEmptyWrapperWithSpace(offset + 1, offset + 1);
   }
+  if (offset >= 8 && text.substring(offset - 8, offset) === '\\textbf{' && text[offset] === '}') {
+    return exitEmptyWrapperWithSpace(offset + 1, offset + 1);
+  }
   const colMatch = text.substring(0, offset).match(/\\textcolor\{[#a-zA-Z0-9|]+\}\{$/);
   if (colMatch && text[offset] === '}') {
     return exitEmptyWrapperWithSpace(offset + 1, offset + 1);
@@ -368,6 +376,16 @@ export const tryCollapseTokenAtCaretOnEnter = ({ node, offset, editModeOptions, 
   // 2. Bold **...**
   const boldRegex = /\*\*([^*]+?)\*\*/g;
   while ((m = boldRegex.exec(text)) !== null) {
+    const start = m.index;
+    const end = start + m[0].length;
+    if (offset > start && offset <= end) {
+      return collapseTokenAndInsertSpace(start, end, 'bold', m[0], m[1]);
+    }
+  }
+
+  // 2b. LaTeX Bold \textbf{...}
+  const tbRegex = /\\textbf\{((?:[^{}]|\{[^{}]*\})+)\}/g;
+  while ((m = tbRegex.exec(text)) !== null) {
     const start = m.index;
     const end = start + m[0].length;
     if (offset > start && offset <= end) {
@@ -497,71 +515,113 @@ export const handleTextBlockKeyDown = (e, ctx) => {
   if (e.key === 'Tab') {
     e.preventDefault();
 
-    const curLine = getContainingLine(node, liveSurface);
-    const bulletWidget = curLine?.querySelector('.live-bullet');
-    const checkboxWidget = curLine?.querySelector('.live-checkbox');
+    const indentTextBlockLine = (lineEl, isOutdent = false) => {
+      if (!lineEl) return;
+      const bulletWidget = lineEl.querySelector('.live-bullet');
+      const checkboxWidget = lineEl.querySelector('.live-checkbox');
+      const currentIndent = lineEl.getAttribute('data-indent') || '';
 
-    if (curLine && (bulletWidget || checkboxWidget)) {
-      const currentIndent = curLine.getAttribute('data-indent') || '';
-
-      if (!e.shiftKey) {
-        // TAB: Indent list item into a nested list
+      if (!isOutdent) {
+        // Tab: Indent list item or line by 4 spaces
         const newIndent = currentIndent + '    ';
-        curLine.setAttribute('data-indent', newIndent);
+        lineEl.setAttribute('data-indent', newIndent);
         const indentLevel = newIndent.length / 4;
-        curLine.style.paddingLeft = `${indentLevel * 1.5}rem`;
+        lineEl.style.paddingLeft = `${indentLevel * 1.5}rem`;
 
         if (bulletWidget) {
           const raw = bulletWidget.getAttribute('data-raw') || '';
           if (/^\d+\.\s*$/.test(raw)) {
-            const num = getNumberForLineAtIndent(curLine, newIndent);
+            const num = getNumberForLineAtIndent(lineEl, newIndent);
             bulletWidget.setAttribute('data-raw', `${num}. `);
             bulletWidget.innerHTML = `${num}.`;
           }
         }
-        triggerUpdate?.();
-        return;
       } else {
-        // SHIFT + TAB: Outdent list item
+        // Shift+Tab: Outdent list item or line by 4 spaces
         if (currentIndent.length >= 4) {
           const newIndent = currentIndent.substring(4);
           if (newIndent) {
-            curLine.setAttribute('data-indent', newIndent);
-            curLine.style.paddingLeft = `${(newIndent.length / 4) * 1.5}rem`;
+            lineEl.setAttribute('data-indent', newIndent);
+            lineEl.style.paddingLeft = `${(newIndent.length / 4) * 1.5}rem`;
           } else {
-            curLine.removeAttribute('data-indent');
-            curLine.style.paddingLeft = '';
+            lineEl.removeAttribute('data-indent');
+            lineEl.style.paddingLeft = '';
           }
 
           if (bulletWidget) {
             const raw = bulletWidget.getAttribute('data-raw') || '';
             if (/^\d+\.\s*$/.test(raw)) {
-              const num = getNumberForLineAtIndent(curLine, newIndent);
+              const num = getNumberForLineAtIndent(lineEl, newIndent);
               bulletWidget.setAttribute('data-raw', `${num}. `);
               bulletWidget.innerHTML = `${num}.`;
             }
           }
-        } else {
+        } else if (bulletWidget || checkboxWidget) {
           if (bulletWidget) bulletWidget.remove();
           if (checkboxWidget) checkboxWidget.remove();
-          curLine.removeAttribute('data-indent');
-          curLine.style.paddingLeft = '';
-          if (!curLine.childNodes.length) {
-            curLine.innerHTML = '<br>';
+          lineEl.removeAttribute('data-indent');
+          lineEl.style.paddingLeft = '';
+          if (!lineEl.childNodes.length) {
+            lineEl.innerHTML = '<br>';
+          }
+        } else if (lineEl.firstChild && lineEl.firstChild.nodeType === Node.TEXT_NODE) {
+          const txt = lineEl.firstChild.nodeValue;
+          if (txt.startsWith('    ')) {
+            lineEl.firstChild.nodeValue = txt.substring(4);
+          } else if (txt.startsWith(' ')) {
+            lineEl.firstChild.nodeValue = txt.replace(/^ +/, '');
           }
         }
-        triggerUpdate?.();
-        return;
       }
+    };
+
+    const startLine = getContainingLine(range.startContainer, liveSurface);
+    const endLine = getContainingLine(range.endContainer, liveSurface);
+
+    let actualEndLine = endLine;
+    if (actualEndLine && startLine && actualEndLine !== startLine && range.endOffset === 0 && (range.endContainer === actualEndLine || range.endContainer === actualEndLine.firstChild)) {
+      actualEndLine = actualEndLine.previousElementSibling || actualEndLine;
     }
 
-    // Normal non-list indentation
+    const isMultiLine = Boolean(startLine && actualEndLine && (startLine !== actualEndLine || (selectedText && selectedText.includes('\n'))));
+
+    if (isMultiLine && startLine && actualEndLine) {
+      const linesToProcess = [];
+      let cur = startLine;
+      while (cur) {
+        linesToProcess.push(cur);
+        if (cur === actualEndLine) break;
+        cur = cur.nextElementSibling;
+      }
+
+      linesToProcess.forEach(lineEl => {
+        indentTextBlockLine(lineEl, e.shiftKey);
+      });
+
+      const newRange = document.createRange();
+      newRange.setStart(startLine, 0);
+      newRange.setEnd(actualEndLine, actualEndLine.childNodes.length);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+
+      triggerUpdate?.();
+      return;
+    }
+
+    // Single line handling
+    const curLine = startLine || getContainingLine(node, liveSurface);
+    const bulletWidget = curLine?.querySelector('.live-bullet');
+    const checkboxWidget = curLine?.querySelector('.live-checkbox');
+
+    if (curLine && (bulletWidget || checkboxWidget || curLine.getAttribute('data-indent'))) {
+      indentTextBlockLine(curLine, e.shiftKey);
+      triggerUpdate?.();
+      return;
+    }
+
+    // Normal non-list single-line indentation
     if (e.shiftKey) {
-      if (selectedText.includes('\n')) {
-        const lines = selectedText.split('\n');
-        const unindented = lines.map(l => l.replace(/^ {1,4}/, '')).join('\n');
-        document.execCommand('insertText', false, unindented);
-      } else if (node.nodeType === Node.TEXT_NODE && offset >= 4 && node.nodeValue.substring(offset - 4, offset) === '    ') {
+      if (node.nodeType === Node.TEXT_NODE && offset >= 4 && node.nodeValue.substring(offset - 4, offset) === '    ') {
         const before = node.nodeValue.substring(0, offset - 4);
         const after = node.nodeValue.substring(offset);
         node.nodeValue = before + after;
@@ -569,15 +629,19 @@ export const handleTextBlockKeyDown = (e, ctx) => {
         range.collapse(true);
         sel.removeAllRanges();
         sel.addRange(range);
+      } else if (node.nodeType === Node.TEXT_NODE && offset > 0 && node.nodeValue.charAt(offset - 1) === ' ') {
+        const spacesToRemove = Math.min(offset, node.nodeValue.substring(0, offset).match(/ +$/)?.[0]?.length || 1);
+        const removeCount = Math.min(spacesToRemove, 4);
+        const before = node.nodeValue.substring(0, offset - removeCount);
+        const after = node.nodeValue.substring(offset);
+        node.nodeValue = before + after;
+        range.setStart(node, offset - removeCount);
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
       }
     } else {
-      if (selectedText.includes('\n')) {
-        const lines = selectedText.split('\n');
-        const indented = lines.map(l => '    ' + l).join('\n');
-        document.execCommand('insertText', false, indented);
-      } else {
-        document.execCommand('insertText', false, '    ');
-      }
+      document.execCommand('insertText', false, '    ');
     }
     triggerUpdate?.();
     return;
@@ -662,6 +726,8 @@ export const handleTextBlockKeyDown = (e, ctx) => {
         deleteBefore = 2; deleteAfter = 2;
       } else if (offset >= 11 && text.substring(offset - 11, offset) === '\\underline{' && text[offset] === '}') {
         deleteBefore = 11; deleteAfter = 1;
+      } else if (offset >= 8 && text.substring(offset - 8, offset) === '\\textbf{' && text[offset] === '}') {
+        deleteBefore = 8; deleteAfter = 1;
       } else if (text.substring(0, offset).match(/\\textcolor\{[#a-zA-Z0-9|]+\}\{$/) && text[offset] === '}') {
         const colMatch = text.substring(0, offset).match(/\\textcolor\{[#a-zA-Z0-9|]+\}\{$/);
         deleteBefore = colMatch[0].length; deleteAfter = 1;

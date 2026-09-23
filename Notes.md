@@ -173,7 +173,7 @@
 | `renderKatex(tex, isDisplayMode = false, noteContext = null)` | 180 - 221 | Synchronously compiles a LaTeX formula to HTML/MathML using KaTeX, utilizing a bounded LRU cache `katexCache` for 0ms re-rendering. |
 | `parseAndRenderMathInText(rawText = '')` | 223 - 225 | Convenience wrapper calling formatRichTextWithMath to parse and render inline math within text. |
 | `formatRichTextWithMath(rawText = '', options = {})` | 234 - 456 | Full-featured text compiler handling display math ($$...$$), inline math ($...$), task checkboxes ([ ], [x]), bullet lists, and markdown formatting. |
-| `parseInlineMarkdownAndLatex(str)` | 458 - 483 | Parses inline formatting tokens (bold, italic, strikethrough, code), `\fig` citations, and LaTeX text styling (`\textcolor`, `\underline`, `\cancel`). |
+| `parseInlineMarkdownAndLatex(str)` | 458 - 484 | Parses inline formatting tokens (bold, italic, strikethrough, code), `\fig` citations, and LaTeX text styling (`\textcolor`, `\underline`, `\textbf`, `\textit`, `\cancel`). |
 
 **Numbering_Engine.js**
 
@@ -429,6 +429,7 @@
 | :--- | :--- | :--- |
 | `getBlockActionsHTML(options)` | 16 - 39 | Returns HTML markup for standard 25x25px block action buttons (Done tick icon, Move Up, Move Down, Copy icon, + Below, Delete trash icon). |
 | `initBlockActions(parentEl, handlers)` | 54 - 110 | Attaches event handlers to block action buttons (Done with selection-preserving mousedown, Move Up, Move Down, Copy with selection-preserving mousedown, Insert Below, Delete). |
+| `copyBlockTextWithFeedback(textToCopy, btn, fallbackTitle)` | 119 - 158 | Copies text to clipboard using the Clipboard API with textarea fallback and animated visual feedback (green checkmark icon and "Copied!" tooltip for 2 seconds). |
 
 **Block_Block.js**
 
@@ -482,7 +483,7 @@
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
 | `createBlockTextarea(options)` | 21 - 69 | Creates and returns a smoothly resizable editor textarea element with soft text-wrapping and input, change, and keydown listeners. |
-| `createCodeEditor(options)` | 423 - 820 | Creates an Obsidian/VS-Code grade code editor featuring soft-wrapping without horizontal scroll, dynamic line-numbered gutter height synchronization via offscreen measurer, ResizeObserver adaptation, safe non-destructive multiline code folding for TikZ ({...}, [...], (...), \begin...\end), and drawer collapse toggle. |
+| `createCodeEditor(options)` | 423 - 860 | Creates an Obsidian/VS-Code grade code editor featuring multi-line Tab/Shift+Tab indentation, soft-wrapping without horizontal scroll, dynamic line-numbered gutter height synchronization via offscreen measurer, ResizeObserver adaptation, safe non-destructive multiline code folding for TikZ ({...}, [...], (...), \begin...\end), and drawer collapse toggle. |
 
 **Code_Block.js**
 
@@ -502,12 +503,12 @@
 | `../../Writing_Engine/Math_Renderer.js` | `renderKatex` | `renderEquationBlock()` |
 | `../../Writing_Engine/Highlight_Sync.js` | `attachHighlightSync` | `renderEquationBlock()` |
 | `../../../00_Components/06_Color_Selector.js` | `CreateColorSelector` | `renderEquationBlock()` |
-| `./Block_Actions.js` | `getBlockActionsHTML`, `initBlockActions` | `renderEquationBlock()` |
+| `./Block_Actions.js` | `getBlockActionsHTML`, `initBlockActions`, `copyBlockTextWithFeedback` | `renderEquationBlock()` |
 | `./Block_Textarea.js` | `createCodeEditor` | `renderEquationBlock()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `renderEquationBlock(block, isEditing = false, onUpdate = null, options = {})` | 20 - 150 | Renders standalone centered display LaTeX equation block with live KaTeX preview, border toggle, color selector, integrated monospace code editor with line numbering, line spacing, and AST highlight synchronization. |
+| `renderEquationBlock(block, isEditing = false, onUpdate = null, options = {})` | 20 - 239 | Renders standalone centered display LaTeX equation block with live KaTeX preview, monotonic min-height retention and error preview freeze during editing, border toggle, color selector, integrated monospace code editor with line numbering, line spacing, AST highlight synchronization, and clipboard copy. |
 
 **Figure_Utils.js**
 
@@ -527,11 +528,12 @@
 | Import Location | Functions Imported | used in Functions |
 | :--- | :--- | :--- |
 | `../../02_Utils.js` | `escapeHtml` | `renderHeadingBlock()` |
+| `../../Writing_Engine/Math_Renderer.js` | `formatRichTextWithMath` | `renderHeadingBlock()` |
 | `./Block_Actions.js` | `getBlockActionsHTML`, `initBlockActions` | `renderHeadingBlock()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `renderHeadingBlock(block, isEditing = false, onUpdate = null, options = {})` | 9 - 155 | Renders section heading block (H1, H2, H3) with dynamic note font-family, proportional font-size scaling, hierarchical numbering prefix, level dropdown, auto-numbering format menu (numeric, roman, alpha, off), and anchor ID generation. |
+| `renderHeadingBlock(block, isEditing = false, onUpdate = null, options = {})` | 9 - 156 | Renders section heading block (H1, H2, H3) with dynamic note font-family, proportional font-size scaling, hierarchical numbering prefix, KaTeX inline math rendering, level dropdown, auto-numbering format menu (numeric, roman, alpha, off), and anchor ID generation. |
 
 **Image_Block.js**
 
@@ -573,13 +575,13 @@
 | `../../Writing_Engine/Highlight_Sync.js` | `attachHighlightSync` | `renderTableBlock()` |
 | `../../02_Utils.js` | `escapeHtml` | `renderTableHtml()` |
 | `./Block_Textarea.js` | `createCodeEditor` | `renderTableBlock()` |
-| `./Block_Actions.js` | `getBlockActionsHTML`, `initBlockActions` | `renderTableBlock()` |
+| `./Block_Actions.js` | `getBlockActionsHTML`, `initBlockActions`, `copyBlockTextWithFeedback` | `renderTableBlock()` |
 | `./Table_Templates_Modal.js` | `GetTableTemplatesModalHTML`, `InitTableTemplatesLogic` | `renderTableBlock()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
 | `renderTableHtml(rawTable)` | 23 - 45 | Compiles raw table input (LaTeX Tabular or Markdown) into HTML markup via parseLatexTabular or parseMarkdownTable. |
-| `renderTableBlock(block, isEditing = false, onUpdate = null, options = {})` | 50 - 235 | Main table block renderer supporting live LaTeX/Markdown table preview, template browser modal, and monospace code editor with line numbering, 1.6x line spacing, code folding, drawer collapse, and highlight synchronization. |
+| `renderTableBlock(block, isEditing = false, onUpdate = null, options = {})` | 50 - 242 | Main table block renderer supporting live LaTeX/Markdown table preview, template browser modal, monospace code editor with line numbering, 1.6x line spacing, code folding, drawer collapse, highlight synchronization, and clipboard copy. |
 
 **Table_Templates.js**
 
@@ -679,10 +681,10 @@
 | :--- | :--- | :--- |
 | `getContainingLine`, `getLineRawText` | 16 | Re-exported from `./Text_Parser.js` for backwards compatibility. |
 | `renumberSubsequentListItems(startLineEl)` | 22 - 73 | Renumbers downstream ordered list items sequentially when an item is added, indented, or deleted. |
-| `checkAutoCollapseTokensNearCaret(options)` | 76 - 142 | Automatically converts Markdown tokens near caret (e.g. **bold**, *italic*, `code`) into live formatted inline widgets. |
+| `checkAutoCollapseTokensNearCaret(options)` | 76 - 142 | Automatically converts Markdown and LaTeX tokens near caret (e.g. **bold**, \textbf{bold}, *italic*, `code`, $math$) into live formatted inline widgets. |
 | `checkAutoBulletConversion(options)` | 144 - 263 | Automatically detects list prefixes (e.g. - , * , 1. , [ ], or HTML/Unicode bullets •○■▸–➔✦◆) and heading markers (# to ######) and converts the line into a list item widget or styled heading with dimmed marker. |
 | `tryCollapseTokenAtCaretOnEnter(options)` | 265 - 451 | Handles Enter key behavior by collapsing uncollapsed tokens at or before the caret before inserting a new line. |
-| `handleTextBlockKeyDown(e, ctx)` | 453 - 1500 | Master keydown handler for text blocks managing Enter, Backspace, Delete, Tab, Shift+Tab, navigation shortcuts, live closing code fence compilation, opening code fence auto-completion, display math, horizontal rules, heading Enter/Backspace navigation, and solitary line / Line 1 unwrap protection. |
+| `handleTextBlockKeyDown(e, ctx)` | 453 - 1560 | Master keydown handler for text blocks managing Enter, Backspace (including empty \textbf{} deletion), Delete, multi-line Tab & Shift+Tab indentation/outdentation, \textbf{} space-collapse and empty wrapper jump-out, navigation shortcuts, live closing code fence compilation, opening code fence auto-completion, display math, horizontal rules, heading Enter/Backspace navigation, and solitary line / Line 1 unwrap protection. |
 | `scanAndCompileCompletedBlocks(liveSurface, editModeOptions, triggerUpdate)` | 1505 - 1675 | Scans and compiles any completed closed blocks (fenced code blocks, display math, horizontal rules, headings) that are not currently focused by the caret. |
 
 **Text_Block_Markdown.js**
@@ -717,7 +719,7 @@
 | `getSpacingLabel(key)` | 34 - 37 | Returns human-readable label for a line spacing option. |
 | `getNumberForLineAtIndent(lineEl, targetIndent)` | 39 - 62 | Finds the previous numbered list item at the same indentation level to determine the next sequence number. |
 | `serializeElement(rootEl)` | 64 - 171 | Serializes rendered DOM line elements, inline widgets, and selection fragments back into a clean plain text/markdown string while accurately ignoring solitary/trailing BR placeholders and distinguishing inline text from block-level lines. |
-| `parseTextToFragment(text, options)` | 173 - 252 | Parses text into a DocumentFragment containing styled line elements, inline widgets, and HTML formatting tags (<u>, <b>, <i>, <mark>, <code>). |
+| `parseTextToFragment(text, options)` | 191 - 275 | Parses text into a DocumentFragment containing styled line elements, inline widgets (including LaTeX \textbf{bold}, \underline, \textcolor, \fig citations), and HTML formatting tags (<u>, <b>, <i>, <mark>, <code>). |
 | `renderSingleLineToDom(rawLine, options)` | 254 - 343 | Parses and renders a single line of text with styled headings (# with subtle dimmed marker), dividers (---), bullet icons (HTML/Unicode •○■▸–➔✦◆ or standard markers), tasks, inline math, HTML tags, and live widgets into a DOM <div>. |
 | `getContainingLine(node, rootEl, offset)` | 348 - 371 | Locates the containing top-level line element within rootEl for any DOM node or selection point, with root fallback and loose text node healing. |
 | `getLineRawText(node)` | 376 - 400 | Extracts raw markdown text from any DOM subtree or line element preserving data-raw tokens. |
@@ -760,10 +762,11 @@
 | `./01_Sidebar_Logo.js` | `CreateSidebarLogo` | `CreateSidebarTOC()` |
 | `../../Writing_Engine/Numbering_Engine.js` | `computeHeadingPrefixes` | `CreateSidebarTOC()` |
 | `../../02_Utils.js` | `escapeHtml` | `CreateSidebarTOC()` |
+| `../../Writing_Engine/Math_Renderer.js` | `formatRichTextWithMath` | `CreateSidebarTOC()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `CreateSidebarTOC(note, { isEditMode = true, onNavigate = null } = {})` | 16 - 139 | Assembles collapsible sidebar drawer with top note logo, section outline tree (H1, H2, H3), prefix numbering, and smooth scrolling to blocks. |
+| `CreateSidebarTOC(note, { isEditMode = true, onNavigate = null } = {})` | 16 - 140 | Assembles collapsible sidebar drawer with top note logo, section outline tree (H1, H2, H3), prefix numbering, inline math rendering, and smooth scrolling to blocks. |
 
 **03_Sidebar_Toggle.js**
 

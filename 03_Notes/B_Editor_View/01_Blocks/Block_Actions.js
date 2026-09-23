@@ -108,3 +108,52 @@ export function initBlockActions(parentEl, { onDone = null, onMoveUp = null, onM
     });
   }
 }
+
+/**
+ * Copies text to clipboard with animated visual feedback on the button.
+ * 
+ * @param {string} textToCopy - Text content to write to clipboard
+ * @param {HTMLButtonElement} btn - The clicked copy button
+ * @param {string} [fallbackTitle='Copy code'] - Tooltip text to restore
+ */
+export async function copyBlockTextWithFeedback(textToCopy, btn, fallbackTitle = 'Copy code') {
+  if (!btn) return;
+  const origHtml = btn.innerHTML;
+  const origTitle = btn.title;
+  const showCopied = () => {
+    btn.innerHTML = `
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="text-green-400">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    `;
+    btn.title = 'Copied!';
+    setTimeout(() => {
+      btn.innerHTML = origHtml;
+      btn.title = origTitle || fallbackTitle;
+    }, 2000);
+  };
+
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(textToCopy);
+    } else {
+      throw new Error('Clipboard API unavailable');
+    }
+    showCopied();
+  } catch (err) {
+    const ta = document.createElement('textarea');
+    ta.value = textToCopy;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand('copy');
+      showCopied();
+    } catch (e) {
+      console.error('Failed to copy to clipboard: ', e);
+    }
+    ta.remove();
+  }
+}
+

@@ -12,6 +12,7 @@
 import { CreateSidebarLogo } from './01_Sidebar_Logo.js';
 import { computeHeadingPrefixes } from '../../Writing_Engine/Numbering_Engine.js';
 import { escapeHtml } from '../../02_Utils.js';
+import { formatRichTextWithMath } from '../../Writing_Engine/Math_Renderer.js';
 
 export function CreateSidebarTOC(note, { isEditMode = true, onNavigate = null } = {}) {
   const sidebar = document.createElement('aside');
@@ -116,7 +117,8 @@ export function CreateSidebarTOC(note, { isEditMode = true, onNavigate = null } 
         else if (level === 'h3') levelClass = 'toc-level-h3';
 
         li.className = `toc-link-item cursor-pointer ${levelClass}`;
-        li.innerHTML = `<span class="mr-1.5 font-serif font-bold">${escapeHtml(prefix)}</span><span>${escapeHtml(h.title || 'Untitled Section')}</span>`;
+        const renderedTitle = h.title ? formatRichTextWithMath(h.title, { allowBlockMath: false, note }) : 'Untitled Section';
+        li.innerHTML = `<span class="mr-1.5 font-serif font-bold">${escapeHtml(prefix)}</span><span>${renderedTitle}</span>`;
 
         li.addEventListener('click', () => {
           const target = document.getElementById(anchorId);
