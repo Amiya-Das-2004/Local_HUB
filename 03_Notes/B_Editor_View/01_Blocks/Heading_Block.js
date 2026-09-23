@@ -9,31 +9,49 @@ import { getBlockActionsHTML, initBlockActions } from './Block_Actions.js';
 
 export function renderHeadingBlock(block, isEditing = false, onUpdate = null, { prefix = '', note = null, onConfigUpdate = null, onDone = null, onMoveUp = null, onMoveDown = null, onDelete = null, index = 0, totalBlocks = 1 } = {}) {
   const container = document.createElement('div');
-  container.className = 'w-full';
+  container.className = 'w-full notes-heading-container';
   const level = block.level || 'h1';
   const title = block.title || '';
   const anchorId = (block.id || title || 'section').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  container.id = anchorId;
 
   if (!isEditing) {
     const heading = document.createElement(level === 'h3' ? 'h3' : (level === 'h2' ? 'h2' : 'h1'));
-    heading.id = anchorId;
     const isFirst = index === 0;
     
-    if (level === 'h1') {
-      heading.className = `notes-heading h1 font-bold ${isFirst ? 'mt-1 mb-2 pt-0 border-t-0' : 'mt-6 mb-2 pt-3 pb-1 border-t border-[var(--border)]/30'} flex items-baseline gap-1 select-text leading-tight text-[var(--text)]`;
-      heading.style.fontSize = 'calc(var(--note-font-size, 1rem) * 1.55)';
-    } else if (level === 'h2') {
-      heading.className = `notes-heading h2 font-bold ${isFirst ? 'mt-1 mb-1.5 pt-0' : 'mt-5 mb-1.5 pt-2 pb-0.5'} flex items-baseline gap-1 select-text leading-snug text-[var(--text)]`;
-      heading.style.fontSize = 'calc(var(--note-font-size, 1rem) * 1.3)';
-    } else {
-      heading.className = `notes-heading h3 font-bold ${isFirst ? 'mt-1 mb-1 pt-0' : 'mt-3.5 mb-1 pt-1 pb-0.5'} flex items-baseline gap-1 select-text leading-snug text-[var(--text)]`;
-      heading.style.fontSize = 'calc(var(--note-font-size, 1rem) * 1.1)';
-    }
-    heading.style.fontFamily = 'var(--note-font-family, inherit)';
+    let sizeMultiplier = 1.7;
+    let weightClass = 'font-extrabold';
+    let prefixColor = 'text-purple-400';
+    let spacingClass = isFirst ? 'mt-1 mb-2.5 pt-0 border-t-0' : 'mt-7 mb-2.5 pt-3 pb-1 border-t border-[var(--border)]/35';
+    let tracking = '-0.025em';
 
-    const renderedTitle = title ? formatRichTextWithMath(title, { allowBlockMath: false, note }) : 'Untitled Section';
+    if (level === 'h2') {
+      sizeMultiplier = 1.38;
+      weightClass = 'font-bold';
+      prefixColor = 'text-purple-400/90';
+      spacingClass = isFirst ? 'mt-1 mb-2 pt-0' : 'mt-5 mb-2 pt-2 pb-0.5';
+      tracking = '-0.018em';
+    } else if (level === 'h3') {
+      sizeMultiplier = 1.15;
+      weightClass = 'font-semibold';
+      prefixColor = 'text-purple-400/80';
+      spacingClass = isFirst ? 'mt-1 mb-1.5 pt-0' : 'mt-4 mb-1.5 pt-1 pb-0.5';
+      tracking = '-0.01em';
+    }
+
+    heading.className = `notes-heading ${level} ${weightClass} ${spacingClass} flex items-baseline select-text leading-tight text-[var(--text)] w-full`;
+    heading.style.fontSize = `calc(var(--note-font-size, 1rem) * ${sizeMultiplier})`;
+    heading.style.fontFamily = 'var(--note-font-family, inherit)';
+    heading.style.letterSpacing = tracking;
+
+    const rawTitle = title ? formatRichTextWithMath(title, { allowBlockMath: false, note }) : 'Untitled Section';
+    const cleanTitle = rawTitle.replace(/^<p[^>]*>/, '').replace(/<\/p>$/, '').trim();
+
     heading.innerHTML = `
-      <span class="mr-1.5 font-bold text-purple-400" style="font-family: var(--note-font-family, inherit);">${escapeHtml(prefix)}</span><span>${renderedTitle}</span>
+      <div class="heading-row flex items-baseline gap-2 w-full">
+        ${prefix ? `<span class="heading-prefix font-bold ${prefixColor} flex-shrink-0 select-none" style="font-size: 1em; font-family: var(--note-font-family, inherit);">${escapeHtml(prefix)}</span>` : ''}
+        <span class="heading-title flex-1 min-w-0" style="font-size: inherit; font-family: var(--note-font-family, inherit); line-height: inherit;">${cleanTitle}</span>
+      </div>
     `;
     container.appendChild(heading);
     return container;
@@ -89,7 +107,7 @@ export function renderHeadingBlock(block, isEditing = false, onUpdate = null, { 
         <option value="h3" ${level === 'h3' ? 'selected' : ''}>Sub-Sub-Section</option>
       </select>
 
-      <input type="text" class="notes-search-input text-sm font-bold flex-1 h-8 px-2.5 py-0 rounded-lg title-input box-border min-w-[120px]" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" value="${escapeHtml(title)}" placeholder="Enter section title..." autofocus />
+      <input type="text" class="notes-search-input text-sm font-bold flex-1 h-8 px-2.5 py-0 rounded-lg title-input box-border min-w-[120px]" style="font-family: var(--note-font-family, inherit);" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" value="${escapeHtml(title)}" placeholder="Enter section title..." autofocus />
     </div>
   `;
 

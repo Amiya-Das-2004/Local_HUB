@@ -54,10 +54,11 @@
 | `./A_Notes_Card_View/A_Notes_Card_View.js` | `GetNoteModalHTML`, `RenderNotesCardView` | `initNotesApp()` |
 | `./B_Editor_View/04_LaTeX_Editor.js` | `RenderLaTeXEditor` | `initNotesApp()` |
 | `./C_Graph_View/Graph_View.js` | `renderGraphView` | `initNotesApp()` |
+| `../00_Components/03_Scrollbar.js` | `InitScrollbar` | `initNotesApp()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `initNotesApp()` | 21 - 312 | Master initialization function and route dispatcher for 03_Notes: parses hash parameters, mounts header and modals, and renders Editor, Graph, or Card Deck view. |
+| `initNotesApp()` | 22 - 389 | Master initialization function and route dispatcher for 03_Notes: injects universal 4px opposite-theme scrollbars, heading scroll-margin/scroll-padding offsets, parses hash parameters, mounts header and modals, renders responsive drawer with clamp/webkit scrollbars, and renders Editor, Graph, or Card Deck view. |
 
 ## Writing_Engine
 **Block_Engine.js**
@@ -533,7 +534,7 @@
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `renderHeadingBlock(block, isEditing = false, onUpdate = null, options = {})` | 9 - 156 | Renders section heading block (H1, H2, H3) with dynamic note font-family, proportional font-size scaling, hierarchical numbering prefix, KaTeX inline math rendering, level dropdown, auto-numbering format menu (numeric, roman, alpha, off), and anchor ID generation. |
+| `renderHeadingBlock(block, isEditing = false, onUpdate = null, options = {})` | 10 - 175 | Renders section heading block (H1, H2, H3) with container anchor ID, dynamic note font-family, proportional font-size scaling, hierarchical numbering prefix, KaTeX inline math rendering, level dropdown, auto-numbering format menu (numeric, roman, alpha, off), and anchor ID generation. |
 
 **Image_Block.js**
 
@@ -763,10 +764,11 @@
 | `../../Writing_Engine/Numbering_Engine.js` | `computeHeadingPrefixes` | `CreateSidebarTOC()` |
 | `../../02_Utils.js` | `escapeHtml` | `CreateSidebarTOC()` |
 | `../../Writing_Engine/Math_Renderer.js` | `formatRichTextWithMath` | `CreateSidebarTOC()` |
+| `../../../00_Components/03_Scrollbar.js` | `InitScrollbar` | `CreateSidebarTOC()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `CreateSidebarTOC(note, { isEditMode = true, onNavigate = null } = {})` | 16 - 140 | Assembles collapsible sidebar drawer with top note logo, section outline tree (H1, H2, H3), prefix numbering, inline math rendering, and smooth scrolling to blocks. |
+| `CreateSidebarTOC(note, { isEditMode = true, onNavigate = null } = {})` | 18 - 265 | Assembles collapsible sidebar drawer with top note logo, section outline tree (H1, H2, H3), same-line prefix and title flex layout with hanging indent, inline math rendering, interactive drag-to-resize handle with localStorage persistence, universal 4px scrollbar, and header-offset smooth scrolling to blocks. |
 
 **03_Sidebar_Toggle.js**
 

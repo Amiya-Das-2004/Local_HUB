@@ -13,22 +13,62 @@ import { CreateSidebarLogo } from './01_Sidebar_Logo.js';
 import { computeHeadingPrefixes } from '../../Writing_Engine/Numbering_Engine.js';
 import { escapeHtml } from '../../02_Utils.js';
 import { formatRichTextWithMath } from '../../Writing_Engine/Math_Renderer.js';
+import { InitScrollbar } from '../../../00_Components/03_Scrollbar.js';
 
 export function CreateSidebarTOC(note, { isEditMode = true, onNavigate = null } = {}) {
+  InitScrollbar();
+
   const sidebar = document.createElement('aside');
   sidebar.id = 'notes-sidebar';
   sidebar.className = 'notes-sidebar-drawer';
+
+  // Restore saved width from localStorage if present
+  try {
+    const savedWidth = localStorage.getItem('notes_sidebar_width');
+    if (savedWidth && parseInt(savedWidth, 10) >= 260 && parseInt(savedWidth, 10) <= 600) {
+      sidebar.style.width = `${parseInt(savedWidth, 10)}px`;
+    }
+  } catch (e) {}
 
   sidebar.innerHTML = `
     <style>
       .toc-link-item {
         display: block;
-        line-height: 1.3;
+        line-height: 1.35;
         white-space: normal;
         word-break: break-word;
         overflow-wrap: anywhere;
         transition: color var(--transition, 0.2s), background-color var(--transition, 0.2s);
         user-select: none;
+      }
+
+      .toc-item-row {
+        display: flex;
+        align-items: baseline;
+        gap: 0.35rem;
+        width: 100%;
+      }
+
+      .toc-prefix {
+        font-family: var(--font-serif, Georgia, serif);
+        font-weight: 700;
+        flex-shrink: 0;
+        color: var(--text-secondary);
+        user-select: none;
+      }
+
+      .toc-title {
+        flex: 1;
+        min-width: 0;
+        color: inherit;
+      }
+
+      .toc-link-item p {
+        display: inline !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        line-height: inherit !important;
+        font-size: inherit !important;
       }
 
       /* Section (H1) */
@@ -51,8 +91,8 @@ export function CreateSidebarTOC(note, { isEditMode = true, onNavigate = null } 
         font-size: 0.70rem;
         font-weight: 600;
         color: var(--text-secondary);
-        margin-left: 0.6rem;
-        padding: 0.16rem 0.3rem 0.16rem 0.45rem;
+        margin-left: 0.5rem;
+        padding: 0.16rem 0.3rem 0.16rem 0.4rem;
         border-left: 1.5px solid var(--border);
         border-radius: 0 4px 4px 0;
       }
@@ -62,8 +102,8 @@ export function CreateSidebarTOC(note, { isEditMode = true, onNavigate = null } 
         font-size: 0.64rem;
         font-weight: 500;
         color: var(--text-dim);
-        margin-left: 1.2rem;
-        padding: 0.12rem 0.25rem 0.12rem 0.45rem;
+        margin-left: 1rem;
+        padding: 0.12rem 0.25rem 0.12rem 0.4rem;
         border-left: 1.5px solid var(--border);
         border-radius: 0 4px 4px 0;
       }
@@ -72,9 +112,26 @@ export function CreateSidebarTOC(note, { isEditMode = true, onNavigate = null } 
         color: var(--accent);
         background: var(--accent-soft, rgba(139, 109, 255, 0.08));
       }
+
+      /* Drag-to-Resize Handle on Right Edge */
+      .notes-sidebar-resizer {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 5px;
+        height: 100%;
+        cursor: col-resize;
+        user-select: none;
+        z-index: 50;
+        transition: background 0.15s ease;
+      }
+      .notes-sidebar-resizer:hover,
+      .notes-sidebar-resizer.resizing {
+        background: var(--accent, #8b6dff);
+      }
     </style>
 
-    <div class="notes-sidebar-inner p-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-sm w-full flex flex-col gap-1">
+    <div class="notes-sidebar-inner p-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-sm w-full flex flex-col gap-1">
       <!-- 1. Top Sidebar Logo Mount -->
       <div id="notes-sidebar-logo-container"></div>
 
@@ -90,6 +147,60 @@ export function CreateSidebarTOC(note, { isEditMode = true, onNavigate = null } 
       </nav>
     </div>
   `;
+
+  // Resizer Handle Element
+  const resizer = document.createElement('div');
+  resizer.className = 'notes-sidebar-resizer';
+  resizer.title = 'Drag to resize sidebar width (Double-click to reset)';
+  sidebar.appendChild(resizer);
+
+  let isResizing = false;
+  let startX = 0;
+  let startWidth = 0;
+
+  const onMouseMove = (e) => {
+    if (!isResizing) return;
+    const maxAllowed = Math.min(window.innerWidth * 0.85, 560);
+    const newWidth = Math.min(Math.max(260, startWidth + (e.clientX - startX)), maxAllowed);
+    sidebar.style.width = `${newWidth}px`;
+  };
+
+  const onMouseUp = () => {
+    if (!isResizing) return;
+    isResizing = false;
+    resizer.classList.remove('resizing');
+    document.body.style.removeProperty('cursor');
+    document.body.style.removeProperty('user-select');
+    window.removeEventListener('mousemove', onMouseMove);
+    window.removeEventListener('mouseup', onMouseUp);
+
+    const finalWidth = sidebar.offsetWidth;
+    try {
+      localStorage.setItem('notes_sidebar_width', String(finalWidth));
+    } catch (err) {}
+  };
+
+  resizer.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    isResizing = true;
+    startX = e.clientX;
+    startWidth = sidebar.offsetWidth;
+    resizer.classList.add('resizing');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  });
+
+  resizer.addEventListener('dblclick', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    sidebar.style.removeProperty('width');
+    try {
+      localStorage.removeItem('notes_sidebar_width');
+    } catch (err) {}
+  });
 
   // Mount Logo
   const logoMount = sidebar.querySelector('#notes-sidebar-logo-container');
@@ -117,13 +228,27 @@ export function CreateSidebarTOC(note, { isEditMode = true, onNavigate = null } 
         else if (level === 'h3') levelClass = 'toc-level-h3';
 
         li.className = `toc-link-item cursor-pointer ${levelClass}`;
-        const renderedTitle = h.title ? formatRichTextWithMath(h.title, { allowBlockMath: false, note }) : 'Untitled Section';
-        li.innerHTML = `<span class="mr-1.5 font-serif font-bold">${escapeHtml(prefix)}</span><span>${renderedTitle}</span>`;
+        const rawRendered = h.title ? formatRichTextWithMath(h.title, { allowBlockMath: false, note }) : 'Untitled Section';
+        const cleanTitle = rawRendered.replace(/^<p[^>]*>/, '').replace(/<\/p>$/, '').trim();
+
+        li.innerHTML = `
+          <div class="toc-item-row flex items-baseline gap-1.5 w-full">
+            ${prefix ? `<span class="toc-prefix font-serif font-bold flex-shrink-0 select-none">${escapeHtml(prefix)}</span>` : ''}
+            <span class="toc-title flex-1 min-w-0">${cleanTitle}</span>
+          </div>
+        `;
 
         li.addEventListener('click', () => {
           const target = document.getElementById(anchorId);
           if (target) {
-            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            const headerEl = document.querySelector('.app-header');
+            const headerHeight = headerEl ? headerEl.offsetHeight : 74;
+            const extraGap = 20; // 20px visual breathing room below header
+            const targetY = target.getBoundingClientRect().top + window.pageYOffset - (headerHeight + extraGap);
+            window.scrollTo({
+              top: Math.max(0, targetY),
+              behavior: 'smooth'
+            });
           }
           if (onNavigate) onNavigate();
           // Auto close mobile drawer if open
