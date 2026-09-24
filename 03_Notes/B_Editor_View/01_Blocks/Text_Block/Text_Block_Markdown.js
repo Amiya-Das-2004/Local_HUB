@@ -502,7 +502,7 @@ export function createLiveBlockElement(blk, options = {}) {
       el.appendChild(titleEl);
 
       const bodyWrap = document.createElement('div');
-      bodyWrap.className = 'obsidian-callout-body text-sm leading-relaxed flex flex-col gap-1 text-[var(--text)]';
+      bodyWrap.className = 'obsidian-callout-body leading-relaxed flex flex-col gap-1 text-[var(--text)]';
       const calloutLines = blk.content.split('\n');
       calloutLines.forEach((cl) => {
         bodyWrap.appendChild(renderSingleLineToDom(cl, options));

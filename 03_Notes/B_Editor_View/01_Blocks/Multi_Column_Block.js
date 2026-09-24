@@ -205,7 +205,7 @@ export function renderMultiColumnBlock(
 
     cols.forEach((colBlock, cIdx) => {
       const colCell = document.createElement('div');
-      colCell.className = 'notes-col-item p-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-xs text-sm leading-snug text-[var(--text)] transition-all';
+      colCell.className = 'notes-col-item p-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-xs leading-snug text-[var(--text)] transition-all';
       colCell.style.scrollbarWidth = 'thin';
 
       const childEl = renderChildBlock(colBlock, false, null, allNotes, {

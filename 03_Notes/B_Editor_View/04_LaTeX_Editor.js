@@ -110,9 +110,9 @@ export function RenderLaTeXEditor(container, noteId, isEditMode = true) {
 
   // Apply Global Typography
   function applyTypography() {
-    const typo = note.typography || { fontFamily: 'serif', fontSize: 'base' };
+    const typo = note.typography || { fontFamily: 'serif', fontSize: 'medium' };
     const fontInfo = GLOBAL_FONT_FAMILIES[typo.fontFamily] || GLOBAL_FONT_FAMILIES.serif;
-    const sizeInfo = GLOBAL_FONT_SIZES[typo.fontSize] || GLOBAL_FONT_SIZES.base;
+    const sizeInfo = GLOBAL_FONT_SIZES[typo.fontSize] || GLOBAL_FONT_SIZES.medium;
     paper.style.setProperty('--note-font-family', fontInfo.css);
     paper.style.setProperty('--note-font-size', sizeInfo.css);
     paper.style.setProperty('--note-line-height', sizeInfo.lineHeight);
@@ -527,10 +527,10 @@ export function RenderLaTeXEditor(container, noteId, isEditMode = true) {
   }
 
   // Bottom Floating Dock Toolbar (Sidebar Toggle, Study Toggle, Note Fonts, Font Size, Macros)
-  const typo = note.typography || { fontFamily: 'serif', fontSize: 'base' };
+  const typo = note.typography || { fontFamily: 'serif', fontSize: 'medium' };
   const floatingToolbar = CreateFloatingToolbar({
     currentFont: typo.fontFamily || 'serif',
-    currentSize: typo.fontSize || 'base',
+    currentSize: typo.fontSize || 'medium',
     isStudyMode: !isEditMode,
     note: note,
     onFontChange: (newFont) => {

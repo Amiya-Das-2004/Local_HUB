@@ -197,19 +197,25 @@ export function layoutCanceltoElement(el) {
     return;
   }
 
-  const L = Math.hypot(W, H) || 22;
-  const ux = W / L;
+  // Authentic LaTeX cancelto geometry:
+  // For narrow symbols, enforce an effective width so the arrow strikes at a natural ~45-50 deg diagonal.
+  const effectiveW = Math.max(W, H / 1.15);
+  const cx = W / 2;
+  const cy = H / 2;
+
+  const L = Math.hypot(effectiveW, H) || 22;
+  const ux = effectiveW / L;
   const uy = H / L;
 
-  // Real LaTeX cancelto overshoot distances
-  const startOvershoot = 6;  // px extending below-left
-  const endOvershoot = 14;   // px extending above-right
-  const gap = 8;             // px clearance gap beyond arrowhead tip
+  // Compact overshoots so the cancellation stays strictly within available line height
+  const startOvershoot = 2.5; // px extending below-left
+  const endOvershoot = 5.0;   // px extending above-right
+  const gap = 3.5;            // px clearance gap beyond arrowhead tip
 
-  const x1 = -startOvershoot * ux;
-  const y1 = H + startOvershoot * uy;
-  const x2 = W + endOvershoot * ux;
-  const y2 = -endOvershoot * uy;
+  const x1 = (cx - effectiveW / 2) - startOvershoot * ux;
+  const y1 = (cy + H / 2) + startOvershoot * uy;
+  const x2 = (cx + effectiveW / 2) + endOvershoot * ux;
+  const y2 = (cy - H / 2) - endOvershoot * uy;
 
   const valX = x2 + gap * ux;
   const valY = y2 - gap * uy;
@@ -230,22 +236,19 @@ export function layoutCanceltoElement(el) {
   const markerId = 'cancelto-arr-' + Math.random().toString(36).slice(2, 7);
   svg.innerHTML = `
     <defs>
-      <marker id="${markerId}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <marker id="${markerId}" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto">
         <path d="M 0 1.5 L 8 5 L 0 8.5 L 2 5 z" fill="currentColor"/>
       </marker>
     </defs>
-    <line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="currentColor" stroke-width="1.1" marker-end="url(#${markerId})"/>
+    <line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="currentColor" stroke-width="1.15" marker-end="url(#${markerId})"/>
   `;
 
   val.style.left = `${valX.toFixed(1)}px`;
   val.style.top = `${valY.toFixed(1)}px`;
+  val.style.transform = 'translate(-50%, -50%)';
 
-  const tx = ((1 - ux) * -35 + ux * 0).toFixed(1);
-  const ty = ((1 - uy) * -50 - uy * 85).toFixed(1);
-  val.style.transform = `translate(${tx}%, ${ty}%)`;
-
-  const totalTopExtension = Math.max(0, -y2 + 8);
-  el.style.marginTop = `${totalTopExtension.toFixed(1)}px`;
+  // Clear any marginTop so the inline math baseline is strictly preserved
+  el.style.marginTop = '';
 }
 
 function getCanceltoElements(root) {
@@ -314,6 +317,7 @@ function ensureCanceltoStyles() {
         position: relative !important;
         display: inline-block !important;
         vertical-align: baseline !important;
+        overflow: visible !important;
       }
       .lh-cancelto-base {
         display: inline-block !important;
@@ -334,8 +338,22 @@ function ensureCanceltoStyles() {
         pointer-events: none !important;
         z-index: 3 !important;
         line-height: 1 !important;
+        font-size: 0.68em !important;
         font-family: KaTeX_Main, "Times New Roman", serif !important;
         color: currentColor !important;
+      }
+      /* Optical Math Size Normalization: KaTeX defaults to 1.21em, making it too large compared to body text */
+      .note-inline-math .katex,
+      .notes-text-content .katex:not(.katex-display .katex),
+      .obsidian-callout-body .katex:not(.katex-display .katex),
+      p .katex:not(.katex-display .katex),
+      li .katex:not(.katex-display .katex),
+      .content-display .katex:not(.katex-display .katex) {
+        font-size: 1.0em !important;
+      }
+      .katex-display .katex,
+      .note-equation-content .katex {
+        font-size: 1.05em !important;
       }
     `;
     document.head.appendChild(style);
@@ -590,9 +608,9 @@ export function formatRichTextWithMath(rawText = '', options = {}) {
 
       if (!inList) {
         if (isNum && bulletStyle === 'numbered') {
-          htmlLines.push('<ol class="list-decimal pl-5 my-1 space-y-0.5 text-sm leading-snug">');
+          htmlLines.push('<ol class="list-decimal pl-5 my-1 space-y-0.5 leading-snug">');
         } else {
-          htmlLines.push('<ul class="list-none pl-2 my-1 space-y-1 text-sm leading-snug">');
+          htmlLines.push('<ul class="list-none pl-2 my-1 space-y-1 leading-snug">');
         }
         inList = true;
       }
@@ -612,7 +630,7 @@ export function formatRichTextWithMath(rawText = '', options = {}) {
       htmlLines.push(bulletStyle === 'numbered' ? '</ol>' : '</ul>');
       inList = false;
     }
-    htmlLines.push(`<p class="my-1 leading-snug text-sm">${parseInlineMarkdownAndLatex(trimmed)}</p>`);
+    htmlLines.push(`<p class="my-1 leading-snug">${parseInlineMarkdownAndLatex(trimmed)}</p>`);
   }
 
   if (inList) htmlLines.push(bulletStyle === 'numbered' ? '</ol>' : '</ul>');

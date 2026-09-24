@@ -5,10 +5,17 @@
 
 import { GLOBAL_FONT_SIZES } from '../../Writing_Engine/Block_Engine.js';
 
-export function GetFontSizeHTML(currentSize = 'base') {
-  const options = Object.entries(GLOBAL_FONT_SIZES).map(([k, v]) => `
-    <option value="${k}" ${currentSize === k ? 'selected' : ''} style="background: var(--surface, #181b27); color: var(--text, #e8eaf2);">${v.label}</option>
-  `).join('');
+export function GetFontSizeHTML(currentSize = 'medium') {
+  let normSize = currentSize;
+  if (normSize === 'base') normSize = 'medium';
+  if (normSize === 'sm') normSize = 'small';
+  if (normSize === 'lg' || normSize === 'xl') normSize = 'large';
+
+  const options = Object.entries(GLOBAL_FONT_SIZES)
+    .filter(([_, v]) => !v.hidden)
+    .map(([k, v]) => `
+      <option value="${k}" ${normSize === k ? 'selected' : ''} style="background: var(--surface, #181b27); color: var(--text, #e8eaf2);">${v.label}</option>
+    `).join('');
 
   return `
     <div class="dock-font-size-wrapper flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] text-xs shadow-xs hover:border-purple-500 transition-all select-none">

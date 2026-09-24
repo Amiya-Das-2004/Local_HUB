@@ -344,6 +344,20 @@ export function initNotesApp() {
       .notes-heading .katex {
         font-size: 0.95em !important;
       }
+
+      /* Optical Math Size Normalization: KaTeX defaults to 1.21em, making it too large compared to body text */
+      .note-inline-math .katex,
+      .notes-text-content .katex:not(.katex-display .katex),
+      .obsidian-callout-body .katex:not(.katex-display .katex),
+      p .katex:not(.katex-display .katex),
+      li .katex:not(.katex-display .katex),
+      .content-display .katex:not(.katex-display .katex) {
+        font-size: 1.0em !important;
+      }
+      .katex-display .katex,
+      .note-equation-content .katex {
+        font-size: 1.05em !important;
+      }
     </style>
 
     <div id="header-mount"></div>

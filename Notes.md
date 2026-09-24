@@ -58,7 +58,7 @@
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `initNotesApp()` | 22 - 389 | Master initialization function and route dispatcher for 03_Notes: injects universal 4px opposite-theme scrollbars, heading scroll-margin/scroll-padding offsets, parses hash parameters, mounts header and modals, renders responsive drawer with clamp/webkit scrollbars, and renders Editor, Graph, or Card Deck view. |
+| `initNotesApp()` | 22 - 403 | Master initialization function and route dispatcher for 03_Notes: injects universal 4px opposite-theme scrollbars, heading scroll-margin/scroll-padding offsets, parses hash parameters, mounts header and modals, renders responsive drawer with clamp/webkit scrollbars, and renders Editor, Graph, or Card Deck view. |
 
 ## Writing_Engine
 **Block_Engine.js**
@@ -69,12 +69,12 @@
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `GLOBAL_FONT_FAMILIES` | 7 - 15 | Constant dictionary defining supported font families (Serif, Sans-Serif, Garamond, Times, Monospace, Georgia, Courier) and their CSS font stacks. |
-| `GLOBAL_FONT_SIZES` | 17 - 22 | Constant dictionary defining supported font size presets (sm, base, lg, xl) with corresponding rem values and line-height ratios. |
-| `BLOCK_DEFINITIONS` | 24 - 148 | Registry array of available block types (heading, text, equation, tikz, image, table, code, callout block, columns) with icons and default constructors. |
-| `BLOCK_DEF_MAP` | 150 | Fast lookup Map mapping block type string keys to their corresponding block schema definitions. |
-| `createNewBlock(type, options = {})` | 155 - 162 | Instantiates a new note block object with a unique timestamped ID, block type, and default payload schema. |
-| `insertBlockAt(blocks = [], newBlock, targetIndex = -1)` | 169 - 177 | Inserts a block object into a blocks array at a specified index or appends it to the end if index is out of bounds. |
+| `GLOBAL_FONT_FAMILIES` | 7 - 16 | Constant dictionary defining 5 supported font families (Serif, Sans-Serif, Georgia, Garamond, Monospace) and their CSS font stacks, plus backward-compatibility aliases. |
+| `GLOBAL_FONT_SIZES` | 18 - 28 | Constant dictionary defining 4 supported font size presets (Tiny, Small, Medium, Large) with corresponding rem values and line-height ratios, plus legacy aliases. |
+| `BLOCK_DEFINITIONS` | 30 - 154 | Registry array of available block types (heading, text, equation, tikz, image, table, code, callout block, columns) with icons and default constructors. |
+| `BLOCK_DEF_MAP` | 156 | Fast lookup Map mapping block type string keys to their corresponding block schema definitions. |
+| `createNewBlock(type, options = {})` | 161 - 168 | Instantiates a new note block object with a unique timestamped ID, block type, and default payload schema. |
+| `insertBlockAt(blocks = [], newBlock, targetIndex = -1)` | 175 - 183 | Inserts a block object into a blocks array at a specified index or appends it to the end if index is out of bounds. |
 
 **Block_History.js**
 
@@ -170,15 +170,15 @@
 | `parseLatexMacrosIntoObject(macroString, targetMacros = {})` | 83 - 117 | Parses `\newcommand`, `\renewcommand`, and `\def` statements from a macro string into a target KaTeX macro dictionary. |
 | `getActiveKatexMacros(note = null)` | 122 - 137 | Merges built-in macros, global vault macros, and note-specific local macros into a unified KaTeX macro object. |
 | `ensureKatexLoaded()` | 139 - 171 | Asynchronously injects KaTeX CSS and JS from CDN and re-renders elements with pending math placeholders once loaded. |
-| `layoutCanceltoElement(el)` | 176 - 247 | Dynamically measures expression dimensions and renders continuous extended SVG arrow vector with adaptive target value positioning. |
-| `initCanceltoLayoutObserver()` | 267 - 311 | Observes the DOM with MutationObserver and ResizeObserver to automatically layout and update `\cancelto` elements. |
-| `ensureCanceltoStyles()` | 313 - 351 | Injects CSS rules for `.lh-cancelto`, `.lh-cancelto-base`, `.lh-cancelto-svg`, `.lh-cancelto-val` and boots observers. |
-| `postProcessKatexHtml(html)` | 353 - 355 | Passes through clean KaTeX HTML without regex manipulation. |
-| `clearKatexCache()` | 357 - 359 | Clears the in-memory KaTeX compilation cache (`katexCache`). |
-| `renderKatex(tex, isDisplayMode = false, noteContext = null)` | 361 - 401 | Synchronously compiles a LaTeX formula to HTML/MathML using KaTeX, utilizing a bounded LRU cache `katexCache` for 0ms re-rendering. |
-| `parseAndRenderMathInText(rawText = '')` | 403 - 405 | Convenience wrapper calling formatRichTextWithMath to parse and render inline math within text. |
-| `formatRichTextWithMath(rawText = '', options = {})` | 414 - 636 | Full-featured text compiler handling display math ($$...$$), inline math ($...$), task checkboxes ([ ], [x]), bullet lists, and markdown formatting. |
-| `parseInlineMarkdownAndLatex(str)` | 638 - 667 | Parses inline formatting tokens (bold, italic, strikethrough, code), `\fig` citations, and LaTeX text styling (`\textcolor`, `\underline`, `\textbf`, `\textit`, `\cancel`). |
+| `layoutCanceltoElement(el)` | 176 - 250 | Dynamically measures expression dimensions and renders continuous extended SVG arrow vector with adaptive target value positioning and compact line-height scaling. |
+| `initCanceltoLayoutObserver()` | 270 - 307 | Observes the DOM with MutationObserver and ResizeObserver to automatically layout and update `\cancelto` elements. |
+| `ensureCanceltoStyles()` | 309 - 361 | Injects CSS rules for `.lh-cancelto`, `.lh-cancelto-base`, `.lh-cancelto-svg`, `.lh-cancelto-val`, optical `.katex` font size normalization, and boots observers. |
+| `postProcessKatexHtml(html)` | 363 - 365 | Passes through clean KaTeX HTML without regex manipulation. |
+| `clearKatexCache()` | 370 - 372 | Clears the in-memory KaTeX compilation cache (`katexCache`). |
+| `renderKatex(tex, isDisplayMode = false, noteContext = null)` | 374 - 414 | Synchronously compiles a LaTeX formula to HTML/MathML using KaTeX, utilizing a bounded LRU cache `katexCache` for 0ms re-rendering. |
+| `parseAndRenderMathInText(rawText = '')` | 416 - 418 | Convenience wrapper calling formatRichTextWithMath to parse and render inline math within text. |
+| `formatRichTextWithMath(rawText = '', options = {})` | 427 - 649 | Full-featured text compiler handling display math ($$...$$), inline math ($...$), task checkboxes ([ ], [x]), bullet lists, and markdown formatting. |
+| `parseInlineMarkdownAndLatex(str)` | 651 - 680 | Parses inline formatting tokens (bold, italic, strikethrough, code), `\fig` citations, and LaTeX text styling (`\textcolor`, `\underline`, `\textbf`, `\textit`, `\cancel`). |
 
 **Numbering_Engine.js**
 
@@ -421,7 +421,7 @@
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `RenderLaTeXEditor(container, noteId, isEditMode = true)` | 24 - 625 | Master LaTeX editor module connecting sidebar outline, document header, reactive block deck, zero-lag in-place block activation/closing, isolated divider insertion, font customizer, and study mode rendering. |
+| `RenderLaTeXEditor(container, noteId, isEditMode = true)` | 24 - 628 | Master LaTeX editor module connecting sidebar outline, document header, reactive block deck, zero-lag in-place block activation/closing, isolated divider insertion, font customizer, and study mode rendering. |
 
 ## B_Editor_View/01_Blocks
 **Block_Actions.js**
@@ -804,8 +804,8 @@
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `GetNoteFontsHTML(currentFont = 'serif')` | 8 - 23 | Returns HTML markup for the font family selector dropdown in the floating toolbar. |
-| `InitNoteFontsLogic(onFontChange)` | 25 - 32 | Binds change listener to font family selector to update note typography in real time. |
+| `GetNoteFontsHTML(currentFont = 'serif')` | 8 - 29 | Returns HTML markup for the font family selector dropdown in the floating toolbar. |
+| `InitNoteFontsLogic(onFontChange)` | 31 - 38 | Binds change listener to font family selector to update note typography in real time. |
 
 **03_Font_Size.js**
 
@@ -815,8 +815,8 @@
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `GetFontSizeHTML(currentSize = 'base')` | 8 - 24 | Returns HTML markup for the font size selector dropdown in the floating toolbar. |
-| `InitFontSizeLogic(onSizeChange)` | 26 - 33 | Binds change listener to font size selector to adjust document font sizing dynamically. |
+| `GetFontSizeHTML(currentSize = 'medium')` | 8 - 31 | Returns HTML markup for the font size selector dropdown in the floating toolbar. |
+| `InitFontSizeLogic(onSizeChange)` | 33 - 40 | Binds change listener to font size selector to adjust document font sizing dynamically. |
 
 **04_Macros_Modal.js**
 

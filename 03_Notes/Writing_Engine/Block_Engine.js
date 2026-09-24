@@ -5,20 +5,26 @@
  */
 
 export const GLOBAL_FONT_FAMILIES = {
-  serif: { label: 'Serif (Classic)', css: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif' },
-  sans: { label: 'Sans-Serif (Modern)', css: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' },
-  garamond: { label: 'Garamond (Academic)', css: 'Garamond, "EB Garamond", serif' },
-  times: { label: 'Times (Formal)', css: '"Times New Roman", Times, serif' },
-  mono: { label: 'Monospace (Code)', css: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' },
-  georgia: { label: 'Georgia (Editorial)', css: 'Georgia, serif' },
-  courier: { label: 'Courier (Typewriter)', css: '"Courier New", Courier, monospace' }
+  serif: { label: 'Serif', css: '"Times New Roman", Times, "Liberation Serif", FreeSerif, serif' },
+  sans: { label: 'Sans-Serif', css: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' },
+  georgia: { label: 'Georgia', css: 'Georgia, Cambria, serif' },
+  garamond: { label: 'Garamond', css: '"EB Garamond", Garamond, "URW Garamond", serif' },
+  mono: { label: 'Monospace', css: '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' },
+  // Backward-compatibility aliases for legacy note data:
+  times: { label: 'Serif', css: '"Times New Roman", Times, "Liberation Serif", FreeSerif, serif', hidden: true },
+  courier: { label: 'Monospace', css: '"JetBrains Mono", ui-monospace, monospace', hidden: true }
 };
 
 export const GLOBAL_FONT_SIZES = {
-  sm: { label: 'Compact (14px)', css: '0.875rem', lineHeight: '1.45' },
-  base: { label: 'Standard (16px)', css: '1rem', lineHeight: '1.6' },
-  lg: { label: 'Comfortable (18px)', css: '1.125rem', lineHeight: '1.7' },
-  xl: { label: 'Large (20px)', css: '1.25rem', lineHeight: '1.8' }
+  tiny: { label: 'Tiny', css: '0.8125rem', lineHeight: '1.45' },
+  small: { label: 'Small', css: '0.90625rem', lineHeight: '1.5' },
+  medium: { label: 'Medium', css: '1rem', lineHeight: '1.6' },
+  large: { label: 'Large', css: '1.125rem', lineHeight: '1.7' },
+  // Backward-compatibility aliases for legacy note data:
+  sm: { label: 'Small', css: '0.90625rem', lineHeight: '1.5', hidden: true },
+  base: { label: 'Medium', css: '1rem', lineHeight: '1.6', hidden: true },
+  lg: { label: 'Large', css: '1.125rem', lineHeight: '1.7', hidden: true },
+  xl: { label: 'Large', css: '1.125rem', lineHeight: '1.7', hidden: true }
 };
 
 export const BLOCK_DEFINITIONS = [
