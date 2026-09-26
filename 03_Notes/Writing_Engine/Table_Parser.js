@@ -571,7 +571,7 @@ export function parseMarkdownTable(markdown) {
       <tr>
         ${headers.map((h, i) => {
           let c = formatRichTextWithMath(h).replace(/^<p[^>]*>/, '').replace(/<\/p>$/, '');
-          return `<th class="px-3 py-2 text-xs uppercase tracking-wider border-b border-[var(--border)] ${aligns[i] || 'text-left'}">${c}</th>`;
+          return `<th class="px-2.5 py-1.5 text-xs uppercase tracking-wider border-b border-[var(--border)] ${aligns[i] || 'text-left'}">${c}</th>`;
         }).join('')}
       </tr>
     </thead>
@@ -586,7 +586,7 @@ export function parseMarkdownTable(markdown) {
           <tr class="hover:bg-[var(--surface-hover)]/40 border-b border-[var(--border)] transition-colors">
             ${cells.map((cell, i) => {
               let c = formatRichTextWithMath(cell).replace(/^<p[^>]*>/, '').replace(/<\/p>$/, '');
-              return `<td class="px-3 py-2 text-sm text-[var(--text)] ${aligns[i] || 'text-left'}">${c}</td>`;
+              return `<td class="px-2.5 py-1.5 text-sm text-[var(--text)] ${aligns[i] || 'text-left'}">${c}</td>`;
             }).join('')}
           </tr>
         `;
@@ -595,8 +595,8 @@ export function parseMarkdownTable(markdown) {
   `;
 
   return `
-    <div class="notes-table-scroll-container w-full overflow-x-auto my-1" style="scrollbar-width: thin;">
-      <table class="notes-markdown-table w-full border-collapse select-text my-0.5" style="border-spacing: 0;">
+    <div class="notes-table-scroll-container w-full overflow-x-auto my-0.5" style="scrollbar-width: thin;">
+      <table class="notes-markdown-table w-full border-collapse select-text m-0" style="border-spacing: 0;">
         ${theadHtml}
         ${tbodyHtml}
       </table>

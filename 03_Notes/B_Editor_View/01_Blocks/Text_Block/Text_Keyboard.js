@@ -515,6 +515,18 @@ export const handleTextBlockKeyDown = (e, ctx) => {
   if (e.key === 'Tab') {
     e.preventDefault();
 
+    // Check if caret or selection is inside a raw block editor (e.g. editing a code block)
+    const rawBlockEl = (node.nodeType === Node.ELEMENT_NODE && node.getAttribute('data-is-raw-block') === 'true')
+      ? node
+      : (node.parentElement ? node.parentElement.closest('[data-is-raw-block="true"]') : null);
+    if (rawBlockEl) {
+      if (!e.shiftKey) {
+        document.execCommand('insertText', false, '  ');
+      }
+      triggerUpdate?.();
+      return;
+    }
+
     const indentTextBlockLine = (lineEl, isOutdent = false) => {
       if (!lineEl) return;
       const bulletWidget = lineEl.querySelector('.live-bullet');
@@ -575,19 +587,33 @@ export const handleTextBlockKeyDown = (e, ctx) => {
       }
     };
 
-    const startLine = getContainingLine(range.startContainer, liveSurface);
-    const endLine = getContainingLine(range.endContainer, liveSurface);
+    const startLine = getContainingLine(range.startContainer, liveSurface, range.startOffset);
+    const endLine = getContainingLine(range.endContainer, liveSurface, range.endOffset);
 
+    let actualStartLine = startLine;
     let actualEndLine = endLine;
-    if (actualEndLine && startLine && actualEndLine !== startLine && range.endOffset === 0 && (range.endContainer === actualEndLine || range.endContainer === actualEndLine.firstChild)) {
+
+    if (actualStartLine && actualEndLine && actualStartLine !== actualEndLine) {
+      if (actualStartLine.compareDocumentPosition(actualEndLine) & Node.DOCUMENT_POSITION_PRECEDING) {
+        const tmp = actualStartLine;
+        actualStartLine = actualEndLine;
+        actualEndLine = tmp;
+      }
+    }
+
+    if (actualEndLine && actualStartLine && actualEndLine !== actualStartLine && range.endOffset === 0 && (range.endContainer === actualEndLine || range.endContainer === actualEndLine.firstChild)) {
       actualEndLine = actualEndLine.previousElementSibling || actualEndLine;
     }
 
-    const isMultiLine = Boolean(startLine && actualEndLine && (startLine !== actualEndLine || (selectedText && selectedText.includes('\n'))));
+    const isMultiLine = Boolean(
+      actualStartLine &&
+      actualEndLine &&
+      (actualStartLine !== actualEndLine || !range.collapsed)
+    );
 
-    if (isMultiLine && startLine && actualEndLine) {
+    if (actualStartLine && actualEndLine && actualStartLine !== actualEndLine) {
       const linesToProcess = [];
-      let cur = startLine;
+      let cur = actualStartLine;
       while (cur) {
         linesToProcess.push(cur);
         if (cur === actualEndLine) break;
@@ -599,7 +625,7 @@ export const handleTextBlockKeyDown = (e, ctx) => {
       });
 
       const newRange = document.createRange();
-      newRange.setStart(startLine, 0);
+      newRange.setStart(actualStartLine, 0);
       newRange.setEnd(actualEndLine, actualEndLine.childNodes.length);
       sel.removeAllRanges();
       sel.addRange(newRange);
@@ -609,7 +635,7 @@ export const handleTextBlockKeyDown = (e, ctx) => {
     }
 
     // Single line handling
-    const curLine = startLine || getContainingLine(node, liveSurface);
+    const curLine = actualStartLine || getContainingLine(node, liveSurface, offset);
     const bulletWidget = curLine?.querySelector('.live-bullet');
     const checkboxWidget = curLine?.querySelector('.live-checkbox');
 
@@ -621,7 +647,9 @@ export const handleTextBlockKeyDown = (e, ctx) => {
 
     // Normal non-list single-line indentation
     if (e.shiftKey) {
-      if (node.nodeType === Node.TEXT_NODE && offset >= 4 && node.nodeValue.substring(offset - 4, offset) === '    ') {
+      if (curLine && curLine.getAttribute('data-indent')) {
+        indentTextBlockLine(curLine, true);
+      } else if (node.nodeType === Node.TEXT_NODE && offset >= 4 && node.nodeValue.substring(offset - 4, offset) === '    ') {
         const before = node.nodeValue.substring(0, offset - 4);
         const after = node.nodeValue.substring(offset);
         node.nodeValue = before + after;
@@ -639,9 +667,15 @@ export const handleTextBlockKeyDown = (e, ctx) => {
         range.collapse(true);
         sel.removeAllRanges();
         sel.addRange(range);
+      } else if (curLine) {
+        indentTextBlockLine(curLine, true);
       }
     } else {
-      document.execCommand('insertText', false, '    ');
+      if (!range.collapsed && curLine) {
+        indentTextBlockLine(curLine, false);
+      } else {
+        document.execCommand('insertText', false, '    ');
+      }
     }
     triggerUpdate?.();
     return;
@@ -1094,6 +1128,17 @@ export const handleTextBlockKeyDown = (e, ctx) => {
 
   // 8. ENTER KEY
   if (e.key === 'Enter') {
+    // Guard against splitting raw block editor (code block in-place edit)
+    const rawBlockEl = (node.nodeType === Node.ELEMENT_NODE && node.getAttribute('data-is-raw-block') === 'true')
+      ? node
+      : (node.parentElement ? node.parentElement.closest('[data-is-raw-block="true"]') : null);
+    if (rawBlockEl) {
+      e.preventDefault();
+      document.execCommand('insertText', false, '\n');
+      triggerUpdate?.();
+      return;
+    }
+
     if (!range.collapsed) {
       range.deleteContents();
     }

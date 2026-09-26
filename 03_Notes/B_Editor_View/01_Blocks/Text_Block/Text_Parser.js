@@ -331,7 +331,7 @@ export const renderSingleLineToDom = (rawLine, options = {}) => {
   if (/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(rawLine)) {
     lineEl.classList.add('live-hr', 'py-1', 'my-1');
     lineEl.setAttribute('data-raw', rawLine);
-    lineEl.innerHTML = '<hr class="border-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--border)] to-transparent w-full m-0 pointer-events-none" />';
+    lineEl.innerHTML = '<hr class="border-0 h-[1px] bg-[var(--border)] opacity-60 w-full m-0 pointer-events-none" />';
     return lineEl;
   }
 
@@ -359,6 +359,17 @@ export const renderSingleLineToDom = (rawLine, options = {}) => {
   }
 
   // Normal line with inline tokens
+  const indentMatch = rawLine.match(/^(\s+)(.*)$/);
+  if (indentMatch) {
+    const indent = indentMatch[1];
+    const rest = indentMatch[2];
+    lineEl.setAttribute('data-indent', indent);
+    const indentLevel = indent.length >= 4 ? indent.length / 4 : (indent.length >= 2 ? 0.75 : 1);
+    lineEl.style.paddingLeft = `${indentLevel * 1.5}rem`;
+    lineEl.appendChild(parseTextToFragment(rest, options));
+    return lineEl;
+  }
+
   lineEl.appendChild(parseTextToFragment(rawLine, options));
   return lineEl;
 };

@@ -355,6 +355,10 @@ function ensureCanceltoStyles() {
       .note-equation-content .katex {
         font-size: 1.05em !important;
       }
+      .obsidian-display-math .katex-display,
+      .notes-text-content .katex-display {
+        margin: 0.25em 0 !important;
+      }
     `;
     document.head.appendChild(style);
   }

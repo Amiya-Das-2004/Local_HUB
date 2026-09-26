@@ -289,13 +289,48 @@ export function renderTextBlock(
     collapseExpandedNode();
 
     const rawContainer = document.createElement('div');
-    rawContainer.className = 'obsidian-raw-block-editor w-full font-mono text-xs sm:text-sm p-2.5 rounded-lg border outline-none my-2 transition-all shadow-inner select-text';
+    rawContainer.className = 'obsidian-raw-block-editor w-full font-mono text-xs sm:text-sm p-2.5 rounded-lg border outline-none my-1 transition-all shadow-inner select-text';
     rawContainer.setAttribute('contenteditable', 'true');
     rawContainer.setAttribute('data-is-raw-block', 'true');
     rawContainer.setAttribute('data-raw', raw);
     rawContainer.style.whiteSpace = 'pre-wrap';
     rawContainer.style.wordBreak = 'break-word';
     rawContainer.textContent = raw;
+
+    rawContainer.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        e.stopPropagation();
+        collapseExpandedBlock();
+        return;
+      }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
+        document.execCommand('insertText', false, '\n');
+        triggerUpdate();
+        return;
+      }
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!e.shiftKey) {
+          document.execCommand('insertText', false, '  ');
+        }
+        triggerUpdate();
+        return;
+      }
+    });
+
+    rawContainer.addEventListener('paste', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+      if (text) {
+        document.execCommand('insertText', false, text);
+        triggerUpdate();
+      }
+    });
 
     const parent = blockEl.parentNode;
     if (!parent) return;

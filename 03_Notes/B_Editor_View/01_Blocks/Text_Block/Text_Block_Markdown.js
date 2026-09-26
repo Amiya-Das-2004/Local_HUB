@@ -423,11 +423,11 @@ export function createLiveBlockElement(blk, options = {}) {
     // -------------------------------------------------------------------------
     case 'horizontal_rule': {
       el = document.createElement('div');
-      el.className = `obsidian-hr-wrap py-2 my-1 w-full select-none ${isViewMode ? '' : 'cursor-pointer hover:opacity-80'}`;
+      el.className = `obsidian-hr-wrap py-1.5 my-0.5 w-full select-none ${isViewMode ? '' : 'cursor-pointer hover:opacity-80'}`;
       el.setAttribute('data-raw', blk.raw);
       el.setAttribute('data-block-type', 'horizontal_rule');
       el.setAttribute('contenteditable', 'false');
-      el.innerHTML = '<hr class="obsidian-hr border-0 h-[1.5px] bg-gradient-to-r from-transparent via-[var(--border)] to-transparent w-full m-0 pointer-events-none" />';
+      el.innerHTML = '<hr class="obsidian-hr border-0 h-[1px] bg-[var(--border)] opacity-60 w-full m-0 pointer-events-none" />';
       break;
     }
 
@@ -436,7 +436,7 @@ export function createLiveBlockElement(blk, options = {}) {
     // -------------------------------------------------------------------------
     case 'display_math': {
       el = document.createElement('div');
-      el.className = `obsidian-display-math my-2.5 py-1.5 px-2 text-center overflow-x-auto select-text rounded transition-all ${isViewMode ? '' : 'cursor-pointer hover:ring-1 hover:ring-purple-500/40'}`;
+      el.className = `obsidian-display-math my-1 py-0.5 px-2 text-center overflow-x-auto select-text rounded transition-all ${isViewMode ? '' : 'cursor-pointer hover:ring-1 hover:ring-purple-500/40'}`;
       el.setAttribute('data-raw', blk.raw);
       el.setAttribute('data-block-type', 'display_math');
       el.setAttribute('contenteditable', 'false');
@@ -458,7 +458,7 @@ export function createLiveBlockElement(blk, options = {}) {
       el.setAttribute('data-raw', blk.raw);
       el.setAttribute('data-block-type', 'code_block');
       el.setAttribute('contenteditable', 'false');
-      el.classList.add('obsidian-code-block', 'my-2', 'transition-all');
+      el.classList.add('obsidian-code-block', 'my-1', 'transition-all');
       if (!isViewMode) {
         el.classList.add('cursor-pointer', 'hover:border-purple-500/50');
       }
@@ -470,7 +470,7 @@ export function createLiveBlockElement(blk, options = {}) {
     // -------------------------------------------------------------------------
     case 'table': {
       el = document.createElement('div');
-      el.className = `obsidian-table-block my-2 w-full select-text rounded transition-all ${isViewMode ? '' : 'cursor-pointer hover:ring-1 hover:ring-purple-500/40'}`;
+      el.className = `obsidian-table-block my-1 w-full select-text rounded transition-all ${isViewMode ? '' : 'cursor-pointer hover:ring-1 hover:ring-purple-500/40'}`;
       el.setAttribute('data-raw', blk.raw);
       el.setAttribute('data-block-type', 'table');
       el.setAttribute('contenteditable', 'false');

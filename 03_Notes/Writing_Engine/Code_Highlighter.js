@@ -122,7 +122,7 @@ export function highlightCode(code, language = 'javascript') {
 export function createHighlightedCodeBlock(code, language = 'javascript', title = '') {
   ensureHighlightJsLoaded();
   const container = document.createElement('div');
-  container.className = 'obsidian-highlighted-code-block group relative my-2 rounded-lg text-xs font-mono select-text overflow-hidden';
+  container.className = 'obsidian-highlighted-code-block group relative my-1 rounded-lg text-xs font-mono select-text overflow-hidden';
 
   // Language display in top-right corner, disguised as a copy button
   const displayLang = title || language || '';
@@ -170,7 +170,7 @@ export function createHighlightedCodeBlock(code, language = 'javascript', title 
   });
 
   const pre = document.createElement('pre');
-  pre.className = 'p-3.5 pr-20 overflow-x-auto m-0 text-xs leading-relaxed font-mono select-text bg-transparent';
+  pre.className = 'py-2.5 px-3.5 pr-16 overflow-x-auto m-0 text-xs leading-relaxed font-mono select-text bg-transparent';
   const codeEl = document.createElement('code');
   codeEl.className = `language-${language} select-text`;
   codeEl.innerHTML = highlightCode(code, language);
