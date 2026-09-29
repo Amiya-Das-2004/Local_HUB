@@ -479,8 +479,8 @@ export function CreateCardElement(note, { isSelected = false, onRefresh = null }
   card.dataset.id = note.id;
   card.dataset.folder = note.folder || 'General';
 
-  // Extract raw text for description using shared helper
-  const rawDescription = getNoteRawDescription(note);
+  // Extract raw text for description using shared helper (lightweight preview)
+  const rawDescription = getNoteRawDescription(note, { forPreview: true });
 
   const descHtml = formatNoteDescription(rawDescription);
   const hasDesc = Boolean(descHtml);

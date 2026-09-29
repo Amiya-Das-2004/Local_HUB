@@ -48,7 +48,7 @@ export function renderBlockBlock(block, isEditing = false, onUpdate = null, allN
         <span class="px-2 py-0.5 rounded text-[10.5px] font-bold tracking-wide uppercase ${style.badge}">${escapeHtml(env)}</span>
         ${title ? `<span class="font-bold text-sm ${style.title}">${escapeHtml(title)}</span>` : ''}
       </div>
-      <div class="text-sm leading-snug text-[var(--text)]">
+      <div class="leading-snug text-[var(--text)]">
         ${renderContentHtml(content)}
       </div>
     `;
@@ -90,7 +90,7 @@ export function renderBlockBlock(block, isEditing = false, onUpdate = null, allN
         <span class="badge-display px-2 py-0.5 rounded text-[10.5px] font-bold tracking-wide uppercase ${style.badge}">${escapeHtml(env)}</span>
         <span class="title-display font-bold text-sm ${style.title}">${escapeHtml(title)}</span>
       </div>
-      <div class="content-display text-sm leading-snug text-[var(--text)]">
+      <div class="content-display leading-snug text-[var(--text)]">
         ${renderContentHtml(content)}
       </div>
     </div>

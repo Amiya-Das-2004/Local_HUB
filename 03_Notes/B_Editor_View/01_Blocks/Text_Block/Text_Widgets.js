@@ -35,6 +35,31 @@ if (typeof document !== 'undefined') {
       border-color: #d8b4fe !important;
       font-weight: 600 !important;
     }
+    .obsidian-raw-block-editor {
+      background-color: #141622;
+      color: #e2e8f0;
+      border: 1px solid rgba(139, 92, 246, 0.4);
+      transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    }
+    [data-theme="light"] .obsidian-raw-block-editor,
+    .light .obsidian-raw-block-editor {
+      background-color: #f3f4f8 !important;
+      color: #1a1d2e !important;
+      border: 1px solid #d1d5e0 !important;
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+    }
+    .floating-katex-pill {
+      background-color: rgba(22, 25, 38, 0.95);
+      color: #d8b4fe;
+      border: 1px solid rgba(139, 92, 246, 0.4);
+    }
+    [data-theme="light"] .floating-katex-pill,
+    .light .floating-katex-pill {
+      background-color: rgba(255, 255, 255, 0.95) !important;
+      color: #581c87 !important;
+      border: 1px solid #d8b4fe !important;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+    }
     .live-line {
       min-height: 1.5em;
       line-height: var(--note-line-height, 1.7);
@@ -106,27 +131,27 @@ export const createLiveWidget = (type, raw, contentHtml = '', options = {}) => {
   if (type === 'math') {
     // Borderless, centered KaTeX formula (vertical-align: middle keeps bullet centered even with \vdots)
     const mathCode = raw.slice(1, -1).trim();
-    span.className = `live-widget live-math inline-flex items-center justify-center align-middle transition-opacity hover:opacity-80 select-none ${baseCursor}`;
+    span.className = `live-widget live-math inline-flex items-center justify-center align-middle transition-opacity hover:opacity-80 select-text ${baseCursor}`;
     span.innerHTML = renderKatex(mathCode, false);
   } else if (type === 'code') {
-    span.className = `live-widget live-code select-none align-middle ${baseCursor}`;
+    span.className = `live-widget live-code select-text align-middle ${baseCursor}`;
     span.innerHTML = escapeHtml(contentHtml);
   } else if (type === 'bold') {
-    span.className = `live-widget live-bold font-bold select-none ${baseCursor}`;
+    span.className = `live-widget live-bold font-bold select-text ${baseCursor}`;
     span.innerHTML = escapeHtml(contentHtml);
   } else if (type === 'italic') {
-    span.className = `live-widget live-italic font-serif italic select-none ${baseCursor}`;
+    span.className = `live-widget live-italic font-serif italic select-text ${baseCursor}`;
     span.innerHTML = escapeHtml(contentHtml);
   } else if (type === 'underline') {
-    span.className = `live-widget live-underline underline underline-offset-2 select-none ${baseCursor}`;
+    span.className = `live-widget live-underline underline underline-offset-2 select-text ${baseCursor}`;
     span.innerHTML = escapeHtml(contentHtml);
   } else if (type === 'strike') {
-    span.className = `live-widget live-strike line-through opacity-75 select-none ${baseCursor}`;
+    span.className = `live-widget live-strike line-through opacity-75 select-text ${baseCursor}`;
     span.innerHTML = escapeHtml(contentHtml);
   } else if (type === 'color') {
     const match = raw.match(/^\\textcolor\{([#a-zA-Z0-9|]+)\}\{([\s\S]*)\}$/);
     const col = match ? resolveThemeColors(match[1]) : '#8b5cf6';
-    span.className = `live-widget live-color font-medium select-none inline align-baseline ${baseCursor}`;
+    span.className = `live-widget live-color font-medium select-text inline align-baseline ${baseCursor}`;
     span.style.color = col;
     if (options.parseSubFragment) {
       span.appendChild(options.parseSubFragment(contentHtml));
@@ -138,7 +163,7 @@ export const createLiveWidget = (type, raw, contentHtml = '', options = {}) => {
     const tagMap = getActiveFigureTagMap ? getActiveFigureTagMap() : null;
     const resolvedNum = tagMap ? (tagMap.get(norm) ?? (tagMap.get(contentHtml) ?? null)) : null;
     const displayLabel = resolvedNum !== null && resolvedNum !== undefined ? `Fig. ${resolvedNum}` : `Fig. ${escapeHtml(contentHtml)}`;
-    span.className = `live-widget live-fig note-fig-citation font-semibold text-purple-400 hover:text-purple-300 bg-purple-500/10 hover:bg-purple-500/20 px-1.5 py-0.5 rounded border border-purple-500/30 transition-colors inline-flex items-center align-middle gap-0.5 cursor-pointer select-none`;
+    span.className = `live-widget live-fig note-fig-citation font-semibold text-purple-400 hover:text-purple-300 bg-purple-500/10 hover:bg-purple-500/20 px-1.5 py-0.5 rounded border border-purple-500/30 transition-colors inline-flex items-center align-middle gap-0.5 cursor-pointer select-text`;
     span.setAttribute('data-fig-target', norm);
     span.setAttribute('data-fig-num', resolvedNum || '');
     span.innerHTML = `[${displayLabel}]`;
@@ -149,7 +174,7 @@ export const createLiveWidget = (type, raw, contentHtml = '', options = {}) => {
       n.id === targetTitle ||
       (n.slug && n.slug.toLowerCase() === targetTitle.toLowerCase())
     );
-    span.className = `live-widget live-wikilink ${target ? 'text-purple-400 hover:text-purple-300 font-semibold underline decoration-dotted decoration-purple-500' : 'text-gray-400 italic'} inline-flex items-center align-middle cursor-pointer select-none`;
+    span.className = `live-widget live-wikilink ${target ? 'text-purple-400 hover:text-purple-300 font-semibold underline decoration-dotted decoration-purple-500' : 'text-gray-400 italic'} inline-flex items-center align-middle cursor-pointer select-text`;
     span.title = target ? `Jump to note: ${targetTitle}` : `Note "${targetTitle}" does not exist yet`;
     span.textContent = targetTitle;
     if (isViewMode && target) {

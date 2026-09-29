@@ -70,6 +70,7 @@ export function GetSaveButtonHTML() {
 // Automatically syncs all DOM <script type="application/json"> blocks with live window states and localStorage caches
 function syncAllStatesToDOM(doc) {
   if (typeof window === 'undefined') return;
+  if (typeof window.flushNotesSave === 'function') window.flushNotesSave();
 
   const now = Date.now();
   const dataScripts = doc.querySelectorAll('script[type="application/json"][id]');
@@ -187,7 +188,7 @@ export async function SaveAndDownloadApp() {
         code = code.replace(/^\s*export\s*\{[\s\S]*?\}\s*from\s+['"][^'"]+['"];?\s*$/gm, '');
         code = code.replace(/^\s*export\s*\{[\s\S]*?\};?\s*$/gm, '');
         code = code.replace(/^\s*export\s+default\s+/gm, '');
-        code = code.replace(/^\s*export\s+(async\s+)?(function|const|let|var|class)/gm, '$1$2');
+        code = code.replace(/^\s*export\s+(async\s+)?(function|const|let|var|class)/gm, (m, p1, p2) => (p1 || '') + p2);
         return `\n/* --- ${cleanPath} --- */\n${code}\n`;
       } catch (e) {
         console.warn(`[Bundler] Error reading ${filePath}:`, e);
@@ -242,6 +243,7 @@ export async function SaveAndDownloadApp() {
       '03_Notes/Writing_Engine/Link_Parser.js',
       '03_Notes/Writing_Engine/Highlight_Sync.js',
       '03_Notes/Writing_Engine/Table_Parser.js',
+      '03_Notes/Writing_Engine/Block_History.js',
       '03_Notes/B_Editor_View/01_Blocks/Block_Actions.js',
       '03_Notes/B_Editor_View/01_Blocks/Figure_Utils.js',
       '03_Notes/B_Editor_View/01_Blocks/Block_Textarea.js',
@@ -253,6 +255,7 @@ export async function SaveAndDownloadApp() {
       '03_Notes/B_Editor_View/01_Blocks/Text_Block/Text_Widgets.js',
       '03_Notes/B_Editor_View/01_Blocks/Text_Block/Text_Parser.js',
       '03_Notes/B_Editor_View/01_Blocks/Text_Block/Text_Keyboard.js',
+      '03_Notes/B_Editor_View/01_Blocks/Text_Block/Text_Block_Markdown.js',
       '03_Notes/B_Editor_View/01_Blocks/Text_Block.js',
       '03_Notes/B_Editor_View/01_Blocks/Equation_Block.js',
       '03_Notes/B_Editor_View/01_Blocks/Tikz_Block.js',
@@ -442,6 +445,14 @@ export function ClearAllLocalCaches() {
       }
     }
   } catch (e) { }
+
+  // 3. Clear per-block undo/redo history stacks from memory
+  if (typeof window !== 'undefined' && window.__blockHistories) {
+    try {
+      window.__blockHistories.clear();
+    } catch (e) { }
+  }
+
   console.log('[Save] All unsaved local caches flushed successfully.');
 }
 

@@ -13,15 +13,18 @@
  * @param {boolean} [options.canInsertBelow=false] - Whether to show '+ Below'
  * @returns {string} HTML string
  */
-export function getBlockActionsHTML({ index = 0, totalBlocks = 1, canInsertBelow = false } = {}) {
+export function getBlockActionsHTML({ index = 0, totalBlocks = 1, canInsertBelow = false, canCopy = true } = {}) {
   const showUp = index > 0;
   const showDown = index < totalBlocks - 1;
 
   return `
-    <div class="block-action-tools flex items-center gap-1 flex-wrap flex-shrink-0">
-      <button class="px-2 h-[25px] rounded text-[11px] font-bold bg-green-600 hover:bg-green-500 text-white done-btn shadow-xs transition-colors flex items-center justify-center cursor-pointer" type="button" title="Done editing">Done</button>
+    <div class="block-action-tools flex items-center gap-1 flex-wrap flex-shrink-0 select-none">
+      <button class="w-[25px] h-[25px] rounded bg-green-600 hover:bg-green-500 text-white done-btn shadow-xs transition-colors flex items-center justify-center cursor-pointer" type="button" title="Done editing">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+      </button>
       ${showUp ? '<button class="w-[25px] h-[25px] rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] hover:text-white flex items-center justify-center text-xs up-btn shadow-xs transition-colors cursor-pointer" type="button" title="Move up">↑</button>' : ''}
       ${showDown ? '<button class="w-[25px] h-[25px] rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] hover:text-white flex items-center justify-center text-xs down-btn shadow-xs transition-colors cursor-pointer" type="button" title="Move down">↓</button>' : ''}
+      ${canCopy ? '<button class="w-[25px] h-[25px] rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] hover:text-purple-300 hover:border-purple-500/40 flex items-center justify-center copy-block-btn shadow-xs transition-colors cursor-pointer" type="button" title="Copy block markdown code"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>' : ''}
       ${canInsertBelow ? '<button class="px-1.5 h-[25px] rounded text-[10px] font-medium border border-purple-500/40 bg-purple-500/10 hover:bg-purple-500/25 text-purple-300 add-below-btn shadow-xs transition-colors flex items-center gap-1 cursor-pointer" type="button" title="Insert block immediately below this block">+ Below</button>' : ''}
       <button class="w-[25px] h-[25px] rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] hover:text-red-400 flex items-center justify-center text-xs del-btn shadow-xs transition-colors cursor-pointer" type="button" title="Delete block">
         <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -43,15 +46,19 @@ export function getBlockActionsHTML({ index = 0, totalBlocks = 1, canInsertBelow
  * @param {Function} [handlers.onDone=null]
  * @param {Function} [handlers.onMoveUp=null]
  * @param {Function} [handlers.onMoveDown=null]
+ * @param {Function} [handlers.onCopy=null]
  * @param {Function} [handlers.onDelete=null]
  * @param {Function} [handlers.onInsertBelow=null]
  * @param {number} [handlers.index=0]
  */
-export function initBlockActions(parentEl, { onDone = null, onMoveUp = null, onMoveDown = null, onDelete = null, onInsertBelow = null, index = 0 } = {}) {
+export function initBlockActions(parentEl, { onDone = null, onMoveUp = null, onMoveDown = null, onCopy = null, onDelete = null, onInsertBelow = null, index = 0 } = {}) {
   if (!parentEl) return;
 
   const doneBtn = parentEl.querySelector('.done-btn');
   if (doneBtn && onDone) {
+    doneBtn.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+    });
     doneBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       onDone();
@@ -74,6 +81,17 @@ export function initBlockActions(parentEl, { onDone = null, onMoveUp = null, onM
     });
   }
 
+  const copyBtn = parentEl.querySelector('.copy-block-btn');
+  if (copyBtn && onCopy) {
+    copyBtn.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+    });
+    copyBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      onCopy(copyBtn);
+    });
+  }
+
   const addBelowBtn = parentEl.querySelector('.add-below-btn');
   if (addBelowBtn && onInsertBelow) {
     addBelowBtn.addEventListener('click', (e) => {
@@ -90,3 +108,52 @@ export function initBlockActions(parentEl, { onDone = null, onMoveUp = null, onM
     });
   }
 }
+
+/**
+ * Copies text to clipboard with animated visual feedback on the button.
+ * 
+ * @param {string} textToCopy - Text content to write to clipboard
+ * @param {HTMLButtonElement} btn - The clicked copy button
+ * @param {string} [fallbackTitle='Copy code'] - Tooltip text to restore
+ */
+export async function copyBlockTextWithFeedback(textToCopy, btn, fallbackTitle = 'Copy code') {
+  if (!btn) return;
+  const origHtml = btn.innerHTML;
+  const origTitle = btn.title;
+  const showCopied = () => {
+    btn.innerHTML = `
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="text-green-400">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    `;
+    btn.title = 'Copied!';
+    setTimeout(() => {
+      btn.innerHTML = origHtml;
+      btn.title = origTitle || fallbackTitle;
+    }, 2000);
+  };
+
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(textToCopy);
+    } else {
+      throw new Error('Clipboard API unavailable');
+    }
+    showCopied();
+  } catch (err) {
+    const ta = document.createElement('textarea');
+    ta.value = textToCopy;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand('copy');
+      showCopied();
+    } catch (e) {
+      console.error('Failed to copy to clipboard: ', e);
+    }
+    ta.remove();
+  }
+}
+

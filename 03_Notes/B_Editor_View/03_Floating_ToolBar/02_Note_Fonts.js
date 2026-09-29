@@ -6,9 +6,15 @@
 import { GLOBAL_FONT_FAMILIES } from '../../Writing_Engine/Block_Engine.js';
 
 export function GetNoteFontsHTML(currentFont = 'serif') {
-  const options = Object.entries(GLOBAL_FONT_FAMILIES).map(([k, v]) => `
-    <option value="${k}" ${currentFont === k ? 'selected' : ''} style="background: var(--surface, #181b27); color: var(--text, #e8eaf2);">${v.label}</option>
-  `).join('');
+  let normFont = currentFont;
+  if (normFont === 'times') normFont = 'serif';
+  if (normFont === 'courier') normFont = 'mono';
+
+  const options = Object.entries(GLOBAL_FONT_FAMILIES)
+    .filter(([_, v]) => !v.hidden)
+    .map(([k, v]) => `
+      <option value="${k}" ${normFont === k ? 'selected' : ''} style="background: var(--surface, #181b27); color: var(--text, #e8eaf2);">${v.label}</option>
+    `).join('');
 
   return `
     <div class="dock-font-family-wrapper flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] text-xs shadow-xs hover:border-purple-500 transition-all select-none">

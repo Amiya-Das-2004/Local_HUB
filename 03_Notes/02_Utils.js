@@ -37,15 +37,42 @@ export function formatNoteDescription(rawText, { fallbackText = '' } = {}) {
 }
 
 // Extracts the plain text or markdown representation of a note's description or blocks
-export function getNoteRawDescription(note) {
+export function getNoteRawDescription(note, { forPreview = false } = {}) {
   if (!note) return '';
   if (typeof note.description === 'string' && note.description.trim()) {
-    return note.description;
+    return forPreview ? note.description.slice(0, 300) : note.description;
   }
   if (note.flashcard && note.flashcard.back) {
-    return (note.flashcard.front ? note.flashcard.front + '\n' : '') + note.flashcard.back;
+    const fc = (note.flashcard.front ? note.flashcard.front + '\n' : '') + note.flashcard.back;
+    return forPreview ? fc.slice(0, 300) : fc;
   }
   if (note.blocks && Array.isArray(note.blocks) && note.blocks.length > 0) {
+    if (forPreview) {
+      // Lightweight extraction: only collect the first 1-2 text/math blocks up to 300 chars
+      const previewParts = [];
+      let totalLen = 0;
+      for (const b of note.blocks) {
+        if (b.type === 'text' || b.type === 'equation' || b.type === 'block' || b.type === 'theorem') {
+          const content = (b.content || b.tex || '').trim();
+          if (content) {
+            previewParts.push(content);
+            totalLen += content.length;
+            if (totalLen >= 250) break;
+          }
+        }
+      }
+      if (previewParts.length > 0) {
+        return previewParts.join('\n').slice(0, 300);
+      }
+      for (const b of note.blocks) {
+        if (b.type !== 'heading') {
+          const content = (b.content || b.tex || '').trim();
+          if (content) return content.slice(0, 300);
+        }
+      }
+      return (note.blocks[0].content || '').slice(0, 300);
+    }
+
     const textBlocks = note.blocks.filter(b => b.type === 'text' || b.type === 'equation' || b.type === 'block' || b.type === 'theorem');
     if (textBlocks.length > 0) {
       return textBlocks.map(b => b.content || b.tex || '').filter(Boolean).join('\n');

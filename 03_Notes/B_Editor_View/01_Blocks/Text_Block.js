@@ -10,12 +10,8 @@
 
 import { escapeHtml } from '../../02_Utils.js';
 import { CreateColorSelector } from '../../../00_Components/06_Color_Selector.js';
-import {
-  getCustomBullets,
-  removeCustomBullet,
-  openCustomBulletDialog
-} from '../../Writing_Engine/Bullet_Engine.js';
 import { renderKatex } from '../../Writing_Engine/Math_Renderer.js';
+import { attachBlockHistory } from '../../Writing_Engine/Block_History.js';
 import { getBlockActionsHTML, initBlockActions } from './Block_Actions.js';
 
 import {
@@ -25,7 +21,11 @@ import {
   getNumberForLineAtIndent,
   serializeElement,
   parseTextToFragment,
-  renderSingleLineToDom
+  renderSingleLineToDom,
+  serializeSelection,
+  getLineCaretSplit,
+  deleteSelectionAndHeal,
+  setCaretAtOffsetInLine
 } from './Text_Block/Text_Parser.js';
 
 import {
@@ -35,13 +35,19 @@ import {
 
 import {
   getContainingLine,
-  getLineRawText,
   checkAutoCollapseTokensNearCaret,
   checkAutoBulletConversion,
-  handleTextBlockKeyDown
+  handleTextBlockKeyDown,
+  scanAndCompileCompletedBlocks
 } from './Text_Block/Text_Keyboard.js';
 
-// Re-export parser and widget utilities for full backward compatibility
+import {
+  renderObsidianMarkdown,
+  createLiveBlockElement,
+  lexMarkdownBlocks
+} from './Text_Block/Text_Block_Markdown.js';
+
+// Re-export parser, widget, and markdown utilities for full backward compatibility
 export {
   LINE_SPACING_OPTIONS,
   getSpacingValue,
@@ -51,7 +57,10 @@ export {
   parseTextToFragment,
   renderSingleLineToDom,
   renderBulletIcon,
-  createLiveWidget
+  createLiveWidget,
+  renderObsidianMarkdown,
+  createLiveBlockElement,
+  lexMarkdownBlocks
 };
 
 export function renderTextBlock(
@@ -65,32 +74,37 @@ export function renderTextBlock(
   container.className = 'w-full';
 
   let rawContent = block.content || '';
+  // Self-heal legacy notes where placeholder notice was saved into block.content:
+  if (rawContent.startsWith('Empty text block. Click to write...')) {
+    rawContent = rawContent.replace(/^Empty text block\. Click to write\.\.\.\n?/, '');
+    block.content = rawContent;
+  }
   let currentLineSpacing = block.lineSpacing || 'normal';
   let currentLineHeight = getSpacingValue(currentLineSpacing);
 
   container.style.setProperty('--note-line-height', String(currentLineHeight));
 
   // =========================================================================
-  // 1. VIEW MODE (EXACT 1:1 DOM PARITY WITH EDIT MODE - ZERO JUMP)
+  // 1. VIEW MODE (OBSIDIAN FULL MARKDOWN PARITY)
   // =========================================================================
   if (!isEditing) {
     if (!rawContent || !rawContent.trim()) {
       const emptyNotice = document.createElement('div');
-      emptyNotice.className = 'italic text-[var(--text-dim)] text-xs select-none py-1';
+      emptyNotice.className = 'obsidian-empty-notice-placeholder empty-notice italic text-[var(--text-dim)] text-xs select-none py-1';
       emptyNotice.textContent = 'Empty text block. Click to write...';
       container.appendChild(emptyNotice);
       return container;
     }
 
     const viewWrap = document.createElement('div');
-    viewWrap.className = 'obsidian-view-surface notes-text-content w-full px-1 py-1 text-sm my-0.5 select-text box-border text-[var(--text)]';
+    viewWrap.className = 'obsidian-view-surface notes-text-content w-full px-1 py-1 my-0.5 select-text box-border text-[var(--text)]';
     viewWrap.style.fontFamily = 'var(--note-font-family, inherit)';
+    viewWrap.style.fontSize = 'var(--note-font-size, 1rem)';
     viewWrap.style.lineHeight = `var(--note-line-height, ${currentLineHeight})`;
-    viewWrap.style.whiteSpace = 'pre-wrap';
     viewWrap.style.wordBreak = 'break-word';
 
-    const handleViewCheckboxToggle = () => {
-      const newMarkdown = serializeElement(viewWrap);
+    const handleViewCheckboxToggle = (updatedMarkdown) => {
+      const newMarkdown = updatedMarkdown !== undefined ? updatedMarkdown : serializeElement(viewWrap);
       rawContent = newMarkdown;
       block.content = newMarkdown;
       if (onUpdate) {
@@ -102,14 +116,12 @@ export function renderTextBlock(
       }
     };
 
-    const lines = rawContent.split('\n');
-    lines.forEach((l) => {
-      viewWrap.appendChild(renderSingleLineToDom(l, {
-        isViewMode: true,
-        allNotes,
-        onCheckboxToggle: handleViewCheckboxToggle
-      }));
+    const renderedMd = renderObsidianMarkdown(rawContent, {
+      isViewMode: true,
+      allNotes,
+      onCheckboxToggle: handleViewCheckboxToggle
     });
+    viewWrap.appendChild(renderedMd);
 
     container.appendChild(viewWrap);
     return container;
@@ -126,39 +138,28 @@ export function renderTextBlock(
   editWrap.innerHTML = `
     <!-- Top Row: Block Title (Left) | Block Actions (Right) -->
     <div class="flex items-center justify-between gap-1.5 w-full pb-1 border-b border-[var(--border)]/60 select-none">
-      <div class="flex items-center text-xs font-semibold text-purple-400 font-mono tracking-wide select-none">
+      <div class="flex items-center gap-2 text-xs font-semibold text-purple-400 font-mono tracking-wide select-none">
         <span class="uppercase tracking-wider text-[11px] font-bold">Text Block</span>
       </div>
 
-      <!-- Top Right: Block Actions Toolbar (Done, Up, Down, + Below, Delete) -->
-      ${getBlockActionsHTML({ index, totalBlocks, canInsertBelow: Boolean(onInsertBelow) })}
+      <!-- Top Right: Block Actions Toolbar (Done, Up, Down, Copy, Delete) -->
+      ${getBlockActionsHTML({ index, totalBlocks, canInsertBelow: false, canCopy: true })}
     </div>
 
     <!-- In-Place Live Preview Workspace Container -->
     <div class="unified-workspace-container relative w-full mt-1">
       <!-- Clean Live Floating KaTeX Math Pill (NO 'Preview:' label) -->
-      <div class="floating-katex-pill hidden absolute pointer-events-none z-30 px-2.5 py-1 rounded-lg border border-purple-500/40 bg-[#161926]/95 text-purple-300 shadow-xl text-sm flex items-center justify-center backdrop-blur-xs transition-all duration-75"></div>
+      <div class="floating-katex-pill hidden absolute pointer-events-none z-30 px-2.5 py-1 rounded-lg border shadow-xl text-sm flex items-center justify-center backdrop-blur-xs transition-all duration-75"></div>
 
-      <!-- Gentle Block Math Notice -->
-      <div class="block-math-notice hidden absolute right-2 top-2 z-20 px-2 py-1 rounded bg-amber-500/15 border border-amber-500/40 text-amber-300 text-[11px] pointer-events-none transition-opacity">
-        Display math ($$) belongs in Equation Blocks. Inline math ($...$) is supported here.
-      </div>
-
-      <!-- In-Place Live Surface -->
-      <div class="obsidian-live-surface w-full px-1 py-1 text-sm rounded-lg outline-none transition-all box-border text-[var(--text)] min-h-[90px] cursor-text select-text" contenteditable="true" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" style="font-family: var(--note-font-family, inherit); line-height: var(--note-line-height, ${currentLineHeight}); white-space: pre-wrap; word-break: break-word;"></div>
+      <!-- In-Place Live Surface (Editable) -->
+      <div class="obsidian-live-surface w-full px-1 py-1 rounded-lg outline-none transition-all box-border text-[var(--text)] min-h-[90px] cursor-text select-text" contenteditable="true" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" style="font-family: var(--note-font-family, inherit); font-size: var(--note-font-size, 1rem); line-height: var(--note-line-height, ${currentLineHeight}); white-space: pre-wrap; word-break: break-word;"></div>
     </div>
   `;
 
-  // Top Centered Floating Formatting Window / Dock (Below Header)
-  const existingDock = document.getElementById('notes-text-floating-dock');
-  if (existingDock) {
-    if (typeof existingDock.__cleanup === 'function') existingDock.__cleanup();
-    existingDock.remove();
-  }
-
+  // Top Floating Window Formatting Dock
   const floatingDock = document.createElement('div');
   floatingDock.id = 'notes-text-floating-dock';
-  floatingDock.className = 'notes-text-floating-dock fixed top-[88px] sm:top-[94px] left-1/2 -translate-x-1/2 z-[60] p-1 sm:p-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md shadow-2xl flex items-center justify-center gap-1 sm:gap-1.5 select-none transition-all duration-200 flex-wrap max-w-[calc(100vw-24px)]';
+  floatingDock.className = 'notes-text-floating-dock fixed top-[84px] sm:top-[90px] left-1/2 -translate-x-1/2 z-[60] p-1 sm:p-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md shadow-2xl flex items-center justify-center gap-1 sm:gap-1.5 select-none transition-all duration-200 flex-wrap max-w-[calc(100vw-24px)]';
 
   floatingDock.innerHTML = `
     <!-- 1. Dual-Theme Text Color Selector [ + | ○ Light | ○ Dark ] -->
@@ -175,7 +176,7 @@ export function renderTextBlock(
       <button type="button" class="btn-italic w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-[var(--border)]/60 bg-[var(--card)] hover:bg-purple-500/15 hover:border-purple-500/40 text-xs font-bold flex items-center justify-center text-[var(--text)] transition-colors cursor-pointer shadow-xs" title="Italics: *text*">
         <span class="italic font-serif font-bold text-sm">I</span>
       </button>
-      <button type="button" class="btn-underline w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-[var(--border)]/60 bg-[var(--card)] hover:bg-purple-500/15 hover:border-purple-500/40 text-xs font-bold flex items-center justify-center text-[var(--text)] transition-colors cursor-pointer shadow-xs" title="Underline: \\underline{...}">
+      <button type="button" class="btn-underline w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-[var(--border)]/60 bg-[var(--card)] hover:bg-purple-500/15 hover:border-purple-500/40 text-xs font-bold flex items-center justify-center text-[var(--text)] transition-colors cursor-pointer shadow-xs" title="Underline: <u>text</u> or \\underline{...}">
         <span class="underline underline-offset-2 font-serif font-bold text-sm">U</span>
       </button>
       <button type="button" class="btn-strikeout w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-[var(--border)]/60 bg-[var(--card)] hover:bg-purple-500/15 hover:border-purple-500/40 text-xs font-bold flex items-center justify-center text-[var(--text)] transition-colors cursor-pointer shadow-xs" title="Strikethrough: ~~text~~">
@@ -229,6 +230,11 @@ export function renderTextBlock(
     </div>
   `;
 
+  // Remove any previously orphaned floating docks before mounting
+  document.querySelectorAll('#notes-text-floating-dock').forEach(el => {
+    if (typeof el.__cleanup === 'function') el.__cleanup();
+    el.remove();
+  });
   document.body.appendChild(floatingDock);
 
   // Prevent toolbar clicks from losing focus/selection in liveSurface (allow color pickers to open)
@@ -242,7 +248,6 @@ export function renderTextBlock(
   // UI References
   const liveSurface = editWrap.querySelector('.obsidian-live-surface');
   const floatingPill = editWrap.querySelector('.floating-katex-pill');
-  const noticeBox = editWrap.querySelector('.block-math-notice');
 
   const colorMount = floatingDock.querySelector('.text-color-selector-mount');
   const btnBold = floatingDock.querySelector('.btn-bold');
@@ -258,14 +263,7 @@ export function renderTextBlock(
   const spacingMenu = floatingDock.querySelector('.spacing-dropdown-menu');
   const activeSpacingDisplay = floatingDock.querySelector('.active-spacing-display');
 
-  let noticeTimer = null;
-  const showNotice = () => {
-    noticeBox.classList.remove('hidden');
-    clearTimeout(noticeTimer);
-    noticeTimer = setTimeout(() => {
-      noticeBox.classList.add('hidden');
-    }, 2800);
-  };
+  const showNotice = () => {}; // Safe no-op
 
   const serializeSurface = () => serializeElement(liveSurface);
 
@@ -283,6 +281,101 @@ export function renderTextBlock(
   };
 
   let currentExpandedNode = null;
+  let currentExpandedBlock = null;
+
+  const expandBlock = (blockEl, raw) => {
+    if (!blockEl || !raw) return;
+    collapseExpandedBlock();
+    collapseExpandedNode();
+
+    const rawContainer = document.createElement('div');
+    rawContainer.className = 'obsidian-raw-block-editor w-full font-mono text-xs sm:text-sm p-2.5 rounded-lg border outline-none my-1 transition-all shadow-inner select-text';
+    rawContainer.setAttribute('contenteditable', 'true');
+    rawContainer.setAttribute('data-is-raw-block', 'true');
+    rawContainer.setAttribute('data-raw', raw);
+    rawContainer.style.whiteSpace = 'pre-wrap';
+    rawContainer.style.wordBreak = 'break-word';
+    rawContainer.textContent = raw;
+
+    rawContainer.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        e.stopPropagation();
+        collapseExpandedBlock();
+        return;
+      }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
+        document.execCommand('insertText', false, '\n');
+        triggerUpdate();
+        return;
+      }
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!e.shiftKey) {
+          document.execCommand('insertText', false, '  ');
+        }
+        triggerUpdate();
+        return;
+      }
+    });
+
+    rawContainer.addEventListener('paste', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+      if (text) {
+        document.execCommand('insertText', false, text);
+        triggerUpdate();
+      }
+    });
+
+    const parent = blockEl.parentNode;
+    if (!parent) return;
+
+    parent.replaceChild(rawContainer, blockEl);
+    currentExpandedBlock = { rawContainer, originalEl: blockEl };
+
+    rawContainer.focus();
+    const sel = window.getSelection();
+    if (sel) {
+      const range = document.createRange();
+      range.selectNodeContents(rawContainer);
+      range.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+  };
+
+  const collapseExpandedBlock = () => {
+    if (!currentExpandedBlock || !currentExpandedBlock.rawContainer.parentNode) {
+      currentExpandedBlock = null;
+      return;
+    }
+
+    const { rawContainer } = currentExpandedBlock;
+    const newRaw = rawContainer.innerText || rawContainer.textContent || '';
+    const parent = rawContainer.parentNode;
+
+    if (!newRaw.trim()) {
+      rawContainer.remove();
+      currentExpandedBlock = null;
+      triggerUpdate();
+      return;
+    }
+
+    const blocks = lexMarkdownBlocks(newRaw);
+    const fragment = document.createDocumentFragment();
+    blocks.forEach((b) => {
+      fragment.appendChild(createLiveBlockElement(b, editModeOptions));
+    });
+
+    parent.replaceChild(fragment, rawContainer);
+    currentExpandedBlock = null;
+    triggerUpdate();
+  };
 
   const expandWidget = (widget, { atEnd = false, atStart = false } = {}) => {
     const raw = widget.getAttribute('data-raw');
@@ -341,16 +434,24 @@ export function renderTextBlock(
     allNotes,
     onCheckboxToggle: () => triggerUpdate(),
     onExpand: (widget, opts) => expandWidget(widget, opts),
+    onExpandBlock: (blockEl, raw) => expandBlock(blockEl, raw),
     onUpdate: () => triggerUpdate(),
     parseSubFragment: (subText) => parseTextToFragment(subText, editModeOptions)
   };
 
   const buildEditorDom = () => {
     liveSurface.innerHTML = '';
-    const lines = (rawContent || '').split('\n');
+    if (!rawContent || !rawContent.trim()) {
+      const emptyLine = document.createElement('div');
+      emptyLine.className = 'live-line min-h-[1.5em] my-0.5';
+      emptyLine.innerHTML = '<br>';
+      liveSurface.appendChild(emptyLine);
+      return;
+    }
 
-    lines.forEach((l) => {
-      liveSurface.appendChild(renderSingleLineToDom(l, editModeOptions));
+    const blocks = lexMarkdownBlocks(rawContent);
+    blocks.forEach((blk) => {
+      liveSurface.appendChild(createLiveBlockElement(blk, editModeOptions));
     });
 
     if (liveSurface.childNodes.length === 0) {
@@ -359,6 +460,8 @@ export function renderTextBlock(
       emptyLine.innerHTML = '<br>';
       liveSurface.appendChild(emptyLine);
     }
+
+    scanAndCompileCompletedBlocks(liveSurface, editModeOptions, triggerUpdate);
   };
 
   buildEditorDom();
@@ -419,7 +522,44 @@ export function renderTextBlock(
     });
   });
 
+  const ensureSurfaceDomIntegrity = () => {
+    if (!liveSurface.childNodes.length) {
+      const line = document.createElement('div');
+      line.className = 'live-line min-h-[1.5em] my-0.5';
+      line.innerHTML = '<br>';
+      liveSurface.appendChild(line);
+      const r = document.createRange();
+      r.setStart(line, 0);
+      r.collapse(true);
+      const sel = window.getSelection();
+      if (sel) {
+        sel.removeAllRanges();
+        sel.addRange(r);
+      }
+      return;
+    }
+
+    Array.from(liveSurface.childNodes).forEach((child) => {
+      if (child.nodeType === Node.TEXT_NODE) {
+        if (child.nodeValue.length > 0) {
+          const line = document.createElement('div');
+          line.className = 'live-line min-h-[1.5em] my-0.5';
+          liveSurface.replaceChild(line, child);
+          line.appendChild(child);
+        } else {
+          child.remove();
+        }
+      } else if (child.nodeType === Node.ELEMENT_NODE && child.tagName === 'BR') {
+        const line = document.createElement('div');
+        line.className = 'live-line min-h-[1.5em] my-0.5';
+        line.innerHTML = '<br>';
+        liveSurface.replaceChild(line, child);
+      }
+    });
+  };
+
   liveSurface.addEventListener('input', () => {
+    ensureSurfaceDomIntegrity();
     updateKatexPill();
     checkAutoCollapseTokensNearCaret({
       editModeOptions,
@@ -434,28 +574,191 @@ export function renderTextBlock(
     triggerUpdate();
   });
 
-  // Track cursor movement to update math pill and collapse out-of-focus expanded node
+  // Seamless clean cut handler: extracts pure markdown and cleanly heals line boundaries
+  liveSurface.addEventListener('cut', (e) => {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
+
+    const range = sel.getRangeAt(0);
+    const cleanMd = serializeSelection(range, liveSurface);
+    if (!cleanMd) return;
+
+    e.preventDefault();
+    e.clipboardData.setData('text/plain', cleanMd);
+
+    deleteSelectionAndHeal(range, liveSurface, editModeOptions, triggerUpdate);
+  });
+
+  // Seamless clean copy handler: extracts pure markdown without KaTeX DOM/MathML distortion
+  liveSurface.addEventListener('copy', (e) => {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
+
+    const range = sel.getRangeAt(0);
+    const selectedText = sel.toString();
+    if (selectedText.trim() === liveSurface.innerText.trim()) {
+      e.preventDefault();
+      const cleanMd = serializeSurface();
+      e.clipboardData.setData('text/plain', cleanMd);
+      return;
+    }
+
+    const cleanMd = serializeSelection(range, liveSurface);
+    if (cleanMd) {
+      e.preventDefault();
+      e.clipboardData.setData('text/plain', cleanMd);
+    }
+  });
+
+  // Clean, context-aware paste handler: handles inline markdown hydration, multiline splitting, and blocks
+  liveSurface.addEventListener('paste', (e) => {
+    e.preventDefault();
+    let pastedText = (e.clipboardData || window.clipboardData).getData('text/plain');
+    if (!pastedText) return;
+
+    // Normalize Windows/Mac line endings (CRLF -> LF, CR -> LF)
+    pastedText = pastedText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0);
+
+    // If text was selected prior to pasting, delete and heal first
+    if (!range.collapsed) {
+      deleteSelectionAndHeal(range, liveSurface, editModeOptions, null);
+    }
+
+    const freshSel = window.getSelection();
+    if (!freshSel || freshSel.rangeCount === 0) return;
+    const curRange = freshSel.getRangeAt(0);
+
+    const curLine = getContainingLine(curRange.startContainer, liveSurface) || liveSurface.firstChild;
+    if (!curLine || curLine.parentNode !== liveSurface) {
+      const newEl = renderSingleLineToDom(pastedText, editModeOptions);
+      liveSurface.appendChild(newEl);
+      setCaretAtOffsetInLine(newEl, pastedText.length);
+      triggerUpdate();
+      return;
+    }
+
+    // Check if paste contains full markdown blocks (code fences, tables, display math, callouts)
+    const hasMarkdownBlocks = /(^|\n)(```|---|===|\$\$|\|[^\n]+\|\n\|[-:\s|]+\||> \[!)/m.test(pastedText);
+
+    if (hasMarkdownBlocks) {
+      const split = getLineCaretSplit(curLine, curRange.startContainer, curRange.startOffset);
+      const blocks = lexMarkdownBlocks(pastedText);
+
+      const isBeforeEmpty = !split.beforeText.trim();
+      const isAfterEmpty = !split.afterText.trim();
+
+      let insertTarget = curLine;
+      if (!isBeforeEmpty) {
+        const beforeEl = renderSingleLineToDom(split.beforeText, editModeOptions);
+        liveSurface.replaceChild(beforeEl, curLine);
+        insertTarget = beforeEl;
+      }
+
+      blocks.forEach((blk, bIdx) => {
+        const blkEl = createLiveBlockElement(blk, editModeOptions);
+        if (bIdx === 0 && isBeforeEmpty && isAfterEmpty && curLine.parentNode === liveSurface) {
+          liveSurface.replaceChild(blkEl, curLine);
+          insertTarget = blkEl;
+        } else {
+          liveSurface.insertBefore(blkEl, insertTarget.nextSibling);
+          insertTarget = blkEl;
+        }
+      });
+
+      if (!isAfterEmpty) {
+        const afterEl = renderSingleLineToDom(split.afterText, editModeOptions);
+        liveSurface.insertBefore(afterEl, insertTarget.nextSibling);
+      }
+
+      const newR = document.createRange();
+      newR.selectNodeContents(insertTarget);
+      newR.collapse(false);
+      freshSel.removeAllRanges();
+      freshSel.addRange(newR);
+      triggerUpdate();
+      return;
+    }
+
+    // Multiline paste (split existing line at caret)
+    if (pastedText.includes('\n')) {
+      const split = getLineCaretSplit(curLine, curRange.startContainer, curRange.startOffset);
+      const pastedLines = pastedText.split('\n');
+
+      const firstLineText = split.beforeText + pastedLines[0];
+      const lastLineText = pastedLines[pastedLines.length - 1] + split.afterText;
+
+      const firstEl = renderSingleLineToDom(firstLineText, editModeOptions);
+      liveSurface.replaceChild(firstEl, curLine);
+
+      let prevEl = firstEl;
+      for (let i = 1; i < pastedLines.length - 1; i++) {
+        const midEl = renderSingleLineToDom(pastedLines[i], editModeOptions);
+        liveSurface.insertBefore(midEl, prevEl.nextSibling);
+        prevEl = midEl;
+      }
+
+      const lastEl = renderSingleLineToDom(lastLineText, editModeOptions);
+      liveSurface.insertBefore(lastEl, prevEl.nextSibling);
+
+      const caretOffsetInLastLine = pastedLines[pastedLines.length - 1].length;
+      setCaretAtOffsetInLine(lastEl, caretOffsetInLastLine);
+
+      triggerUpdate();
+      return;
+    }
+
+    // Single-line paste (immediate token hydration & caret positioning)
+    const split = getLineCaretSplit(curLine, curRange.startContainer, curRange.startOffset);
+    const combinedLineText = split.beforeText + pastedText + split.afterText;
+    const combinedEl = renderSingleLineToDom(combinedLineText, editModeOptions);
+    liveSurface.replaceChild(combinedEl, curLine);
+
+    const targetCaretOffset = split.beforeText.length + pastedText.length;
+    setCaretAtOffsetInLine(combinedEl, targetCaretOffset);
+
+    triggerUpdate();
+  });
+
+  // Track cursor movement to update math pill and collapse out-of-focus expanded node/block
   liveSurface.addEventListener('keyup', (e) => {
     if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', ' '].includes(e.key)) {
       const sel = window.getSelection();
+      if (sel && currentExpandedBlock && !currentExpandedBlock.rawContainer.contains(sel.anchorNode)) {
+        collapseExpandedBlock();
+      }
       if (sel && currentExpandedNode && sel.anchorNode !== currentExpandedNode) {
         collapseExpandedNode();
       }
       updateKatexPill();
+      scanAndCompileCompletedBlocks(liveSurface, editModeOptions, triggerUpdate);
     }
   });
 
-  liveSurface.addEventListener('click', () => {
+  liveSurface.addEventListener('click', (e) => {
     const sel = window.getSelection();
+    if (currentExpandedBlock && !currentExpandedBlock.rawContainer.contains(e.target)) {
+      collapseExpandedBlock();
+    }
     if (sel && currentExpandedNode && sel.anchorNode !== currentExpandedNode) {
       collapseExpandedNode();
     }
     updateKatexPill();
+    scanAndCompileCompletedBlocks(liveSurface, editModeOptions, triggerUpdate);
   });
 
   liveSurface.addEventListener('blur', () => {
-    hideKatexPill();
-    collapseExpandedNode();
+    setTimeout(() => {
+      if (!liveSurface.contains(document.activeElement)) {
+        hideKatexPill();
+        collapseExpandedNode();
+        collapseExpandedBlock();
+        scanAndCompileCompletedBlocks(liveSurface, editModeOptions, triggerUpdate);
+      }
+    }, 150);
   });
 
   // Toolbar formatting helper
@@ -581,14 +884,15 @@ export function renderTextBlock(
   };
 
   const renderBulletMenu = () => {
-    const customList = getCustomBullets();
-
     let itemsHtml = `
       <div class="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--text-dim)]">Presets (Inserts on Line)</div>
     `;
 
     const bulletOptions = [
       { label: '• Disc (Default)', prefix: '• ' },
+      { label: '○ Circle', prefix: '○ ' },
+      { label: '■ Square', prefix: '■ ' },
+      { label: '▸ Triangle', prefix: '▸ ' },
       { label: '– Dash', prefix: '– ' },
       { label: '➔ Arrow', prefix: '➔ ' },
       { label: '✦ Star', prefix: '✦ ' },
@@ -600,7 +904,7 @@ export function renderTextBlock(
     bulletOptions.forEach((opt) => {
       const isSelected = activeBulletPrefix === opt.prefix;
       itemsHtml += `
-        <button type="button" class="preset-item w-full flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-[var(--surface-hover)] text-left transition-colors ${isSelected ? 'bg-purple-500/15 text-purple-400 font-bold' : ''}" data-prefix="${escapeHtml(opt.prefix)}">
+        <button type="button" class="preset-item w-full flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-[var(--surface-hover)] text-left transition-colors cursor-pointer ${isSelected ? 'bg-purple-500/15 text-purple-400 font-bold' : ''}" data-prefix="${escapeHtml(opt.prefix)}">
           <div class="flex items-center gap-2">
             <span class="w-4 text-center font-bold text-purple-400">${renderBulletIcon(opt.prefix)}</span>
             <span>${escapeHtml(opt.label)}</span>
@@ -609,38 +913,6 @@ export function renderTextBlock(
         </button>
       `;
     });
-
-    if (customList.length > 0) {
-      itemsHtml += `
-        <div class="my-1 border-t border-[var(--border)]"></div>
-        <div class="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--text-dim)]">Global Custom LaTeX Bullets</div>
-      `;
-
-      customList.forEach((latex) => {
-        const latexPrefix = `$${latex}$ `;
-        const isSelected = activeBulletPrefix === latexPrefix;
-        itemsHtml += `
-          <div class="custom-bullet-row group flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-[var(--surface-hover)] transition-colors ${isSelected ? 'bg-purple-500/15 text-purple-400 font-bold' : ''}">
-            <button type="button" class="select-custom-btn flex items-center gap-2 flex-1 text-left" data-prefix="${escapeHtml(latexPrefix)}">
-              <span class="w-5 text-center text-purple-400 inline-flex items-center justify-center">${renderKatex(latex, false)}</span>
-              <span class="font-mono text-[11px]">${escapeHtml(latex)}</span>
-            </button>
-            <div class="flex items-center gap-1.5">
-              ${isSelected ? '<span class="text-xs text-purple-400">✓</span>' : ''}
-              <button type="button" class="del-custom-btn opacity-0 group-hover:opacity-100 hover:text-red-400 text-xs px-1 transition-opacity text-[var(--text-dim)]" data-latex="${escapeHtml(latex)}" title="Delete custom bullet">✕</button>
-            </div>
-          </div>
-        `;
-      });
-    }
-
-    itemsHtml += `
-      <div class="my-1 border-t border-[var(--border)]"></div>
-      <button type="button" class="add-custom-bullet-btn w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-purple-500/20 text-purple-300 font-semibold transition-colors">
-        <span class="text-purple-400 font-bold">+</span>
-        <span>Add Custom LaTeX Bullet...</span>
-      </button>
-    `;
 
     bulletMenu.innerHTML = itemsHtml;
 
@@ -651,33 +923,6 @@ export function renderTextBlock(
         closeBulletMenu();
       });
     });
-
-    bulletMenu.querySelectorAll('.select-custom-btn').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const p = btn.getAttribute('data-prefix');
-        insertBulletAtCurrentLine(p);
-        closeBulletMenu();
-      });
-    });
-
-    bulletMenu.querySelectorAll('.del-custom-btn').forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const lx = btn.getAttribute('data-latex');
-        removeCustomBullet(lx);
-        renderBulletMenu();
-      });
-    });
-
-    const addBtn = bulletMenu.querySelector('.add-custom-bullet-btn');
-    if (addBtn) {
-      addBtn.addEventListener('click', () => {
-        closeBulletMenu();
-        openCustomBulletDialog((newLatex) => {
-          insertBulletAtCurrentLine(`$${newLatex}$ `);
-        });
-      });
-    }
   };
 
   const toggleBulletMenu = () => {
@@ -795,7 +1040,13 @@ export function renderTextBlock(
     }
   };
 
+  const onHashChange = () => {
+    cleanupFloatingDock();
+  };
+  window.addEventListener('hashchange', onHashChange);
+
   const cleanupFloatingDock = () => {
+    window.removeEventListener('hashchange', onHashChange);
     document.removeEventListener('click', onDocClick);
     hideFloatingDock();
   };
@@ -809,19 +1060,15 @@ export function renderTextBlock(
 
   // Click outside to dismiss menus and close floating dock when leaving text block
   const onDocClick = (e) => {
-    // If the click is inside the dock or inside this block container, keep it open
     if (floatingDock.contains(e.target) || container.contains(e.target)) {
       return;
     }
-    // If click is inside a modal/dialog (e.g. custom bullet modal, macros modal), keep it open
     if (e.target.closest('#notes-custom-bullet-modal, #notes-macros-modal, #sidebar-logo-modal')) {
       return;
     }
-    // Leaving text block: hide floating dock
     hideFloatingDock();
   };
 
-  // Attach onDocClick asynchronously so the event that selected this block does not immediately dismiss it
   setTimeout(() => {
     document.addEventListener('click', onDocClick);
   }, 100);
@@ -833,18 +1080,89 @@ export function renderTextBlock(
     }
   }, 50);
 
+  // Attach isolated per-block undo/redo history
+  const detachHistory = attachBlockHistory(liveSurface, {
+    blockId: block.id,
+    getValue: () => serializeSurface(),
+    setValue: (newMarkdown) => {
+      collapseExpandedBlock();
+      collapseExpandedNode();
+      liveSurface.innerHTML = '';
+      if (!newMarkdown || !newMarkdown.trim()) {
+        const emptyLine = document.createElement('div');
+        emptyLine.className = 'live-line min-h-[1.5em] my-0.5';
+        emptyLine.innerHTML = '<br>';
+        liveSurface.appendChild(emptyLine);
+      } else {
+        const rendered = renderObsidianMarkdown(newMarkdown, editModeOptions);
+        while (rendered.firstChild) {
+          liveSurface.appendChild(rendered.firstChild);
+        }
+      }
+      ensureSurfaceDomIntegrity();
+    },
+    onUpdate: () => {
+      triggerUpdate();
+    }
+  });
+
   container.__blockCleanup = () => {
     cleanupFloatingDock();
+    if (typeof detachHistory === 'function') detachHistory();
   };
 
-  // Block Actions (Done, Up, Down, + Below, Delete)
+  const handleCopyBlock = async (btn) => {
+    collapseExpandedBlock();
+    collapseExpandedNode();
+    const markdownToCopy = serializeSurface();
+    const origHtml = btn.innerHTML;
+    const showCopied = () => {
+      btn.innerHTML = `
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="text-green-400">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+      `;
+      btn.title = 'Copied!';
+      setTimeout(() => {
+        btn.innerHTML = origHtml;
+        btn.title = 'Copy block markdown code';
+      }, 2000);
+    };
+
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(markdownToCopy);
+      } else {
+        throw new Error('Clipboard API unavailable');
+      }
+      showCopied();
+    } catch (err) {
+      const textarea = document.createElement('textarea');
+      textarea.value = markdownToCopy;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        showCopied();
+      } catch (e) {
+        console.error('Failed to copy markdown: ', e);
+      }
+      textarea.remove();
+    }
+  };
+
+  // Block Actions (Done, Up, Down, Copy, + Below, Delete)
   initBlockActions(editWrap, {
     onDone: () => {
       cleanupFloatingDock();
+      collapseExpandedBlock();
       collapseExpandedNode();
       triggerUpdate();
       if (onDone) onDone();
     },
+    onCopy: handleCopyBlock,
     onMoveUp: () => {
       cleanupFloatingDock();
       if (onMoveUp) onMoveUp();

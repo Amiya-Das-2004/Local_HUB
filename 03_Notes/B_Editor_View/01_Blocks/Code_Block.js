@@ -9,6 +9,7 @@
  */
 
 import { highlightCode, ensureHighlightJsLoaded } from '../../Writing_Engine/Code_Highlighter.js';
+import { attachBlockHistory } from '../../Writing_Engine/Block_History.js';
 import { escapeHtml } from '../../02_Utils.js';
 
 // Inject code card styling once
@@ -112,7 +113,10 @@ if (typeof document !== 'undefined' && !document.getElementById('notes-code-bloc
       resize: none;
       display: block;
       overflow-y: hidden;
-      white-space: pre;
+      overflow-x: hidden;
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow-wrap: anywhere;
     }
   `;
   document.head.appendChild(style);
@@ -334,8 +338,67 @@ export function renderCodeBlock(
           e.preventDefault();
           const start = textarea.selectionStart;
           const end = textarea.selectionEnd;
-          textarea.value = textarea.value.substring(0, start) + '  ' + textarea.value.substring(end);
-          textarea.selectionStart = textarea.selectionEnd = start + 2;
+          const val = textarea.value;
+
+          let effectiveEnd = end;
+          if (end > start && val.charAt(end - 1) === '\n') {
+            effectiveEnd = end - 1;
+          }
+
+          const isMultiLine = (start !== end && val.substring(start, effectiveEnd).includes('\n')) || (e.shiftKey && start !== end);
+
+          if (isMultiLine) {
+            const lineStart = val.lastIndexOf('\n', start - 1) + 1;
+            let lineEnd = val.indexOf('\n', effectiveEnd);
+            if (lineEnd === -1) lineEnd = val.length;
+
+            const lines = val.substring(lineStart, lineEnd).split('\n');
+
+            if (!e.shiftKey) {
+              const modified = lines.map(line => '  ' + line);
+              textarea.value = val.substring(0, lineStart) + modified.join('\n') + val.substring(lineEnd);
+              textarea.selectionStart = start + 2;
+              textarea.selectionEnd = end + (2 * lines.length);
+            } else {
+              let firstLineRemoved = 0;
+              let totalRemoved = 0;
+
+              const modified = lines.map((line, idx) => {
+                let removed = 0;
+                if (line.startsWith('  ')) {
+                  removed = 2;
+                } else if (line.startsWith(' ')) {
+                  removed = 1;
+                }
+                if (idx === 0) firstLineRemoved = removed;
+                totalRemoved += removed;
+                return line.substring(removed);
+              });
+
+              textarea.value = val.substring(0, lineStart) + modified.join('\n') + val.substring(lineEnd);
+              const startShift = Math.min(start - lineStart, firstLineRemoved);
+              textarea.selectionStart = Math.max(lineStart, start - startShift);
+              textarea.selectionEnd = Math.max(textarea.selectionStart, end - totalRemoved);
+            }
+          } else if (!e.shiftKey) {
+            textarea.value = val.substring(0, start) + '  ' + val.substring(end);
+            textarea.selectionStart = textarea.selectionEnd = start + 2;
+          } else {
+            const before = val.substring(0, start);
+            const lineStart = before.lastIndexOf('\n') + 1;
+            let removed = 0;
+            if (val.substring(lineStart, lineStart + 2) === '  ') {
+              removed = 2;
+            } else if (val.charAt(lineStart) === ' ') {
+              removed = 1;
+            }
+            if (removed > 0) {
+              textarea.value = val.substring(0, lineStart) + val.substring(lineStart + removed);
+              textarea.selectionStart = Math.max(lineStart, start - removed);
+              textarea.selectionEnd = Math.max(lineStart, end - removed);
+            }
+          }
+
           currentCode = textarea.value;
           block.code = currentCode;
           block.content = currentCode;
@@ -351,6 +414,19 @@ export function renderCodeBlock(
       });
 
       textarea.addEventListener('click', (e) => e.stopPropagation());
+
+      attachBlockHistory(textarea, {
+        blockId: block.id,
+        onUpdate: (val) => {
+          currentCode = val;
+          block.code = currentCode;
+          block.content = currentCode;
+          autoResize();
+          if (onUpdate) {
+            onUpdate({ code: currentCode, content: currentCode, title: currentTitle, language });
+          }
+        }
+      });
 
       textarea.addEventListener('blur', () => {
         currentCode = textarea.value;

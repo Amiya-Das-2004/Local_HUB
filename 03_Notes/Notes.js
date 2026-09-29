@@ -15,6 +15,7 @@ import { GetHeaderHTML, InitHeader } from './01_Header.js';
 import { GetNoteModalHTML, RenderNotesCardView } from './A_Notes_Card_View/A_Notes_Card_View.js';
 import { RenderLaTeXEditor } from './B_Editor_View/04_LaTeX_Editor.js';
 import { renderGraphView } from './C_Graph_View/Graph_View.js';
+import { InitScrollbar } from '../00_Components/03_Scrollbar.js';
 
 let isGlobalEditMode = true;
 
@@ -22,6 +23,7 @@ export function initNotesApp() {
   const root = document.getElementById('root');
   if (!root) return;
 
+  InitScrollbar();
   LoadNotesState();
 
   const currentHash = window.location.hash || '';
@@ -215,8 +217,8 @@ export function initNotesApp() {
         position: fixed !important;
         top: 0 !important;
         bottom: 0 !important;
-        left: -330px !important;
-        width: 300px !important;
+        left: -100% !important;
+        width: clamp(320px, 22vw, 420px);
         max-width: 85vw !important;
         height: 100vh !important;
         z-index: 100 !important;
@@ -226,13 +228,34 @@ export function initNotesApp() {
         border-right: 1px solid var(--border) !important;
         transition: left 0.28s cubic-bezier(0.4, 0, 0.2, 1) !important;
         box-shadow: none !important;
-        padding: 12px !important;
+        padding: 10px !important;
         scrollbar-width: thin;
         scrollbar-color: rgba(232, 234, 242, 0.45) transparent;
       }
 
+      .notes-sidebar-drawer::-webkit-scrollbar {
+        width: 4px;
+        height: 4px;
+      }
+      .notes-sidebar-drawer::-webkit-scrollbar-track {
+        background: transparent !important;
+      }
+      .notes-sidebar-drawer::-webkit-scrollbar-thumb {
+        background: rgba(232, 234, 242, 0.42);
+        border-radius: 9999px;
+      }
+      .notes-sidebar-drawer::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.85);
+      }
+
       [data-theme="light"] .notes-sidebar-drawer {
         scrollbar-color: rgba(26, 29, 46, 0.45) transparent;
+      }
+      [data-theme="light"] .notes-sidebar-drawer::-webkit-scrollbar-thumb {
+        background: rgba(26, 29, 46, 0.42);
+      }
+      [data-theme="light"] .notes-sidebar-drawer::-webkit-scrollbar-thumb:hover {
+        background: rgba(0, 0, 0, 0.85);
       }
 
       .notes-sidebar-drawer.visible {
@@ -275,6 +298,66 @@ export function initNotesApp() {
           border-radius: 12px !important;
         }
       }
+
+      /* ============================================================
+         HEADING HIERARCHY TYPOGRAPHY & SCROLL OFFSET
+         ============================================================ */
+      html {
+        scroll-padding-top: 96px;
+      }
+
+      .notes-heading-container,
+      .notes-heading {
+        scroll-margin-top: 96px;
+      }
+
+      @media (max-width: 600px) {
+        html {
+          scroll-padding-top: 86px;
+        }
+        .notes-heading-container,
+        .notes-heading {
+          scroll-margin-top: 86px;
+        }
+      }
+
+      @media (max-width: 440px) {
+        html {
+          scroll-padding-top: 80px;
+        }
+        .notes-heading-container,
+        .notes-heading {
+          scroll-margin-top: 80px;
+        }
+      }
+
+      .notes-heading p {
+        display: inline !important;
+        font-size: inherit !important;
+        font-family: inherit !important;
+        font-weight: inherit !important;
+        line-height: inherit !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+
+      .notes-heading .katex {
+        font-size: 0.95em !important;
+      }
+
+      /* Optical Math Size Normalization: KaTeX defaults to 1.21em, making it too large compared to body text */
+      .note-inline-math .katex,
+      .notes-text-content .katex:not(.katex-display .katex),
+      .obsidian-callout-body .katex:not(.katex-display .katex),
+      p .katex:not(.katex-display .katex),
+      li .katex:not(.katex-display .katex),
+      .content-display .katex:not(.katex-display .katex) {
+        font-size: 1.0em !important;
+      }
+      .katex-display .katex,
+      .note-equation-content .katex {
+        font-size: 1.05em !important;
+      }
     </style>
 
     <div id="header-mount"></div>
@@ -293,6 +376,14 @@ export function initNotesApp() {
   }
 
   const mainContainer = document.getElementById('notes-main-container');
+
+  // Remove any leftover floating text dock when outside an individual note
+  if (!noteId) {
+    document.querySelectorAll('#notes-text-floating-dock').forEach(el => {
+      if (typeof el.__cleanup === 'function') el.__cleanup();
+      el.remove();
+    });
+  }
 
   // 3. Active View Router
   if (noteId) {

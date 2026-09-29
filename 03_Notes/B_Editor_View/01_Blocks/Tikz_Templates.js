@@ -7,6 +7,65 @@ import { NotesState, SaveNotesState } from '../../00_State.js';
 
 export const BUILTIN_TIKZ_TEMPLATES = [
   {
+    id: 'builtin_progress_bar',
+    name: 'Progress Bar',
+    category: 'Chart',
+    description: 'Horizontal Record Tracking Progress Bar',
+    isBuiltin: true,
+    code: String.raw`\begin{tikzpicture}[
+    font=\sffamily,
+    x=1cm, y=1cm
+]
+
+% ============ CUSTOMIZABLE SETTINGS ============
+\def\barStartX{3}          % x-coordinate where bars start
+\def\barEndX{20}            % x-coordinate where bars end (100%)
+\def\barHeight{0.3}        % height of each bar
+\def\barGap{1}             % vertical gap between bars
+\def\labelX{0}             % x-coordinate for labels
+\def\percentGap{0.2}       % gap between bar end and percent label
+\def\titleText{Progress Chart}
+
+% Colors: \colorlet registers them as recognized TikZ color names
+\colorlet{bgColor}{gray!15}
+\colorlet{fillColor}{blue!65}
+
+% Pre-compute widths and title coordinates
+\pgfmathsetmacro{\barWidth}{\barEndX - \barStartX}
+\pgfmathsetmacro{\numItems}{4}
+\pgfmathsetmacro{\titleX}{\barStartX + \barWidth/2}
+\pgfmathsetmacro{\titleY}{\numItems * \barGap + 0.9}
+\pgfmathsetmacro{\pctLabelX}{\barEndX + \percentGap}
+
+% ============ TITLE ============
+\node[font=\large\bfseries] at (\titleX, \titleY) {\titleText};
+
+% ============ DRAW BARS ============
+\foreach [count=\i] \label/\pct in {
+    {TASK 1}/20,
+    {TASK 2}/50
+} {
+    \pgfmathsetmacro{\yPos}{(\numItems - \i) * \barGap + 0.6}
+    \pgfmathsetmacro{\yLo}{\yPos - \barHeight/2}
+    \pgfmathsetmacro{\yHi}{\yPos + \barHeight/2}
+    \pgfmathsetmacro{\fillEndX}{\barStartX + (\barWidth * \pct / 100)}
+
+    % Label
+    \node[anchor=west, font=\bfseries] at (\labelX, \yPos) {\label};
+
+    % Background bar
+    \fill[bgColor, rounded corners=2pt] (\barStartX, \yLo) rectangle (\barEndX, \yHi);
+
+    % Filled progress
+    \fill[fillColor, rounded corners=2pt] (\barStartX, \yLo) rectangle (\fillEndX, \yHi);
+
+    % Percentage label
+    \node[anchor=west] at (\pctLabelX, \yPos) {\pct\%};
+}
+
+\end{tikzpicture}`
+  },
+  {
     id: 'builtin_optical_cavity',
     name: 'Optical Cavity',
     category: 'Physics & Optics',
@@ -20,16 +79,16 @@ export const BUILTIN_TIKZ_TEMPLATES = [
     line join=round,
     every node/.style={font=\large, inner sep=1pt},
     cavity/.style={draw=#000000|#f1f5f9, fill=#ffffff|#222738}
-]
-  % Mirrors
-  \draw[cavity, thick] (20,20) rectangle (40,160);
-  \draw[cavity, thick] (300,20) rectangle (320,160);
-  % Laser Beam
-  \draw[red, very thick] (40,90) -- (300,90);
-  \node[above, red] at (170,90) {Laser Cavity Beam};
-  % Input Coupler Arrow
-  \draw[->, purple, thick] (0,90) -- (20,90);
-\end{tikzpicture}`
+    ]
+    % Mirrors
+    \draw[cavity, thick] (20,20) rectangle (40,160);
+    \draw[cavity, thick] (300,20) rectangle (320,160);
+    % Laser Beam
+    \draw[red, very thick] (40,90) -- (300,90);
+    \node[above, red] at (170,90) {Laser Cavity Beam};
+    % Input Coupler Arrow
+    \draw[->, purple, thick] (0,90) -- (20,90);
+    \end{tikzpicture}`
   },
   {
     id: 'builtin_2d_vectors',
