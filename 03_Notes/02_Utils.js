@@ -10,7 +10,12 @@ import { formatRichTextWithMath } from './Writing_Engine/Math_Renderer.js';
 
 // Sanitizes raw strings by escaping HTML special characters to prevent XSS and layout breaks
 export function escapeHtml(str) {
-  return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 // Toggles completion state of a markdown checkbox at a specific index in raw text

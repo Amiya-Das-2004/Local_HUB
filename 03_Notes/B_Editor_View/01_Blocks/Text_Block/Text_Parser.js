@@ -192,7 +192,7 @@ export const parseTextToFragment = (text, options = {}) => {
   const fragment = document.createDocumentFragment();
   if (!text) return fragment;
 
-  const tokenRegex = /((?<!\\)\$(?!\s)([^\$\n\r]+?)(?<!\s)\$)|(`([^`\n\r]+?)`)|(\*\*([^*]+?)\*\*)|((?:^|[^*])\*([^*\n\r]+?)\*(?!\*))|(\\underline\{([^}]+)\})|(~~([^~]+)~~)|(\\textcolor\{([#a-zA-Z0-9|]+)\}\{((?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})+)\})|(\\fig\{([^}]+)\})|(\[\[([^\]\n\r]+)\]\])|(<u>([\s\S]*?)<\/u>)|(<b>([\s\S]*?)<\/b>|<strong>([\s\S]*?)<\/strong>)|(<i>([\s\S]*?)<\/i>|<em>([\s\S]*?)<\/em>)|(<mark>([\s\S]*?)<\/mark>)|(<code>([\s\S]*?)<\/code>)|(\\textbf\{((?:[^{}]|\{[^{}]*\})+)\})/g;
+  const tokenRegex = /((?<!\\)\$(?!\s)([^\$\n\r]+?)(?<!\s)\$)|(`([^`\n\r]+?)`)|(\*\*([^*]+?)\*\*)|((?:^|[^*])\*([^*\n\r]+?)\*(?!\*))|(\\underline\{([^}]+)\})|(~~([^~]+)~~)|(\\textcolor\{([#a-zA-Z0-9|]+)\}\{((?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})+)\})|(\\fig\{([^}]+)\})|(\[\[([^\]\n\r]+)\]\])|(<u>([\s\S]*?)<\/u>)|(<b>([\s\S]*?)<\/b>|<strong>([\s\S]*?)<\/strong>)|(<i>([\s\S]*?)<\/i>|<em>([\s\S]*?)<\/em>)|(<mark>([\s\S]*?)<\/mark>)|(<code>([\s\S]*?)<\/code>)|(\\textbf\{((?:[^{}]|\{[^{}]*\})+)\})|(\\cite\{([^}]*)\})/g;
 
   let lastIndex = 0;
   let match;
@@ -261,6 +261,9 @@ export const parseTextToFragment = (text, options = {}) => {
     } else if (match[32]) {
       // LaTeX Bold: \textbf{...}
       fragment.appendChild(createLiveWidget('bold', match[32], match[33], options));
+    } else if (match[34]) {
+      // Bibliography Citation: \cite{key1,key2}
+      fragment.appendChild(createLiveWidget('cite', match[34], match[35], options));
     }
 
     lastIndex = matchEnd;

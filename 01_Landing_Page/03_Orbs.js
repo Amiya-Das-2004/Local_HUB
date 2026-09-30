@@ -238,6 +238,23 @@ export class Orb {
   }
 }
 
+// Tab click navigation. In the multi-file dev workspace a tab's PageUrl opens its
+// standalone HTML page (same tab). Inside the all-in-one standalone build
+// (__IS_STANDALONE__) there are no sibling pages, so the hash router is used.
+export function NavigateToTab(Tab) {
+  const targetUrl = (Tab && Tab.Url) || '';
+  const pageUrl = (Tab && Tab.PageUrl) || '';
+  const isStandaloneApp = typeof window !== 'undefined' && window.__IS_STANDALONE__ === true;
+
+  if (pageUrl && !isStandaloneApp && !/^(https?:)?\/\//i.test(pageUrl)) {
+    window.location.href = pageUrl;
+  } else if (targetUrl.startsWith('#')) {
+    window.location.hash = targetUrl;
+  } else {
+    window.open(targetUrl, '_blank');
+  }
+}
+
 export function SetupInputs(Renderer, Camera, Orbs, Viewport) {
   const Raycaster = new THREE.Raycaster();
   const MouseNdc = new THREE.Vector2();
@@ -297,12 +314,7 @@ export function SetupInputs(Renderer, Camera, Orbs, Viewport) {
       const Moved = Math.hypot(E.clientX - MouseDownScreen.x, E.clientY - MouseDownScreen.y);
       DraggingOrb.IsDragging = false;
       if (Moved < 5) {
-        const targetUrl = DraggingOrb.Tab.Url || '';
-        if (targetUrl.startsWith('#')) {
-          window.location.hash = targetUrl;
-        } else {
-          window.open(targetUrl, '_blank');
-        }
+        NavigateToTab(DraggingOrb.Tab);
       }
       DraggingOrb = null;
     }
@@ -339,12 +351,7 @@ export function SetupInputs(Renderer, Camera, Orbs, Viewport) {
       const Moved = Math.hypot(T.clientX - TouchStartScreen.x, T.clientY - TouchStartScreen.y);
       DraggingOrb.IsDragging = false;
       if (Moved < 10) {
-        const targetUrl = DraggingOrb.Tab.Url || '';
-        if (targetUrl.startsWith('#')) {
-          window.location.hash = targetUrl;
-        } else {
-          window.open(targetUrl, '_blank');
-        }
+        NavigateToTab(DraggingOrb.Tab);
       }
       DraggingOrb = null;
     }

@@ -235,5 +235,11 @@ export function renderEquationBlock(block, isEditing = false, onUpdate = null, {
   });
 
   container.appendChild(editWrap);
+
+  // Release the code editor's ResizeObserver + history when the editor re-renders or removes this block
+  container.__blockCleanup = () => {
+    if (codeEditor && typeof codeEditor.__cleanup === 'function') codeEditor.__cleanup();
+  };
+
   return container;
 }

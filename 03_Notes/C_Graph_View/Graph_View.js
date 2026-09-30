@@ -160,7 +160,16 @@ export function renderGraphView() {
     ctx.restore();
   }
 
+  // Stops itself once the view is detached (navigation replaces the DOM) and removes
+  // the window listeners; otherwise the physics loop runs forever per visit.
   function loop() {
+    if (!container.isConnected) {
+      animId = null;
+      window.removeEventListener('mousemove', onWindowMouseMove);
+      window.removeEventListener('mouseup', onWindowMouseUp);
+      window.removeEventListener('resize', resize);
+      return;
+    }
     stepPhysics();
     draw();
     animId = requestAnimationFrame(loop);
@@ -204,7 +213,8 @@ export function renderGraphView() {
     }
   });
 
-  window.addEventListener('mousemove', (e) => {
+  // Named so they can be removed when the view is torn down (see loop()'s isConnected check)
+  function onWindowMouseMove(e) {
     const { worldX, worldY, clientX, clientY } = getGraphCoords(e);
 
     if (draggedNode) {
@@ -219,9 +229,9 @@ export function renderGraphView() {
       hoveredNode = findNodeUnder(worldX, worldY);
       canvas.style.cursor = hoveredNode ? 'pointer' : 'grab';
     }
-  });
+  }
 
-  window.addEventListener('mouseup', (e) => {
+  function onWindowMouseUp(e) {
     const { worldX, worldY } = getGraphCoords(e);
     if (draggedNode) {
       const hitNode = findNodeUnder(worldX, worldY);
@@ -231,7 +241,11 @@ export function renderGraphView() {
     }
     draggedNode = null;
     isDraggingCanvas = false;
-  });
+  }
+
+  window.addEventListener('mousemove', onWindowMouseMove);
+
+  window.addEventListener('mouseup', onWindowMouseUp);
 
   canvas.addEventListener('wheel', (e) => {
     e.preventDefault();

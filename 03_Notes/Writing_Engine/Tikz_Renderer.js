@@ -96,12 +96,15 @@ export function clearTikzSvgCache() {
   } catch (e) {}
 }
 
-export function getCachedTikzSvg(code, theme = null) {
+export function getCachedTikzSvg(code, theme = null, preambleKey = '') {
   if (!code) return null;
   const isLight = (theme === 'light' || (theme === null && typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light'));
   const currentTheme = isLight ? 'light' : 'dark';
   const rawClean = code.trim();
-  const cacheKey = `${currentTheme}:::${TIKZ_CACHE_VERSION}:::${rawClean}`;
+  // The effective preamble (global + note-level TikZ macros) is part of the compiled script,
+  // so it MUST be part of the key or notes with different local macros share one compiled SVG.
+  const effPreambleKey = preambleKey || resolveThemeColors(getActiveTikzPreamble(null));
+  const cacheKey = `${currentTheme}:::${TIKZ_CACHE_VERSION}:::${effPreambleKey ? hashString(effPreambleKey) + ':::' : ''}${rawClean}`;
   if (tikzSvgCache.has(cacheKey)) {
     return tikzSvgCache.get(cacheKey);
   }
@@ -290,7 +293,10 @@ function waitForTikzSvg(targetContainer, renderId, timeoutMs = 25000) {
 
     checkInterval = setInterval(() => {
       if (targetContainer.__tikzRenderId !== renderId) {
+        // A newer render superseded this one — settle the promise so the awaiting
+        // closure is released (and its onComplete can reset the UI) instead of hanging forever.
         cleanup();
+        resolve(null);
         return;
       }
 
@@ -483,10 +489,13 @@ export function renderTikzToElement(tikzCode, targetContainer, onComplete = null
     return;
   }
 
-  // 1. Instant Bi-Theme Cache Check
+  // 1. Instant Bi-Theme Cache Check.
+  // The effective preamble (global + note-level macros) is part of the compiled script, so it
+  // must be part of the key — otherwise notes with different local TikZ macros share one SVG.
   const isLight = (typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light');
   const currentTheme = isLight ? 'light' : 'dark';
-  const cacheKey = `${currentTheme}:::${TIKZ_CACHE_VERSION}:::${rawClean}`;
+  const basePreamble = resolveThemeColors(getActiveTikzPreamble(noteContext));
+  const cacheKey = `${currentTheme}:::${TIKZ_CACHE_VERSION}:::${hashString(basePreamble)}:::${rawClean}`;
 
   let cachedHtml = tikzSvgCache.get(cacheKey);
   if (!cachedHtml) {
@@ -515,7 +524,6 @@ export function renderTikzToElement(tikzCode, targetContainer, onComplete = null
 
   // 2. Resolve dual-theme colors (#Light|#Dark)
   const resolvedCode = resolveThemeColors(healedCode);
-  const basePreamble = resolveThemeColors(getActiveTikzPreamble(noteContext));
 
   // 3. Translate any raw #HEX colors to valid TikZ \definecolor names
   // In LaTeX/TikZ, raw '#' causes "Illegal parameter number in definition of \pgfkeyscurrentkey"

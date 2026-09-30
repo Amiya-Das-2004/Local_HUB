@@ -95,6 +95,7 @@ export const checkAutoCollapseTokensNearCaret = ({ editModeOptions, hideKatexPil
     { type: 'strike', regex: /(~~([^~]+)~~)\s*$/ },
     { type: 'color', regex: /(\\textcolor\{([#a-zA-Z0-9|]+)\}\{((?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})+)\})\s*$/ },
     { type: 'fig', regex: /(\\fig\{([^}]+)\})\s*$/ },
+    { type: 'cite', regex: /(\\cite\{([^}]*)\})\s*$/ },
     { type: 'wikilink', regex: /(\[\[([^\]\n\r]+)\]\])\s*$/ }
   ];
 
@@ -121,6 +122,7 @@ export const checkAutoCollapseTokensNearCaret = ({ editModeOptions, hideKatexPil
       else if (p.type === 'strike') contentVal = match[2] || fullToken.slice(2, -2);
       else if (p.type === 'color') contentVal = match[3] || '';
       else if (p.type === 'fig') contentVal = match[2] || fullToken.slice(5, -1);
+      else if (p.type === 'cite') contentVal = match[2] || fullToken.slice(6, -1);
       else if (p.type === 'wikilink') contentVal = match[2] || fullToken.slice(2, -2);
 
       const widget = createLiveWidget(widgetType, fullToken, contentVal, editModeOptions);
@@ -323,6 +325,9 @@ export const tryCollapseTokenAtCaretOnEnter = ({ node, offset, editModeOptions, 
   if (offset >= 5 && text.substring(offset - 5, offset) === '\\fig{' && text[offset] === '}') {
     return exitEmptyWrapperWithSpace(offset + 1, offset + 1);
   }
+  if (offset >= 6 && text.substring(offset - 6, offset) === '\\cite{' && text[offset] === '}') {
+    return exitEmptyWrapperWithSpace(offset + 1, offset + 1);
+  }
   if (offset >= 2 && text.substring(offset - 2, offset) === '[[' && text.substring(offset, offset + 2) === ']]') {
     return exitEmptyWrapperWithSpace(offset + 2, offset + 2);
   }
@@ -452,6 +457,16 @@ export const tryCollapseTokenAtCaretOnEnter = ({ node, offset, editModeOptions, 
     const end = start + m[0].length;
     if (offset > start && offset <= end) {
       return collapseTokenAndInsertSpace(start, end, 'fig', m[0], m[1]);
+    }
+  }
+
+  // 8b. Bibliography Citation \cite{key1,key2}
+  const citeRegex = /\\cite\{([^}]*)\}/g;
+  while ((m = citeRegex.exec(text)) !== null) {
+    const start = m.index;
+    const end = start + m[0].length;
+    if (offset > start && offset <= end) {
+      return collapseTokenAndInsertSpace(start, end, 'cite', m[0], m[1]);
     }
   }
 
@@ -767,6 +782,8 @@ export const handleTextBlockKeyDown = (e, ctx) => {
         deleteBefore = colMatch[0].length; deleteAfter = 1;
       } else if (offset >= 5 && text.substring(offset - 5, offset) === '\\fig{' && text[offset] === '}') {
         deleteBefore = 5; deleteAfter = 1;
+      } else if (offset >= 6 && text.substring(offset - 6, offset) === '\\cite{' && text[offset] === '}') {
+        deleteBefore = 6; deleteAfter = 1;
       } else if (offset >= 2 && text.substring(offset - 2, offset) === '[[' && text.substring(offset, offset + 2) === ']]') {
         deleteBefore = 2; deleteAfter = 2;
       }

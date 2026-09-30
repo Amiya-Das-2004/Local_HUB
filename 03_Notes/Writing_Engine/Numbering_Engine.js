@@ -30,7 +30,7 @@ export function toAlpha(num, upper = false) {
   let result = '';
   let n = num;
   while (n > 0) {
-    const mod = (num - 1) % 26;
+    const mod = (n - 1) % 26;
     result = String.fromCharCode(65 + mod) + result;
     n = Math.floor((n - 1) / 26);
   }
@@ -193,5 +193,47 @@ export function computeFigureNumbers(blocks = []) {
   });
 
   return { figureMap, tagMap };
+}
+
+/**
+ * Collects \cite{key1,key2} occurrences across all text blocks in document order and
+ * assigns first-appearance numbers, mirroring computeFigureNumbers' walk (recursing
+ * into multi-column children). Unresolved keys still get a number so numeric labels
+ * stay stable; resolution against the library happens at render time.
+ * @param {Array<Object>} blocks - note blocks
+ * @returns {Map<string, number>} lowercased key -> first-appearance number
+ */
+export function computeCitationNumbers(blocks = []) {
+  const citeOrder = new Map(); // lowercased key -> number
+  let counter = 0;
+
+  const collectFromText = (raw) => {
+    if (!raw || typeof raw !== 'string') return;
+    const re = /\\cite\{([^}]*)\}/g;
+    let m;
+    while ((m = re.exec(raw)) !== null) {
+      for (const rawKey of m[1].split(',')) {
+        const key = rawKey.trim().toLowerCase();
+        if (key && !citeOrder.has(key)) {
+          counter += 1;
+          citeOrder.set(key, counter);
+        }
+      }
+    }
+  };
+
+  const processBlock = (block) => {
+    if (!block || typeof block !== 'object') return;
+    if (block.type === 'columns' || block.type === 'multicolumn' || block.type === 'multi-column') {
+      (block.cols || []).forEach(child => processBlock(child));
+      return;
+    }
+    if (block.type === 'text' || block.type === undefined) {
+      collectFromText(block.content);
+    }
+  };
+
+  blocks.forEach(processBlock);
+  return citeOrder;
 }
 

@@ -87,11 +87,12 @@ export function recordBlockSnapshot(blockId, text, cursorStart = 0, cursorEnd = 
 
 /**
  * Performs an undo operation for a block.
- * @param {string} blockId 
- * @param {string} currentText 
+ * @param {string} blockId
+ * @param {string} currentText
+ * @param {{ start: number, end: number } | null} [currentCaret] - live caret, pushed to the redo stack
  * @returns {{ text: string, cursorStart: number, cursorEnd: number } | null}
  */
-export function undoBlockHistory(blockId, currentText) {
+export function undoBlockHistory(blockId, currentText, currentCaret = null) {
   if (!blockId) return null;
   const history = blockHistories.get(blockId);
   if (!history || history.undoStack.length <= 1) return null;
@@ -106,7 +107,7 @@ export function undoBlockHistory(blockId, currentText) {
 
   // If current editor text is newer than top of stack, push current state to redo first
   if (top && top.text !== textStr) {
-    history.redoStack.push({ text: textStr, cursorStart: 0, cursorEnd: 0 });
+    history.redoStack.push({ text: textStr, cursorStart: currentCaret?.start ?? 0, cursorEnd: currentCaret?.end ?? 0 });
     return top;
   }
 
@@ -119,11 +120,12 @@ export function undoBlockHistory(blockId, currentText) {
 
 /**
  * Performs a redo operation for a block.
- * @param {string} blockId 
- * @param {string} currentText 
+ * @param {string} blockId
+ * @param {string} currentText
+ * @param {{ start: number, end: number } | null} [currentCaret]
  * @returns {{ text: string, cursorStart: number, cursorEnd: number } | null}
  */
-export function redoBlockHistory(blockId, currentText) {
+export function redoBlockHistory(blockId, currentText, currentCaret = null) {
   if (!blockId) return null;
   const history = blockHistories.get(blockId);
   if (!history || history.redoStack.length === 0) return null;
@@ -133,9 +135,82 @@ export function redoBlockHistory(blockId, currentText) {
     history.typingTimer = null;
   }
 
+  const textStr = String(currentText ?? '');
+  const top = history.undoStack[history.undoStack.length - 1];
+
+  // If current editor text is newer than the redo entry, push current state back onto undo first
+  if (top && top.text !== textStr) {
+    history.undoStack.push({ text: textStr, cursorStart: currentCaret?.start ?? 0, cursorEnd: currentCaret?.end ?? 0 });
+  }
+
   const next = history.redoStack.pop();
   history.undoStack.push(next);
   return next;
+}
+
+// --- Caret helpers for contenteditable surfaces (textareas keep their native selectionStart/End) ---
+
+function isEditableSurface(el) {
+  return el && el.isContentEditable === true;
+}
+
+// Text-content offset of the caret: pre-order count of characters across descendant text nodes
+function getCaretTextOffset(rootEl) {
+  const sel = typeof window !== 'undefined' ? window.getSelection() : null;
+  if (!sel || sel.rangeCount === 0) return 0;
+  const range = sel.getRangeAt(0);
+  if (!rootEl || !rootEl.contains(range.startContainer)) return 0;
+  let count = 0;
+  const walker = document.createTreeWalker(rootEl, NodeFilter.SHOW_TEXT);
+  let n;
+  while ((n = walker.nextNode())) {
+    if (n === range.startContainer) return count + range.startOffset;
+    count += n.nodeValue.length;
+  }
+  return count;
+}
+
+// Places the caret at a text-content offset (clamped to the content length)
+function setCaretAtTextOffset(rootEl, offset) {
+  if (typeof document === 'undefined' || !rootEl) return;
+  let count = 0;
+  let target = null;
+  let targetOffset = 0;
+  let last = null;
+  const walker = document.createTreeWalker(rootEl, NodeFilter.SHOW_TEXT);
+  let n;
+  while ((n = walker.nextNode())) {
+    const len = n.nodeValue.length;
+    if (!target && count + len >= offset) {
+      target = n;
+      targetOffset = offset - count;
+    }
+    count += len;
+    last = n;
+  }
+  if (!target) {
+    target = last;
+    targetOffset = target ? target.nodeValue.length : 0;
+  }
+  if (!target) return;
+  try {
+    const range = document.createRange();
+    range.setStart(target, Math.min(targetOffset, target.nodeValue.length));
+    range.collapse(true);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  } catch (_) {}
+}
+
+function getLiveCaret(element, val) {
+  if (isEditableSurface(element)) {
+    const off = getCaretTextOffset(element);
+    return { start: off, end: off };
+  }
+  const start = element.selectionStart !== undefined ? element.selectionStart : (val ? String(val).length : 0);
+  const end = element.selectionEnd !== undefined ? element.selectionEnd : start;
+  return { start, end };
 }
 
 /**
@@ -157,8 +232,7 @@ export function attachBlockHistory(element, { blockId = '', getValue = null, set
 
   const handleInput = () => {
     const val = getValue ? getValue() : element.value;
-    const start = element.selectionStart !== undefined ? element.selectionStart : val.length;
-    const end = element.selectionEnd !== undefined ? element.selectionEnd : start;
+    const { start, end } = getLiveCaret(element, val);
     recordBlockSnapshot(blockId, val, start, end);
   };
 
@@ -174,7 +248,7 @@ export function attachBlockHistory(element, { blockId = '', getValue = null, set
       e.stopPropagation();
 
       const current = getValue ? getValue() : element.value;
-      const prev = undoBlockHistory(blockId, current);
+      const prev = undoBlockHistory(blockId, current, getLiveCaret(element, current));
       if (prev) {
         if (setValue) {
           setValue(prev.text);
@@ -182,7 +256,10 @@ export function attachBlockHistory(element, { blockId = '', getValue = null, set
           element.value = prev.text;
         }
 
-        if (element.setSelectionRange && typeof prev.cursorStart === 'number') {
+        if (isEditableSurface(element)) {
+          // setValue re-renders contenteditable surfaces asynchronously — restore after the new DOM exists
+          setTimeout(() => setCaretAtTextOffset(element, prev.cursorStart ?? 0), 0);
+        } else if (element.setSelectionRange && typeof prev.cursorStart === 'number') {
           try {
             element.setSelectionRange(prev.cursorStart, prev.cursorEnd ?? prev.cursorStart);
           } catch (_) {}
@@ -199,7 +276,7 @@ export function attachBlockHistory(element, { blockId = '', getValue = null, set
       e.stopPropagation();
 
       const current = getValue ? getValue() : element.value;
-      const next = redoBlockHistory(blockId, current);
+      const next = redoBlockHistory(blockId, current, getLiveCaret(element, current));
       if (next) {
         if (setValue) {
           setValue(next.text);
@@ -207,7 +284,10 @@ export function attachBlockHistory(element, { blockId = '', getValue = null, set
           element.value = next.text;
         }
 
-        if (element.setSelectionRange && typeof next.cursorStart === 'number') {
+        if (isEditableSurface(element)) {
+          // setValue re-renders contenteditable surfaces asynchronously — restore after the new DOM exists
+          setTimeout(() => setCaretAtTextOffset(element, next.cursorStart ?? 0), 0);
+        } else if (element.setSelectionRange && typeof next.cursorStart === 'number') {
           try {
             element.setSelectionRange(next.cursorStart, next.cursorEnd ?? next.cursorStart);
           } catch (_) {}

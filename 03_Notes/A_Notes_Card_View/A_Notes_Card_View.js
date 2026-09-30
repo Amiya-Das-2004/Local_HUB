@@ -12,6 +12,7 @@ import {
   ClearSelectedNotes,
   GetSelectedNoteIds
 } from './01_Navbar/05_Delete_Button.js';
+import { OpenLibraryModal } from '../03_Library.js';
 
 // Re-export modal and action controls directly for master consumers
 export {
@@ -86,6 +87,13 @@ export function RenderNotesCardView(mainContainer, state) {
     },
     onAddClick: () => {
       OpenNoteModal(null);
+    },
+    onLibraryClick: () => {
+      OpenLibraryModal({
+        onUpdate: () => {
+          RefreshCardsView();
+        }
+      });
     }
   });
 

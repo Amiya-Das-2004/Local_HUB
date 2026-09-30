@@ -208,7 +208,7 @@ export function GetHeaderHTML() {
       <div class="header-inner">
         <!-- 1. LEFT CORNER: Logo from 00_Components/Logo.js -->
         <div class="header-left">
-          ${GetLogoHTML()}
+          ${GetLogoHTML({ variant: 'notes' })}
         </div>
 
         <!-- 2. MIDDLE: Refined SVG Logo + "NOTES" -->

@@ -44,16 +44,25 @@ export const DEFAULT_GLOBAL_MACROS = {
 }`
 };
 
-// In-memory state holding notes, folders, tags, vault metadata, macros, and custom templates
+// In-memory state holding notes, folders, tags, vault metadata, macros, custom templates, and the BibTeX library
 export let NotesState = {
   vaultMeta: { title: "Notes Vault", version: "1.0.0" },
   globalMacros: { ...DEFAULT_GLOBAL_MACROS },
   tableTemplates: [],
   tikzTemplates: [],
+  bibliography: [],
+  citationStyle: 'numeric',
   folders: [],
   tags: [],
   notes: []
 };
+
+// Preserves a manually curated order (e.g. drag-reordered folders) and only appends newly seen values.
+function mergeOrderedLists(existing, derived) {
+  const base = Array.isArray(existing) ? existing.filter(Boolean) : [];
+  const extra = (Array.isArray(derived) ? derived : []).filter(v => v && !base.includes(v));
+  return [...base, ...extra];
+}
 
 // Validates note structure and fills missing fields with defaults
 function sanitizeNote(n, idx = 0) {
@@ -97,7 +106,7 @@ export function LoadNotesState(forceReload = false) {
         const parsedCache = JSON.parse(cached);
         const cacheTimestamp = parsedCache?._savedAt || 0;
         const currentTimestamp = NotesState.vaultMeta?.lastSaved || 0;
-        if (cacheTimestamp <= currentTimestamp && !parsedCache._unsaved) {
+        if (cacheTimestamp <= currentTimestamp) {
           return NotesState;
         }
       } else {
@@ -120,6 +129,8 @@ export function LoadNotesState(forceReload = false) {
           globalMacros: parsedDom.globalMacros || { ...DEFAULT_GLOBAL_MACROS },
           tableTemplates: Array.isArray(parsedDom.tableTemplates) ? parsedDom.tableTemplates : [],
           tikzTemplates: Array.isArray(parsedDom.tikzTemplates) ? parsedDom.tikzTemplates : [],
+          bibliography: Array.isArray(parsedDom.bibliography) ? parsedDom.bibliography : [],
+          citationStyle: typeof parsedDom.citationStyle === 'string' ? parsedDom.citationStyle : 'numeric',
           folders: Array.isArray(parsedDom.folders) ? parsedDom.folders : [],
           tags: Array.isArray(parsedDom.tags) ? parsedDom.tags : [],
           notes: Array.isArray(parsedDom.notes) ? parsedDom.notes.map(sanitizeNote) : []
@@ -142,16 +153,17 @@ export function LoadNotesState(forceReload = false) {
       if (parsedCache && parsedCache._unsaved === true && cacheTimestamp > domTimestamp && Array.isArray(parsedCache.notes)) {
         console.log('[NotesState] Recovering uncommitted working edits from local cache...');
         const cachedNotes = parsedCache.notes.map(sanitizeNote);
-        const allFolders = Array.from(new Set(cachedNotes.map(n => n.folder || 'General').filter(Boolean)));
-        const allTags = Array.from(new Set(cachedNotes.flatMap(n => n.tags || []).filter(Boolean)));
 
         Object.assign(NotesState, {
           vaultMeta: parsedCache.vaultMeta || domState?.vaultMeta || { title: "My Research & Notes Vault", version: "1.0.0", lastSaved: cacheTimestamp },
           globalMacros: parsedCache.globalMacros || domState?.globalMacros || { ...DEFAULT_GLOBAL_MACROS },
           tableTemplates: parsedCache.tableTemplates || domState?.tableTemplates || [],
           tikzTemplates: parsedCache.tikzTemplates || domState?.tikzTemplates || [],
-          folders: allFolders,
-          tags: allTags,
+          bibliography: Array.isArray(parsedCache.bibliography) ? parsedCache.bibliography : (domState?.bibliography || []),
+          citationStyle: typeof parsedCache.citationStyle === 'string' ? parsedCache.citationStyle : (domState?.citationStyle || 'numeric'),
+          // Recovery must not discard vault-level folders/tags that have no cached note (they may be intentionally empty or hand-ordered)
+          folders: mergeOrderedLists(parsedCache.folders || domState?.folders || [], Array.from(new Set(cachedNotes.map(n => n.folder || 'General').filter(Boolean)))),
+          tags: mergeOrderedLists(parsedCache.tags || domState?.tags || [], Array.from(new Set(cachedNotes.flatMap(n => n.tags || []).filter(Boolean)))),
           notes: cachedNotes
         });
 
@@ -171,6 +183,8 @@ export function LoadNotesState(forceReload = false) {
       globalMacros: domState.globalMacros || { ...DEFAULT_GLOBAL_MACROS },
       tableTemplates: domState.tableTemplates || [],
       tikzTemplates: domState.tikzTemplates || [],
+      bibliography: domState.bibliography || [],
+      citationStyle: domState.citationStyle || 'numeric',
       folders: domState.folders.length > 0 ? domState.folders : Array.from(new Set(domState.notes.map(n => n.folder || 'General').filter(Boolean))),
       tags: domState.tags.length > 0 ? domState.tags : Array.from(new Set(domState.notes.flatMap(n => n.tags || []).filter(Boolean))),
       notes: domState.notes
@@ -185,6 +199,8 @@ export function LoadNotesState(forceReload = false) {
     globalMacros: { ...DEFAULT_GLOBAL_MACROS },
     tableTemplates: [],
     tikzTemplates: [],
+    bibliography: [],
+    citationStyle: 'numeric',
     folders: [],
     tags: [],
     notes: []
@@ -243,10 +259,14 @@ if (typeof window !== 'undefined') {
 export function SaveNotesState(newState = null, { immediate = false } = {}) {
   if (newState) NotesState = newState;
 
-  // Sync folders and tags to currently active notes
+  // Sync folders and tags to currently active notes.
+  // The existing lists are the ordering source of truth (drag-reorder writes them directly);
+  // derived values are only APPENDED so custom order and intentionally-empty folders survive saves.
   if (Array.isArray(NotesState.notes)) {
-    NotesState.folders = Array.from(new Set(NotesState.notes.map(n => n.folder || 'General').filter(Boolean)));
-    NotesState.tags = Array.from(new Set(NotesState.notes.flatMap(n => n.tags || []).filter(Boolean)));
+    const derivedFolders = Array.from(new Set(NotesState.notes.map(n => n.folder || 'General').filter(Boolean)));
+    const derivedTags = Array.from(new Set(NotesState.notes.flatMap(n => n.tags || []).filter(Boolean)));
+    NotesState.folders = mergeOrderedLists(NotesState.folders, derivedFolders);
+    NotesState.tags = mergeOrderedLists(NotesState.tags, derivedTags);
   }
 
   // Keep window.NotesState synchronously in sync

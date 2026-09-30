@@ -17,7 +17,12 @@ import { escapeHtml } from '../02_Utils.js';
 export function resolveLatexColor(col) {
   if (!col) return '';
   col = col.trim();
-  if (col.startsWith('#')) return col;
+  // Values land inside double-quoted style="..." attributes — allowlist them so a
+  // crafted \rowcolor{#" onmouseover="...} cannot inject attributes (XSS via shared notes).
+  if (col.startsWith('#')) {
+    const hex = col.match(/^#[0-9a-fA-F]{3,8}$/);
+    return hex ? hex[0] : '';
+  }
   if (/^[0-9a-fA-F]{6}$/.test(col)) return '#' + col;
 
   const tintMatch = col.match(/^([a-zA-Z]+)!(\d+)$/);
@@ -49,7 +54,7 @@ export function resolveLatexColor(col) {
     purple: 'rgba(168, 85, 247, 0.15)',
     yellow: 'rgba(234, 179, 8, 0.15)'
   };
-  return named[col.toLowerCase()] || col;
+  return named[col.toLowerCase()] || '';
 }
 
 /**
@@ -451,7 +456,9 @@ export function parseLatexTabular(input) {
       if (mrMatch) {
         rowspan = parseInt(mrMatch[1], 10);
         if (mrMatch[2] && mrMatch[2] !== '*') {
-          cellWidth = mrMatch[2];
+          const w = mrMatch[2].trim();
+          // Interpolated into style="..." — only plain CSS lengths are allowed through
+          cellWidth = /^[0-9.]+\s*(px|em|rem|%|cm|mm|in|pt|ex|ch)?$/.test(w) ? w : null;
         }
         cellRaw = mrMatch[3];
       }
@@ -556,7 +563,10 @@ export function parseMarkdownTable(markdown) {
     let clean = line;
     if (clean.startsWith('|')) clean = clean.slice(1);
     if (clean.endsWith('|')) clean = clean.slice(0, -1);
-    return clean.split('|').map(c => c.trim());
+    // Split on unescaped pipes only, then unescape \| so "a \| b" stays one cell
+    return clean
+      .split(/(?<!\\)\|/)
+      .map(c => c.trim().replace(/\\\|/g, '|'));
   };
 
   const headers = parseRow(lines[0]);

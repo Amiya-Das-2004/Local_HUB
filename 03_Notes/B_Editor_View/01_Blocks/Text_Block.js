@@ -13,6 +13,8 @@ import { CreateColorSelector } from '../../../00_Components/06_Color_Selector.js
 import { renderKatex } from '../../Writing_Engine/Math_Renderer.js';
 import { attachBlockHistory } from '../../Writing_Engine/Block_History.js';
 import { getBlockActionsHTML, initBlockActions } from './Block_Actions.js';
+import { maybeShowCiteAutocomplete, handleCiteAutocompleteKeydown, hideCiteAutocomplete } from './Text_Block/Cite_Autocomplete.js';
+import { hideCitePreview } from './Text_Block/Cite_Preview.js';
 
 import {
   LINE_SPACING_OPTIONS,
@@ -508,6 +510,10 @@ export function renderTextBlock(
 
   // Keyboard and Input Events
   liveSurface.addEventListener('keydown', (e) => {
+    // \cite autocomplete interception runs first while the suggestion popup is open
+    if (handleCiteAutocompleteKeydown(e, liveSurface, editModeOptions, hideKatexPill, triggerUpdate)) {
+      return;
+    }
     handleTextBlockKeyDown(e, {
       liveSurface,
       editModeOptions,
@@ -571,6 +577,7 @@ export function renderTextBlock(
       editModeOptions,
       triggerUpdate
     });
+    maybeShowCiteAutocomplete(liveSurface, editModeOptions, hideKatexPill, triggerUpdate);
     triggerUpdate();
   });
 
@@ -1045,9 +1052,16 @@ export function renderTextBlock(
   };
   window.addEventListener('hashchange', onHashChange);
 
+  let docClickListenerAttached = false;
+  let docClickListenerCleanedUp = false;
+
   const cleanupFloatingDock = () => {
     window.removeEventListener('hashchange', onHashChange);
-    document.removeEventListener('click', onDocClick);
+    if (docClickListenerAttached) {
+      document.removeEventListener('click', onDocClick);
+      docClickListenerAttached = false;
+    }
+    docClickListenerCleanedUp = true;
     hideFloatingDock();
   };
 
@@ -1069,8 +1083,12 @@ export function renderTextBlock(
     hideFloatingDock();
   };
 
+  // Deferred attach; the cleanedUp flag prevents a fast teardown from leaking the listener forever
   setTimeout(() => {
-    document.addEventListener('click', onDocClick);
+    if (!docClickListenerCleanedUp) {
+      document.addEventListener('click', onDocClick);
+      docClickListenerAttached = true;
+    }
   }, 100);
 
   // Auto-focus live surface when entering edit mode
@@ -1108,6 +1126,8 @@ export function renderTextBlock(
 
   container.__blockCleanup = () => {
     cleanupFloatingDock();
+    hideCiteAutocomplete();
+    hideCitePreview();
     if (typeof detachHistory === 'function') detachHistory();
   };
 

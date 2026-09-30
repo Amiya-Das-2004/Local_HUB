@@ -137,12 +137,14 @@ export function TriggerImport(onSuccess = null) {
         let masterBlocks = {};
 
         // 1. Identify format: Master multi-tab container vs Single-tab direct payload
-        if (importedData.LandingPageData || importedData.Bookmarks || importedData.NotesData) {
+        if (importedData.LandingPageData || importedData.Bookmarks || importedData.NotesData || importedData.ProfessorsData) {
           masterBlocks = importedData;
         } else if (Array.isArray(importedData.notes) || importedData.vaultMeta) {
           masterBlocks['NotesData'] = importedData;
         } else if (Array.isArray(importedData.bookmarks) || importedData.sectionOrder) {
           masterBlocks['Bookmarks'] = importedData;
+        } else if (Array.isArray(importedData.professors)) {
+          masterBlocks['ProfessorsData'] = importedData;
         } else if (Array.isArray(importedData.tabs)) {
           masterBlocks['LandingPageData'] = importedData;
         } else {
@@ -165,6 +167,8 @@ export function TriggerImport(onSuccess = null) {
             cleanData.globalMacros = cleanData.globalMacros || { ...DEFAULT_MACROS };
             cleanData.tableTemplates = Array.isArray(cleanData.tableTemplates) ? cleanData.tableTemplates : [];
             cleanData.tikzTemplates = Array.isArray(cleanData.tikzTemplates) ? cleanData.tikzTemplates : [];
+            cleanData.bibliography = Array.isArray(cleanData.bibliography) ? cleanData.bibliography : [];
+            cleanData.citationStyle = typeof cleanData.citationStyle === 'string' ? cleanData.citationStyle : 'numeric';
             cleanData.notes = Array.isArray(cleanData.notes) ? cleanData.notes.map(sanitizeImportedNote) : [];
             cleanData.folders = Array.isArray(cleanData.folders) && cleanData.folders.length > 0 
               ? cleanData.folders 
@@ -179,6 +183,19 @@ export function TriggerImport(onSuccess = null) {
             cleanData.sectionOrder = Array.isArray(cleanData.sectionOrder) ? cleanData.sectionOrder : ['ALL'];
             if (!cleanData.sectionOrder.includes('ALL')) cleanData.sectionOrder.unshift('ALL');
             cleanData._lastSaved = now;
+          }
+          // Auto-create missing parts for ProfessorsData
+          else if (id === 'ProfessorsData' || Array.isArray(cleanData.professors)) {
+            cleanData.version = cleanData.version || 1;
+            cleanData.updatedAt = new Date().toISOString();
+            cleanData.professors = Array.isArray(cleanData.professors) ? cleanData.professors : [];
+            try {
+              if (typeof localStorage !== 'undefined') {
+                localStorage.setItem('profftrack:v1', JSON.stringify(cleanData));
+              }
+            } catch (err) {
+              console.warn('[Import] Failed to save profftrack:v1 in localStorage:', err);
+            }
           }
           // Auto-create missing parts for LandingPageData
           else if (id === 'LandingPageData' || Array.isArray(cleanData.tabs)) {
@@ -203,6 +220,10 @@ export function TriggerImport(onSuccess = null) {
             if (id === 'NotesData' && window.NotesState) Object.assign(window.NotesState, cleanData);
             if (id === 'Bookmarks' && window.BookmarkState) Object.assign(window.BookmarkState, cleanData);
             if (id === 'LandingPageData' && window.AppState) Object.assign(window.AppState, cleanData);
+            if (id === 'ProfessorsData') {
+              if (window.ProfessorsState) Object.assign(window.ProfessorsState, cleanData);
+              if (typeof window.replaceState === 'function') window.replaceState(cleanData);
+            }
             if (window[id + 'State']) Object.assign(window[id + 'State'], cleanData);
             if (window[id]) Object.assign(window[id], cleanData);
           }
@@ -268,7 +289,8 @@ export function TriggerExport() {
       'App' + id,
       'AppState',
       'BookmarkState',
-      'NotesState'
+      'NotesState',
+      'ProfessorsState'
     ];
 
     for (const key of candidateKeys) {
@@ -279,7 +301,8 @@ export function TriggerExport() {
           key === id.replace(/Data$/, '') + 'State' ||
           (id === 'LandingPageData' && key === 'AppState') ||
           (id === 'Bookmarks' && key === 'BookmarkState') ||
-          (id === 'NotesData' && key === 'NotesState')
+          (id === 'NotesData' && key === 'NotesState') ||
+          (id === 'ProfessorsData' && key === 'ProfessorsState')
         ) {
           foundData = window[key];
           break;
@@ -290,6 +313,18 @@ export function TriggerExport() {
     if (!foundData) {
       try {
         foundData = JSON.parse(script.textContent);
+      } catch (e) { }
+    }
+
+    if ((!foundData || !foundData.professors || foundData.professors.length === 0) && id === 'ProfessorsData') {
+      try {
+        const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('profftrack:v1') : null;
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed && Array.isArray(parsed.professors) && parsed.professors.length > 0) {
+            foundData = parsed;
+          }
+        }
       } catch (e) { }
     }
 

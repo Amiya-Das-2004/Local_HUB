@@ -1,5 +1,6 @@
 import { GetLogoHTML, InitLogoLogic } from '../00_Components/01_Local_HUB_Logo.js';
 import { GetThemeToggleHTML, InitThemeToggleLogic } from '../00_Components/02_Theme_Toggle.js';
+import { GetImportButtonHTML, GetExportButtonHTML, InitImportExport } from '../00_Components/04_Import_Export.js';
 import { GetSaveButtonHTML, InitSaveButtonLogic } from '../00_Components/05_Save_Button.js';
 
 
@@ -127,7 +128,7 @@ export function GetHeaderHTML() {
     <header class="app-header">
       <div class="header-inner">
         <div class="header-left">
-          ${GetLogoHTML()}
+          ${GetLogoHTML({ variant: 'bookmarks' })}
         </div>
 
         <div class="header-center">
@@ -140,6 +141,8 @@ export function GetHeaderHTML() {
         </div>
 
         <div class="header-right">
+          ${GetImportButtonHTML()}
+          ${GetExportButtonHTML()}
           ${GetSaveButtonHTML()}
           ${GetThemeToggleHTML()}
         </div>
@@ -153,7 +156,8 @@ export function InitHeader(container) {
     container.innerHTML = GetHeaderHTML();
   }
   InitLogoLogic();
+  InitImportExport();
   InitThemeToggleLogic();
 }
 
-export { InitSaveButtonLogic }
+export { InitSaveButtonLogic, InitImportExport }

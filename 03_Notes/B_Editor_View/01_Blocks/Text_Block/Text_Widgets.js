@@ -3,7 +3,7 @@
  * In-place Live Preview widget constructors and inline styles.
  */
 
-import { renderKatex, getActiveFigureTagMap } from '../../../Writing_Engine/Math_Renderer.js';
+import { renderKatex, getActiveFigureTagMap, resolveCitationLabels } from '../../../Writing_Engine/Math_Renderer.js';
 import { escapeHtml } from '../../../02_Utils.js';
 import { resolveThemeColors } from '../../../../00_Components/06_Color_Selector.js';
 
@@ -167,6 +167,14 @@ export const createLiveWidget = (type, raw, contentHtml = '', options = {}) => {
     span.setAttribute('data-fig-target', norm);
     span.setAttribute('data-fig-num', resolvedNum || '');
     span.innerHTML = `[${displayLabel}]`;
+  } else if (type === 'cite') {
+    // Bibliography citation \cite{key} — label per NotesState.citationStyle + numbering map
+    const { parts, missing } = resolveCitationLabels(contentHtml || '');
+    const missingClass = missing ? ' border-amber-500/50 text-amber-400' : '';
+    span.className = `live-widget live-cite note-bib-citation font-semibold text-sky-400 hover:text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 px-1.5 py-0.5 rounded border border-sky-500/30 transition-colors inline-flex items-center align-middle gap-0.5 cursor-pointer select-text${missingClass}`;
+    span.setAttribute('data-cite-keys', contentHtml || '');
+    span.title = 'Citation (hover for details)';
+    span.innerHTML = `[${escapeHtml(parts.join(', '))}]`;
   } else if (type === 'wikilink') {
     const targetTitle = (contentHtml || '').trim();
     const target = (allNotes || []).find(n =>

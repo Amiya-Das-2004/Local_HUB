@@ -234,6 +234,8 @@ export async function SaveAndDownloadApp() {
     const noteFiles = [
       '03_Notes/00_State.js',
       '03_Notes/02_Utils.js',
+      '03_Notes/Writing_Engine/BibTeX_Parser.js',
+      '03_Notes/03_Library.js',
       '03_Notes/Writing_Engine/Bullet_Engine.js',
       '03_Notes/Writing_Engine/Block_Engine.js',
       '03_Notes/Writing_Engine/Numbering_Engine.js',
@@ -255,6 +257,8 @@ export async function SaveAndDownloadApp() {
       '03_Notes/B_Editor_View/01_Blocks/Text_Block/Text_Widgets.js',
       '03_Notes/B_Editor_View/01_Blocks/Text_Block/Text_Parser.js',
       '03_Notes/B_Editor_View/01_Blocks/Text_Block/Text_Keyboard.js',
+      '03_Notes/B_Editor_View/01_Blocks/Text_Block/Cite_Autocomplete.js',
+      '03_Notes/B_Editor_View/01_Blocks/Text_Block/Cite_Preview.js',
       '03_Notes/B_Editor_View/01_Blocks/Text_Block/Text_Block_Markdown.js',
       '03_Notes/B_Editor_View/01_Blocks/Text_Block.js',
       '03_Notes/B_Editor_View/01_Blocks/Equation_Block.js',
@@ -274,6 +278,7 @@ export async function SaveAndDownloadApp() {
       '03_Notes/B_Editor_View/03_Floating_ToolBar/02_Note_Fonts.js',
       '03_Notes/B_Editor_View/03_Floating_ToolBar/03_Font_Size.js',
       '03_Notes/B_Editor_View/03_Floating_ToolBar/04_Macros_Modal.js',
+      '03_Notes/B_Editor_View/03_Floating_ToolBar/05_Citation_Style.js',
       '03_Notes/B_Editor_View/02_Floating_Toolbar.js',
       '03_Notes/B_Editor_View/03_Study_View.js',
       '03_Notes/B_Editor_View/04_LaTeX_Editor.js',
@@ -283,6 +288,7 @@ export async function SaveAndDownloadApp() {
       '03_Notes/A_Notes_Card_View/01_Navbar/04_Graph_Toggle.js',
       '03_Notes/A_Notes_Card_View/01_Navbar/05_Delete_Button.js',
       '03_Notes/A_Notes_Card_View/01_Navbar/06_Add_Edit_Button.js',
+      '03_Notes/A_Notes_Card_View/01_Navbar/07_Library_Button.js',
       '03_Notes/A_Notes_Card_View/01_Navbar.js',
       '03_Notes/A_Notes_Card_View/02_Notes_Card.js',
       '03_Notes/A_Notes_Card_View/A_Notes_Card_View.js',
@@ -291,17 +297,48 @@ export async function SaveAndDownloadApp() {
       '03_Notes/Notes.js'
     ];
 
+    const professorFiles = [
+      '04_Professors/00_State.js',
+      '04_Professors/01_Utils.js',
+      '04_Professors/02_Styles.js',
+      '04_Professors/03_Seed_Data.js',
+      '04_Professors/01_HTML_Page/01_Header.js',
+      '04_Professors/01_HTML_Page/02_Toolbar.js',
+      '04_Professors/01_HTML_Page/03_Theme_Toggle.js',
+      '04_Professors/01_HTML_Page/04_Footer.js',
+      '04_Professors/02_Dashboard/01_Stats_Bar.js',
+      '04_Professors/02_Dashboard/02_Resume_Section.js',
+      '04_Professors/02_Dashboard/03_Heatmap.js',
+      '04_Professors/02_Dashboard/04_Tag_Bar.js',
+      '04_Professors/03_Professor_List/01_Prof_Cards.js',
+      '04_Professors/03_Professor_List/02_List_Actions.js',
+      '04_Professors/04_Modals/01_Modal_Core.js',
+      '04_Professors/04_Modals/02_Professor_Modal.js',
+      '04_Professors/04_Modals/03_Paper_Modal.js',
+      '04_Professors/04_Modals/04_Journal_Modal.js',
+      '04_Professors/04_Modals/05_Journal_Browser.js',
+      '04_Professors/04_Modals/06_Compare_Modal.js',
+      '04_Professors/04_Modals/07_Bulk_Add_Modal.js',
+      '04_Professors/04_Modals/08_Paste_Import_Modal.js',
+      '04_Professors/04_Modals/09_Shortcuts_Modal.js',
+      '04_Professors/05_Data_IO/01_Save_Button.js',
+      '04_Professors/05_Data_IO/02_Export.js',
+      '04_Professors/05_Data_IO/03_Import.js',
+      '04_Professors/Professors.js'
+    ];
+
     const bundleGroup = async (files) => {
       let out = '';
       for (const f of files) out += await bundleFile(f);
       return out;
     };
 
-    const [bundledComponents, bundledLanding, bundledBookmarks, bundledNotes] = await Promise.all([
+    const [bundledComponents, bundledLanding, bundledBookmarks, bundledNotes, bundledProfessors] = await Promise.all([
       bundleGroup(componentFiles),
       bundleGroup(landingFiles),
       bundleGroup(bookmarkFiles),
-      bundleGroup(noteFiles)
+      bundleGroup(noteFiles),
+      bundleGroup(professorFiles)
     ]);
 
     const threeImportLine = 'imp' + 'ort * as THREE from \'https://unpkg.com/three@0.160.0/build/three.module.js\';';
@@ -341,6 +378,14 @@ ${bundledNotes}
 }
 
 /* ==========================================================================
+   PROFESSORS PAGE MODULE (ProffTrack)
+   ========================================================================== */
+function LoadProfessorsPage() {
+${bundledProfessors}
+  if (typeof initProfessorsApp === 'function') initProfessorsApp();
+}
+
+/* ==========================================================================
    MASTER ROUTER
    ========================================================================== */
 function handleRoute() {
@@ -353,6 +398,8 @@ function handleRoute() {
     LoadBookmarkPage();
   } else if (lowerHash.startsWith('#notes')) {
     LoadNotesPage();
+  } else if (lowerHash.startsWith('#professors')) {
+    LoadProfessorsPage();
   } else {
     LoadLandingPage();
   }

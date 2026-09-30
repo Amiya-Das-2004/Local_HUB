@@ -5,7 +5,7 @@
  */
 
 import { NotesState, SaveNotesState, flushNotesSave } from '../00_State.js';
-import { computeHeadingPrefixes, computeFigureNumbers } from '../Writing_Engine/Numbering_Engine.js';
+import { computeHeadingPrefixes, computeFigureNumbers, computeCitationNumbers } from '../Writing_Engine/Numbering_Engine.js';
 import {
   createNewBlock,
   insertBlockAt,
@@ -18,7 +18,7 @@ import { CreateDocHeader } from './01_Doc_Header.js';
 import { CreateFloatingToolbar } from './02_Floating_Toolbar.js';
 import { CreateBlockItem } from './01_Blocks/Block_Item.js';
 import { escapeHtml } from '../02_Utils.js';
-import { setActiveNoteContext, setActiveFigureTagMap } from '../Writing_Engine/Math_Renderer.js';
+import { setActiveNoteContext, setActiveFigureTagMap, setActiveCitationMap } from '../Writing_Engine/Math_Renderer.js';
 import { setActiveTikzNoteContext } from '../Writing_Engine/Tikz_Renderer.js';
 
 export function RenderLaTeXEditor(container, noteId, isEditMode = true) {
@@ -346,6 +346,7 @@ export function RenderLaTeXEditor(container, noteId, isEditMode = true) {
     const prefixMap = computeHeadingPrefixes(blocks, note.autoNumbering);
     const { figureMap, tagMap } = computeFigureNumbers(blocks);
     setActiveFigureTagMap(tagMap);
+    setActiveCitationMap(computeCitationNumbers(blocks));
 
     const newBlockEl = createConfiguredBlockItem(block, idx, isEditing, prefixMap, figureMap);
     blocksContainer.replaceChild(newBlockEl, existingEl);
@@ -453,6 +454,7 @@ export function RenderLaTeXEditor(container, noteId, isEditMode = true) {
     const prefixMap = computeHeadingPrefixes(blocks, note.autoNumbering);
     const { figureMap, tagMap } = computeFigureNumbers(blocks);
     setActiveFigureTagMap(tagMap);
+    setActiveCitationMap(computeCitationNumbers(blocks));
 
     // Render Picking Banner if active
     if (pickerState) {
@@ -552,6 +554,11 @@ export function RenderLaTeXEditor(container, noteId, isEditMode = true) {
     },
     onMacrosChange: () => {
       // Re-render blocks and sidebar to apply updated macros and styles in real-time
+      renderBlocks();
+      refreshSidebar();
+    },
+    onCiteStyleChange: () => {
+      // Library or citation-style changed — re-render so \cite labels/numbers update everywhere
       renderBlocks();
       refreshSidebar();
     }

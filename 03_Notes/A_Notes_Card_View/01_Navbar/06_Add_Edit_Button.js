@@ -430,7 +430,11 @@ export function CloseNoteModal() {
   EditingNoteId = null;
 }
 
-// Binds event listeners for modal controls, live in-place Obsidian surface, and note save
+// Binds event listeners for modal controls, live in-place Obsidian surface, and note save.
+// The modal DOM is static, so listeners are bound once — InitNoteModal runs on every deck
+// render and must not stack duplicate document/keydown handlers each time.
+let NoteModalListenersBound = false;
+
 export function InitNoteModal(onUpdate) {
   OnModalUpdate = onUpdate;
 
@@ -439,6 +443,9 @@ export function InitNoteModal(onUpdate) {
   const saveBtn = document.getElementById('notes-modal-save-btn');
   const folderInput = document.getElementById('notes-modal-folder-input');
   const folderDropdown = document.getElementById('notes-modal-folder-dropdown');
+
+  if (NoteModalListenersBound) return;
+  NoteModalListenersBound = true;
 
   if (closeBtn) closeBtn.addEventListener('click', CloseNoteModal);
 
@@ -507,18 +514,20 @@ export function InitNoteModal(onUpdate) {
       if (!NotesState.notes) NotesState.notes = [];
 
       if (EditingNoteId) {
-        // Update existing note (preserves blocks untouched)
+        // Update existing note (preserves blocks and any authored flashcard content untouched)
         const existing = NotesState.notes.find(n => n.id === EditingNoteId);
         if (existing) {
           existing.title = title;
           existing.folder = folder;
           existing.tags = tags;
           existing.description = description;
-          existing.flashcard = {
-            isFlashcard: true,
-            front: description.slice(0, 120),
-            back: description
-          };
+          if (!existing.flashcard) {
+            existing.flashcard = {
+              isFlashcard: true,
+              front: description.slice(0, 120),
+              back: description
+            };
+          }
           if (!existing.macros) existing.macros = { equation: '', tikz: '' };
           if (!existing.blocks) existing.blocks = [];
         }

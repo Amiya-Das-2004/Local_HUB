@@ -1,4 +1,102 @@
-# 03_Notes
+# 03_Notes — Architectural & API Reference
+
+Comprehensive modular documentation of the Local_HUB Notes engine. Includes card decks, block-based rich text/LaTeX/TikZ editor, interactive citation manager, knowledge graph view, and multi-shell data synchronization.
+
+---
+
+## Folder Structure
+
+```
+03_Notes/
+│
+├── 00_State.js                             ← Reactive notes state, vault serialization, debounced storage
+├── 01_Header.js                            ← Header shell with title, navigation, import/export, and save triggers
+├── 02_Utils.js                             ← String escapes, task toggling, raw descriptions, folder extractors
+├── 03_Library.js                           ← BibTeX bibliography manager, modal dialog, and citation styler
+├── Notes.html                              ← Standalone single-tab HTML runner for Notes
+├── Notes.js                                ← Master lifecycle orchestrator for card/editor/graph views
+├── Notes.md                                ← This architecture & API reference
+├── Tab_Import_Export_Handler.js            ← Tab-isolated JSON backup and recovery adapter
+├── Tab_Logo_Handler.js                     ← Custom Notes logo branding click router
+├── Tab_Save_Handler.js                     ← Tab-isolated self-contained standalone HTML bundler
+│
+├── A_Notes_Card_View/                      ← Card deck gallery and management view
+│   ├── 01_Navbar.js                        ← Card view top navigation container
+│   ├── 01_Navbar/
+│   │   ├── 01_Card_View_Toggle.js          ← Compact vs standard card layout switcher
+│   │   ├── 02_Group_Filter.js              ← Folder and tag filtering dropdown / badges
+│   │   ├── 03_Search_Bar.js                ← Real-time note search and title/content filter
+│   │   ├── 04_Graph_Toggle.js              ← Switch between card gallery and knowledge graph
+│   │   ├── 05_Delete_Button.js             ← Batch/card deletion action confirmation
+│   │   ├── 06_Add_Edit_Button.js           ← Create new note and edit note metadata modal
+│   │   └── 07_Library_Button.js            ← Open BibTeX library manager dialog button
+│   ├── 02_Notes_Card.js                    ← Individual note card renderer, tag pills, click routing
+│   └── A_Notes_Card_View.js                ← Card view orchestrator and DOM mounter
+│
+├── B_Editor_View/                          ← Block-based LaTeX & Markdown document editor
+│   ├── 01_Doc_Header.js                    ← Note title and metadata bar in editor
+│   ├── 02_Floating_Toolbar.js              ← Floating action pill above active editor block
+│   ├── 03_Study_View.js                    ← Read-only distraction-free study layout
+│   ├── 04_LaTeX_Editor.js                  ← Document editor core: block list, reordering, shortcuts
+│   │
+│   ├── 01_Blocks/                          ← Modular editor block renderers
+│   │   ├── Block_Actions.js                ← Move up/down, duplicate, delete block controls
+│   │   ├── Block_Block.js                  ← Outer block wrapper and drag handles
+│   │   ├── Block_Dispatcher.js             ← Routes block data to specific type renderer
+│   │   ├── Block_Item.js                   ← Block item model and boundary manager
+│   │   ├── Block_Textarea.js               ← Auto-resizing textarea with keyboard navigation
+│   │   ├── Code_Block.js                   ← Syntax highlighted code block with copy button
+│   │   ├── Equation_Block.js               ← MathJax/KaTeX display equation with live preview
+│   │   ├── Figure_Utils.js                 ← Figure numbering, caption labels, subcaptions
+│   │   ├── Heading_Block.js                ← Heading 1-6 block with dynamic TOC anchoring
+│   │   ├── Image_Block.js                  ← Resizable image embed block with captions
+│   │   ├── Multi_Column_Block.js           ← 2/3 column layout container with nested blocks
+│   │   ├── Table_Block.js                  ← Interactive markdown table with add/del row/col
+│   │   ├── Table_Templates.js              ← Predefined academic table templates
+│   │   ├── Table_Templates_Modal.js        ← Visual gallery modal for table templates
+│   │   ├── Text_Block.js                   ← Main rich-text / markdown / citation block
+│   │   ├── Text_Block/                     ← Specialized text block submodules
+│   │   │   ├── Cite_Autocomplete.js        ← Autocomplete popup for \cite{} references
+│   │   │   ├── Cite_Preview.js             ← Hover tooltip showing citation bibliography details
+│   │   │   ├── Text_Block_Markdown.js      ← Real-time inline markdown renderer
+│   │   │   ├── Text_Keyboard.js            ← Keyboard shortcuts (multiline tab/indent, bullets)
+│   │   │   ├── Text_Parser.js              ← Fast markdown AST tokenizer and segmenter
+│   │   │   └── Text_Widgets.js             ← Inline widgets (checkboxes, tags, pills)
+│   │   ├── Tikz_Block.js                   ← Interactive TikZ/PGF graphic block
+│   │   ├── Tikz_Templates.js               ← Predefined academic diagram templates
+│   │   └── Tikz_Templates_Modal.js         ← TikZ template selector dialog
+│   │
+│   ├── 02_Sidebar/                         ← Document outline & TOC navigation sidebar
+│   │   ├── 01_Sidebar_Logo.js              ← Sidebar brand logo and quick home link
+│   │   ├── 02_Sidebar_TOC.js               ← Dynamic Table of Contents tree with smooth jump
+│   │   └── 03_Sidebar_Toggle.js            ← Collapse/expand toggle button for sidebar
+│   │
+│   └── 03_Floating_ToolBar/                ← Editor formatting & settings floating toolbar
+│       ├── 01_Study_View_Toggle.js         ← Switch to presentation/study reading mode
+│       ├── 02_Note_Fonts.js                ← Document typography selector (Sans/Serif/Mono)
+│       ├── 03_Font_Size.js                 ← Base text size increment/decrement control
+│       ├── 04_Macros_Modal.js              ← Global & per-note LaTeX macros config modal
+│       └── 05_Citation_Style.js            ← Citation format switcher (Numeric/Author-Year)
+│
+├── C_Graph_View/                           ← Interactive 2D knowledge graph
+│   └── Graph_View.js                       ← Canvas-based force-directed note & tag relationship graph
+│
+└── Writing_Engine/                         ← Core text, math, TikZ, and formatting compilers
+    ├── BibTeX_Parser.js                    ← BibTeX (.bib) tokenizer, parser, and citation formatter
+    ├── Block_Engine.js                     ← High-performance block differential updates
+    ├── Block_History.js                    ← Undo/redo history stack per block and document
+    ├── Bullet_Engine.js                    ← Smart nested list and bullet indentation logic
+    ├── Code_Highlighter.js                 ← Lightweight regex-based syntax highlighter
+    ├── Highlight_Sync.js                   ← Bi-directional textarea overlay highlight synchronizer
+    ├── Link_Parser.js                      ← Internal [[wiki-links]] and external link resolver
+    ├── Math_Renderer.js                    ← KaTeX compiler with LaTeX macro expansion support
+    ├── Numbering_Engine.js                 ← Automatic equation, theorem, and figure numbering
+    ├── Table_Parser.js                     ← Markdown table string parser and serializer
+    └── Tikz_Renderer.js                    ← TikZ standalone SVG compiler via WebAssembly / TikzJax
+```
+
+---
+
 **00_State.js**
 
 | Import Location | Functions Imported | used in Functions |
@@ -8,12 +106,12 @@
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
 | `DEFAULT_GLOBAL_MACROS` | 3 - 45 | Default LaTeX macros dictionary containing predefined equation shortcuts (`\mb`, `\cancelto`, `\comment`, `\R`, `\C`, `\N`, `\Z`) and TikZ styles/libraries. |
-| `NotesState` | 45 - 53 | Central in-memory reactive state object holding vault metadata, global macros, table templates, tikz templates, folders, tags, and notes. |
-| `sanitizeNote(n, idx = 0)` | 56 - 85 | Validates note object schema, fills missing fallback properties (id, slug, title, folder, tags, blocks, macros, autoNumbering), and prevents data corruption. |
-| `LoadNotesState(forceReload = false)` | 90 - 192 | Reads and parses notes from DOM script vault (#NotesData), recovers newer uncommitted edits from localStorage, and reuses in-memory state when not stale to eliminate multi-MB JSON re-parsing on route changes. |
-| `SaveNotesState(newState = null, { immediate = false } = {})` | 237 - 265 | Re-derives active folder/tag lists, synchronizes window.NotesState, and persists unsaved buffer to DOM vault and localStorage with debouncing (~280ms) for high-speed typing. |
-| `flushNotesSave()` | 224 - 228 | Immediately flushes any pending debounced state writes to DOM #NotesData and localStorage. |
-| `ClearNotesLocalCache()` | 268 - 278 | Clears the unsaved localStorage recovery cache (NotesData_Local_Cache) after downloading or saving standalone application HTML. |
+| `NotesState` | 48 - 58 | Central in-memory reactive state object holding vault metadata, global macros, table templates, tikz templates, bibliography entries, citation style, folders, tags, and notes. |
+| `sanitizeNote(n, idx = 0)` | 68 - 97 | Validates note object schema, fills missing fallback properties (id, slug, title, folder, tags, blocks, macros, autoNumbering), and prevents data corruption. |
+| `LoadNotesState(forceReload = false)` | 100 - 202 | Reads and parses notes from DOM script vault (#NotesData), recovers newer uncommitted edits from localStorage, and reuses in-memory state when not stale to eliminate multi-MB JSON re-parsing on route changes. |
+| `flushNotesSave()` | 234 - 238 | Immediately flushes any pending debounced state writes to DOM #NotesData and localStorage. |
+| `SaveNotesState(newState = null, { immediate = false } = {})` | 247 - 275 | Re-derives active folder/tag lists, synchronizes window.NotesState, and persists unsaved buffer to DOM vault and localStorage with debouncing (~280ms) for high-speed typing. |
+| `ClearNotesLocalCache()` | 278 - 288 | Clears the unsaved localStorage recovery cache (NotesData_Local_Cache) after downloading or saving standalone application HTML. |
 
 **01_Header.js**
 
@@ -45,6 +143,60 @@
 | `getNoteRawDescription(note, { forPreview = false } = {})` | 40 - 87 | Extracts raw string representation of a note's description; supports lightweight preview extraction (~300 chars) for card decks to prevent full-document KaTeX compilation. |
 | `getAvailableFolders(state)` | 90 - 103 | Extracts and deduplicates all available folder/group names across active notes and state, ensuring "General" is always present. |
 
+**03_Library.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| `./00_State.js` | `NotesState`, `SaveNotesState` | `GetLibraryEntries()`, `GetCitationStyle()`, `SetCitationStyle()`, `UpsertLibraryEntry()`, `DeleteLibraryEntry()`, `ImportBibtexToLibrary()` |
+| `./02_Utils.js` | `escapeHtml` | `OpenLibraryModal()` |
+| `./Writing_Engine/BibTeX_Parser.js` | `bibEntryFromRaw`, `parseBibtex`, `formatCitationLabel`, `getAuthorSurnames` | `UpsertLibraryEntry()`, `ImportBibtexToLibrary()`, `OpenLibraryModal()` |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `GetLibraryEntries()` | 25 - 27 | Returns the reactive array of bibliography entries from `NotesState.bibliography`. |
+| `GetCitationStyle()` | 29 - 31 | Returns active citation label style (`numeric`, `authoryear`, `authortitle`) with fallback to `'numeric'`. |
+| `SetCitationStyle(style)` | 33 - 38 | Sets active citation style, persists changes to state and storage, and returns sanitized style string. |
+| `FindLibraryEntryByKey(key)` | 40 - 45 | Finds and returns a bibliography entry matching a given citation key (case-insensitive). |
+| `UpsertLibraryEntry(entry)` | 47 - 64 | Inserts or updates a bibliography record, sanitizing required fields, assigning timestamps, and persisting to vault. |
+| `DeleteLibraryEntry(idOrKey)` | 66 - 76 | Removes a bibliography entry by ID or key from `NotesState.bibliography` and persists changes. |
+| `ImportBibtexToLibrary(rawBibtex)` | 78 - 88 | Parses one or more BibTeX entries from pasted text and merges them into the bibliography vault. |
+| `OpenLibraryModal({ onUpdate = null })` | 104 - 386 | Opens an Overleaf-style vault dialog to search, preview, add via BibTeX, edit raw fields, delete citations, and switch active citation style with live callbacks. |
+
+**Tab_Save_Handler.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| `../00_Components/06_Color_Selector.js` | `resolveThemeColors` | `syncTabStatesToDOM()` |
+| `../00_Components/01_Local_HUB_Logo.js` | `LOCAL_HUB_LOGO_SVG` | `bundleTabFile()` |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `SaveNotesStandalone()` | 231 - 359 | Bundles `Notes.html` into a self-contained, standalone single-file HTML document by flattening modules, embedding script vaults, and triggering browser download. |
+
+**Tab_Logo_Handler.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| - | - | - |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `InitTabLogoOverride()` | 12 - 30 | Replaces standard SPA logo click listener on standalone `Notes.html` with explicit navigation to the main hub index URL. |
+
+**Tab_Import_Export_Handler.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| - | - | - |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `TAB_DEFAULT_MACROS` | 12 - 54 | Default equation and TikZ macro shortcuts for schema fallback. |
+| `sanitizeTabNote(n, idx = 0)` | 56 - 85 | Validates note schema and populates missing default fields during import. |
+| `TriggerTabImport(onSuccess = null)` | 88 - 193 | Resilient notes importer: parses single-tab Notes JSON or extracts NotesData from a global multi-tab envelope. |
+| `TriggerTabExport()` | 196 - 237 | Exports active notes library and metadata as `Notes_DATA.json`. |
+| `InitTabImportExportOverride()` | 241 - 262 | Swaps header button click listeners to use the single-tab notes handlers on `Notes.html`. |
+
 **Notes.js**
 
 | Import Location | Functions Imported | used in Functions |
@@ -61,6 +213,19 @@
 | `initNotesApp()` | 22 - 403 | Master initialization function and route dispatcher for 03_Notes: injects universal 4px opposite-theme scrollbars, heading scroll-margin/scroll-padding offsets, parses hash parameters, mounts header and modals, renders responsive drawer with clamp/webkit scrollbars, and renders Editor, Graph, or Card Deck view. |
 
 ## Writing_Engine
+**BibTeX_Parser.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| - | - | - |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `parseBibtex(raw)` | 57 - 177 | Robust brace-depth parser scanning `@type{key, field = {value}, ...}` blocks, supporting `{...}`, `"..."`, numbers, `#` concatenation, and skipping `@comment`/`@string`/`@preamble`. |
+| `bibEntryFromRaw(raw)` | 183 - 212 | Parses raw BibTeX string and shapes the first entry into a normalized vault record schema with unique ID and lowercase field keys. |
+| `getAuthorSurnames(entry)` | 215 - 227 | Extracts an array of lowercase author/editor surnames for citation label generation and search indexing. |
+| `formatCitationLabel(entry, style = 'numeric', num = null)` | 234 - 253 | Computes the formatted citation badge text (e.g. `1`, `einstein_1935`, `(einstein)_can_quantum`) for `'numeric'`, `'authoryear'`, or `'authortitle'` styles. |
+
 **Block_Engine.js**
 
 | Import Location | Functions Imported | used in Functions |
@@ -156,29 +321,32 @@
 
 | Import Location | Functions Imported | used in Functions |
 | :--- | :--- | :--- |
-| `../02_Utils.js` | `escapeHtml` | `renderKatex()`, `parseInlineMarkdownAndLatex()` |
+| `../02_Utils.js` | `escapeHtml` | `renderKatex()`, `parseInlineMarkdownAndLatex()`, `resolveCitationLabels()` |
 | `../../00_Components/06_Color_Selector.js` | `resolveThemeColors` | `parseLatexMacrosIntoObject()`, `ensureKatexLoaded()`, `renderKatex()`, `formatRichTextWithMath()`, `parseInlineMarkdownAndLatex()` |
-| `../00_State.js` | `NotesState` | `getActiveKatexMacros()` |
+| `../00_State.js` | `NotesState` | `getActiveKatexMacros()`, `resolveCitationLabels()` |
+| `../03_Library.js` | `GetCitationStyle`, `FindLibraryEntryByKey` | `resolveCitationLabels()` |
+| `./BibTeX_Parser.js` | `formatCitationLabel` | `resolveCitationLabels()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `KATEX_MACROS` | 13 - 20 | Built-in dictionary of common mathematical KaTeX macro definitions (`\dddot`, `\ddddot`, `\bm`, `\argmax`, `\argmin`, `\cancelto`). |
-| `setActiveNoteContext(note)` | 26 - 28 | Sets the active note context object used for note-specific local macro resolution and figure citation mapping. |
-| `getActiveNoteContext()` | 30 - 32 | Returns the currently active note context object. |
-| `setActiveFigureTagMap(map)` | 34 - 36 | Sets the active figure tag-to-number citation Map for `\fig{tag}` link resolution. |
-| `getActiveFigureTagMap()` | 38 - 40 | Returns the active figure citation tag Map. |
-| `parseLatexMacrosIntoObject(macroString, targetMacros = {})` | 83 - 117 | Parses `\newcommand`, `\renewcommand`, and `\def` statements from a macro string into a target KaTeX macro dictionary. |
-| `getActiveKatexMacros(note = null)` | 122 - 137 | Merges built-in macros, global vault macros, and note-specific local macros into a unified KaTeX macro object. |
-| `ensureKatexLoaded()` | 139 - 171 | Asynchronously injects KaTeX CSS and JS from CDN and re-renders elements with pending math placeholders once loaded. |
-| `layoutCanceltoElement(el)` | 176 - 250 | Dynamically measures expression dimensions and renders continuous extended SVG arrow vector with adaptive target value positioning and compact line-height scaling. |
-| `initCanceltoLayoutObserver()` | 270 - 307 | Observes the DOM with MutationObserver and ResizeObserver to automatically layout and update `\cancelto` elements. |
-| `ensureCanceltoStyles()` | 309 - 361 | Injects CSS rules for `.lh-cancelto`, `.lh-cancelto-base`, `.lh-cancelto-svg`, `.lh-cancelto-val`, optical `.katex` font size normalization, and boots observers. |
-| `postProcessKatexHtml(html)` | 363 - 365 | Passes through clean KaTeX HTML without regex manipulation. |
-| `clearKatexCache()` | 370 - 372 | Clears the in-memory KaTeX compilation cache (`katexCache`). |
-| `renderKatex(tex, isDisplayMode = false, noteContext = null)` | 374 - 414 | Synchronously compiles a LaTeX formula to HTML/MathML using KaTeX, utilizing a bounded LRU cache `katexCache` for 0ms re-rendering. |
-| `parseAndRenderMathInText(rawText = '')` | 416 - 418 | Convenience wrapper calling formatRichTextWithMath to parse and render inline math within text. |
-| `formatRichTextWithMath(rawText = '', options = {})` | 427 - 649 | Full-featured text compiler handling display math ($$...$$), inline math ($...$), task checkboxes ([ ], [x]), bullet lists, and markdown formatting. |
-| `parseInlineMarkdownAndLatex(str)` | 651 - 680 | Parses inline formatting tokens (bold, italic, strikethrough, code), `\fig` citations, and LaTeX text styling (`\textcolor`, `\underline`, `\textbf`, `\textit`, `\cancel`). |
+| `KATEX_MACROS` | 15 - 22 | Built-in dictionary of common mathematical KaTeX macro definitions (`\dddot`, `\ddddot`, `\bm`, `\argmax`, `\argmin`, `\cancelto`). |
+| `setActiveNoteContext(note)` | 28 - 30 | Sets the active note context object used for note-specific local macro resolution and figure citation mapping. |
+| `getActiveNoteContext()` | 32 - 34 | Returns the currently active note context object. |
+| `setActiveFigureTagMap(map)` | 36 - 38 | Sets the active figure tag-to-number citation Map for `\fig{tag}` link resolution. |
+| `getActiveFigureTagMap()` | 40 - 42 | Returns the active figure citation tag Map. |
+| `parseLatexMacrosIntoObject(macroString, targetMacros = {})` | 85 - 119 | Parses `\newcommand`, `\renewcommand`, and `\def` statements from a macro string into a target KaTeX macro dictionary. |
+| `getActiveKatexMacros(note = null)` | 124 - 139 | Merges built-in macros, global vault macros, and note-specific local macros into a unified KaTeX macro object. |
+| `ensureKatexLoaded()` | 141 - 173 | Asynchronously injects KaTeX CSS and JS from CDN and re-renders elements with pending math placeholders once loaded. |
+| `layoutCanceltoElement(el)` | 178 - 252 | Dynamically measures expression dimensions and renders continuous extended SVG arrow vector with adaptive target value positioning and compact line-height scaling. |
+| `initCanceltoLayoutObserver()` | 272 - 309 | Observes the DOM with MutationObserver and ResizeObserver to automatically layout and update `\cancelto` elements. |
+| `ensureCanceltoStyles()` | 311 - 363 | Injects CSS rules for `.lh-cancelto`, `.lh-cancelto-base`, `.lh-cancelto-svg`, `.lh-cancelto-val`, optical `.katex` font size normalization, and boots observers. |
+| `postProcessKatexHtml(html)` | 365 - 367 | Passes through clean KaTeX HTML without regex manipulation. |
+| `clearKatexCache()` | 372 - 374 | Clears the in-memory KaTeX compilation cache (`katexCache`). |
+| `renderKatex(tex, isDisplayMode = false, noteContext = null)` | 376 - 416 | Synchronously compiles a LaTeX formula to HTML/MathML using KaTeX, utilizing a bounded LRU cache `katexCache` for 0ms re-rendering. |
+| `parseAndRenderMathInText(rawText = '')` | 418 - 420 | Convenience wrapper calling formatRichTextWithMath to parse and render inline math within text. |
+| `resolveCitationLabels(keysRaw)` | 473 - 508 | Resolves comma-separated citation keys against the library vault and formats badges per `NotesState.citationStyle`. |
+| `formatRichTextWithMath(rawText = '', options = {})` | 511 - 699 | Full-featured text compiler handling display math ($$...$$), inline math ($...$), task checkboxes ([ ], [x]), bullet lists, and markdown formatting. |
+| `parseInlineMarkdownAndLatex(str)` | 701 - 737 | Parses inline formatting tokens (bold, italic, strikethrough, code), `\fig` citations, `\cite` bibliography citations, and LaTeX text styling (`\textcolor`, `\underline`, `\textbf`, `\textit`, `\cancel`). |
 
 **Numbering_Engine.js**
 
@@ -193,6 +361,7 @@
 | `formatSingleNumber(num, style)` | 40 - 47 | Formats an integer using the chosen numbering style (numeric, roman-upper, roman-lower, alpha-upper, alpha-lower). |
 | `computeHeadingPrefixes(blocks, autoNumberingConfig)` | 65 - 136 | Calculates hierarchical section numbering prefixes (e.g. 1., 1.1., 1.1.1.) across all heading blocks based on configuration. |
 | `computeFigureNumbers(blocks)` | 142 - 196 | Calculates sequential figure numbers across Image and TikZ blocks, returning a block-to-figure metadata map and a tag citation lookup map. |
+| `computeCitationNumbers(blocks)` | 206 - 238 | Traverses note text blocks in document order to assign sequential first-appearance numbers to `\cite{...}` keys for numeric citation formatting. |
 
 **Table_Parser.js**
 
@@ -240,11 +409,12 @@
 | `./01_Navbar/04_Graph_Toggle.js` | `GetGraphToggleHTML`, `InitGraphToggleLogic` | `GetNavbarHTML()`, `InitNavbar()` |
 | `./01_Navbar/05_Delete_Button.js` | `GetDeleteButtonHTML`, `InitDeleteButton` | `GetNavbarHTML()`, `InitNavbar()` |
 | `./01_Navbar/06_Add_Edit_Button.js` | `GetAddNoteButtonHTML`, `InitAddNoteButton` | `GetNavbarHTML()`, `InitNavbar()` |
+| `./01_Navbar/07_Library_Button.js` | `GetLibraryButtonHTML`, `InitLibraryButton` | `GetNavbarHTML()`, `InitNavbar()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `GetNavbarHTML(isGraphActive = false)` | 9 - 101 | Assembles HTML markup and responsive CSS rules for the complete notes toolbar (View Toggle, Folder Filter, Search Bar, Graph Toggle, Delete, and Add Note). |
-| `InitNavbar(state, callbacks)` | 104 - 111 | Initializes all toolbar subcomponents and binds their action callbacks (onViewChange, onGroupSelect, onOrderUpdate, onSearch, onDeleteSelected, onAddClick). |
+| `GetNavbarHTML(isGraphActive = false)` | 10 - 103 | Assembles HTML markup and responsive CSS rules for the complete notes toolbar (View Toggle, Folder Filter, Search Bar, Graph Toggle, Delete, BibTeX Library, and Add Note). |
+| `InitNavbar(state, callbacks)` | 106 - 114 | Initializes all toolbar subcomponents and binds their action callbacks (onViewChange, onGroupSelect, onOrderUpdate, onSearch, onDeleteSelected, onAddClick, onLibraryClick). |
 
 **02_Notes_Card.js**
 
@@ -273,11 +443,12 @@
 | `./02_Notes_Card.js` | `GetNotesCardsContainerHTML`, `RenderNotesGrid` | `RenderNotesCardView()`, Re-exported |
 | `./01_Navbar/06_Add_Edit_Button.js` | `GetNoteModalHTML`, `OpenNoteModal`, `CloseNoteModal`, `InitNoteModal` | `RenderNotesCardView()`, Re-exported |
 | `./01_Navbar/05_Delete_Button.js` | `DeleteNoteById`, `DeleteSelectedNotes`, `ClearSelectedNotes`, `GetSelectedNoteIds` | Re-exported |
+| `../03_Library.js` | `OpenLibraryModal` | `RenderNotesCardView()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `GetNotesCardViewHTML()` | 33 - 38 | Returns HTML skeleton mounting points for the navbar (#navbar-mount) and cards container (#cards-mount). |
-| `RenderNotesCardView(mainContainer, state)` | 41 - 93 | Master entry point for Card View; mounts toolbar and cards container, initializes modal dialog, wires toolbar controls, and coordinates reactive card deck rendering. |
+| `GetNotesCardViewHTML()` | 34 - 38 | Returns HTML skeleton mounting points for the navbar (#navbar-mount) and cards container (#cards-mount). |
+| `RenderNotesCardView(mainContainer, state)` | 41 - 94 | Master entry point for Card View; mounts toolbar and cards container, initializes modal dialog, wires toolbar controls including Library modal with auto-refresh callback, and coordinates reactive card deck rendering. |
 
 ## A_Notes_Card_View/01_Navbar
 **01_Card_View_Toggle.js**
@@ -369,6 +540,17 @@
 | `GetAddNoteButtonHTML()` | 556 - 623 | Returns primary "+" toolbar button markup with accent glow styling and includes note modal HTML. |
 | `InitAddNoteButton(onAddClick)` | 626 - 638 | Attaches click listener to "+" button to trigger note creation modal. |
 
+**07_Library_Button.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| `../../../03_Library.js` | `OpenLibraryModal` | `InitLibraryButton()` |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `GetLibraryButtonHTML()` | 10 - 55 | Returns HTML markup and responsive styles for the BibTeX Library toolbar button with book SVG icon. |
+| `InitLibraryButton(onLibraryClick)` | 57 - 68 | Attaches click listener to open the shared BibTeX Library vault dialog, executing optional custom callback. |
+
 ## B_Editor_View
 **01_Doc_Header.js**
 
@@ -389,10 +571,12 @@
 | `./03_Floating_ToolBar/02_Note_Fonts.js` | `GetNoteFontsHTML`, `InitNoteFontsLogic` | `CreateFloatingToolbar()` |
 | `./03_Floating_ToolBar/03_Font_Size.js` | `GetFontSizeHTML`, `InitFontSizeLogic` | `CreateFloatingToolbar()` |
 | `./03_Floating_ToolBar/04_Macros_Modal.js` | `OpenMacrosModal` | `CreateFloatingToolbar()` |
+| `../03_Library.js` | `OpenLibraryModal` | `CreateFloatingToolbar()` |
+| `./03_Floating_ToolBar/05_Citation_Style.js` | `GetCitationStyleHTML`, `InitCitationStyleLogic` | `CreateFloatingToolbar()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `CreateFloatingToolbar(options)` | 17 - 86 | Creates bottom floating dock toolbar integrating sidebar drawer toggle, study view switch, font family selector, font size selector, and LaTeX macros modal button. |
+| `CreateFloatingToolbar(options)` | 19 - 124 | Creates bottom floating dock toolbar integrating sidebar drawer toggle, study view switch, font family selector, font size selector, LaTeX macros modal, BibTeX library vault dialog, and citation style selector. |
 
 **03_Study_View.js**
 
@@ -745,6 +929,33 @@
 | `renderBulletIcon(prefix)` | 85 - 95 | Compiles and renders bullet icon markup for unordered, ordered, or custom LaTeX list markers. |
 | `createLiveWidget(type, raw, contentHtml, options)` | 97 - 188 | Creates live interactive inline DOM widgets with seamless text selection (select-text) for math ($...$), formatting (**bold**, *italic*, <u>underline</u>), code (`code`), or citation links (`\fig`). |
 
+**Cite_Autocomplete.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| `../../../03_Library.js` | `GetLibraryEntries` | `renderMatches()`, `maybeShowCiteAutocomplete()` |
+| `./Text_Keyboard.js` | `checkAutoCollapseTokensNearCaret` | `acceptActiveMatch()` |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `maybeShowCiteAutocomplete(targetEl, options)` | 134 - 186 | Inspects text preceding caret for `\cite` trigger, positions floating popup list near cursor, and populates matching library entries. |
+| `handleCiteAutocompleteKeydown(e)` | 188 - 234 | Intercepts keyboard navigation (ArrowUp, ArrowDown, Enter, Tab, Escape) while the citation autocomplete popup is open. |
+| `hideCiteAutocomplete()` | 236 - 247 | Closes and hides the citation autocomplete suggestion list. |
+
+**Cite_Preview.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| `../../../03_Library.js` | `FindLibraryEntryByKey`, `GetCitationStyle` | `renderDockContent()` |
+| `../../../02_Utils.js` | `escapeHtml` | `renderDockContent()` |
+| `../../../Writing_Engine/BibTeX_Parser.js` | `formatCitationLabel` | `renderDockContent()` |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `showCitePreview(anchorEl, rawKeys, options)` | 114 - 150 | Displays floating preview dock adjacent to a hovered or pinned citation chip showing article metadata, author list, and abstract. |
+| `hideCitePreview()` | 152 - 163 | Hides the floating citation details dock. |
+| `initCitePreviewListeners()` | 165 - 171 | Attaches global event delegation for hovering and clicking `.note-bib-citation` chips across edit and read modes. |
+
 ## B_Editor_View/02_Sidebar
 **01_Sidebar_Logo.js**
 
@@ -829,6 +1040,17 @@
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
 | `OpenMacrosModal({ note = null, onSave = null } = {})` | 16 - 259 | Displays modal dialog to configure and edit global vault and local note LaTeX equation macros and TikZ preambles with live persistence. |
+
+**05_Citation_Style.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| `../../03_Library.js` | `GetCitationStyle`, `SetCitationStyle` | `GetCitationStyleHTML()`, `InitCitationStyleLogic()` |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `GetCitationStyleHTML()` | 19 - 85 | Returns HTML markup and styling for the citation style dropdown button in the floating editor toolbar. |
+| `InitCitationStyleLogic(onChange)` | 87 - 143 | Initializes citation style dropdown menu interactions, style switching (`numeric`, `authoryear`, `authortitle`), persistence, and re-render callbacks. |
 
 ## C_Graph_View
 **Graph_View.js**

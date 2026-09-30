@@ -4,6 +4,7 @@ import { GetSearchBarHTML, InitSearchBar } from './01_Navbar/03_Search_Bar.js';
 import { GetGraphToggleHTML, InitGraphToggleLogic } from './01_Navbar/04_Graph_Toggle.js';
 import { GetDeleteButtonHTML, InitDeleteButton } from './01_Navbar/05_Delete_Button.js';
 import { GetAddNoteButtonHTML, InitAddNoteButton } from './01_Navbar/06_Add_Edit_Button.js';
+import { GetLibraryButtonHTML, InitLibraryButton } from './01_Navbar/07_Library_Button.js';
 
 // Assembles HTML for the complete toolbar (view toggle, folder filter, search bar, graph toggle, delete, and add button)
 export function GetNavbarHTML(isGraphActive = false) {
@@ -91,9 +92,10 @@ export function GetNavbarHTML(isGraphActive = false) {
         ${GetGraphToggleHTML(isGraphActive)}
       </div>
 
-      <!-- 3. RIGHT: Auto-Active Delete & Add Note Button -->
+      <!-- 3. RIGHT: Auto-Active Delete, BibTeX Library & Add Note Button -->
       <div class="notes-toolbar-right">
         ${GetDeleteButtonHTML()}
+        ${GetLibraryButtonHTML()}
         ${GetAddNoteButtonHTML()}
       </div>
     </div>
@@ -101,11 +103,12 @@ export function GetNavbarHTML(isGraphActive = false) {
 }
 
 // Initializes all toolbar controls with their corresponding event listeners and callbacks
-export function InitNavbar(state, { onViewChange, onGroupSelect, onOrderUpdate, onSearch, onDeleteSelected, onAddClick }) {
+export function InitNavbar(state, { onViewChange, onGroupSelect, onOrderUpdate, onSearch, onDeleteSelected, onAddClick, onLibraryClick }) {
   InitViewToggle(onViewChange);
   InitGroupFilter(state, onGroupSelect, onOrderUpdate);
   InitSearchBar(onSearch);
   InitGraphToggleLogic();
   InitDeleteButton(onDeleteSelected);
+  InitLibraryButton(onLibraryClick);
   InitAddNoteButton(onAddClick);
 }

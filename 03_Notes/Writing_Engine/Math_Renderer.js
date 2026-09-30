@@ -9,6 +9,8 @@
 import { escapeHtml } from '../02_Utils.js';
 import { resolveThemeColors } from '../../00_Components/06_Color_Selector.js';
 import { NotesState } from '../00_State.js';
+import { GetCitationStyle, FindLibraryEntryByKey } from '../03_Library.js';
+import { formatCitationLabel } from './BibTeX_Parser.js';
 
 export const KATEX_MACROS = {
   "\\dddot": "\\overset{\\dots}{#1}",
@@ -37,6 +39,38 @@ export function setActiveFigureTagMap(map) {
 
 export function getActiveFigureTagMap() {
   return activeFigureTagMap;
+}
+
+// Active citation numbering for the note being rendered (key -> first-appearance number),
+// computed by computeCitationNumbers() and set by the editor render loop.
+let activeCitationMap = new Map();
+
+export function setActiveCitationMap(map) {
+  activeCitationMap = map || new Map();
+}
+
+export function getActiveCitationMap() {
+  return activeCitationMap;
+}
+
+/**
+ * Resolves a raw \cite{a,b} key list into display labels for the current citation
+ * style + numbering map. Shared by the edit-mode live widget and the view-mode renderer.
+ * @param {string} keysRaw - comma-separated citation keys
+ * @returns {{ parts: string[], missing: boolean }}
+ */
+export function resolveCitationLabels(keysRaw) {
+  const citeMap = getActiveCitationMap();
+  const style = GetCitationStyle();
+  const keys = String(keysRaw || '').split(',').map(k => k.trim()).filter(Boolean);
+  let missing = false;
+  const parts = keys.map(k => {
+    const entry = FindLibraryEntryByKey(k);
+    if (!entry) missing = true;
+    const num = citeMap.get(k.toLowerCase());
+    return formatCitationLabel(entry || { key: k }, style, num ?? null);
+  });
+  return { parts, missing };
 }
 
 // Global click handler for figure citation links [Fig. X]
@@ -373,6 +407,14 @@ function postProcessKatexHtml(html) {
 const katexCache = new Map();
 const MAX_KATEX_CACHE = 800;
 
+// Bumped whenever macros change so cached renders made with old macros are never reused
+let katexMacroVersion = 0;
+
+export function bumpKatexMacroVersion() {
+  katexMacroVersion += 1;
+  katexCache.clear();
+}
+
 export function clearKatexCache() {
   katexCache.clear();
 }
@@ -388,7 +430,7 @@ export function renderKatex(tex, isDisplayMode = false, noteContext = null) {
     const isLight = typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light';
     const theme = isLight ? 'light' : 'dark';
     const ctxId = noteContext?.id || (activeNoteContext ? activeNoteContext.id : 'global');
-    const cacheKey = `${theme}:${ctxId}:${isDisplayMode ? 'D' : 'I'}:${cleanTex}`;
+    const cacheKey = `${theme}:${ctxId}:${isDisplayMode ? 'D' : 'I'}:v${katexMacroVersion}:${cleanTex}`;
 
     if (katexCache.has(cacheKey)) {
       return katexCache.get(cacheKey);
@@ -401,7 +443,8 @@ export function renderKatex(tex, isDisplayMode = false, noteContext = null) {
         throwOnError: false,
         output: 'htmlAndMathml',
         macros: macros,
-        trust: true
+        // \href/\url only with safe protocols — blanket `trust: true` would allow javascript: URLs from imported notes
+        trust: (context) => ['\\href', '\\url'].includes(context.command) && /^https?:\/\//i.test(context.url || '')
       });
       rendered = postProcessKatexHtml(rendered);
       if (katexCache.size >= MAX_KATEX_CACHE) {
@@ -544,10 +587,11 @@ export function formatRichTextWithMath(rawText = '', options = {}) {
   }) : processedText;
 
   // Step 2: Extract Inline Math $...$
-  text = text.replace(/(^|[^\\])\$([^\$\n\r]+?)\$/g, (_, prefix, tex) => {
+  // Lookbehind instead of consuming the prefix char so adjacent math like $a$$b$ renders both halves
+  text = text.replace(/(?<=^|[^\\])\$([^\$\n\r]+?)\$/g, (_, tex) => {
     const idx = inlineTokens.length;
     inlineTokens.push(renderKatex(tex.trim(), false));
-    return `${prefix}@@@INLINE_MATH_${idx}@@@`;
+    return `@@@INLINE_MATH_${idx}@@@`;
   });
 
   // Step 3: Process Line by Line
@@ -663,6 +707,13 @@ function parseInlineMarkdownAndLatex(str) {
     const resolvedNum = activeFigureTagMap.get(norm) ?? (activeFigureTagMap.get(rawTag) ?? null);
     const displayLabel = resolvedNum !== null && resolvedNum !== undefined ? `Fig. ${resolvedNum}` : `Fig. ${escapeHtml(rawTag)}`;
     return `<a class="note-fig-citation font-semibold text-purple-400 hover:text-purple-300 bg-purple-500/10 hover:bg-purple-500/20 px-1.5 py-0.5 rounded border border-purple-500/30 transition-colors inline-flex items-center gap-0.5 cursor-pointer select-none no-underline" href="#fig-${escapeHtml(norm)}" data-fig-target="${escapeHtml(norm)}" data-fig-num="${resolvedNum || ''}" title="Jump to ${displayLabel}">[${displayLabel}]</a>`;
+  });
+
+  // LaTeX \cite{key1,key2} bibliography citation (label per NotesState.citationStyle)
+  s = s.replace(/\\cite\{([^}]*)\}/g, (match, keysRaw) => {
+    const { parts, missing } = resolveCitationLabels(keysRaw);
+    const missingClass = missing ? ' note-bib-citation-missing border-amber-500/50 text-amber-400' : '';
+    return `<span class="note-bib-citation font-semibold text-sky-400 hover:text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 px-1.5 py-0.5 rounded border border-sky-500/30 transition-colors inline-flex items-center cursor-pointer select-none${missingClass}" data-cite-keys="${keysRaw.trim()}" title="Citation">[${escapeHtml(parts.join(', '))}]</span>`;
   });
   // LaTeX \textcolor{#hex}{content} or \textcolor{colorName}{content}
   s = s.replace(/\\textcolor\{([#a-zA-Z0-9]+)\}\{([^\}]+)\}/g, '<span style="color:$1;">$2</span>');
