@@ -73,7 +73,8 @@
       "tabs": [
         { "Name": "BOOKMARK", "Url": "#Bookmarks", "PageUrl": "02_Bookmarks/Bookmarks.html", "Color": 14037359 },
         { "Name": "NOTES", "Url": "#Notes", "PageUrl": "03_Notes/Notes.html", "Color": 4048447 },
-        { "Name": "PROFESSORS", "Url": "#Professors", "PageUrl": "04_Professors/Professor.html", "Color": 1013358 }
+        { "Name": "PROFESSORS", "Url": "#Professors", "PageUrl": "04_Professors/Professor.html", "Color": 1013358 },
+        { "Name": "R&D", "Url": "#RD", "PageUrl": "05_R&D/R&D.html", "Color": 9137663 }
       ]
     }
   </script>
@@ -98,6 +99,8 @@
     },
     "tableTemplates": [],
     "tikzTemplates": [],
+    "bibliography": [],
+    "citationStyle": "numeric",
     "folders": [
       "LaTex"
     ],
@@ -385,6 +388,17 @@
     "professors": []
   }
   </script>
+  <script type="application/json" id="RDData">
+  {
+    "version": 1,
+    "updatedAt": null,
+    "items": [],
+    "groups": [],
+    "groupOrder": [],
+    "itemOrder": [],
+    "links": []
+  }
+  </script>
 </head>
 
 <body>
@@ -414,6 +428,11 @@
           const mod = await import('./04_Professors/Professors.js');
           if (mod && typeof mod.initProfessorsApp === 'function') {
             mod.initProfessorsApp();
+          }
+        } else if (lowerHash.startsWith('#rd') || lowerHash.startsWith('#r&d')) {
+          const mod = await import('./05_R&D/RD.js');
+          if (mod && typeof mod.initRDApp === 'function') {
+            mod.initRDApp();
           }
         } else {
           const mod = await import('./01_Landing_Page/Main.js');

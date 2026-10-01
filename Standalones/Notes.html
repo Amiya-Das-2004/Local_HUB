@@ -80,6 +80,8 @@
   },
   "tableTemplates": [],
   "tikzTemplates": [],
+  "bibliography": [],
+  "citationStyle": "numeric",
   "folders": [
     "LaTex"
   ],
@@ -1326,12 +1328,14 @@ function TriggerImport(onSuccess = null) {
         let masterBlocks = {};
 
         // 1. Identify format: Master multi-tab container vs Single-tab direct payload
-        if (importedData.LandingPageData || importedData.Bookmarks || importedData.NotesData) {
+        if (importedData.LandingPageData || importedData.Bookmarks || importedData.NotesData || importedData.ProfessorsData) {
           masterBlocks = importedData;
         } else if (Array.isArray(importedData.notes) || importedData.vaultMeta) {
           masterBlocks['NotesData'] = importedData;
         } else if (Array.isArray(importedData.bookmarks) || importedData.sectionOrder) {
           masterBlocks['Bookmarks'] = importedData;
+        } else if (Array.isArray(importedData.professors)) {
+          masterBlocks['ProfessorsData'] = importedData;
         } else if (Array.isArray(importedData.tabs)) {
           masterBlocks['LandingPageData'] = importedData;
         } else {
@@ -1354,6 +1358,8 @@ function TriggerImport(onSuccess = null) {
             cleanData.globalMacros = cleanData.globalMacros || { ...DEFAULT_MACROS };
             cleanData.tableTemplates = Array.isArray(cleanData.tableTemplates) ? cleanData.tableTemplates : [];
             cleanData.tikzTemplates = Array.isArray(cleanData.tikzTemplates) ? cleanData.tikzTemplates : [];
+            cleanData.bibliography = Array.isArray(cleanData.bibliography) ? cleanData.bibliography : [];
+            cleanData.citationStyle = typeof cleanData.citationStyle === 'string' ? cleanData.citationStyle : 'numeric';
             cleanData.notes = Array.isArray(cleanData.notes) ? cleanData.notes.map(sanitizeImportedNote) : [];
             cleanData.folders = Array.isArray(cleanData.folders) && cleanData.folders.length > 0 
               ? cleanData.folders 
@@ -1368,6 +1374,19 @@ function TriggerImport(onSuccess = null) {
             cleanData.sectionOrder = Array.isArray(cleanData.sectionOrder) ? cleanData.sectionOrder : ['ALL'];
             if (!cleanData.sectionOrder.includes('ALL')) cleanData.sectionOrder.unshift('ALL');
             cleanData._lastSaved = now;
+          }
+          // Auto-create missing parts for ProfessorsData
+          else if (id === 'ProfessorsData' || Array.isArray(cleanData.professors)) {
+            cleanData.version = cleanData.version || 1;
+            cleanData.updatedAt = new Date().toISOString();
+            cleanData.professors = Array.isArray(cleanData.professors) ? cleanData.professors : [];
+            try {
+              if (typeof localStorage !== 'undefined') {
+                localStorage.setItem('profftrack:v1', JSON.stringify(cleanData));
+              }
+            } catch (err) {
+              console.warn('[Import] Failed to save profftrack:v1 in localStorage:', err);
+            }
           }
           // Auto-create missing parts for LandingPageData
           else if (id === 'LandingPageData' || Array.isArray(cleanData.tabs)) {
@@ -1392,6 +1411,10 @@ function TriggerImport(onSuccess = null) {
             if (id === 'NotesData' && window.NotesState) Object.assign(window.NotesState, cleanData);
             if (id === 'Bookmarks' && window.BookmarkState) Object.assign(window.BookmarkState, cleanData);
             if (id === 'LandingPageData' && window.AppState) Object.assign(window.AppState, cleanData);
+            if (id === 'ProfessorsData') {
+              if (window.ProfessorsState) Object.assign(window.ProfessorsState, cleanData);
+              if (typeof window.replaceState === 'function') window.replaceState(cleanData);
+            }
             if (window[id + 'State']) Object.assign(window[id + 'State'], cleanData);
             if (window[id]) Object.assign(window[id], cleanData);
           }
@@ -1457,7 +1480,8 @@ function TriggerExport() {
       'App' + id,
       'AppState',
       'BookmarkState',
-      'NotesState'
+      'NotesState',
+      'ProfessorsState'
     ];
 
     for (const key of candidateKeys) {
@@ -1468,7 +1492,8 @@ function TriggerExport() {
           key === id.replace(/Data$/, '') + 'State' ||
           (id === 'LandingPageData' && key === 'AppState') ||
           (id === 'Bookmarks' && key === 'BookmarkState') ||
-          (id === 'NotesData' && key === 'NotesState')
+          (id === 'NotesData' && key === 'NotesState') ||
+          (id === 'ProfessorsData' && key === 'ProfessorsState')
         ) {
           foundData = window[key];
           break;
@@ -1479,6 +1504,18 @@ function TriggerExport() {
     if (!foundData) {
       try {
         foundData = JSON.parse(script.textContent);
+      } catch (e) { }
+    }
+
+    if ((!foundData || !foundData.professors || foundData.professors.length === 0) && id === 'ProfessorsData') {
+      try {
+        const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('profftrack:v1') : null;
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed && Array.isArray(parsed.professors) && parsed.professors.length > 0) {
+            foundData = parsed;
+          }
+        }
       } catch (e) { }
     }
 
@@ -1798,6 +1835,8 @@ async function SaveAndDownloadApp() {
     const noteFiles = [
       '03_Notes/00_State.js',
       '03_Notes/02_Utils.js',
+      '03_Notes/Writing_Engine/BibTeX_Parser.js',
+      '03_Notes/03_Library.js',
       '03_Notes/Writing_Engine/Bullet_Engine.js',
       '03_Notes/Writing_Engine/Block_Engine.js',
       '03_Notes/Writing_Engine/Numbering_Engine.js',
@@ -1819,6 +1858,8 @@ async function SaveAndDownloadApp() {
       '03_Notes/B_Editor_View/01_Blocks/Text_Block/Text_Widgets.js',
       '03_Notes/B_Editor_View/01_Blocks/Text_Block/Text_Parser.js',
       '03_Notes/B_Editor_View/01_Blocks/Text_Block/Text_Keyboard.js',
+      '03_Notes/B_Editor_View/01_Blocks/Text_Block/Cite_Autocomplete.js',
+      '03_Notes/B_Editor_View/01_Blocks/Text_Block/Cite_Preview.js',
       '03_Notes/B_Editor_View/01_Blocks/Text_Block/Text_Block_Markdown.js',
       '03_Notes/B_Editor_View/01_Blocks/Text_Block.js',
       '03_Notes/B_Editor_View/01_Blocks/Equation_Block.js',
@@ -1838,6 +1879,7 @@ async function SaveAndDownloadApp() {
       '03_Notes/B_Editor_View/03_Floating_ToolBar/02_Note_Fonts.js',
       '03_Notes/B_Editor_View/03_Floating_ToolBar/03_Font_Size.js',
       '03_Notes/B_Editor_View/03_Floating_ToolBar/04_Macros_Modal.js',
+      '03_Notes/B_Editor_View/03_Floating_ToolBar/05_Citation_Style.js',
       '03_Notes/B_Editor_View/02_Floating_Toolbar.js',
       '03_Notes/B_Editor_View/03_Study_View.js',
       '03_Notes/B_Editor_View/04_LaTeX_Editor.js',
@@ -1847,6 +1889,7 @@ async function SaveAndDownloadApp() {
       '03_Notes/A_Notes_Card_View/01_Navbar/04_Graph_Toggle.js',
       '03_Notes/A_Notes_Card_View/01_Navbar/05_Delete_Button.js',
       '03_Notes/A_Notes_Card_View/01_Navbar/06_Add_Edit_Button.js',
+      '03_Notes/A_Notes_Card_View/01_Navbar/07_Library_Button.js',
       '03_Notes/A_Notes_Card_View/01_Navbar.js',
       '03_Notes/A_Notes_Card_View/02_Notes_Card.js',
       '03_Notes/A_Notes_Card_View/A_Notes_Card_View.js',
@@ -1855,17 +1898,48 @@ async function SaveAndDownloadApp() {
       '03_Notes/Notes.js'
     ];
 
+    const professorFiles = [
+      '04_Professors/00_State.js',
+      '04_Professors/01_Utils.js',
+      '04_Professors/02_Styles.js',
+      '04_Professors/03_Seed_Data.js',
+      '04_Professors/01_HTML_Page/01_Header.js',
+      '04_Professors/01_HTML_Page/02_Toolbar.js',
+      '04_Professors/01_HTML_Page/03_Theme_Toggle.js',
+      '04_Professors/01_HTML_Page/04_Footer.js',
+      '04_Professors/02_Dashboard/01_Stats_Bar.js',
+      '04_Professors/02_Dashboard/02_Resume_Section.js',
+      '04_Professors/02_Dashboard/03_Heatmap.js',
+      '04_Professors/02_Dashboard/04_Tag_Bar.js',
+      '04_Professors/03_Professor_List/01_Prof_Cards.js',
+      '04_Professors/03_Professor_List/02_List_Actions.js',
+      '04_Professors/04_Modals/01_Modal_Core.js',
+      '04_Professors/04_Modals/02_Professor_Modal.js',
+      '04_Professors/04_Modals/03_Paper_Modal.js',
+      '04_Professors/04_Modals/04_Journal_Modal.js',
+      '04_Professors/04_Modals/05_Journal_Browser.js',
+      '04_Professors/04_Modals/06_Compare_Modal.js',
+      '04_Professors/04_Modals/07_Bulk_Add_Modal.js',
+      '04_Professors/04_Modals/08_Paste_Import_Modal.js',
+      '04_Professors/04_Modals/09_Shortcuts_Modal.js',
+      '04_Professors/05_Data_IO/01_Save_Button.js',
+      '04_Professors/05_Data_IO/02_Export.js',
+      '04_Professors/05_Data_IO/03_Import.js',
+      '04_Professors/Professors.js'
+    ];
+
     const bundleGroup = async (files) => {
       let out = '';
       for (const f of files) out += await bundleFile(f);
       return out;
     };
 
-    const [bundledComponents, bundledLanding, bundledBookmarks, bundledNotes] = await Promise.all([
+    const [bundledComponents, bundledLanding, bundledBookmarks, bundledNotes, bundledProfessors] = await Promise.all([
       bundleGroup(componentFiles),
       bundleGroup(landingFiles),
       bundleGroup(bookmarkFiles),
-      bundleGroup(noteFiles)
+      bundleGroup(noteFiles),
+      bundleGroup(professorFiles)
     ]);
 
     const threeImportLine = 'imp' + 'ort * as THREE from \'https://unpkg.com/three@0.160.0/build/three.module.js\';';
@@ -1905,6 +1979,14 @@ ${bundledNotes}
 }
 
 /* ==========================================================================
+   PROFESSORS PAGE MODULE (ProffTrack)
+   ========================================================================== */
+function LoadProfessorsPage() {
+${bundledProfessors}
+  if (typeof initProfessorsApp === 'function') initProfessorsApp();
+}
+
+/* ==========================================================================
    MASTER ROUTER
    ========================================================================== */
 function handleRoute() {
@@ -1917,6 +1999,8 @@ function handleRoute() {
     LoadBookmarkPage();
   } else if (lowerHash.startsWith('#notes')) {
     LoadNotesPage();
+  } else if (lowerHash.startsWith('#professors')) {
+    LoadProfessorsPage();
   } else {
     LoadLandingPage();
   }
@@ -2368,6 +2452,8 @@ const tabHandlerFiles = [
 const tabModuleFiles = [
   '03_Notes/00_State.js',
   '03_Notes/02_Utils.js',
+  '03_Notes/Writing_Engine/BibTeX_Parser.js',
+  '03_Notes/03_Library.js',
   '03_Notes/Writing_Engine/Bullet_Engine.js',
   '03_Notes/Writing_Engine/Block_Engine.js',
   '03_Notes/Writing_Engine/Numbering_Engine.js',
@@ -2389,6 +2475,8 @@ const tabModuleFiles = [
   '03_Notes/B_Editor_View/01_Blocks/Text_Block/Text_Widgets.js',
   '03_Notes/B_Editor_View/01_Blocks/Text_Block/Text_Parser.js',
   '03_Notes/B_Editor_View/01_Blocks/Text_Block/Text_Keyboard.js',
+  '03_Notes/B_Editor_View/01_Blocks/Text_Block/Cite_Autocomplete.js',
+  '03_Notes/B_Editor_View/01_Blocks/Text_Block/Cite_Preview.js',
   '03_Notes/B_Editor_View/01_Blocks/Text_Block/Text_Block_Markdown.js',
   '03_Notes/B_Editor_View/01_Blocks/Text_Block.js',
   '03_Notes/B_Editor_View/01_Blocks/Equation_Block.js',
@@ -2408,6 +2496,7 @@ const tabModuleFiles = [
   '03_Notes/B_Editor_View/03_Floating_ToolBar/02_Note_Fonts.js',
   '03_Notes/B_Editor_View/03_Floating_ToolBar/03_Font_Size.js',
   '03_Notes/B_Editor_View/03_Floating_ToolBar/04_Macros_Modal.js',
+  '03_Notes/B_Editor_View/03_Floating_ToolBar/05_Citation_Style.js',
   '03_Notes/B_Editor_View/02_Floating_Toolbar.js',
   '03_Notes/B_Editor_View/03_Study_View.js',
   '03_Notes/B_Editor_View/04_LaTeX_Editor.js',
@@ -2417,6 +2506,7 @@ const tabModuleFiles = [
   '03_Notes/A_Notes_Card_View/01_Navbar/04_Graph_Toggle.js',
   '03_Notes/A_Notes_Card_View/01_Navbar/05_Delete_Button.js',
   '03_Notes/A_Notes_Card_View/01_Navbar/06_Add_Edit_Button.js',
+  '03_Notes/A_Notes_Card_View/01_Navbar/07_Library_Button.js',
   '03_Notes/A_Notes_Card_View/01_Navbar.js',
   '03_Notes/A_Notes_Card_View/02_Notes_Card.js',
   '03_Notes/A_Notes_Card_View/A_Notes_Card_View.js',
@@ -2676,7 +2766,7 @@ function sanitizeTabNote(n, idx = 0) {
   };
 }
 
-// Universal self-healing import (local copy of the shared logic).
+// Dedicated Notes tab import with multi-tab envelope resilience
 function TriggerTabImport(onSuccess = null) {
   const input = document.createElement('input');
   input.type = 'file';
@@ -2692,95 +2782,69 @@ function TriggerTabImport(onSuccess = null) {
           throw new Error('Imported file does not contain a valid JSON object.');
         }
 
-        const now = Date.now();
-        let masterBlocks = {};
-
-        // 1. Identify format: Master multi-tab container vs Single-tab direct payload
-        if (importedData.LandingPageData || importedData.Bookmarks || importedData.NotesData) {
-          masterBlocks = importedData;
+        // Resilient extraction: direct notes vs global multi-tab envelope
+        let targetData = null;
+        if (importedData.NotesData && typeof importedData.NotesData === 'object') {
+          targetData = importedData.NotesData;
         } else if (Array.isArray(importedData.notes) || importedData.vaultMeta) {
-          masterBlocks['NotesData'] = importedData;
-        } else if (Array.isArray(importedData.bookmarks) || importedData.sectionOrder) {
-          masterBlocks['Bookmarks'] = importedData;
-        } else if (Array.isArray(importedData.tabs)) {
-          masterBlocks['LandingPageData'] = importedData;
+          targetData = importedData;
         } else {
-          masterBlocks = importedData;
+          throw new Error('No notes data found in this file.');
         }
 
-        // 2. Universally sanitize, auto-create missing fields, and sync to DOM & localStorage
-        for (const [id, rawData] of Object.entries(masterBlocks)) {
-          if (!rawData || typeof rawData !== 'object') continue;
+        const now = Date.now();
+        let cleanData = JSON.parse(JSON.stringify(targetData));
+        delete cleanData._unsaved;
+        delete cleanData._savedAt;
 
-          let cleanData = JSON.parse(JSON.stringify(rawData));
-          delete cleanData._unsaved;
-          delete cleanData._savedAt;
+        cleanData.vaultMeta = cleanData.vaultMeta || { title: "My Research & Notes Vault", version: "1.0.0" };
+        cleanData.vaultMeta.lastSaved = now;
+        cleanData.globalMacros = cleanData.globalMacros || { ...TAB_DEFAULT_MACROS };
+        cleanData.tableTemplates = Array.isArray(cleanData.tableTemplates) ? cleanData.tableTemplates : [];
+        cleanData.tikzTemplates = Array.isArray(cleanData.tikzTemplates) ? cleanData.tikzTemplates : [];
+        cleanData.bibliography = Array.isArray(cleanData.bibliography) ? cleanData.bibliography : [];
+        cleanData.citationStyle = typeof cleanData.citationStyle === 'string' ? cleanData.citationStyle : 'numeric';
+        cleanData.notes = Array.isArray(cleanData.notes) ? cleanData.notes.map(sanitizeTabNote) : [];
+        cleanData.folders = Array.isArray(cleanData.folders) && cleanData.folders.length > 0
+          ? cleanData.folders
+          : Array.from(new Set(cleanData.notes.map(n => n.folder || 'General').filter(Boolean)));
+        cleanData.tags = Array.isArray(cleanData.tags) && cleanData.tags.length > 0
+          ? cleanData.tags
+          : Array.from(new Set(cleanData.notes.flatMap(n => n.tags || []).filter(Boolean)));
 
-          if (id === 'NotesData' || Array.isArray(cleanData.notes) || cleanData.vaultMeta) {
-            cleanData.vaultMeta = cleanData.vaultMeta || { title: "My Research & Notes Vault", version: "1.0.0" };
-            cleanData.vaultMeta.lastSaved = now;
-            cleanData.globalMacros = cleanData.globalMacros || { ...TAB_DEFAULT_MACROS };
-            cleanData.tableTemplates = Array.isArray(cleanData.tableTemplates) ? cleanData.tableTemplates : [];
-            cleanData.tikzTemplates = Array.isArray(cleanData.tikzTemplates) ? cleanData.tikzTemplates : [];
-            cleanData.notes = Array.isArray(cleanData.notes) ? cleanData.notes.map(sanitizeTabNote) : [];
-            cleanData.folders = Array.isArray(cleanData.folders) && cleanData.folders.length > 0
-              ? cleanData.folders
-              : Array.from(new Set(cleanData.notes.map(n => n.folder || 'General').filter(Boolean)));
-            cleanData.tags = Array.isArray(cleanData.tags) && cleanData.tags.length > 0
-              ? cleanData.tags
-              : Array.from(new Set(cleanData.notes.flatMap(n => n.tags || []).filter(Boolean)));
-          }
-          else if (id === 'Bookmarks' || Array.isArray(cleanData.bookmarks)) {
-            cleanData.bookmarks = Array.isArray(cleanData.bookmarks) ? cleanData.bookmarks : [];
-            cleanData.sectionOrder = Array.isArray(cleanData.sectionOrder) ? cleanData.sectionOrder : ['ALL'];
-            if (!cleanData.sectionOrder.includes('ALL')) cleanData.sectionOrder.unshift('ALL');
-            cleanData._lastSaved = now;
-          }
-          else if (id === 'LandingPageData' || Array.isArray(cleanData.tabs)) {
-            cleanData.tabs = Array.isArray(cleanData.tabs) ? cleanData.tabs : [];
-            cleanData._lastSaved = now;
-          } else {
-            cleanData._lastSaved = now;
-          }
+        // 1. Sync to DOM script block
+        let scriptBlock = document.getElementById('NotesData');
+        if (!scriptBlock) {
+          scriptBlock = document.createElement('script');
+          scriptBlock.type = 'application/json';
+          scriptBlock.id = 'NotesData';
+          document.head.appendChild(scriptBlock);
+        }
+        scriptBlock.textContent = JSON.stringify(cleanData, null, 2);
 
-          // A. Update or create DOM <script type="application/json" id="...">
-          let scriptBlock = document.getElementById(id);
-          if (!scriptBlock) {
-            scriptBlock = document.createElement('script');
-            scriptBlock.type = 'application/json';
-            scriptBlock.id = id;
-            document.head.appendChild(scriptBlock);
-          }
-          scriptBlock.textContent = JSON.stringify(cleanData, null, 2);
-
-          // B. Update in-memory window state objects if present
-          if (typeof window !== 'undefined') {
-            if (id === 'NotesData' && window.NotesState) Object.assign(window.NotesState, cleanData);
-            if (id === 'Bookmarks' && window.BookmarkState) Object.assign(window.BookmarkState, cleanData);
-            if (id === 'LandingPageData' && window.AppState) Object.assign(window.AppState, cleanData);
-            if (window[id + 'State']) Object.assign(window[id + 'State'], cleanData);
-            if (window[id]) Object.assign(window[id], cleanData);
-          }
-
-          // C. Save to LocalStorage with _unsaved: true and _savedAt: now
-          try {
-            if (typeof localStorage !== 'undefined') {
-              const cachePayload = {
-                ...cleanData,
-                _unsaved: true,
-                _savedAt: now
-              };
-              localStorage.setItem(id + '_Local_Cache', JSON.stringify(cachePayload));
-            }
-          } catch (err) {
-            console.warn(`[TabImport] Failed to cache ${id} in localStorage:`, err);
-          }
+        // 2. Sync to in-memory window state
+        if (typeof window !== 'undefined' && window.NotesState) {
+          Object.assign(window.NotesState, cleanData);
         }
 
-        alert('Data imported successfully! All missing fields were automatically structured. Remember to click SAVE to make it permanent in your HTML.');
+        // 3. Save to localStorage with recovery buffer
+        try {
+          if (typeof localStorage !== 'undefined') {
+            const cachePayload = {
+              ...cleanData,
+              _unsaved: true,
+              _savedAt: now
+            };
+            localStorage.setItem('NotesData_Local_Cache', JSON.stringify(cachePayload));
+          }
+        } catch (err) {
+          console.warn('[Notes Import] Failed to cache in localStorage:', err);
+        }
+
+        alert('Notes imported successfully! Remember to click SAVE to make it permanent in your HTML.');
 
         if (onSuccess) {
-          onSuccess(masterBlocks);
+          onSuccess(cleanData);
         } else {
           window.location.reload();
         }
@@ -2793,60 +2857,61 @@ function TriggerTabImport(onSuccess = null) {
   input.click();
 }
 
-// Universal dynamic export (local copy of the shared logic).
+// Dedicated Notes tab export
 function TriggerTabExport() {
-  const masterBackup = {};
-  const scripts = document.querySelectorAll('script[type="application/json"][id]');
-  scripts.forEach(script => {
-    const id = script.id;
-    let foundData = null;
+  if (typeof window !== 'undefined' && typeof window.flushNotesSave === 'function') {
+    window.flushNotesSave();
+  }
 
-    const candidateKeys = [
-      id,
-      id + 'State',
-      id.replace(/Data$/, '') + 'State',
-      'App' + id,
-      'AppState',
-      'BookmarkState',
-      'NotesState'
-    ];
+  let foundData = null;
+  if (typeof window !== 'undefined' && window.NotesState && typeof window.NotesState === 'object') {
+    foundData = window.NotesState;
+  }
 
-    for (const key of candidateKeys) {
-      if (typeof window !== 'undefined' && window[key] && typeof window[key] === 'object' && Object.keys(window[key]).length > 0) {
-        if (
-          key === id ||
-          key === id + 'State' ||
-          key === id.replace(/Data$/, '') + 'State' ||
-          (id === 'LandingPageData' && key === 'AppState') ||
-          (id === 'Bookmarks' && key === 'BookmarkState') ||
-          (id === 'NotesData' && key === 'NotesState')
-        ) {
-          foundData = window[key];
-          break;
-        }
-      }
-    }
-
-    if (!foundData) {
+  if (!foundData) {
+    const script = document.getElementById('NotesData');
+    if (script && script.textContent.trim()) {
       try {
         foundData = JSON.parse(script.textContent);
       } catch (e) { }
     }
+  }
 
-    if (foundData) {
-      const cleanData = JSON.parse(JSON.stringify(foundData));
-      delete cleanData._unsaved;
-      delete cleanData._savedAt;
-      masterBackup[id] = cleanData;
-    }
-  });
+  if (!foundData) {
+    try {
+      const cached = typeof localStorage !== 'undefined' ? localStorage.getItem('NotesData_Local_Cache') : null;
+      if (cached) {
+        foundData = JSON.parse(cached);
+      }
+    } catch (e) { }
+  }
 
-  const dataStr = JSON.stringify(masterBackup, null, 2);
+  const now = Date.now();
+  const cleanData = JSON.parse(JSON.stringify(foundData || {}));
+  delete cleanData._unsaved;
+  delete cleanData._savedAt;
+
+  cleanData.vaultMeta = cleanData.vaultMeta || { title: "My Research & Notes Vault", version: "1.0.0" };
+  cleanData.vaultMeta.lastSaved = now;
+  cleanData.globalMacros = cleanData.globalMacros || { ...TAB_DEFAULT_MACROS };
+  cleanData.tableTemplates = Array.isArray(cleanData.tableTemplates) ? cleanData.tableTemplates : [];
+  cleanData.tikzTemplates = Array.isArray(cleanData.tikzTemplates) ? cleanData.tikzTemplates : [];
+  cleanData.bibliography = Array.isArray(cleanData.bibliography) ? cleanData.bibliography : [];
+  cleanData.citationStyle = typeof cleanData.citationStyle === 'string' ? cleanData.citationStyle : 'numeric';
+  cleanData.notes = Array.isArray(cleanData.notes) ? cleanData.notes.map(sanitizeTabNote) : [];
+  cleanData.folders = Array.isArray(cleanData.folders) && cleanData.folders.length > 0
+    ? cleanData.folders
+    : Array.from(new Set(cleanData.notes.map(n => n.folder || 'General').filter(Boolean)));
+  cleanData.tags = Array.isArray(cleanData.tags) && cleanData.tags.length > 0
+    ? cleanData.tags
+    : Array.from(new Set(cleanData.notes.flatMap(n => n.tags || []).filter(Boolean)));
+
+  const dataStr = JSON.stringify(cleanData, null, 2);
   const blob = new Blob([dataStr], { type: 'application/json;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'Local_HUB_DATA.json';
+  a.download = 'Notes_DATA.json';
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -2930,16 +2995,25 @@ const DEFAULT_GLOBAL_MACROS = {
 }`
 };
 
-// In-memory state holding notes, folders, tags, vault metadata, macros, and custom templates
+// In-memory state holding notes, folders, tags, vault metadata, macros, custom templates, and the BibTeX library
 let NotesState = {
   vaultMeta: { title: "Notes Vault", version: "1.0.0" },
   globalMacros: { ...DEFAULT_GLOBAL_MACROS },
   tableTemplates: [],
   tikzTemplates: [],
+  bibliography: [],
+  citationStyle: 'numeric',
   folders: [],
   tags: [],
   notes: []
 };
+
+// Preserves a manually curated order (e.g. drag-reordered folders) and only appends newly seen values.
+function mergeOrderedLists(existing, derived) {
+  const base = Array.isArray(existing) ? existing.filter(Boolean) : [];
+  const extra = (Array.isArray(derived) ? derived : []).filter(v => v && !base.includes(v));
+  return [...base, ...extra];
+}
 
 // Validates note structure and fills missing fields with defaults
 function sanitizeNote(n, idx = 0) {
@@ -2983,7 +3057,7 @@ function LoadNotesState(forceReload = false) {
         const parsedCache = JSON.parse(cached);
         const cacheTimestamp = parsedCache?._savedAt || 0;
         const currentTimestamp = NotesState.vaultMeta?.lastSaved || 0;
-        if (cacheTimestamp <= currentTimestamp && !parsedCache._unsaved) {
+        if (cacheTimestamp <= currentTimestamp) {
           return NotesState;
         }
       } else {
@@ -3006,6 +3080,8 @@ function LoadNotesState(forceReload = false) {
           globalMacros: parsedDom.globalMacros || { ...DEFAULT_GLOBAL_MACROS },
           tableTemplates: Array.isArray(parsedDom.tableTemplates) ? parsedDom.tableTemplates : [],
           tikzTemplates: Array.isArray(parsedDom.tikzTemplates) ? parsedDom.tikzTemplates : [],
+          bibliography: Array.isArray(parsedDom.bibliography) ? parsedDom.bibliography : [],
+          citationStyle: typeof parsedDom.citationStyle === 'string' ? parsedDom.citationStyle : 'numeric',
           folders: Array.isArray(parsedDom.folders) ? parsedDom.folders : [],
           tags: Array.isArray(parsedDom.tags) ? parsedDom.tags : [],
           notes: Array.isArray(parsedDom.notes) ? parsedDom.notes.map(sanitizeNote) : []
@@ -3028,16 +3104,17 @@ function LoadNotesState(forceReload = false) {
       if (parsedCache && parsedCache._unsaved === true && cacheTimestamp > domTimestamp && Array.isArray(parsedCache.notes)) {
         console.log('[NotesState] Recovering uncommitted working edits from local cache...');
         const cachedNotes = parsedCache.notes.map(sanitizeNote);
-        const allFolders = Array.from(new Set(cachedNotes.map(n => n.folder || 'General').filter(Boolean)));
-        const allTags = Array.from(new Set(cachedNotes.flatMap(n => n.tags || []).filter(Boolean)));
 
         Object.assign(NotesState, {
           vaultMeta: parsedCache.vaultMeta || domState?.vaultMeta || { title: "My Research & Notes Vault", version: "1.0.0", lastSaved: cacheTimestamp },
           globalMacros: parsedCache.globalMacros || domState?.globalMacros || { ...DEFAULT_GLOBAL_MACROS },
           tableTemplates: parsedCache.tableTemplates || domState?.tableTemplates || [],
           tikzTemplates: parsedCache.tikzTemplates || domState?.tikzTemplates || [],
-          folders: allFolders,
-          tags: allTags,
+          bibliography: Array.isArray(parsedCache.bibliography) ? parsedCache.bibliography : (domState?.bibliography || []),
+          citationStyle: typeof parsedCache.citationStyle === 'string' ? parsedCache.citationStyle : (domState?.citationStyle || 'numeric'),
+          // Recovery must not discard vault-level folders/tags that have no cached note (they may be intentionally empty or hand-ordered)
+          folders: mergeOrderedLists(parsedCache.folders || domState?.folders || [], Array.from(new Set(cachedNotes.map(n => n.folder || 'General').filter(Boolean)))),
+          tags: mergeOrderedLists(parsedCache.tags || domState?.tags || [], Array.from(new Set(cachedNotes.flatMap(n => n.tags || []).filter(Boolean)))),
           notes: cachedNotes
         });
 
@@ -3057,6 +3134,8 @@ function LoadNotesState(forceReload = false) {
       globalMacros: domState.globalMacros || { ...DEFAULT_GLOBAL_MACROS },
       tableTemplates: domState.tableTemplates || [],
       tikzTemplates: domState.tikzTemplates || [],
+      bibliography: domState.bibliography || [],
+      citationStyle: domState.citationStyle || 'numeric',
       folders: domState.folders.length > 0 ? domState.folders : Array.from(new Set(domState.notes.map(n => n.folder || 'General').filter(Boolean))),
       tags: domState.tags.length > 0 ? domState.tags : Array.from(new Set(domState.notes.flatMap(n => n.tags || []).filter(Boolean))),
       notes: domState.notes
@@ -3071,6 +3150,8 @@ function LoadNotesState(forceReload = false) {
     globalMacros: { ...DEFAULT_GLOBAL_MACROS },
     tableTemplates: [],
     tikzTemplates: [],
+    bibliography: [],
+    citationStyle: 'numeric',
     folders: [],
     tags: [],
     notes: []
@@ -3129,10 +3210,14 @@ if (typeof window !== 'undefined') {
 function SaveNotesState(newState = null, { immediate = false } = {}) {
   if (newState) NotesState = newState;
 
-  // Sync folders and tags to currently active notes
+  // Sync folders and tags to currently active notes.
+  // The existing lists are the ordering source of truth (drag-reorder writes them directly);
+  // derived values are only APPENDED so custom order and intentionally-empty folders survive saves.
   if (Array.isArray(NotesState.notes)) {
-    NotesState.folders = Array.from(new Set(NotesState.notes.map(n => n.folder || 'General').filter(Boolean)));
-    NotesState.tags = Array.from(new Set(NotesState.notes.flatMap(n => n.tags || []).filter(Boolean)));
+    const derivedFolders = Array.from(new Set(NotesState.notes.map(n => n.folder || 'General').filter(Boolean)));
+    const derivedTags = Array.from(new Set(NotesState.notes.flatMap(n => n.tags || []).filter(Boolean)));
+    NotesState.folders = mergeOrderedLists(NotesState.folders, derivedFolders);
+    NotesState.tags = mergeOrderedLists(NotesState.tags, derivedTags);
   }
 
   // Keep window.NotesState synchronously in sync
@@ -3182,7 +3267,12 @@ NotesState = LoadNotesState();
 
 // Sanitizes raw strings by escaping HTML special characters to prevent XSS and layout breaks
 function escapeHtml(str) {
-  return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 // Toggles completion state of a markdown checkbox at a specific index in raw text
@@ -3272,6 +3362,670 @@ function getAvailableFolders(state) {
     folders.unshift('General');
   }
   return Array.from(new Set(folders.filter(Boolean)));
+}
+
+
+/* --- 03_Notes/Writing_Engine/BibTeX_Parser.js --- */
+/**
+ * 03_Notes/Writing_Engine/BibTeX_Parser.js
+ * Minimal, dependency-free BibTeX parsing and citation-label formatting for the Library vault.
+ *
+ * - parseBibtex(raw):            robust `@type{key, field = {value}, ...}` scanner (brace-depth based,
+ *                                supports {...} / "..." / bare-number values, `#` concatenation,
+ *                                multiple entries in one paste, skips @comment/@string/@preamble).
+ * - bibEntryFromRaw(raw):        convenience: parse + shape the FIRST entry into a vault record.
+ * - formatCitationLabel(entry, style, num): 'numeric' | 'authoryear' | 'authortitle' label text
+ *                                (without the surrounding brackets).
+ * - getAuthorSurnames(entry):    ['einstein', 'podolsky', ...] for label building / previews.
+ * - libraryEntryFromParsed(p, raw, i): shapes one parsed entry into the Library vault record
+ *                                schema (single source of truth for bibEntryFromRaw, the Library
+ *                                modal "Add" flow, and ImportBibtexToLibrary).
+ */
+
+const KNOWN_FIELDS = [
+  'title', 'author', 'editor', 'year', 'month', 'journal', 'booktitle', 'publisher',
+  'volume', 'number', 'pages', 'doi', 'url', 'eprint', 'abstract', 'note', 'school',
+  'howpublished', 'address', 'edition', 'series', 'organization', 'keywords'
+];
+
+const SKIPPED_ENTRY_TYPES = new Set(['comment', 'string', 'preamble']);
+
+// Collapses whitespace and strips TeX brace grouping from a raw field value
+function cleanFieldValue(val) {
+  if (val === undefined || val === null) return '';
+  return String(val)
+    .replace(/\{|\}/g, '')
+    .replace(/\s*~\s*/g, ' ')
+    .replace(/\\&/g, '&')
+    .replace(/\\\$/g, '$')
+    .replace(/\\%/g, '%')
+    .replace(/\\_/g, '_')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Reads one balanced {...} group starting at src[i] === '{'; returns { value, next }
+function readBracedGroup(src, i) {
+  if (src[i] !== '{') return { value: '', next: i };
+  let depth = 0;
+  const start = i + 1;
+  for (; i < src.length; i++) {
+    const ch = src[i];
+    if (ch === '{') depth++;
+    else if (ch === '}') {
+      depth--;
+      if (depth === 0) {
+        return { value: src.slice(start, i), next: i + 1 };
+      }
+    }
+  }
+  return { value: src.slice(start), next: src.length };
+}
+
+// Reads one field value ({...}, "..." , bare token, or # concatenation thereof)
+function readFieldValue(src, i) {
+  // Skip whitespace between '=' and the value
+  while (i < src.length && /\s/.test(src[i])) i++;
+  let parts = [];
+  while (i < src.length) {
+    const ch = src[i];
+    if (ch === '{') {
+      const g = readBracedGroup(src, i);
+      parts.push(g.value);
+      i = g.next;
+    } else if (ch === '"') {
+      const end = src.indexOf('"', i + 1);
+      const stop = end === -1 ? src.length : end;
+      parts.push(src.slice(i + 1, stop));
+      i = stop + 1;
+    } else if (/[0-9]/.test(ch)) {
+      const m = /^[0-9]+/.exec(src.slice(i));
+      parts.push(m[0]);
+      i += m[0].length;
+    } else {
+      break;
+    }
+    // Concatenation operator between value parts
+    const rest = src.slice(i).replace(/^\s+/, '');
+    if (rest.startsWith('#')) {
+      i = src.length - rest.length + 1;
+      while (i < src.length && /\s/.test(src[i])) i++;
+      continue;
+    }
+    break;
+  }
+  return { value: parts.join(' '), next: i };
+}
+
+// Splits the body of an entry on top-level commas (commas inside braces/quotes are protected)
+function splitTopLevel(body) {
+  const segments = [];
+  let depth = 0;
+  let inQuotes = false;
+  let start = 0;
+  for (let i = 0; i < body.length; i++) {
+    const ch = body[i];
+    if (ch === '{') depth++;
+    else if (ch === '}') depth--;
+    else if (ch === '"' && depth === 0) inQuotes = !inQuotes;
+    else if (ch === ',' && depth === 0 && !inQuotes) {
+      segments.push(body.slice(start, i));
+      start = i + 1;
+    }
+  }
+  segments.push(body.slice(start));
+  return segments;
+}
+
+// Extracts an "author1 and author2 and ..." list into plain surnames.
+// Handles both "Last, First" and "First van Last" BibTeX name forms.
+function getAuthorSurnames(entry) {
+  if (!entry) return [];
+  const rawAuthors = entry.author || entry.editor || '';
+  if (!rawAuthors) return [];
+  return String(rawAuthors)
+    .split(/\s+and\s+/i)
+    .map(name => {
+      let n = cleanFieldValue(name);
+      if (!n) return '';
+      if (n.includes(',')) {
+        // "Podolsky, Boris" -> surname before the comma
+        n = n.split(',')[0];
+      } else {
+        // "Boris Podolsky" -> surname is the last word (von parts included)
+        const words = n.trim().split(/\s+/);
+        n = words[words.length - 1] || '';
+      }
+      return n.toLowerCase().replace(/[^a-z0-9]/g, '');
+    })
+    .filter(Boolean);
+}
+
+// Lowercased, underscore-joined surname part used by authoryear/authortitle labels
+function authorPart(entry) {
+  const surnames = getAuthorSurnames(entry);
+  if (surnames.length === 0) return '';
+  if (surnames.length === 1) return surnames[0];
+  if (surnames.length === 2) return `${surnames[0]}_${surnames[1]}`;
+  return `${surnames[0]}_etal`;
+}
+
+function titlePart(entry) {
+  let t = String(entry?.title || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+  if (t.length > 40) {
+    t = t.slice(0, 40);
+    const cut = t.lastIndexOf('_');
+    if (cut > 10) t = t.slice(0, cut);
+  }
+  return t;
+}
+
+/**
+ * Formats a citation label (the text INSIDE the brackets) for a library entry.
+ * @param {Object} entry - library entry ({ key, author, title, year, ... })
+ * @param {string} style - 'numeric' | 'authoryear' | 'authortitle'
+ * @param {number|null} num - first-appearance number for the numeric style
+ */
+function formatCitationLabel(entry, style = 'numeric', num = null) {
+  const fallbackKey = String(entry?.key || '').trim();
+  const year = String(entry?.year || '').trim();
+
+  if (style === 'authoryear') {
+    const a = authorPart(entry);
+    if (a && year) return `${a}_${year}`;
+    if (a) return a;
+    if (fallbackKey && year) return `${sanitizeKeyPart(fallbackKey)}_${year}`;
+    return fallbackKey || '?';
+  }
+
+  if (style === 'authortitle') {
+    const a = authorPart(entry) || sanitizeKeyPart(fallbackKey) || 'unknown';
+    const t = titlePart(entry);
+    return t ? `(${a})_${t}` : `(${a})`;
+  }
+
+  // numeric (default)
+  if (num !== null && num !== undefined && !Number.isNaN(Number(num))) return String(num);
+  return fallbackKey || '?';
+}
+
+function sanitizeKeyPart(key) {
+  return String(key).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+}
+
+/**
+ * Parses raw BibTeX text into entries.
+ * @param {string} rawText
+ * @returns {Array<{ key: string, type: string, fields: Object }>}
+ */
+function parseBibtex(rawText) {
+  const src = String(rawText || '');
+  const entries = [];
+  const atRegex = /@(\w+)\s*\{/g;
+  let m;
+
+  while ((m = atRegex.exec(src)) !== null) {
+    const type = m[1].toLowerCase();
+    if (SKIPPED_ENTRY_TYPES.has(type)) continue;
+
+    const bodyResult = readBracedGroup(src, atRegex.lastIndex - 1);
+    if (!bodyResult.value.trim()) continue;
+    atRegex.lastIndex = bodyResult.next;
+
+    const segments = splitTopLevel(bodyResult.value);
+    const key = (segments.shift() || '').trim();
+    if (!key) continue;
+
+    const fields = {};
+    for (const seg of segments) {
+      const eq = seg.indexOf('=');
+      if (eq === -1) continue;
+      const name = seg.slice(0, eq).trim().toLowerCase();
+      if (!name) continue;
+      const { value } = readFieldValue(seg, eq + 1);
+      if (!KNOWN_FIELDS.includes(name)) continue;
+      const cleaned = cleanFieldValue(value);
+      if (cleaned) fields[name] = cleaned;
+    }
+
+    entries.push({ key, type, fields });
+  }
+
+  return entries;
+}
+
+// Shapes one parsed entry ({ key, type, fields }) into the Library vault record schema.
+function libraryEntryFromParsed(parsed, rawText, index = 0) {
+  const f = parsed?.fields || {};
+  return {
+    id: `bib_${Date.now()}_${Math.random().toString(36).slice(2, 7)}_${index}`,
+    key: parsed?.key,
+    type: parsed?.type || 'misc',
+    title: f.title || '',
+    author: f.author || f.editor || '',
+    year: f.year || '',
+    journal: f.journal || f.booktitle || f.publisher || '',
+    volume: f.volume || '',
+    pages: f.pages || '',
+    doi: f.doi || '',
+    url: f.url || '',
+    abstract: f.abstract || '',
+    raw: String(rawText || '').trim(),
+    createdAt: Date.now()
+  };
+}
+
+/**
+ * Shapes the first parsed BibTeX entry into a Library vault record.
+ * @returns {Object|null} entry or null when nothing parseable was found
+ */
+function bibEntryFromRaw(rawText) {
+  const parsed = parseBibtex(rawText);
+  if (parsed.length === 0) return null;
+  return libraryEntryFromParsed(parsed[0], rawText);
+}
+
+
+/* --- 03_Notes/03_Library.js --- */
+/**
+ * 03_Notes/03_Library.js
+ * Overleaf-style BibTeX Library vault for the Notes workspace.
+ *
+ * - Entries live in NotesState.bibliography (persisted to the #NotesData vault + localStorage
+ *   via SaveNotesState) and survive export/import/save like every other vault field.
+ * - OpenLibraryModal() is a self-contained body-level dialog (Macros-modal pattern) usable from
+ *   BOTH the card-view navbar button and the editor floating toolbar: search, add via pasted
+ *   BibTeX with parse preview, edit raw, delete, and the citation-style selector.
+ * - Programmatic path: ImportBibtexToLibrary(raw) parses + upserts entries without the modal
+ *   (importers/tests). UpsertLibraryEntry is an alias of SaveLibraryEntry, and
+ *   DeleteLibraryEntry accepts either an entry id or a citation key.
+ */
+
+
+
+// ---------------------------------------------------------------------------
+// State CRUD
+// ---------------------------------------------------------------------------
+function GetLibraryEntries() {
+  return Array.isArray(NotesState.bibliography) ? NotesState.bibliography : [];
+}
+function GetCitationStyle() {
+  return NotesState.citationStyle || 'numeric';
+}
+function SetCitationStyle(style) {
+  const allowed = ['numeric', 'authoryear', 'authortitle'];
+  NotesState.citationStyle = allowed.includes(style) ? style : 'numeric';
+  SaveNotesState();
+  return NotesState.citationStyle;
+}
+function FindLibraryEntryByKey(key) {
+  const k = String(key || '').trim().toLowerCase();
+  if (!k) return null;
+  return GetLibraryEntries().find(e => String(e.key || '').toLowerCase() === k) || null;
+}
+
+/**
+ * Inserts or updates a library entry. Rejects keys already used by another entry.
+ * @returns {{ ok: boolean, error?: string, entry?: Object }}
+ */
+function SaveLibraryEntry(entry) {
+  if (!entry || !entry.key || !String(entry.key).trim()) {
+    return { ok: false, error: 'Citation key is required.' };
+  }
+  const key = String(entry.key).trim();
+  if (!Array.isArray(NotesState.bibliography)) NotesState.bibliography = [];
+
+  const duplicate = NotesState.bibliography.find(e =>
+    String(e.key || '').toLowerCase() === key.toLowerCase() && e.id !== entry.id
+  );
+  if (duplicate) {
+    return { ok: false, error: `Citation key "${key}" is already used by "${duplicate.title || duplicate.key}".` };
+  }
+
+  entry.key = key;
+  const idx = NotesState.bibliography.findIndex(e => e.id === entry.id);
+  if (idx >= 0) {
+    NotesState.bibliography[idx] = entry;
+  } else {
+    NotesState.bibliography.unshift(entry);
+  }
+  SaveNotesState();
+  return { ok: true, entry };
+}
+
+/**
+ * Alias of SaveLibraryEntry for call sites that prefer upsert semantics.
+ * @returns {{ ok: boolean, error?: string, entry?: Object }}
+ */
+function UpsertLibraryEntry(entry) {
+  return SaveLibraryEntry(entry);
+}
+
+/**
+ * Removes a library entry matched by id OR citation key (case-insensitive).
+ * @returns {boolean} true when an entry was removed
+ */
+function DeleteLibraryEntry(idOrKey) {
+  if (!Array.isArray(NotesState.bibliography)) return false;
+  const target = String(idOrKey || '').trim().toLowerCase();
+  if (!target) return false;
+  const before = NotesState.bibliography.length;
+  NotesState.bibliography = NotesState.bibliography.filter(e =>
+    String(e.id || '').toLowerCase() !== target &&
+    String(e.key || '').trim().toLowerCase() !== target
+  );
+  if (NotesState.bibliography.length !== before) {
+    SaveNotesState();
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Parses raw BibTeX text and upserts every parsed entry into the library —
+ * the programmatic equivalent of the modal's "Parse & Preview" + "Add" flow.
+ * @param {string} rawBibtex
+ * @returns {{ added: number, skipped: number, entries: Object[], errors: string[] }}
+ */
+function ImportBibtexToLibrary(rawBibtex) {
+  const result = { added: 0, skipped: 0, entries: [], errors: [] };
+  parseBibtex(rawBibtex).forEach((parsed, i) => {
+    const res = SaveLibraryEntry(libraryEntryFromParsed(parsed, rawBibtex, i));
+    if (res.ok) {
+      result.added++;
+      result.entries.push(res.entry);
+    } else {
+      result.skipped++;
+      result.errors.push(res.error || `Entry "${parsed.key}" was skipped.`);
+    }
+  });
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// Modal
+// ---------------------------------------------------------------------------
+
+const TYPE_BADGE = {
+  article: 'bg-sky-500/15 text-sky-400 border-sky-500/30',
+  book: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+  inproceedings: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
+  phdthesis: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+  mastersthesis: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+  techreport: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+  misc: 'bg-gray-500/15 text-gray-400 border-gray-500/30'
+};
+
+let _modalOnUpdate = null;
+let _editingEntryId = null;
+let _pendingEntries = [];
+function OpenLibraryModal({ onUpdate = null } = {}) {
+  _modalOnUpdate = onUpdate;
+  _editingEntryId = null;
+  _pendingEntries = [];
+
+  // Remove any stale instance (same pattern as the Macros modal)
+  const existing = document.getElementById('notes-library-modal-backdrop');
+  if (existing) existing.remove();
+
+  const backdrop = document.createElement('div');
+  backdrop.id = 'notes-library-modal-backdrop';
+  backdrop.className = 'fixed inset-0 z-50 bg-black/65 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn';
+  backdrop.innerHTML = `
+    <div class="bg-[var(--card,#1c1f2e)] border border-[var(--border,#2a2e40)] rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col overflow-hidden max-h-[92vh]">
+      <!-- Top Bar -->
+      <div class="flex items-center justify-between gap-3 px-4 py-3 border-b border-[var(--border)] bg-[var(--surface,#181b27)]">
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <span class="text-lg leading-none">📚</span>
+          <span class="text-sm font-bold text-[var(--text)] tracking-wide">Library</span>
+          <span class="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-400 border border-purple-500/30" id="library-count-badge">0</span>
+        </div>
+        <div class="flex items-center gap-2 flex-1 justify-end min-w-0">
+          <div class="relative w-full max-w-[260px] hidden sm:block">
+            <input type="text" id="library-search-input" placeholder="Search key, title, author..."
+              class="w-full h-8 pl-7 pr-2 text-xs rounded-lg bg-[var(--background,#0d0f16)] border border-[var(--border)] text-[var(--text)] placeholder-[var(--text-secondary)] outline-none focus:border-purple-500/60" />
+            <svg class="absolute left-2 top-1.5 w-4 h-4 text-[var(--text-secondary)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          </div>
+          <select id="library-style-select" title="Citation reference style"
+            class="h-8 text-xs rounded-lg bg-[var(--background,#0d0f16)] border border-[var(--border)] text-[var(--text)] outline-none cursor-pointer focus:border-purple-500/60">
+            <option value="numeric">Style: [1]</option>
+            <option value="authoryear">Style: [name_year]</option>
+            <option value="authortitle">Style: [(name)_title]</option>
+          </select>
+          <button type="button" id="library-add-toggle-btn"
+            class="h-8 px-3 text-xs font-semibold rounded-full flex items-center gap-1.5 bg-purple-600 hover:bg-purple-500 text-white transition-all cursor-pointer flex-shrink-0">
+            <span class="font-bold leading-none">+</span><span>Add BibTeX</span>
+          </button>
+          <button type="button" id="library-close-btn" title="Close Library"
+            class="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)] transition-all cursor-pointer flex-shrink-0">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Add / Edit Paste Panel (hidden by default) -->
+      <div id="library-paste-panel" class="hidden border-b border-[var(--border)] bg-[var(--background,#0d0f16)] px-4 py-3">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-semibold text-[var(--text)]" id="library-paste-title">Paste BibTeX</span>
+          <div class="flex items-center gap-2">
+            <button type="button" id="library-parse-btn"
+              class="h-7 px-3 text-xs font-semibold rounded-md bg-purple-600 hover:bg-purple-500 text-white transition-all cursor-pointer">Parse &amp; Preview</button>
+            <button type="button" id="library-cancel-paste-btn"
+              class="h-7 px-3 text-xs font-semibold rounded-md border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text)] transition-all cursor-pointer">Cancel</button>
+          </div>
+        </div>
+        <textarea id="library-paste-textarea" spellcheck="false"
+          placeholder="@article{key,&#10;  author = {Last, First and Last2, First2},&#10;  title = {Paper Title},&#10;  journal = {Journal Name},&#10;  year = {2024}&#10;}"
+          class="w-full h-36 p-2.5 text-xs font-mono rounded-lg bg-[var(--surface,#181b27)] border border-[var(--border)] text-[var(--text)] outline-none focus:border-purple-500/60 resize-y"></textarea>
+        <div id="library-parse-preview" class="hidden mt-2"></div>
+      </div>
+
+      <!-- Entry List -->
+      <div id="library-entries-list" class="flex-1 overflow-y-auto px-2 py-2 min-h-0"></div>
+    </div>
+  `;
+  document.body.appendChild(backdrop);
+
+  const listEl = backdrop.querySelector('#library-entries-list');
+  const searchInput = backdrop.querySelector('#library-search-input');
+  const styleSelect = backdrop.querySelector('#library-style-select');
+  const pastePanel = backdrop.querySelector('#library-paste-panel');
+  const pasteTextarea = backdrop.querySelector('#library-paste-textarea');
+  const pasteTitle = backdrop.querySelector('#library-paste-title');
+  const parsePreview = backdrop.querySelector('#library-parse-preview');
+  const countBadge = backdrop.querySelector('#library-count-badge');
+
+  styleSelect.value = GetCitationStyle();
+
+  const commitAndRefresh = () => {
+    SaveNotesState();
+    renderList();
+    if (typeof _modalOnUpdate === 'function') _modalOnUpdate();
+  };
+
+  const closePastePanel = () => {
+    pastePanel.classList.add('hidden');
+    parsePreview.classList.add('hidden');
+    pastePreviewEntries([]);
+    _pendingEntries = [];
+    _editingEntryId = null;
+    pasteTextarea.value = '';
+  };
+
+  const openPastePanel = (entry = null) => {
+    _editingEntryId = entry ? entry.id : null;
+    pasteTitle.textContent = entry ? `Edit "${entry.key}"` : 'Paste BibTeX';
+    pasteTextarea.value = entry ? (entry.raw || '') : '';
+    parsePreview.classList.add('hidden');
+    pastePreviewEntries([]);
+    pastePanel.classList.remove('hidden');
+    setTimeout(() => pasteTextarea.focus(), 30);
+  };
+
+  const pastePreviewEntries = (parsed) => {
+    _pendingEntries = parsed;
+    parsePreview.innerHTML = '';
+    if (!parsed.length) return;
+    const rows = parsed.map(p => {
+      const dup = FindLibraryEntryByKey(p.key);
+      const dupNote = dup ? `<span class="text-amber-400">⚠ key exists</span>` : '';
+      return `<li class="flex items-center gap-2 py-0.5">
+        <code class="text-[11px] text-purple-400">${escapeHtml(p.key)}</code>
+        <span class="text-[11px] text-[var(--text-secondary)] truncate">${escapeHtml((p.fields.title || p.key).slice(0, 60))}</span>
+        ${dupNote}
+      </li>`;
+    }).join('');
+    parsePreview.innerHTML = `
+      <div class="rounded-lg border border-[var(--border)] bg-[var(--surface,#181b27)] p-2">
+        <div class="text-[11px] text-[var(--text-secondary)] mb-1">Parsed <b class="text-[var(--text)]">${parsed.length}</b> entr${parsed.length === 1 ? 'y' : 'ies'}:</div>
+        <ul class="max-h-24 overflow-y-auto">${rows}</ul>
+        <button type="button" id="library-confirm-add-btn"
+          class="mt-2 h-7 px-3 text-xs font-semibold rounded-md bg-emerald-600 hover:bg-emerald-500 text-white transition-all cursor-pointer">Add ${parsed.length} to Library</button>
+      </div>`;
+    parsePreview.classList.remove('hidden');
+    parsePreview.querySelector('#library-confirm-add-btn').addEventListener('click', () => {
+      let added = 0;
+      let skipped = 0;
+      for (const p of parsed) {
+        const res = SaveLibraryEntry(libraryEntryFromParsed(p, p.__raw, added));
+        if (res.ok) added++; else skipped++;
+      }
+      closePastePanel();
+      commitAndRefresh();
+      if (skipped > 0) alert(`Added ${added} entr${added === 1 ? 'y' : 'ies'}; skipped ${skipped} (duplicate citation key${skipped === 1 ? '' : 's'}).`);
+    });
+  };
+
+  const entryRow = (entry) => {
+    const badge = TYPE_BADGE[entry.type] || TYPE_BADGE.misc;
+    const surnames = getAuthorSurnames(entry);
+    const authors = surnames.length
+      ? surnames.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(', ')
+      : '';
+    const yearJournal = [entry.year, entry.journal].filter(Boolean).join(' · ');
+    const preview = formatCitationLabel(entry, GetCitationStyle(), null);
+    return `
+      <div class="library-entry-row group flex items-start gap-3 px-3 py-2.5 rounded-xl border border-transparent hover:border-[var(--border)] hover:bg-[var(--surface,#181b27)] transition-all" data-entry-id="${escapeHtml(entry.id)}">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 flex-wrap">
+            <code class="text-xs font-bold text-purple-400">${escapeHtml(entry.key)}</code>
+            <span class="text-[10px] px-1.5 py-0.5 rounded border ${badge} uppercase">${escapeHtml(entry.type)}</span>
+            <span class="text-[10px] px-1.5 py-0.5 rounded bg-[var(--surface-hover)] text-[var(--text-secondary)]" title="Preview with the current style">cite: [${escapeHtml(preview)}]</span>
+          </div>
+          <div class="text-sm text-[var(--text)] mt-0.5 leading-snug">${escapeHtml(entry.title || '(no title)')}</div>
+          <div class="text-[11px] text-[var(--text-secondary)] mt-0.5 truncate">
+            ${escapeHtml(authors)}${authors && yearJournal ? ' — ' : ''}${escapeHtml(yearJournal)}
+          </div>
+        </div>
+        <div class="flex items-center gap-1 flex-shrink-0 opacity-60 group-hover:opacity-100 transition-opacity">
+          <button type="button" class="library-edit-btn w-7 h-7 rounded-md flex items-center justify-center text-[var(--text-secondary)] hover:text-purple-400 hover:bg-purple-500/10 transition-all cursor-pointer" title="Edit BibTeX">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+          </button>
+          <button type="button" class="library-delete-btn w-7 h-7 rounded-md flex items-center justify-center text-[var(--text-secondary)] hover:text-red-400 hover:bg-red-500/10 transition-all cursor-pointer" title="Delete entry">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+          </button>
+        </div>
+      </div>`;
+  };
+
+  const renderList = () => {
+    const query = (searchInput.value || '').trim().toLowerCase();
+    const entries = GetLibraryEntries();
+    countBadge.textContent = String(entries.length);
+
+    const filtered = query
+      ? entries.filter(e =>
+        String(e.key || '').toLowerCase().includes(query) ||
+        String(e.title || '').toLowerCase().includes(query) ||
+        String(e.author || '').toLowerCase().includes(query))
+      : entries;
+
+    if (!filtered.length) {
+      listEl.innerHTML = `
+        <div class="flex flex-col items-center justify-center py-14 text-center select-none">
+          <span class="text-3xl mb-3 opacity-40">📚</span>
+          <div class="text-sm text-[var(--text-secondary)]">${entries.length === 0
+            ? 'The library is empty. Click <b class="text-[var(--text)]">+ Add BibTeX</b> to paste your first entry.'
+            : 'No entries match your search.'}</div>
+        </div>`;
+      return;
+    }
+
+    listEl.innerHTML = filtered.map(entryRow).join('');
+
+    listEl.querySelectorAll('.library-entry-row').forEach(row => {
+      const id = row.getAttribute('data-entry-id');
+      const entry = entries.find(e => e.id === id);
+      if (!entry) return;
+      row.querySelector('.library-edit-btn').addEventListener('click', () => openPastePanel(entry));
+      row.querySelector('.library-delete-btn').addEventListener('click', () => {
+        if (!confirm(`Delete "${entry.key}" from the library?\n\nExisting \\cite{${entry.key}} references in notes will render as unresolved.`)) return;
+        DeleteLibraryEntry(entry.id);
+        commitAndRefresh();
+      });
+    });
+  };
+
+  // --- Events ---
+  backdrop.querySelector('#library-close-btn').addEventListener('click', closeModal);
+  backdrop.addEventListener('click', (e) => {
+    if (e.target === backdrop) closeModal();
+  });
+
+  searchInput.addEventListener('input', renderList);
+
+  styleSelect.addEventListener('change', () => {
+    SetCitationStyle(styleSelect.value);
+    renderList();
+    if (typeof _modalOnUpdate === 'function') _modalOnUpdate();
+  });
+
+  backdrop.querySelector('#library-add-toggle-btn').addEventListener('click', () => {
+    if (pastePanel.classList.contains('hidden')) openPastePanel();
+    else closePastePanel();
+  });
+  backdrop.querySelector('#library-cancel-paste-btn').addEventListener('click', closePastePanel);
+
+  const runParse = () => {
+    const raw = pasteTextarea.value;
+    if (!raw.trim()) {
+      alert('Paste some BibTeX first.');
+      return;
+    }
+    const parsed = parseBibtex(raw).map(p => ({ ...p, __raw: raw.trim() }));
+    if (!parsed.length) {
+      alert('No valid BibTeX entries found. Entries look like @article{key, ...}.');
+      return;
+    }
+    pastePreviewEntries(parsed);
+  };
+  backdrop.querySelector('#library-parse-btn').addEventListener('click', runParse);
+  pasteTextarea.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      runParse();
+    }
+    e.stopPropagation();
+  });
+
+  function onModalKeydown(e) {
+    if (e.key === 'Escape') {
+      e.stopPropagation();
+      closeModal();
+    }
+  }
+  document.addEventListener('keydown', onModalKeydown);
+
+  function closeModal() {
+    document.removeEventListener('keydown', onModalKeydown);
+    backdrop.classList.add('opacity-0');
+    setTimeout(() => backdrop.remove(), 150);
+  }
+
+  renderList();
 }
 
 
@@ -3696,7 +4450,7 @@ function toAlpha(num, upper = false) {
   let result = '';
   let n = num;
   while (n > 0) {
-    const mod = (num - 1) % 26;
+    const mod = (n - 1) % 26;
     result = String.fromCharCode(65 + mod) + result;
     n = Math.floor((n - 1) / 26);
   }
@@ -3860,6 +4614,48 @@ function computeFigureNumbers(blocks = []) {
   return { figureMap, tagMap };
 }
 
+/**
+ * Collects \cite{key1,key2} occurrences across all text blocks in document order and
+ * assigns first-appearance numbers, mirroring computeFigureNumbers' walk (recursing
+ * into multi-column children). Unresolved keys still get a number so numeric labels
+ * stay stable; resolution against the library happens at render time.
+ * @param {Array<Object>} blocks - note blocks
+ * @returns {Map<string, number>} lowercased key -> first-appearance number
+ */
+function computeCitationNumbers(blocks = []) {
+  const citeOrder = new Map(); // lowercased key -> number
+  let counter = 0;
+
+  const collectFromText = (raw) => {
+    if (!raw || typeof raw !== 'string') return;
+    const re = /\\cite\{([^}]*)\}/g;
+    let m;
+    while ((m = re.exec(raw)) !== null) {
+      for (const rawKey of m[1].split(',')) {
+        const key = rawKey.trim().toLowerCase();
+        if (key && !citeOrder.has(key)) {
+          counter += 1;
+          citeOrder.set(key, counter);
+        }
+      }
+    }
+  };
+
+  const processBlock = (block) => {
+    if (!block || typeof block !== 'object') return;
+    if (block.type === 'columns' || block.type === 'multicolumn' || block.type === 'multi-column') {
+      (block.cols || []).forEach(child => processBlock(child));
+      return;
+    }
+    if (block.type === 'text' || block.type === undefined) {
+      collectFromText(block.content);
+    }
+  };
+
+  blocks.forEach(processBlock);
+  return citeOrder;
+}
+
 
 
 /* --- 03_Notes/Writing_Engine/Math_Renderer.js --- */
@@ -3893,6 +4689,36 @@ function setActiveFigureTagMap(map) {
 }
 function getActiveFigureTagMap() {
   return activeFigureTagMap;
+}
+
+// Active citation numbering for the note being rendered (key -> first-appearance number),
+// computed by computeCitationNumbers() and set by the editor render loop.
+let activeCitationMap = new Map();
+function setActiveCitationMap(map) {
+  activeCitationMap = map || new Map();
+}
+function getActiveCitationMap() {
+  return activeCitationMap;
+}
+
+/**
+ * Resolves a raw \cite{a,b} key list into display labels for the current citation
+ * style + numbering map. Shared by the edit-mode live widget and the view-mode renderer.
+ * @param {string} keysRaw - comma-separated citation keys
+ * @returns {{ parts: string[], missing: boolean }}
+ */
+function resolveCitationLabels(keysRaw) {
+  const citeMap = getActiveCitationMap();
+  const style = GetCitationStyle();
+  const keys = String(keysRaw || '').split(',').map(k => k.trim()).filter(Boolean);
+  let missing = false;
+  const parts = keys.map(k => {
+    const entry = FindLibraryEntryByKey(k);
+    if (!entry) missing = true;
+    const num = citeMap.get(k.toLowerCase());
+    return formatCitationLabel(entry || { key: k }, style, num ?? null);
+  });
+  return { parts, missing };
 }
 
 // Global click handler for figure citation links [Fig. X]
@@ -4225,6 +5051,13 @@ function postProcessKatexHtml(html) {
 
 const katexCache = new Map();
 const MAX_KATEX_CACHE = 800;
+
+// Bumped whenever macros change so cached renders made with old macros are never reused
+let katexMacroVersion = 0;
+function bumpKatexMacroVersion() {
+  katexMacroVersion += 1;
+  katexCache.clear();
+}
 function clearKatexCache() {
   katexCache.clear();
 }
@@ -4239,7 +5072,7 @@ function renderKatex(tex, isDisplayMode = false, noteContext = null) {
     const isLight = typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light';
     const theme = isLight ? 'light' : 'dark';
     const ctxId = noteContext?.id || (activeNoteContext ? activeNoteContext.id : 'global');
-    const cacheKey = `${theme}:${ctxId}:${isDisplayMode ? 'D' : 'I'}:${cleanTex}`;
+    const cacheKey = `${theme}:${ctxId}:${isDisplayMode ? 'D' : 'I'}:v${katexMacroVersion}:${cleanTex}`;
 
     if (katexCache.has(cacheKey)) {
       return katexCache.get(cacheKey);
@@ -4252,7 +5085,8 @@ function renderKatex(tex, isDisplayMode = false, noteContext = null) {
         throwOnError: false,
         output: 'htmlAndMathml',
         macros: macros,
-        trust: true
+        // \href/\url only with safe protocols — blanket `trust: true` would allow javascript: URLs from imported notes
+        trust: (context) => ['\\href', '\\url'].includes(context.command) && /^https?:\/\//i.test(context.url || '')
       });
       rendered = postProcessKatexHtml(rendered);
       if (katexCache.size >= MAX_KATEX_CACHE) {
@@ -4394,10 +5228,11 @@ function formatRichTextWithMath(rawText = '', options = {}) {
   }) : processedText;
 
   // Step 2: Extract Inline Math $...$
-  text = text.replace(/(^|[^\\])\$([^\$\n\r]+?)\$/g, (_, prefix, tex) => {
+  // Lookbehind instead of consuming the prefix char so adjacent math like $a$$b$ renders both halves
+  text = text.replace(/(?<=^|[^\\])\$([^\$\n\r]+?)\$/g, (_, tex) => {
     const idx = inlineTokens.length;
     inlineTokens.push(renderKatex(tex.trim(), false));
-    return `${prefix}@@@INLINE_MATH_${idx}@@@`;
+    return `@@@INLINE_MATH_${idx}@@@`;
   });
 
   // Step 3: Process Line by Line
@@ -4514,6 +5349,13 @@ function parseInlineMarkdownAndLatex(str) {
     const displayLabel = resolvedNum !== null && resolvedNum !== undefined ? `Fig. ${resolvedNum}` : `Fig. ${escapeHtml(rawTag)}`;
     return `<a class="note-fig-citation font-semibold text-purple-400 hover:text-purple-300 bg-purple-500/10 hover:bg-purple-500/20 px-1.5 py-0.5 rounded border border-purple-500/30 transition-colors inline-flex items-center gap-0.5 cursor-pointer select-none no-underline" href="#fig-${escapeHtml(norm)}" data-fig-target="${escapeHtml(norm)}" data-fig-num="${resolvedNum || ''}" title="Jump to ${displayLabel}">[${displayLabel}]</a>`;
   });
+
+  // LaTeX \cite{key1,key2} bibliography citation (label per NotesState.citationStyle)
+  s = s.replace(/\\cite\{([^}]*)\}/g, (match, keysRaw) => {
+    const { parts, missing } = resolveCitationLabels(keysRaw);
+    const missingClass = missing ? ' note-bib-citation-missing border-amber-500/50 text-amber-400' : '';
+    return `<span class="note-bib-citation font-semibold text-sky-400 hover:text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 px-1.5 py-0.5 rounded border border-sky-500/30 transition-colors inline-flex items-center cursor-pointer select-none${missingClass}" data-cite-keys="${keysRaw.trim()}" title="Citation">[${escapeHtml(parts.join(', '))}]</span>`;
+  });
   // LaTeX \textcolor{#hex}{content} or \textcolor{colorName}{content}
   s = s.replace(/\\textcolor\{([#a-zA-Z0-9]+)\}\{([^\}]+)\}/g, '<span style="color:$1;">$2</span>');
   // LaTeX \underline{content}
@@ -4629,12 +5471,15 @@ function clearTikzSvgCache() {
     }
   } catch (e) {}
 }
-function getCachedTikzSvg(code, theme = null) {
+function getCachedTikzSvg(code, theme = null, preambleKey = '') {
   if (!code) return null;
   const isLight = (theme === 'light' || (theme === null && typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light'));
   const currentTheme = isLight ? 'light' : 'dark';
   const rawClean = code.trim();
-  const cacheKey = `${currentTheme}:::${TIKZ_CACHE_VERSION}:::${rawClean}`;
+  // The effective preamble (global + note-level TikZ macros) is part of the compiled script,
+  // so it MUST be part of the key or notes with different local macros share one compiled SVG.
+  const effPreambleKey = preambleKey || resolveThemeColors(getActiveTikzPreamble(null));
+  const cacheKey = `${currentTheme}:::${TIKZ_CACHE_VERSION}:::${effPreambleKey ? hashString(effPreambleKey) + ':::' : ''}${rawClean}`;
   if (tikzSvgCache.has(cacheKey)) {
     return tikzSvgCache.get(cacheKey);
   }
@@ -4823,7 +5668,10 @@ function waitForTikzSvg(targetContainer, renderId, timeoutMs = 25000) {
 
     checkInterval = setInterval(() => {
       if (targetContainer.__tikzRenderId !== renderId) {
+        // A newer render superseded this one — settle the promise so the awaiting
+        // closure is released (and its onComplete can reset the UI) instead of hanging forever.
         cleanup();
+        resolve(null);
         return;
       }
 
@@ -5015,10 +5863,13 @@ function renderTikzToElement(tikzCode, targetContainer, onComplete = null, noteC
     return;
   }
 
-  // 1. Instant Bi-Theme Cache Check
+  // 1. Instant Bi-Theme Cache Check.
+  // The effective preamble (global + note-level macros) is part of the compiled script, so it
+  // must be part of the key — otherwise notes with different local TikZ macros share one SVG.
   const isLight = (typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light');
   const currentTheme = isLight ? 'light' : 'dark';
-  const cacheKey = `${currentTheme}:::${TIKZ_CACHE_VERSION}:::${rawClean}`;
+  const basePreamble = resolveThemeColors(getActiveTikzPreamble(noteContext));
+  const cacheKey = `${currentTheme}:::${TIKZ_CACHE_VERSION}:::${hashString(basePreamble)}:::${rawClean}`;
 
   let cachedHtml = tikzSvgCache.get(cacheKey);
   if (!cachedHtml) {
@@ -5047,7 +5898,6 @@ function renderTikzToElement(tikzCode, targetContainer, onComplete = null, noteC
 
   // 2. Resolve dual-theme colors (#Light|#Dark)
   const resolvedCode = resolveThemeColors(healedCode);
-  const basePreamble = resolveThemeColors(getActiveTikzPreamble(noteContext));
 
   // 3. Translate any raw #HEX colors to valid TikZ \definecolor names
   // In LaTeX/TikZ, raw '#' causes "Illegal parameter number in definition of \pgfkeyscurrentkey"
@@ -5866,7 +6716,12 @@ function attachHighlightSync(previewEl, textareaEl) {
 function resolveLatexColor(col) {
   if (!col) return '';
   col = col.trim();
-  if (col.startsWith('#')) return col;
+  // Values land inside double-quoted style="..." attributes — allowlist them so a
+  // crafted \rowcolor{#" onmouseover="...} cannot inject attributes (XSS via shared notes).
+  if (col.startsWith('#')) {
+    const hex = col.match(/^#[0-9a-fA-F]{3,8}$/);
+    return hex ? hex[0] : '';
+  }
   if (/^[0-9a-fA-F]{6}$/.test(col)) return '#' + col;
 
   const tintMatch = col.match(/^([a-zA-Z]+)!(\d+)$/);
@@ -5898,7 +6753,7 @@ function resolveLatexColor(col) {
     purple: 'rgba(168, 85, 247, 0.15)',
     yellow: 'rgba(234, 179, 8, 0.15)'
   };
-  return named[col.toLowerCase()] || col;
+  return named[col.toLowerCase()] || '';
 }
 
 /**
@@ -6300,7 +7155,9 @@ function parseLatexTabular(input) {
       if (mrMatch) {
         rowspan = parseInt(mrMatch[1], 10);
         if (mrMatch[2] && mrMatch[2] !== '*') {
-          cellWidth = mrMatch[2];
+          const w = mrMatch[2].trim();
+          // Interpolated into style="..." — only plain CSS lengths are allowed through
+          cellWidth = /^[0-9.]+\s*(px|em|rem|%|cm|mm|in|pt|ex|ch)?$/.test(w) ? w : null;
         }
         cellRaw = mrMatch[3];
       }
@@ -6405,7 +7262,10 @@ function parseMarkdownTable(markdown) {
     let clean = line;
     if (clean.startsWith('|')) clean = clean.slice(1);
     if (clean.endsWith('|')) clean = clean.slice(0, -1);
-    return clean.split('|').map(c => c.trim());
+    // Split on unescaped pipes only, then unescape \| so "a \| b" stays one cell
+    return clean
+      .split(/(?<!\\)\|/)
+      .map(c => c.trim().replace(/\\\|/g, '|'));
   };
 
   const headers = parseRow(lines[0]);
@@ -6544,11 +7404,12 @@ function recordBlockSnapshot(blockId, text, cursorStart = 0, cursorEnd = 0, { fo
 
 /**
  * Performs an undo operation for a block.
- * @param {string} blockId 
- * @param {string} currentText 
+ * @param {string} blockId
+ * @param {string} currentText
+ * @param {{ start: number, end: number } | null} [currentCaret] - live caret, pushed to the redo stack
  * @returns {{ text: string, cursorStart: number, cursorEnd: number } | null}
  */
-function undoBlockHistory(blockId, currentText) {
+function undoBlockHistory(blockId, currentText, currentCaret = null) {
   if (!blockId) return null;
   const history = blockHistories.get(blockId);
   if (!history || history.undoStack.length <= 1) return null;
@@ -6563,7 +7424,7 @@ function undoBlockHistory(blockId, currentText) {
 
   // If current editor text is newer than top of stack, push current state to redo first
   if (top && top.text !== textStr) {
-    history.redoStack.push({ text: textStr, cursorStart: 0, cursorEnd: 0 });
+    history.redoStack.push({ text: textStr, cursorStart: currentCaret?.start ?? 0, cursorEnd: currentCaret?.end ?? 0 });
     return top;
   }
 
@@ -6576,11 +7437,12 @@ function undoBlockHistory(blockId, currentText) {
 
 /**
  * Performs a redo operation for a block.
- * @param {string} blockId 
- * @param {string} currentText 
+ * @param {string} blockId
+ * @param {string} currentText
+ * @param {{ start: number, end: number } | null} [currentCaret]
  * @returns {{ text: string, cursorStart: number, cursorEnd: number } | null}
  */
-function redoBlockHistory(blockId, currentText) {
+function redoBlockHistory(blockId, currentText, currentCaret = null) {
   if (!blockId) return null;
   const history = blockHistories.get(blockId);
   if (!history || history.redoStack.length === 0) return null;
@@ -6590,9 +7452,82 @@ function redoBlockHistory(blockId, currentText) {
     history.typingTimer = null;
   }
 
+  const textStr = String(currentText ?? '');
+  const top = history.undoStack[history.undoStack.length - 1];
+
+  // If current editor text is newer than the redo entry, push current state back onto undo first
+  if (top && top.text !== textStr) {
+    history.undoStack.push({ text: textStr, cursorStart: currentCaret?.start ?? 0, cursorEnd: currentCaret?.end ?? 0 });
+  }
+
   const next = history.redoStack.pop();
   history.undoStack.push(next);
   return next;
+}
+
+// --- Caret helpers for contenteditable surfaces (textareas keep their native selectionStart/End) ---
+
+function isEditableSurface(el) {
+  return el && el.isContentEditable === true;
+}
+
+// Text-content offset of the caret: pre-order count of characters across descendant text nodes
+function getCaretTextOffset(rootEl) {
+  const sel = typeof window !== 'undefined' ? window.getSelection() : null;
+  if (!sel || sel.rangeCount === 0) return 0;
+  const range = sel.getRangeAt(0);
+  if (!rootEl || !rootEl.contains(range.startContainer)) return 0;
+  let count = 0;
+  const walker = document.createTreeWalker(rootEl, NodeFilter.SHOW_TEXT);
+  let n;
+  while ((n = walker.nextNode())) {
+    if (n === range.startContainer) return count + range.startOffset;
+    count += n.nodeValue.length;
+  }
+  return count;
+}
+
+// Places the caret at a text-content offset (clamped to the content length)
+function setCaretAtTextOffset(rootEl, offset) {
+  if (typeof document === 'undefined' || !rootEl) return;
+  let count = 0;
+  let target = null;
+  let targetOffset = 0;
+  let last = null;
+  const walker = document.createTreeWalker(rootEl, NodeFilter.SHOW_TEXT);
+  let n;
+  while ((n = walker.nextNode())) {
+    const len = n.nodeValue.length;
+    if (!target && count + len >= offset) {
+      target = n;
+      targetOffset = offset - count;
+    }
+    count += len;
+    last = n;
+  }
+  if (!target) {
+    target = last;
+    targetOffset = target ? target.nodeValue.length : 0;
+  }
+  if (!target) return;
+  try {
+    const range = document.createRange();
+    range.setStart(target, Math.min(targetOffset, target.nodeValue.length));
+    range.collapse(true);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  } catch (_) {}
+}
+
+function getLiveCaret(element, val) {
+  if (isEditableSurface(element)) {
+    const off = getCaretTextOffset(element);
+    return { start: off, end: off };
+  }
+  const start = element.selectionStart !== undefined ? element.selectionStart : (val ? String(val).length : 0);
+  const end = element.selectionEnd !== undefined ? element.selectionEnd : start;
+  return { start, end };
 }
 
 /**
@@ -6614,8 +7549,7 @@ function attachBlockHistory(element, { blockId = '', getValue = null, setValue =
 
   const handleInput = () => {
     const val = getValue ? getValue() : element.value;
-    const start = element.selectionStart !== undefined ? element.selectionStart : val.length;
-    const end = element.selectionEnd !== undefined ? element.selectionEnd : start;
+    const { start, end } = getLiveCaret(element, val);
     recordBlockSnapshot(blockId, val, start, end);
   };
 
@@ -6631,7 +7565,7 @@ function attachBlockHistory(element, { blockId = '', getValue = null, setValue =
       e.stopPropagation();
 
       const current = getValue ? getValue() : element.value;
-      const prev = undoBlockHistory(blockId, current);
+      const prev = undoBlockHistory(blockId, current, getLiveCaret(element, current));
       if (prev) {
         if (setValue) {
           setValue(prev.text);
@@ -6639,7 +7573,10 @@ function attachBlockHistory(element, { blockId = '', getValue = null, setValue =
           element.value = prev.text;
         }
 
-        if (element.setSelectionRange && typeof prev.cursorStart === 'number') {
+        if (isEditableSurface(element)) {
+          // setValue re-renders contenteditable surfaces asynchronously — restore after the new DOM exists
+          setTimeout(() => setCaretAtTextOffset(element, prev.cursorStart ?? 0), 0);
+        } else if (element.setSelectionRange && typeof prev.cursorStart === 'number') {
           try {
             element.setSelectionRange(prev.cursorStart, prev.cursorEnd ?? prev.cursorStart);
           } catch (_) {}
@@ -6656,7 +7593,7 @@ function attachBlockHistory(element, { blockId = '', getValue = null, setValue =
       e.stopPropagation();
 
       const current = getValue ? getValue() : element.value;
-      const next = redoBlockHistory(blockId, current);
+      const next = redoBlockHistory(blockId, current, getLiveCaret(element, current));
       if (next) {
         if (setValue) {
           setValue(next.text);
@@ -6664,7 +7601,10 @@ function attachBlockHistory(element, { blockId = '', getValue = null, setValue =
           element.value = next.text;
         }
 
-        if (element.setSelectionRange && typeof next.cursorStart === 'number') {
+        if (isEditableSurface(element)) {
+          // setValue re-renders contenteditable surfaces asynchronously — restore after the new DOM exists
+          setTimeout(() => setCaretAtTextOffset(element, next.cursorStart ?? 0), 0);
+        } else if (element.setSelectionRange && typeof next.cursorStart === 'number') {
           try {
             element.setSelectionRange(next.cursorStart, next.cursorEnd ?? next.cursorStart);
           } catch (_) {}
@@ -9245,6 +10185,14 @@ const createLiveWidget = (type, raw, contentHtml = '', options = {}) => {
     span.setAttribute('data-fig-target', norm);
     span.setAttribute('data-fig-num', resolvedNum || '');
     span.innerHTML = `[${displayLabel}]`;
+  } else if (type === 'cite') {
+    // Bibliography citation \cite{key} — label per NotesState.citationStyle + numbering map
+    const { parts, missing } = resolveCitationLabels(contentHtml || '');
+    const missingClass = missing ? ' border-amber-500/50 text-amber-400' : '';
+    span.className = `live-widget live-cite note-bib-citation font-semibold text-sky-400 hover:text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 px-1.5 py-0.5 rounded border border-sky-500/30 transition-colors inline-flex items-center align-middle gap-0.5 cursor-pointer select-text${missingClass}`;
+    span.setAttribute('data-cite-keys', contentHtml || '');
+    span.title = 'Citation (hover for details)';
+    span.innerHTML = `[${escapeHtml(parts.join(', '))}]`;
   } else if (type === 'wikilink') {
     const targetTitle = (contentHtml || '').trim();
     const target = (allNotes || []).find(n =>
@@ -9476,7 +10424,7 @@ const parseTextToFragment = (text, options = {}) => {
   const fragment = document.createDocumentFragment();
   if (!text) return fragment;
 
-  const tokenRegex = /((?<!\\)\$(?!\s)([^\$\n\r]+?)(?<!\s)\$)|(`([^`\n\r]+?)`)|(\*\*([^*]+?)\*\*)|((?:^|[^*])\*([^*\n\r]+?)\*(?!\*))|(\\underline\{([^}]+)\})|(~~([^~]+)~~)|(\\textcolor\{([#a-zA-Z0-9|]+)\}\{((?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})+)\})|(\\fig\{([^}]+)\})|(\[\[([^\]\n\r]+)\]\])|(<u>([\s\S]*?)<\/u>)|(<b>([\s\S]*?)<\/b>|<strong>([\s\S]*?)<\/strong>)|(<i>([\s\S]*?)<\/i>|<em>([\s\S]*?)<\/em>)|(<mark>([\s\S]*?)<\/mark>)|(<code>([\s\S]*?)<\/code>)|(\\textbf\{((?:[^{}]|\{[^{}]*\})+)\})/g;
+  const tokenRegex = /((?<!\\)\$(?!\s)([^\$\n\r]+?)(?<!\s)\$)|(`([^`\n\r]+?)`)|(\*\*([^*]+?)\*\*)|((?:^|[^*])\*([^*\n\r]+?)\*(?!\*))|(\\underline\{([^}]+)\})|(~~([^~]+)~~)|(\\textcolor\{([#a-zA-Z0-9|]+)\}\{((?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})+)\})|(\\fig\{([^}]+)\})|(\[\[([^\]\n\r]+)\]\])|(<u>([\s\S]*?)<\/u>)|(<b>([\s\S]*?)<\/b>|<strong>([\s\S]*?)<\/strong>)|(<i>([\s\S]*?)<\/i>|<em>([\s\S]*?)<\/em>)|(<mark>([\s\S]*?)<\/mark>)|(<code>([\s\S]*?)<\/code>)|(\\textbf\{((?:[^{}]|\{[^{}]*\})+)\})|(\\cite\{([^}]*)\})/g;
 
   let lastIndex = 0;
   let match;
@@ -9545,6 +10493,9 @@ const parseTextToFragment = (text, options = {}) => {
     } else if (match[32]) {
       // LaTeX Bold: \textbf{...}
       fragment.appendChild(createLiveWidget('bold', match[32], match[33], options));
+    } else if (match[34]) {
+      // Bibliography Citation: \cite{key1,key2}
+      fragment.appendChild(createLiveWidget('cite', match[34], match[35], options));
     }
 
     lastIndex = matchEnd;
@@ -10027,6 +10978,7 @@ const checkAutoCollapseTokensNearCaret = ({ editModeOptions, hideKatexPill, trig
     { type: 'strike', regex: /(~~([^~]+)~~)\s*$/ },
     { type: 'color', regex: /(\\textcolor\{([#a-zA-Z0-9|]+)\}\{((?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})+)\})\s*$/ },
     { type: 'fig', regex: /(\\fig\{([^}]+)\})\s*$/ },
+    { type: 'cite', regex: /(\\cite\{([^}]*)\})\s*$/ },
     { type: 'wikilink', regex: /(\[\[([^\]\n\r]+)\]\])\s*$/ }
   ];
 
@@ -10053,6 +11005,7 @@ const checkAutoCollapseTokensNearCaret = ({ editModeOptions, hideKatexPill, trig
       else if (p.type === 'strike') contentVal = match[2] || fullToken.slice(2, -2);
       else if (p.type === 'color') contentVal = match[3] || '';
       else if (p.type === 'fig') contentVal = match[2] || fullToken.slice(5, -1);
+      else if (p.type === 'cite') contentVal = match[2] || fullToken.slice(6, -1);
       else if (p.type === 'wikilink') contentVal = match[2] || fullToken.slice(2, -2);
 
       const widget = createLiveWidget(widgetType, fullToken, contentVal, editModeOptions);
@@ -10253,6 +11206,9 @@ const tryCollapseTokenAtCaretOnEnter = ({ node, offset, editModeOptions, hideKat
   if (offset >= 5 && text.substring(offset - 5, offset) === '\\fig{' && text[offset] === '}') {
     return exitEmptyWrapperWithSpace(offset + 1, offset + 1);
   }
+  if (offset >= 6 && text.substring(offset - 6, offset) === '\\cite{' && text[offset] === '}') {
+    return exitEmptyWrapperWithSpace(offset + 1, offset + 1);
+  }
   if (offset >= 2 && text.substring(offset - 2, offset) === '[[' && text.substring(offset, offset + 2) === ']]') {
     return exitEmptyWrapperWithSpace(offset + 2, offset + 2);
   }
@@ -10382,6 +11338,16 @@ const tryCollapseTokenAtCaretOnEnter = ({ node, offset, editModeOptions, hideKat
     const end = start + m[0].length;
     if (offset > start && offset <= end) {
       return collapseTokenAndInsertSpace(start, end, 'fig', m[0], m[1]);
+    }
+  }
+
+  // 8b. Bibliography Citation \cite{key1,key2}
+  const citeRegex = /\\cite\{([^}]*)\}/g;
+  while ((m = citeRegex.exec(text)) !== null) {
+    const start = m.index;
+    const end = start + m[0].length;
+    if (offset > start && offset <= end) {
+      return collapseTokenAndInsertSpace(start, end, 'cite', m[0], m[1]);
     }
   }
 
@@ -10696,6 +11662,8 @@ const handleTextBlockKeyDown = (e, ctx) => {
         deleteBefore = colMatch[0].length; deleteAfter = 1;
       } else if (offset >= 5 && text.substring(offset - 5, offset) === '\\fig{' && text[offset] === '}') {
         deleteBefore = 5; deleteAfter = 1;
+      } else if (offset >= 6 && text.substring(offset - 6, offset) === '\\cite{' && text[offset] === '}') {
+        deleteBefore = 6; deleteAfter = 1;
       } else if (offset >= 2 && text.substring(offset - 2, offset) === '[[' && text.substring(offset, offset + 2) === ']]') {
         deleteBefore = 2; deleteAfter = 2;
       }
@@ -11722,6 +12690,423 @@ const scanAndCompileCompletedBlocks = (liveSurface, editModeOptions, triggerUpda
 
 
 
+/* --- 03_Notes/B_Editor_View/01_Blocks/Text_Block/Cite_Autocomplete.js --- */
+/**
+ * 03_Notes/B_Editor_View/01_Blocks/Text_Block/Cite_Autocomplete.js
+ * Overleaf-style \cite{key} autocomplete for text blocks.
+ *
+ * While typing inside a live text surface, `\cite` (optionally followed by `{` and a
+ * partial key) opens a caret-anchored suggestion list built from the BibTeX Library.
+ * Typing filters (works after commas for multi-key cites); ArrowUp/Down move; Enter,
+ * Tab or Space accept — the raw text from `\cite` to the caret is rewritten to
+ * `\cite{key}` and immediately collapses into the live citation widget.
+ */
+
+
+let popupEl = null;
+let activeIndex = 0;
+let currentMatches = [];
+// Context captured while the popup is open (single popup across the page at a time)
+let ctx = null; // { node, textBeforeCaret, matchStart, hadBrace, typedAll, priorKeys, editModeOptions, hideKatexPill, triggerUpdate }
+
+const MAX_VISIBLE = 40;
+
+function ensurePopup() {
+  if (popupEl) return popupEl;
+  popupEl = document.createElement('div');
+  popupEl.id = 'notes-cite-autocomplete';
+  popupEl.style.cssText = `
+    position: fixed; z-index: 80; min-width: 260px; max-width: 420px; max-height: 224px;
+    overflow-y: auto; display: none; padding: 4px; border-radius: 12px;
+    border: 1px solid var(--border, #2a2e40); background: var(--card, #1c1f2e);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5); font-size: 12px; user-select: none;`;
+  document.body.appendChild(popupEl);
+
+  // Hide when clicking elsewhere (module singleton — lives for the page lifetime)
+  document.addEventListener('mousedown', (e) => {
+    if (popupEl && popupEl.style.display !== 'none' && !popupEl.contains(e.target)) {
+      hideCiteAutocomplete();
+    }
+  });
+  window.addEventListener('hashchange', hideCiteAutocomplete);
+  document.addEventListener('scroll', hideCiteAutocomplete, true);
+  return popupEl;
+}
+function hideCiteAutocomplete() {
+  if (popupEl) popupEl.style.display = 'none';
+  ctx = null;
+  currentMatches = [];
+}
+
+// Detects `\cite` or `\cite{partial` immediately before the caret of a text node.
+function readCiteContext(liveSurface) {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return null;
+  const node = sel.anchorNode;
+  if (!node || node.nodeType !== Node.TEXT_NODE) return null;
+  if (liveSurface && !liveSurface.contains(node)) return null;
+
+  const text = node.nodeValue;
+  const offset = sel.anchorOffset;
+  const before = text.substring(0, offset);
+  const m = before.match(/\\cite\{?([^}\n\r]*)$/);
+  if (!m) return null;
+
+  const typedAll = m[1] || '';
+  const segs = typedAll.split(',');
+  const currentSeg = (segs[segs.length - 1] || '').trim().toLowerCase();
+  const priorKeys = segs.slice(0, -1).map(s => s.trim()).filter(Boolean).join(', ');
+
+  return {
+    node,
+    text,
+    offset,
+    matchStart: before.length - m[0].length,
+    hadBrace: m[0].includes('{'),
+    typedAll,
+    currentSeg,
+    priorKeys
+  };
+}
+
+function renderMatches(editModeOptions, hideKatexPill, triggerUpdate, liveSurface) {
+  const entries = GetLibraryEntries();
+  const seg = ctx.currentSeg;
+  currentMatches = entries.filter(e =>
+    !seg ||
+    String(e.key || '').toLowerCase().includes(seg) ||
+    String(e.title || '').toLowerCase().includes(seg) ||
+    String(e.author || '').toLowerCase().includes(seg)
+  ).slice(0, MAX_VISIBLE);
+
+  const popup = ensurePopup();
+  if (currentMatches.length === 0) {
+    popup.innerHTML = `<div class="px-3 py-2 text-[11px] text-[var(--text-secondary,#a0a4b8)] italic">No library entries match "${escapeAttr(ctx.currentSeg)}". Add sources in the Library.</div>`;
+  } else {
+    popup.innerHTML = currentMatches.map((e, i) => `
+      <div class="cite-ac-item flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer ${i === activeIndex ? 'bg-purple-500/20' : 'hover:bg-[var(--surface-hover)]'}" data-idx="${i}">
+        <code class="text-[11px] font-bold text-purple-400 flex-shrink-0">${escapeHtmlText(e.key)}</code>
+        <span class="text-[11px] text-[var(--text-secondary,#a0a4b8)] truncate">${escapeHtmlText((e.title || '').slice(0, 46))}${e.year ? ` <span class="opacity-70">(${escapeHtmlText(e.year)})</span>` : ''}</span>
+      </div>`).join('');
+
+    popup.querySelectorAll('.cite-ac-item').forEach(item => {
+      item.addEventListener('mouseenter', () => {
+        activeIndex = parseInt(item.getAttribute('data-idx'), 10);
+        highlightActive();
+      });
+      item.addEventListener('mousedown', (ev) => {
+        ev.preventDefault(); // keep the caret/selection intact
+        ev.stopPropagation();
+        acceptActive(liveSurface, editModeOptions, hideKatexPill, triggerUpdate);
+      });
+    });
+  }
+  highlightActive();
+}
+
+function escapeHtmlText(s) {
+  return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function escapeAttr(s) {
+  return escapeHtmlText(s);
+}
+
+function highlightActive() {
+  if (!popupEl) return;
+  popupEl.querySelectorAll('.cite-ac-item').forEach(item => {
+    const isActive = parseInt(item.getAttribute('data-idx'), 10) === activeIndex;
+    item.classList.toggle('bg-purple-500/20', isActive);
+  });
+  const active = popupEl.querySelector(`.cite-ac-item[data-idx="${activeIndex}"]`);
+  if (active) active.scrollIntoView({ block: 'nearest' });
+}
+
+function acceptActive(liveSurface, editModeOptions, hideKatexPill, triggerUpdate) {
+  if (!ctx || !currentMatches.length) return;
+  const entry = currentMatches[activeIndex];
+  if (!entry) return;
+
+  const { node, text, offset, matchStart } = ctx;
+  const replacement = `\\cite{${ctx.priorKeys ? ctx.priorKeys + ', ' : ''}${entry.key}}`;
+
+  node.nodeValue = text.substring(0, matchStart) + replacement + text.substring(offset);
+
+  // Caret after the closing brace so the collapse routine can see the finished token
+  const sel = window.getSelection();
+  const range = document.createRange();
+  range.setStart(node, matchStart + replacement.length);
+  range.collapse(true);
+  sel.removeAllRanges();
+  sel.addRange(range);
+
+  hideCiteAutocomplete();
+  checkAutoCollapseTokensNearCaret({ editModeOptions, hideKatexPill, triggerUpdate });
+}
+
+/**
+ * Shows/updates/hides the popup after an input event inside a live text surface.
+ * Safe to call on every input — it no-ops when no \cite context exists at the caret.
+ */
+function maybeShowCiteAutocomplete(liveSurface, editModeOptions, hideKatexPill, triggerUpdate) {
+  const context = readCiteContext(liveSurface);
+  if (!context) {
+    hideCiteAutocomplete();
+    return;
+  }
+  if (GetLibraryEntries().length === 0) {
+    hideCiteAutocomplete();
+    return;
+  }
+
+  const changedContext = !ctx || ctx.node !== context.node || ctx.matchStart !== context.matchStart;
+  ctx = context;
+  if (changedContext || popupEl.style.display === 'none') activeIndex = 0;
+  if (activeIndex >= MAX_VISIBLE) activeIndex = 0;
+
+  renderMatches(editModeOptions, hideKatexPill, triggerUpdate, liveSurface);
+  positionPopup(context.node, context.offset);
+  popupEl.style.display = 'block';
+}
+
+function positionPopup(node, offset) {
+  const popup = ensurePopup();
+  try {
+    const range = document.createRange();
+    range.setStart(node, Math.max(0, offset - 1));
+    range.collapse(true);
+    const rect = range.getBoundingClientRect();
+    popup.style.visibility = 'hidden';
+    popup.style.display = 'block';
+    const pw = popup.offsetWidth;
+    const ph = popup.offsetHeight;
+    let left = Math.min(rect.left, window.innerWidth - pw - 8);
+    left = Math.max(8, left);
+    let top = rect.bottom + 6;
+    if (top + ph > window.innerHeight - 8) {
+      top = Math.max(8, rect.top - ph - 6);
+    }
+    popup.style.left = `${left}px`;
+    popup.style.top = `${top}px`;
+    popup.style.visibility = 'visible';
+  } catch (_) { /* caret rect unavailable — leave popup where it is */ }
+}
+
+/**
+ * Keydown interceptor. Returns true when the event was consumed by the open popup
+ * (Arrow navigation, Enter/Tab/Space accept, Escape dismiss).
+ */
+function handleCiteAutocompleteKeydown(e, liveSurface, editModeOptions, hideKatexPill, triggerUpdate) {
+  if (!popupEl || popupEl.style.display === 'none' || !ctx) return false;
+
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    e.stopPropagation();
+    hideCiteAutocomplete();
+    return true;
+  }
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    e.stopPropagation();
+    if (currentMatches.length) {
+      activeIndex = (activeIndex + 1) % currentMatches.length;
+      highlightActive();
+    }
+    return true;
+  }
+
+  if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    e.stopPropagation();
+    if (currentMatches.length) {
+      activeIndex = (activeIndex - 1 + currentMatches.length) % currentMatches.length;
+      highlightActive();
+    }
+    return true;
+  }
+
+  // Enter / Tab / Space accept the highlighted entry
+  if (e.key === 'Enter' || e.key === 'Tab' || e.key === ' ') {
+    e.preventDefault();
+    e.stopPropagation();
+    acceptActive(liveSurface, editModeOptions, hideKatexPill, triggerUpdate);
+    return true;
+  }
+
+  return false;
+}
+
+
+/* --- 03_Notes/B_Editor_View/01_Blocks/Text_Block/Cite_Preview.js --- */
+/**
+ * 03_Notes/B_Editor_View/01_Blocks/Text_Block/Cite_Preview.js
+ * Floating article-details preview for rendered citations.
+ *
+ * Hovering (and, in view mode, clicking to pin) any `.note-bib-citation` chip —
+ * the live edit-mode widget or the view/study-mode span — opens a floating dock
+ * with the referenced Library entry's details. Delegated document-level listeners
+ * are registered once (marker-guarded), so no per-block cleanup is required.
+ */
+
+
+
+let dockEl = null;
+let hideTimer = null;
+let pinnedKey = null;
+
+function ensureDock() {
+  if (dockEl) return dockEl;
+  dockEl = document.createElement('div');
+  dockEl.id = 'notes-cite-preview-dock';
+  dockEl.style.cssText = `
+    position: fixed; z-index: 70; width: 340px; max-width: calc(100vw - 24px);
+    display: none; border-radius: 14px; overflow: hidden;
+    border: 1px solid var(--border, #2a2e40); background: var(--card, #1c1f2e);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55); font-size: 12px;`;
+  document.body.appendChild(dockEl);
+
+  window.addEventListener('hashchange', hideCitePreview);
+  document.addEventListener('scroll', () => {
+    if (pinnedKey === null) hideCitePreview();
+  }, true);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      pinnedKey = null;
+      hideCitePreview();
+    }
+  });
+  document.addEventListener('mousedown', (e) => {
+    if (pinnedKey !== null && dockEl.style.display !== 'none' &&
+      !dockEl.contains(e.target) && !e.target.closest('.note-bib-citation')) {
+      pinnedKey = null;
+      hideCitePreview();
+    }
+  });
+  return dockEl;
+}
+
+function buildEntryHtml(entry, keysRaw) {
+  if (!entry) {
+    return `
+      <div class="px-4 py-3">
+        <div class="flex items-center gap-2 mb-1">
+          <code class="text-xs font-bold text-amber-400">${escapeHtml(keysRaw)}</code>
+          <span class="text-[10px] px-1.5 py-0.5 rounded border border-amber-500/40 text-amber-400 uppercase">unresolved</span>
+        </div>
+        <div class="text-[11px] text-[var(--text-secondary,#a0a4b8)]">No library entry with this citation key. Open the 📚 Library to add it.</div>
+      </div>`;
+  }
+
+  const surnames = String(entry.author || entry.editor || '')
+    .split(/\s+and\s+/i)
+    .map(a => a.trim())
+    .filter(Boolean);
+  const authors = surnames.length ? surnames.join(', ') : '';
+  const metaLine = [entry.year, entry.journal, entry.volume ? `vol. ${entry.volume}` : '', entry.pages ? `pp. ${entry.pages}` : '']
+    .filter(Boolean).join(' · ');
+
+  let linkHtml = '';
+  const url = String(entry.url || '').trim();
+  const doi = String(entry.doi || '').trim();
+  const href = /^https?:\/\//i.test(url) ? url : (doi ? `https://doi.org/${encodeURIComponent(doi)}` : '');
+  if (href) {
+    linkHtml = `<a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer" class="text-sky-400 hover:text-sky-300 underline decoration-dotted text-[11px]">Open source ↗</a>`;
+  }
+
+  const abstract = String(entry.abstract || '').trim();
+  const abstractHtml = abstract
+    ? `<div class="mt-2 pt-2 border-t border-[var(--border)] text-[11px] text-[var(--text-secondary)] leading-relaxed max-h-24 overflow-y-auto">${escapeHtml(abstract.length > 320 ? abstract.slice(0, 320) + '…' : abstract)}</div>`
+    : '';
+
+  return `
+    <div class="px-4 py-3">
+      <div class="flex items-center gap-2 flex-wrap mb-1.5">
+        <code class="text-xs font-bold text-purple-400">${escapeHtml(entry.key)}</code>
+        <span class="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-400 border border-purple-500/30 uppercase">${escapeHtml(entry.type || 'misc')}</span>
+        <span class="text-[10px] px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-400 border border-sky-500/30" title="Rendered with the current style">[${escapeHtml(formatCitationLabel(entry, GetCitationStyle(), null))}]</span>
+      </div>
+      <div class="text-sm font-semibold text-[var(--text)] leading-snug">${escapeHtml(entry.title || '(no title)')}</div>
+      ${authors ? `<div class="text-[11px] text-[var(--text-secondary)] mt-1">${escapeHtml(authors)}</div>` : ''}
+      ${metaLine ? `<div class="text-[11px] text-[var(--text-secondary)] mt-0.5 italic">${escapeHtml(metaLine)}</div>` : ''}
+      ${linkHtml ? `<div class="mt-2">${linkHtml}</div>` : ''}
+      ${abstractHtml}
+    </div>`;
+}
+
+function showDockFor(citationEl, pin) {
+  const dock = ensureDock();
+  const keysRaw = citationEl.getAttribute('data-cite-keys') || citationEl.getAttribute('data-cite-key') || '';
+  const firstKey = keysRaw.split(',')[0].trim();
+  const entry = firstKey ? FindLibraryEntryByKey(firstKey) : null;
+
+  dock.innerHTML = buildEntryHtml(entry, keysRaw || '(empty key)');
+  dock.style.visibility = 'hidden';
+  dock.style.display = 'block';
+
+  const rect = citationEl.getBoundingClientRect();
+  const dw = dock.offsetWidth;
+  const dh = dock.offsetHeight;
+  let left = Math.min(rect.left, window.innerWidth - dw - 8);
+  left = Math.max(8, left);
+  let top = rect.bottom + 6;
+  if (top + dh > window.innerHeight - 8) {
+    top = Math.max(8, rect.top - dh - 6);
+  }
+  dock.style.left = `${left}px`;
+  dock.style.top = `${top}px`;
+  dock.style.visibility = 'visible';
+
+  if (pin) pinnedKey = firstKey;
+}
+function hideCitePreview() {
+  if (dockEl) dockEl.style.display = 'none';
+}
+
+// --- Delegated listeners (registered once per document) ---
+if (typeof document !== 'undefined' && !document.getElementById('note-cite-preview-handler')) {
+  const marker = document.createElement('div');
+  marker.id = 'note-cite-preview-handler';
+  marker.style.display = 'none';
+  document.head.appendChild(marker);
+
+  document.addEventListener('mouseover', (e) => {
+    const citation = e.target.closest('.note-bib-citation');
+    if (citation) {
+      clearTimeout(hideTimer);
+      showDockFor(citation, false);
+      return;
+    }
+    // Leaving the chip or the dock itself: delay slightly so moving into the dock keeps it open
+    if (dockEl && dockEl.style.display !== 'none' && pinnedKey === null) {
+      const from = e.relatedTarget;
+      if (!from || (!dockEl.contains(from) && !from.closest?.('.note-bib-citation'))) {
+        clearTimeout(hideTimer);
+        hideTimer = setTimeout(hideCitePreview, 120);
+      }
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    const citation = e.target.closest('.note-bib-citation');
+    if (!citation) return;
+    // View/study mode: click pins/unpins the preview. (In edit mode the widget's own
+    // expand-to-raw handler stops propagation first, so this only fires in view mode.)
+    const isEditSurface = !!citation.closest('.obsidian-live-surface');
+    if (isEditSurface) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const keysRaw = citation.getAttribute('data-cite-keys') || '';
+    const firstKey = keysRaw.split(',')[0].trim();
+    if (pinnedKey === firstKey) {
+      pinnedKey = null;
+      hideCitePreview();
+    } else {
+      showDockFor(citation, true);
+    }
+  }, true);
+}
+
+
 /* --- 03_Notes/B_Editor_View/01_Blocks/Text_Block/Text_Block_Markdown.js --- */
 /**
  * 03_Notes/B_Editor_View/01_Blocks/Text_Block/Text_Block_Markdown.js
@@ -12363,6 +13748,8 @@ function renderObsidianMarkdown(markdownText = '', options = {}) {
 
 
 
+
+
 // Re-export parser, widget, and markdown utilities for full backward compatibility
 function renderTextBlock(
   block,
@@ -12809,6 +14196,10 @@ function renderTextBlock(
 
   // Keyboard and Input Events
   liveSurface.addEventListener('keydown', (e) => {
+    // \cite autocomplete interception runs first while the suggestion popup is open
+    if (handleCiteAutocompleteKeydown(e, liveSurface, editModeOptions, hideKatexPill, triggerUpdate)) {
+      return;
+    }
     handleTextBlockKeyDown(e, {
       liveSurface,
       editModeOptions,
@@ -12872,6 +14263,7 @@ function renderTextBlock(
       editModeOptions,
       triggerUpdate
     });
+    maybeShowCiteAutocomplete(liveSurface, editModeOptions, hideKatexPill, triggerUpdate);
     triggerUpdate();
   });
 
@@ -13346,9 +14738,16 @@ function renderTextBlock(
   };
   window.addEventListener('hashchange', onHashChange);
 
+  let docClickListenerAttached = false;
+  let docClickListenerCleanedUp = false;
+
   const cleanupFloatingDock = () => {
     window.removeEventListener('hashchange', onHashChange);
-    document.removeEventListener('click', onDocClick);
+    if (docClickListenerAttached) {
+      document.removeEventListener('click', onDocClick);
+      docClickListenerAttached = false;
+    }
+    docClickListenerCleanedUp = true;
     hideFloatingDock();
   };
 
@@ -13370,8 +14769,12 @@ function renderTextBlock(
     hideFloatingDock();
   };
 
+  // Deferred attach; the cleanedUp flag prevents a fast teardown from leaking the listener forever
   setTimeout(() => {
-    document.addEventListener('click', onDocClick);
+    if (!docClickListenerCleanedUp) {
+      document.addEventListener('click', onDocClick);
+      docClickListenerAttached = true;
+    }
   }, 100);
 
   // Auto-focus live surface when entering edit mode
@@ -13409,6 +14812,8 @@ function renderTextBlock(
 
   container.__blockCleanup = () => {
     cleanupFloatingDock();
+    hideCiteAutocomplete();
+    hideCitePreview();
     if (typeof detachHistory === 'function') detachHistory();
   };
 
@@ -13716,6 +15121,12 @@ function renderEquationBlock(block, isEditing = false, onUpdate = null, { onDone
   });
 
   container.appendChild(editWrap);
+
+  // Release the code editor's ResizeObserver + history when the editor re-renders or removes this block
+  container.__blockCleanup = () => {
+    if (codeEditor && typeof codeEditor.__cleanup === 'function') codeEditor.__cleanup();
+  };
+
   return container;
 }
 
@@ -14986,6 +16397,12 @@ Ampere-Maxwell & Magnetism & $\nabla \times \mathbf{B} = \mu_0 \mathbf{J} + \mu_
   });
 
   container.appendChild(editWrap);
+
+  // Release the code editor's ResizeObserver + history when the editor re-renders or removes this block
+  container.__blockCleanup = () => {
+    if (codeEditor && typeof codeEditor.__cleanup === 'function') codeEditor.__cleanup();
+  };
+
   return container;
 }
 
@@ -17448,7 +18865,8 @@ function OpenMacrosModal({ note = null, onSave = null } = {}) {
       note.macros = { ...workingLocal };
     }
 
-    // 3. Persist State
+    // 3. Persist State (invalidates the KaTeX cache so equations re-render with the new macros)
+    bumpKatexMacroVersion();
     SaveNotesState();
 
     // 4. Notify Parent / Re-render canvas
@@ -17464,6 +18882,147 @@ function OpenMacrosModal({ note = null, onSave = null } = {}) {
 
   // Initial UI Render
   updateUI();
+}
+
+
+/* --- 03_Notes/B_Editor_View/03_Floating_ToolBar/05_Citation_Style.js --- */
+/**
+ * 03_Notes/B_Editor_View/03_Floating_ToolBar/05_Citation_Style.js
+ * Citation reference-style selector for the editor floating toolbar.
+ * Switches how \cite{key} renders inside text blocks:
+ *   numeric      -> [1]
+ *   authoryear   -> [name_year]
+ *   authortitle  -> [(name)_title]
+ * Persisted vault-wide in NotesState.citationStyle.
+ */
+
+const STYLE_LABELS = {
+  numeric: '[1]',
+  authoryear: '[name_year]',
+  authortitle: '[(name)_title]'
+};
+function GetCitationStyleHTML() {
+  const current = GetCitationStyle();
+  return `
+    <style>
+      .btn-cite-style {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        height: 30px;
+        padding: 0 10px;
+        font-size: 11px;
+        font-weight: 600;
+        border-radius: 9999px;
+        border: 1px solid transparent;
+        background: transparent;
+        color: var(--text, #e8eaf2);
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        white-space: nowrap;
+        font-family: inherit;
+        user-select: none;
+      }
+      .btn-cite-style:hover {
+        color: #facc15;
+        border-color: rgba(250, 204, 21, 0.5);
+        background: rgba(250, 204, 21, 0.08);
+      }
+      .btn-cite-style .cite-style-badge {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        color: #facc15;
+        max-width: 110px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .cite-style-menu {
+        position: absolute;
+        bottom: calc(100% + 8px);
+        left: 50%;
+        transform: translateX(-50%);
+        min-width: 190px;
+        padding: 4px;
+        border-radius: 12px;
+        border: 1px solid var(--border, #2a2e40);
+        background: var(--card, #1c1f2e);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+        z-index: 60;
+      }
+      .cite-style-menu.hidden { display: none; }
+      .cite-style-option {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        width: 100%;
+        padding: 7px 10px;
+        font-size: 11px;
+        border-radius: 8px;
+        border: none;
+        background: transparent;
+        color: var(--text, #e8eaf2);
+        cursor: pointer;
+        text-align: left;
+        transition: background 0.15s;
+      }
+      .cite-style-option:hover { background: var(--surface-hover, rgba(255,255,255,0.06)); }
+      .cite-style-option.active { background: rgba(250, 204, 21, 0.12); }
+      .cite-style-option .opt-style {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        color: #facc15;
+      }
+    </style>
+
+    <div class="relative flex items-center flex-shrink-0" id="cite-style-wrap">
+      <button type="button" class="btn-cite-style notes-ghost-btn rounded-full" title="Citation reference style for \\cite{...} in text blocks">
+        <span class="font-serif font-bold text-sm leading-none text-yellow-400">”</span>
+        <span class="hidden sm:inline">Cite</span>
+        <span class="cite-style-badge" id="cite-style-current">${STYLE_LABELS[current] || STYLE_LABELS.numeric}</span>
+      </button>
+      <div class="cite-style-menu hidden" id="cite-style-menu">
+        <button type="button" class="cite-style-option ${current === 'numeric' ? 'active' : ''}" data-style="numeric">
+          <span>Numbered</span><span class="opt-style">[1]</span>
+        </button>
+        <button type="button" class="cite-style-option ${current === 'authoryear' ? 'active' : ''}" data-style="authoryear">
+          <span>Author — Year</span><span class="opt-style">[name_year]</span>
+        </button>
+        <button type="button" class="cite-style-option ${current === 'authortitle' ? 'active' : ''}" data-style="authortitle">
+          <span>Author — Title</span><span class="opt-style">[(name)_title]</span>
+        </button>
+      </div>
+    </div>
+  `;
+}
+function InitCitationStyleLogic(onStyleChange = null) {
+  const wrap = document.getElementById('cite-style-wrap');
+  if (!wrap) return;
+  const btn = wrap.querySelector('.btn-cite-style');
+  const menu = wrap.querySelector('#cite-style-menu');
+  const badge = wrap.querySelector('#cite-style-current');
+
+  btn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    menu.classList.toggle('hidden');
+  });
+
+  menu.addEventListener('click', (e) => e.stopPropagation());
+
+  // Close when clicking anywhere else
+  document.addEventListener('click', (e) => {
+    if (!wrap.contains(e.target)) menu.classList.add('hidden');
+  });
+
+  menu.querySelectorAll('.cite-style-option').forEach(opt => {
+    opt.addEventListener('click', () => {
+      const style = SetCitationStyle(opt.getAttribute('data-style'));
+      badge.textContent = STYLE_LABELS[style] || STYLE_LABELS.numeric;
+      menu.querySelectorAll('.cite-style-option').forEach(o =>
+        o.classList.toggle('active', o.getAttribute('data-style') === style));
+      menu.classList.add('hidden');
+      if (typeof onStyleChange === 'function') onStyleChange(style);
+    });
+  });
 }
 
 
@@ -17485,7 +19044,8 @@ function CreateFloatingToolbar({
   onFontChange = null,
   onSizeChange = null,
   onToggleStudy = null,
-  onMacrosChange = null
+  onMacrosChange = null,
+  onCiteStyleChange = null
 } = {}) {
   const toolbar = document.createElement('div');
   toolbar.className = 'notes-insert-floating-dock notes-floating-toolbar fixed bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 z-40 p-1 sm:p-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md shadow-2xl flex items-center justify-center gap-1.5 sm:gap-2 select-none transition-all duration-200 max-w-[calc(100vw-16px)]';
@@ -17516,7 +19076,26 @@ function CreateFloatingToolbar({
     <!-- Divider -->
     <div class="w-[1px] h-5 bg-[var(--border)]/70 flex-shrink-0"></div>
 
-    <!-- 5. LaTeX & TikZ Macros Button -->
+    <!-- 5. BibTeX Library Button -->
+    <div class="flex items-center flex-shrink-0">
+      <button type="button" class="btn-library-toggle notes-ghost-btn h-8 px-2.5 sm:px-3 text-xs font-semibold rounded-full flex items-center gap-1.5 transition-all text-[var(--text)] hover:text-sky-400 hover:border-sky-500/50 hover:bg-sky-500/10 cursor-pointer shadow-xs" title="BibTeX Library — manage sources, cite them with \cite{key}">
+        <span class="text-sm leading-none">📚</span>
+        <span class="hidden xs:inline">Library</span>
+      </button>
+    </div>
+
+    <!-- Divider -->
+    <div class="w-[1px] h-5 bg-[var(--border)]/70 flex-shrink-0"></div>
+
+    <!-- 6. Citation Style Selector -->
+    <div class="flex items-center flex-shrink-0">
+      ${GetCitationStyleHTML()}
+    </div>
+
+    <!-- Divider -->
+    <div class="w-[1px] h-5 bg-[var(--border)]/70 flex-shrink-0"></div>
+
+    <!-- 7. LaTeX & TikZ Macros Button -->
     <div class="flex items-center flex-shrink-0">
       <button type="button" class="btn-macros-toggle notes-ghost-btn h-8 px-2.5 sm:px-3 text-xs font-semibold rounded-full flex items-center gap-1.5 transition-all text-[var(--text)] hover:text-purple-400 hover:border-purple-500/50 hover:bg-purple-500/10 cursor-pointer shadow-xs" title="Manage Global & Local LaTeX/TikZ Macros">
         <span class="font-serif font-bold text-sm leading-none text-purple-400">∑</span>
@@ -17543,6 +19122,17 @@ function CreateFloatingToolbar({
         });
       });
     }
+
+    const btnLibrary = toolbar.querySelector('.btn-library-toggle');
+    if (btnLibrary) {
+      btnLibrary.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        OpenLibraryModal({ onUpdate: onCiteStyleChange });
+      });
+    }
+
+    InitCitationStyleLogic(onCiteStyleChange);
   }, 0);
 
   return toolbar;
@@ -17905,6 +19495,7 @@ function RenderLaTeXEditor(container, noteId, isEditMode = true) {
     const prefixMap = computeHeadingPrefixes(blocks, note.autoNumbering);
     const { figureMap, tagMap } = computeFigureNumbers(blocks);
     setActiveFigureTagMap(tagMap);
+    setActiveCitationMap(computeCitationNumbers(blocks));
 
     const newBlockEl = createConfiguredBlockItem(block, idx, isEditing, prefixMap, figureMap);
     blocksContainer.replaceChild(newBlockEl, existingEl);
@@ -18012,6 +19603,7 @@ function RenderLaTeXEditor(container, noteId, isEditMode = true) {
     const prefixMap = computeHeadingPrefixes(blocks, note.autoNumbering);
     const { figureMap, tagMap } = computeFigureNumbers(blocks);
     setActiveFigureTagMap(tagMap);
+    setActiveCitationMap(computeCitationNumbers(blocks));
 
     // Render Picking Banner if active
     if (pickerState) {
@@ -18111,6 +19703,11 @@ function RenderLaTeXEditor(container, noteId, isEditMode = true) {
     },
     onMacrosChange: () => {
       // Re-render blocks and sidebar to apply updated macros and styles in real-time
+      renderBlocks();
+      refreshSidebar();
+    },
+    onCiteStyleChange: () => {
+      // Library or citation-style changed — re-render so \cite labels/numbers update everywhere
       renderBlocks();
       refreshSidebar();
     }
@@ -18342,6 +19939,10 @@ let DropdownCols = 2;
 let IsDragging = false;
 let DraggedGroup = null;
 let TemporaryOrder = null;
+// The navbar (and its dropdown window) is re-mounted on every deck render; these module refs
+// let the document/window listeners be detached before the next set is attached.
+let GroupDocClickHandler = null;
+let GroupResizeHandler = null;
 
 // Returns the currently active folder/group filter name
 function GetActiveGroup() {
@@ -18829,11 +20430,13 @@ function InitGroupFilter(state, onGroupSelect, onOrderUpdate) {
     });
   }
 
-  document.addEventListener('click', (e) => {
+  if (GroupDocClickHandler) document.removeEventListener('click', GroupDocClickHandler);
+  GroupDocClickHandler = (e) => {
     if (dropdownWindow && !dropdownWindow.contains(e.target) && toggleBtn && !toggleBtn.contains(e.target)) {
       dropdownWindow.classList.add('hidden');
     }
-  });
+  };
+  document.addEventListener('click', GroupDocClickHandler);
 
   if (searchInput) {
     searchInput.addEventListener('input', () => {
@@ -18864,11 +20467,13 @@ function InitGroupFilter(state, onGroupSelect, onOrderUpdate) {
     });
   }
 
-  window.addEventListener('resize', () => {
+  if (GroupResizeHandler) window.removeEventListener('resize', GroupResizeHandler);
+  GroupResizeHandler = () => {
     if (dropdownWindow && !dropdownWindow.classList.contains('hidden')) {
       RenderGroupsDropdownGrid(state, onGroupSelect, onOrderUpdate);
     }
-  });
+  };
+  window.addEventListener('resize', GroupResizeHandler);
 
   RenderGroupsDropdownGrid(state, onGroupSelect, onOrderUpdate);
 }
@@ -19838,7 +21443,10 @@ function CloseNoteModal() {
   EditingNoteId = null;
 }
 
-// Binds event listeners for modal controls, live in-place Obsidian surface, and note save
+// Binds event listeners for modal controls, live in-place Obsidian surface, and note save.
+// The modal DOM is static, so listeners are bound once — InitNoteModal runs on every deck
+// render and must not stack duplicate document/keydown handlers each time.
+let NoteModalListenersBound = false;
 function InitNoteModal(onUpdate) {
   OnModalUpdate = onUpdate;
 
@@ -19847,6 +21455,9 @@ function InitNoteModal(onUpdate) {
   const saveBtn = document.getElementById('notes-modal-save-btn');
   const folderInput = document.getElementById('notes-modal-folder-input');
   const folderDropdown = document.getElementById('notes-modal-folder-dropdown');
+
+  if (NoteModalListenersBound) return;
+  NoteModalListenersBound = true;
 
   if (closeBtn) closeBtn.addEventListener('click', CloseNoteModal);
 
@@ -19915,18 +21526,20 @@ function InitNoteModal(onUpdate) {
       if (!NotesState.notes) NotesState.notes = [];
 
       if (EditingNoteId) {
-        // Update existing note (preserves blocks untouched)
+        // Update existing note (preserves blocks and any authored flashcard content untouched)
         const existing = NotesState.notes.find(n => n.id === EditingNoteId);
         if (existing) {
           existing.title = title;
           existing.folder = folder;
           existing.tags = tags;
           existing.description = description;
-          existing.flashcard = {
-            isFlashcard: true,
-            front: description.slice(0, 120),
-            back: description
-          };
+          if (!existing.flashcard) {
+            existing.flashcard = {
+              isFlashcard: true,
+              front: description.slice(0, 120),
+              back: description
+            };
+          }
           if (!existing.macros) existing.macros = { equation: '', tikz: '' };
           if (!existing.blocks) existing.blocks = [];
         }
@@ -20050,7 +21663,75 @@ function InitAddNoteButton(onAddClick) {
 }
 
 
+/* --- 03_Notes/A_Notes_Card_View/01_Navbar/07_Library_Button.js --- */
+/**
+ * 03_Notes/A_Notes_Card_View/01_Navbar/07_Library_Button.js
+ * Library (BibTeX vault) toolbar button for the notes card view.
+ * Opens the shared Library modal from 03_Library.js — same dialog the editor
+ * floating toolbar opens from beside Macros.
+ */
+function GetLibraryButtonHTML() {
+  return `
+    <style>
+      .notes-library-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        border: 1px solid var(--border, #2a2e40);
+        background: var(--surface, #181b27);
+        color: var(--text-secondary, #a0a4b8);
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        padding: 0;
+        user-select: none;
+        flex-shrink: 0;
+      }
+
+      .notes-library-btn:hover {
+        border-color: var(--accent, #8b6dff);
+        color: var(--accent, #8b6dff);
+        background: var(--card, #1c1f2e);
+        box-shadow: 0 0 10px var(--accent-glow, rgba(139, 109, 255, 0.2));
+      }
+
+      .notes-library-btn svg {
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
+      }
+
+      @media (max-width: 600px) {
+        .notes-library-btn { width: 32px; height: 32px; }
+        .notes-library-btn svg { width: 14px; height: 14px; }
+      }
+    </style>
+
+    <button class="notes-library-btn" id="notes-library-btn" type="button" title="BibTeX Library (cite sources with \\cite{key})">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>
+      </svg>
+    </button>
+  `;
+}
+function InitLibraryButton(onLibraryClick = null) {
+  const btn = document.getElementById('notes-library-btn');
+  if (!btn) return;
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (typeof onLibraryClick === 'function') {
+      onLibraryClick();
+    } else {
+      OpenLibraryModal();
+    }
+  });
+}
+
+
 /* --- 03_Notes/A_Notes_Card_View/01_Navbar.js --- */
+
 
 
 
@@ -20143,9 +21824,10 @@ function GetNavbarHTML(isGraphActive = false) {
         ${GetGraphToggleHTML(isGraphActive)}
       </div>
 
-      <!-- 3. RIGHT: Auto-Active Delete & Add Note Button -->
+      <!-- 3. RIGHT: Auto-Active Delete, BibTeX Library & Add Note Button -->
       <div class="notes-toolbar-right">
         ${GetDeleteButtonHTML()}
+        ${GetLibraryButtonHTML()}
         ${GetAddNoteButtonHTML()}
       </div>
     </div>
@@ -20153,12 +21835,13 @@ function GetNavbarHTML(isGraphActive = false) {
 }
 
 // Initializes all toolbar controls with their corresponding event listeners and callbacks
-function InitNavbar(state, { onViewChange, onGroupSelect, onOrderUpdate, onSearch, onDeleteSelected, onAddClick }) {
+function InitNavbar(state, { onViewChange, onGroupSelect, onOrderUpdate, onSearch, onDeleteSelected, onAddClick, onLibraryClick }) {
   InitViewToggle(onViewChange);
   InitGroupFilter(state, onGroupSelect, onOrderUpdate);
   InitSearchBar(onSearch);
   InitGraphToggleLogic();
   InitDeleteButton(onDeleteSelected);
+  InitLibraryButton(onLibraryClick);
   InitAddNoteButton(onAddClick);
 }
 
@@ -20869,6 +22552,7 @@ function RenderNotesGrid(container, state) {
 
 
 
+
 // Re-export modal and action controls directly for master consumers
 
 // Returns HTML skeleton for Navbar and Cards mounting points
@@ -20928,6 +22612,13 @@ function RenderNotesCardView(mainContainer, state) {
     },
     onAddClick: () => {
       OpenNoteModal(null);
+    },
+    onLibraryClick: () => {
+      OpenLibraryModal({
+        onUpdate: () => {
+          RefreshCardsView();
+        }
+      });
     }
   });
 
@@ -21094,7 +22785,16 @@ function renderGraphView() {
     ctx.restore();
   }
 
+  // Stops itself once the view is detached (navigation replaces the DOM) and removes
+  // the window listeners; otherwise the physics loop runs forever per visit.
   function loop() {
+    if (!container.isConnected) {
+      animId = null;
+      window.removeEventListener('mousemove', onWindowMouseMove);
+      window.removeEventListener('mouseup', onWindowMouseUp);
+      window.removeEventListener('resize', resize);
+      return;
+    }
     stepPhysics();
     draw();
     animId = requestAnimationFrame(loop);
@@ -21138,7 +22838,8 @@ function renderGraphView() {
     }
   });
 
-  window.addEventListener('mousemove', (e) => {
+  // Named so they can be removed when the view is torn down (see loop()'s isConnected check)
+  function onWindowMouseMove(e) {
     const { worldX, worldY, clientX, clientY } = getGraphCoords(e);
 
     if (draggedNode) {
@@ -21153,9 +22854,9 @@ function renderGraphView() {
       hoveredNode = findNodeUnder(worldX, worldY);
       canvas.style.cursor = hoveredNode ? 'pointer' : 'grab';
     }
-  });
+  }
 
-  window.addEventListener('mouseup', (e) => {
+  function onWindowMouseUp(e) {
     const { worldX, worldY } = getGraphCoords(e);
     if (draggedNode) {
       const hitNode = findNodeUnder(worldX, worldY);
@@ -21165,7 +22866,11 @@ function renderGraphView() {
     }
     draggedNode = null;
     isDraggingCanvas = false;
-  });
+  }
+
+  window.addEventListener('mousemove', onWindowMouseMove);
+
+  window.addEventListener('mouseup', onWindowMouseUp);
 
   canvas.addEventListener('wheel', (e) => {
     e.preventDefault();

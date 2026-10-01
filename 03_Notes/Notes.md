@@ -147,20 +147,21 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 
 | Import Location | Functions Imported | used in Functions |
 | :--- | :--- | :--- |
-| `./00_State.js` | `NotesState`, `SaveNotesState` | `GetLibraryEntries()`, `GetCitationStyle()`, `SetCitationStyle()`, `UpsertLibraryEntry()`, `DeleteLibraryEntry()`, `ImportBibtexToLibrary()` |
+| `./00_State.js` | `NotesState`, `SaveNotesState` | `GetLibraryEntries()`, `GetCitationStyle()`, `SetCitationStyle()`, `SaveLibraryEntry()`, `DeleteLibraryEntry()`, `ImportBibtexToLibrary()` |
 | `./02_Utils.js` | `escapeHtml` | `OpenLibraryModal()` |
-| `./Writing_Engine/BibTeX_Parser.js` | `bibEntryFromRaw`, `parseBibtex`, `formatCitationLabel`, `getAuthorSurnames` | `UpsertLibraryEntry()`, `ImportBibtexToLibrary()`, `OpenLibraryModal()` |
+| `./Writing_Engine/BibTeX_Parser.js` | `parseBibtex`, `formatCitationLabel`, `getAuthorSurnames`, `libraryEntryFromParsed` | `ImportBibtexToLibrary()`, `OpenLibraryModal()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `GetLibraryEntries()` | 25 - 27 | Returns the reactive array of bibliography entries from `NotesState.bibliography`. |
-| `GetCitationStyle()` | 29 - 31 | Returns active citation label style (`numeric`, `authoryear`, `authortitle`) with fallback to `'numeric'`. |
-| `SetCitationStyle(style)` | 33 - 38 | Sets active citation style, persists changes to state and storage, and returns sanitized style string. |
-| `FindLibraryEntryByKey(key)` | 40 - 45 | Finds and returns a bibliography entry matching a given citation key (case-insensitive). |
-| `UpsertLibraryEntry(entry)` | 47 - 64 | Inserts or updates a bibliography record, sanitizing required fields, assigning timestamps, and persisting to vault. |
-| `DeleteLibraryEntry(idOrKey)` | 66 - 76 | Removes a bibliography entry by ID or key from `NotesState.bibliography` and persists changes. |
-| `ImportBibtexToLibrary(rawBibtex)` | 78 - 88 | Parses one or more BibTeX entries from pasted text and merges them into the bibliography vault. |
-| `OpenLibraryModal({ onUpdate = null })` | 104 - 386 | Opens an Overleaf-style vault dialog to search, preview, add via BibTeX, edit raw fields, delete citations, and switch active citation style with live callbacks. |
+| `GetLibraryEntries()` | 28 - 30 | Returns the reactive array of bibliography entries from `NotesState.bibliography`. |
+| `GetCitationStyle()` | 32 - 34 | Returns active citation label style (`numeric`, `authoryear`, `authortitle`) with fallback to `'numeric'`. |
+| `SetCitationStyle(style)` | 36 - 41 | Sets active citation style, persists changes to state and storage, and returns sanitized style string. |
+| `FindLibraryEntryByKey(key)` | 43 - 47 | Finds and returns a bibliography entry matching a given citation key (case-insensitive). |
+| `SaveLibraryEntry(entry)` | 53 - 76 | Inserts or updates a bibliography record, rejecting citation keys already used by another entry, and persists to vault. |
+| `UpsertLibraryEntry(entry)` | 82 - 84 | Alias of `SaveLibraryEntry()` for call sites that prefer upsert semantics. |
+| `DeleteLibraryEntry(idOrKey)` | 90 - 104 | Removes a bibliography entry matched by id OR citation key (case-insensitive) and persists changes. |
+| `ImportBibtexToLibrary(rawBibtex)` | 112 - 125 | Parses one or more BibTeX entries from raw text and upserts them into the bibliography vault; returns `{ added, skipped, entries, errors }`. |
+| `OpenLibraryModal({ onUpdate = null } = {})` | 145 - 409 | Opens an Overleaf-style vault dialog to search, preview, add via BibTeX, edit raw fields, delete citations, and switch active citation style with live callbacks. |
 
 **Tab_Save_Handler.js**
 
@@ -187,15 +188,13 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 
 | Import Location | Functions Imported | used in Functions |
 | :--- | :--- | :--- |
-| - | - | - |
+| `../00_Components/04_Import_Export.js` | `TriggerExport`, `TriggerImport` | `TriggerTabExport()`, `TriggerTabImport()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `TAB_DEFAULT_MACROS` | 12 - 54 | Default equation and TikZ macro shortcuts for schema fallback. |
-| `sanitizeTabNote(n, idx = 0)` | 56 - 85 | Validates note schema and populates missing default fields during import. |
-| `TriggerTabImport(onSuccess = null)` | 88 - 193 | Resilient notes importer: parses single-tab Notes JSON or extracts NotesData from a global multi-tab envelope. |
-| `TriggerTabExport()` | 196 - 237 | Exports active notes library and metadata as `Notes_DATA.json`. |
-| `InitTabImportExportOverride()` | 241 - 262 | Swaps header button click listeners to use the single-tab notes handlers on `Notes.html`. |
+| `TriggerTabExport()` | 8 - 10 | Delegates to canonical `TriggerExport()`, exporting active notes library as `Notes_DATA.json`. |
+| `TriggerTabImport(onSuccess = null)` | 13 - 15 | Delegates to canonical `TriggerImport()`, safely isolating imported notes data without polluting other tab caches. |
+| `InitTabImportExportOverride()` | 18 - 39 | Re-binds header Import/Export button listeners to ensure single-tab notes handlers execute on `Notes.html`. |
 
 **Notes.js**
 
@@ -221,10 +220,11 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `parseBibtex(raw)` | 57 - 177 | Robust brace-depth parser scanning `@type{key, field = {value}, ...}` blocks, supporting `{...}`, `"..."`, numbers, `#` concatenation, and skipping `@comment`/`@string`/`@preamble`. |
-| `bibEntryFromRaw(raw)` | 183 - 212 | Parses raw BibTeX string and shapes the first entry into a normalized vault record schema with unique ID and lowercase field keys. |
-| `getAuthorSurnames(entry)` | 215 - 227 | Extracts an array of lowercase author/editor surnames for citation label generation and search indexing. |
-| `formatCitationLabel(entry, style = 'numeric', num = null)` | 234 - 253 | Computes the formatted citation badge text (e.g. `1`, `einstein_1935`, `(einstein)_can_quantum`) for `'numeric'`, `'authoryear'`, or `'authortitle'` styles. |
+| `getAuthorSurnames(entry)` | 114 - 134 | Extracts an array of lowercase author/editor surnames for citation label generation and search indexing. |
+| `formatCitationLabel(entry, style = 'numeric', num = null)` | 164 - 185 | Computes the formatted citation badge text (e.g. `1`, `einstein_1935`, `(einstein)_can_quantum`) for `'numeric'`, `'authoryear'`, or `'authortitle'` styles. |
+| `parseBibtex(raw)` | 196 - 230 | Robust brace-depth parser scanning `@type{key, field = {value}, ...}` blocks, supporting `{...}`, `"..."`, numbers, `#` concatenation, and skipping `@comment`/`@string`/`@preamble`. |
+| `libraryEntryFromParsed(parsed, rawText, index = 0)` | 233 - 251 | Shapes one parsed entry into the normalized Library vault record schema; single source of truth for `bibEntryFromRaw()`, the Library modal "Add" flow, and `ImportBibtexToLibrary()`. |
+| `bibEntryFromRaw(raw)` | 257 - 261 | Parses raw BibTeX string and shapes the first entry into a normalized vault record via `libraryEntryFromParsed()`. |
 
 **Block_Engine.js**
 
@@ -576,7 +576,7 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `CreateFloatingToolbar(options)` | 19 - 124 | Creates bottom floating dock toolbar integrating sidebar drawer toggle, study view switch, font family selector, font size selector, LaTeX macros modal, BibTeX library vault dialog, and citation style selector. |
+| `CreateFloatingToolbar(options)` | 19 - 119 | Creates bottom floating dock toolbar integrating sidebar drawer toggle, study view switch, font family selector, font size selector, LaTeX macros modal, BibTeX library vault dialog, and citation style selector. |
 
 **03_Study_View.js**
 
@@ -926,35 +926,41 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `renderBulletIcon(prefix)` | 85 - 95 | Compiles and renders bullet icon markup for unordered, ordered, or custom LaTeX list markers. |
-| `createLiveWidget(type, raw, contentHtml, options)` | 97 - 188 | Creates live interactive inline DOM widgets with seamless text selection (select-text) for math ($...$), formatting (**bold**, *italic*, <u>underline</u>), code (`code`), or citation links (`\fig`). |
+| `renderBulletIcon(prefix)` | 110 - 120 | Compiles and renders bullet icon markup for unordered, ordered, or custom LaTeX list markers. |
+| `createLiveWidget(type, raw, contentHtml, options)` | 122 - 222 | Creates live interactive inline DOM widgets with seamless text selection (select-text) for math ($...$), formatting (**bold**, *italic*, <u>underline</u>), code (`code`), or citation links (`\fig`). |
 
 **Cite_Autocomplete.js**
 
 | Import Location | Functions Imported | used in Functions |
 | :--- | :--- | :--- |
 | `../../../03_Library.js` | `GetLibraryEntries` | `renderMatches()`, `maybeShowCiteAutocomplete()` |
-| `./Text_Keyboard.js` | `checkAutoCollapseTokensNearCaret` | `acceptActiveMatch()` |
+| `./Text_Keyboard.js` | `checkAutoCollapseTokensNearCaret` | `acceptActive()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `maybeShowCiteAutocomplete(targetEl, options)` | 134 - 186 | Inspects text preceding caret for `\cite` trigger, positions floating popup list near cursor, and populates matching library entries. |
-| `handleCiteAutocompleteKeydown(e)` | 188 - 234 | Intercepts keyboard navigation (ArrowUp, ArrowDown, Enter, Tab, Escape) while the citation autocomplete popup is open. |
-| `hideCiteAutocomplete()` | 236 - 247 | Closes and hides the citation autocomplete suggestion list. |
+| `hideCiteAutocomplete()` | 45 - 49 | Closes and hides the citation autocomplete suggestion list. |
+| `readCiteContext(liveSurface)` | 52 - 80 | Inspects text before the caret for a `\cite{` trigger and returns the active key-query segment. |
+| `renderMatches(editModeOptions, hideKatexPill, triggerUpdate, liveSurface)` | 82 - 115 | Renders the caret-anchored popup listing library entries filtered in real time by key, author, and title. |
+| `acceptActive(liveSurface, editModeOptions, hideKatexPill, triggerUpdate)` | 134 - 154 | Inserts the selected citation key into the raw `\cite{...}` token and re-collapses the widget. |
+| `maybeShowCiteAutocomplete(liveSurface, editModeOptions, hideKatexPill, triggerUpdate)` | 160 - 179 | Entry point: shows/refreshes the floating autocomplete popup when the caret sits inside a `\cite{` token. |
+| `handleCiteAutocompleteKeydown(e, liveSurface, editModeOptions, hideKatexPill, triggerUpdate)` | 208 - 247 | Intercepts keyboard navigation (ArrowUp, ArrowDown, Enter, Tab, Escape) while the citation autocomplete popup is open. |
 
 **Cite_Preview.js**
 
 | Import Location | Functions Imported | used in Functions |
 | :--- | :--- | :--- |
-| `../../../03_Library.js` | `FindLibraryEntryByKey`, `GetCitationStyle` | `renderDockContent()` |
-| `../../../02_Utils.js` | `escapeHtml` | `renderDockContent()` |
-| `../../../Writing_Engine/BibTeX_Parser.js` | `formatCitationLabel` | `renderDockContent()` |
+| `../../../03_Library.js` | `FindLibraryEntryByKey`, `GetCitationStyle` | `buildEntryHtml()`, `showDockFor()` |
+| `../../../02_Utils.js` | `escapeHtml` | `buildEntryHtml()` |
+| `../../../Writing_Engine/BibTeX_Parser.js` | `formatCitationLabel` | `buildEntryHtml()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `showCitePreview(anchorEl, rawKeys, options)` | 114 - 150 | Displays floating preview dock adjacent to a hovered or pinned citation chip showing article metadata, author list, and abstract. |
-| `hideCitePreview()` | 152 - 163 | Hides the floating citation details dock. |
-| `initCitePreviewListeners()` | 165 - 171 | Attaches global event delegation for hovering and clicking `.note-bib-citation` chips across edit and read modes. |
+| `ensureDock()` | 19 - 48 | Lazily creates the shared floating preview dock element. |
+| `buildEntryHtml(entry, keysRaw)` | 50 - 96 | Renders an entry's metadata card: title, styled citation badge, authors, journal, volume/pages, year, URL/DOI link, and abstract. |
+| `showDockFor(citationEl, pin)` | 98 - 122 | Positions the dock adjacent to a hovered or pinned `.note-bib-citation` chip and fills it from the referenced Library entry. |
+| `hideCitePreview()` | 124 - 126 | Hides the floating citation details dock. |
+
+Delegated document-level `mouseover`/`click` listeners (registered once, marker-guarded, lines 128 - 170) drive hover previews and click-to-pin behavior across edit and view/study modes.
 
 ## B_Editor_View/02_Sidebar
 **01_Sidebar_Logo.js**
@@ -1049,8 +1055,8 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `GetCitationStyleHTML()` | 19 - 85 | Returns HTML markup and styling for the citation style dropdown button in the floating editor toolbar. |
-| `InitCitationStyleLogic(onChange)` | 87 - 143 | Initializes citation style dropdown menu interactions, style switching (`numeric`, `authoryear`, `authortitle`), persistence, and re-render callbacks. |
+| `GetCitationStyleHTML()` | 19 - 110 | Returns HTML markup and styling for the citation style dropdown button in the floating editor toolbar. |
+| `InitCitationStyleLogic(onStyleChange = null)` | 112 - 142 | Initializes citation style dropdown menu interactions, style switching (`numeric`, `authoryear`, `authortitle`), persistence, and re-render callbacks. |
 
 ## C_Graph_View
 **Graph_View.js**

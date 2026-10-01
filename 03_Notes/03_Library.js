@@ -7,15 +7,18 @@
  * - OpenLibraryModal() is a self-contained body-level dialog (Macros-modal pattern) usable from
  *   BOTH the card-view navbar button and the editor floating toolbar: search, add via pasted
  *   BibTeX with parse preview, edit raw, delete, and the citation-style selector.
+ * - Programmatic path: ImportBibtexToLibrary(raw) parses + upserts entries without the modal
+ *   (importers/tests). UpsertLibraryEntry is an alias of SaveLibraryEntry, and
+ *   DeleteLibraryEntry accepts either an entry id or a citation key.
  */
 
 import { NotesState, SaveNotesState } from './00_State.js';
 import { escapeHtml } from './02_Utils.js';
 import {
-  bibEntryFromRaw,
   parseBibtex,
   formatCitationLabel,
-  getAuthorSurnames
+  getAuthorSurnames,
+  libraryEntryFromParsed
 } from './Writing_Engine/BibTeX_Parser.js';
 
 // ---------------------------------------------------------------------------
@@ -72,15 +75,53 @@ export function SaveLibraryEntry(entry) {
   return { ok: true, entry };
 }
 
-export function DeleteLibraryEntry(id) {
+/**
+ * Alias of SaveLibraryEntry for call sites that prefer upsert semantics.
+ * @returns {{ ok: boolean, error?: string, entry?: Object }}
+ */
+export function UpsertLibraryEntry(entry) {
+  return SaveLibraryEntry(entry);
+}
+
+/**
+ * Removes a library entry matched by id OR citation key (case-insensitive).
+ * @returns {boolean} true when an entry was removed
+ */
+export function DeleteLibraryEntry(idOrKey) {
   if (!Array.isArray(NotesState.bibliography)) return false;
+  const target = String(idOrKey || '').trim().toLowerCase();
+  if (!target) return false;
   const before = NotesState.bibliography.length;
-  NotesState.bibliography = NotesState.bibliography.filter(e => e.id !== id);
+  NotesState.bibliography = NotesState.bibliography.filter(e =>
+    String(e.id || '').toLowerCase() !== target &&
+    String(e.key || '').trim().toLowerCase() !== target
+  );
   if (NotesState.bibliography.length !== before) {
     SaveNotesState();
     return true;
   }
   return false;
+}
+
+/**
+ * Parses raw BibTeX text and upserts every parsed entry into the library —
+ * the programmatic equivalent of the modal's "Parse & Preview" + "Add" flow.
+ * @param {string} rawBibtex
+ * @returns {{ added: number, skipped: number, entries: Object[], errors: string[] }}
+ */
+export function ImportBibtexToLibrary(rawBibtex) {
+  const result = { added: 0, skipped: 0, entries: [], errors: [] };
+  parseBibtex(rawBibtex).forEach((parsed, i) => {
+    const res = SaveLibraryEntry(libraryEntryFromParsed(parsed, rawBibtex, i));
+    if (res.ok) {
+      result.added++;
+      result.entries.push(res.entry);
+    } else {
+      result.skipped++;
+      result.errors.push(res.error || `Entry "${parsed.key}" was skipped.`);
+    }
+  });
+  return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -229,24 +270,7 @@ export function OpenLibraryModal({ onUpdate = null } = {}) {
       let added = 0;
       let skipped = 0;
       for (const p of parsed) {
-        const f = p.fields || {};
-        const entry = {
-          id: `bib_${Date.now()}_${Math.random().toString(36).slice(2, 7)}_${added}`,
-          key: p.key,
-          type: p.type || 'misc',
-          title: f.title || '',
-          author: f.author || f.editor || '',
-          year: f.year || '',
-          journal: f.journal || f.booktitle || f.publisher || '',
-          volume: f.volume || '',
-          pages: f.pages || '',
-          doi: f.doi || '',
-          url: f.url || '',
-          abstract: f.abstract || '',
-          raw: p.__raw || '',
-          createdAt: Date.now()
-        };
-        const res = SaveLibraryEntry(entry);
+        const res = SaveLibraryEntry(libraryEntryFromParsed(p, p.__raw, added));
         if (res.ok) added++; else skipped++;
       }
       closePastePanel();

@@ -78,7 +78,15 @@ function syncAllStatesToDOM(doc) {
     const id = script.id;
     let foundData = null;
 
-    // 1. Check window state matching id (e.g. window.BookmarkState, window.NotesState, window.AppState, window[id])
+    // 1. Check window state matching id (e.g. window.BookmarkState, window.NotesState, window.AppState, window.RD, window[id])
+    if (id === 'RDData') {
+      if (window.RD && typeof window.RD.state === 'function') {
+        foundData = window.RD.state();
+      } else if (window.RDState) {
+        foundData = window.RDState.rd || window.RDState;
+      }
+    }
+
     const candidateKeys = [
       id,
       id + 'State',
@@ -86,21 +94,27 @@ function syncAllStatesToDOM(doc) {
       'App' + id,
       'AppState',
       'BookmarkState',
-      'NotesState'
+      'NotesState',
+      'ProfessorsState',
+      'RDState'
     ];
 
-    for (const key of candidateKeys) {
-      if (window[key] && typeof window[key] === 'object' && Object.keys(window[key]).length > 0) {
-        if (
-          key === id ||
-          key === id + 'State' ||
-          key === id.replace(/Data$/, '') + 'State' ||
-          (id === 'LandingPageData' && key === 'AppState') ||
-          (id === 'Bookmarks' && key === 'BookmarkState') ||
-          (id === 'NotesData' && key === 'NotesState')
-        ) {
-          foundData = window[key];
-          break;
+    if (!foundData) {
+      for (const key of candidateKeys) {
+        if (window[key] && typeof window[key] === 'object' && Object.keys(window[key]).length > 0) {
+          if (
+            key === id ||
+            key === id + 'State' ||
+            key === id.replace(/Data$/, '') + 'State' ||
+            (id === 'LandingPageData' && key === 'AppState') ||
+            (id === 'Bookmarks' && key === 'BookmarkState') ||
+            (id === 'NotesData' && key === 'NotesState') ||
+            (id === 'ProfessorsData' && key === 'ProfessorsState') ||
+            (id === 'RDData' && key === 'RDState')
+          ) {
+            foundData = (id === 'RDData' && window[key].rd) ? window[key].rd : window[key];
+            break;
+          }
         }
       }
     }
@@ -108,13 +122,14 @@ function syncAllStatesToDOM(doc) {
     // 2. Check localStorage cache for latest edits only if not found in live window state
     if (!foundData) {
       const cacheKeys = [id + '_Local_Cache', id.replace(/Data$/, '') + '_Local_Cache', id];
+      if (id === 'RDData') cacheKeys.push('rd_library_v1');
       for (const ck of cacheKeys) {
         try {
           const cached = localStorage.getItem(ck);
           if (cached) {
             const parsed = JSON.parse(cached);
             if (parsed && typeof parsed === 'object') {
-              foundData = parsed;
+              foundData = (id === 'RDData' && parsed.rd) ? parsed.rd : parsed;
               break;
             }
           }
@@ -135,6 +150,8 @@ function syncAllStatesToDOM(doc) {
           if (window.NotesState && window.NotesState.vaultMeta) {
             window.NotesState.vaultMeta.lastSaved = now;
           }
+        } else if (id === 'RDData') {
+          cleanData.updatedAt = new Date().toISOString();
         } else {
           cleanData._lastSaved = now;
           if (id === 'Bookmarks' && window.BookmarkState) {
@@ -327,18 +344,47 @@ export async function SaveAndDownloadApp() {
       '04_Professors/Professors.js'
     ];
 
+    const rdFiles = [
+      '05_R&D/00_State.js',
+      '05_R&D/01_Utils.js',
+      '05_R&D/02_Styles.js',
+      '05_R&D/03_Seed_Data.js',
+      '05_R&D/01_HTML_Page/01_Header.js',
+      '05_R&D/01_HTML_Page/02_Navbar.js',
+      '05_R&D/01_HTML_Page/03_Toolbar.js',
+      '05_R&D/01_HTML_Page/04_Footer.js',
+      '05_R&D/02_Bibtex_Doi/01_Bibtex.js',
+      '05_R&D/02_Bibtex_Doi/02_Doi.js',
+      '05_R&D/03_Views/01_List_View.js',
+      '05_R&D/03_Views/02_Timeline_View.js',
+      '05_R&D/03_Views/03_Map_View.js',
+      '05_R&D/03_Views/04_Group_View.js',
+      '05_R&D/04_Modals/01_Modal_Core.js',
+      '05_R&D/04_Modals/02_Item_Modal.js',
+      '05_R&D/04_Modals/03_Drawer.js',
+      '05_R&D/04_Modals/04_Queue_Panel.js',
+      '05_R&D/04_Modals/05_Stats_Popover.js',
+      '05_R&D/04_Modals/06_Health_Modal.js',
+      '05_R&D/04_Modals/07_Help_Modal.js',
+      '05_R&D/05_Data_IO/01_Save_Button.js',
+      '05_R&D/05_Data_IO/02_Export.js',
+      '05_R&D/05_Data_IO/03_Import.js',
+      '05_R&D/RD.js'
+    ];
+
     const bundleGroup = async (files) => {
       let out = '';
       for (const f of files) out += await bundleFile(f);
       return out;
     };
 
-    const [bundledComponents, bundledLanding, bundledBookmarks, bundledNotes, bundledProfessors] = await Promise.all([
+    const [bundledComponents, bundledLanding, bundledBookmarks, bundledNotes, bundledProfessors, bundledRD] = await Promise.all([
       bundleGroup(componentFiles),
       bundleGroup(landingFiles),
       bundleGroup(bookmarkFiles),
       bundleGroup(noteFiles),
-      bundleGroup(professorFiles)
+      bundleGroup(professorFiles),
+      bundleGroup(rdFiles)
     ]);
 
     const threeImportLine = 'imp' + 'ort * as THREE from \'https://unpkg.com/three@0.160.0/build/three.module.js\';';
@@ -386,6 +432,14 @@ ${bundledProfessors}
 }
 
 /* ==========================================================================
+   R&D LIBRARY MODULE
+   ========================================================================== */
+function LoadRDPage() {
+${bundledRD}
+  if (typeof initRDApp === 'function') initRDApp();
+}
+
+/* ==========================================================================
    MASTER ROUTER
    ========================================================================== */
 function handleRoute() {
@@ -400,6 +454,8 @@ function handleRoute() {
     LoadNotesPage();
   } else if (lowerHash.startsWith('#professors')) {
     LoadProfessorsPage();
+  } else if (lowerHash.startsWith('#rd') || lowerHash.startsWith('#r&d')) {
+    LoadRDPage();
   } else {
     LoadLandingPage();
   }
@@ -416,7 +472,10 @@ handleRoute();
         s.textContent.includes('handleRoute') ||
         s.textContent.includes('Bookmarks.js') ||
         s.textContent.includes('Main.js') ||
-        s.textContent.includes('initLandingPage')
+        s.textContent.includes('initLandingPage') ||
+        s.textContent.includes('RD.js') ||
+        s.textContent.includes('R&D.js') ||
+        s.textContent.includes('initRDApp')
       ) {
         const inlineScript = document.createElement('script');
         inlineScript.type = 'module';

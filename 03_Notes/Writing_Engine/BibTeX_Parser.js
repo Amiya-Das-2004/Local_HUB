@@ -9,6 +9,9 @@
  * - formatCitationLabel(entry, style, num): 'numeric' | 'authoryear' | 'authortitle' label text
  *                                (without the surrounding brackets).
  * - getAuthorSurnames(entry):    ['einstein', 'podolsky', ...] for label building / previews.
+ * - libraryEntryFromParsed(p, raw, i): shapes one parsed entry into the Library vault record
+ *                                schema (single source of truth for bibEntryFromRaw, the Library
+ *                                modal "Add" flow, and ImportBibtexToLibrary).
  */
 
 const KNOWN_FIELDS = [
@@ -78,6 +81,7 @@ function readFieldValue(src, i) {
     const rest = src.slice(i).replace(/^\s+/, '');
     if (rest.startsWith('#')) {
       i = src.length - rest.length + 1;
+      while (i < src.length && /\s/.test(src[i])) i++;
       continue;
     }
     break;
@@ -225,19 +229,13 @@ export function parseBibtex(rawText) {
   return entries;
 }
 
-/**
- * Shapes the first parsed BibTeX entry into a Library vault record.
- * @returns {Object|null} entry or null when nothing parseable was found
- */
-export function bibEntryFromRaw(rawText) {
-  const parsed = parseBibtex(rawText);
-  if (parsed.length === 0) return null;
-  const first = parsed[0];
-  const f = first.fields || {};
+// Shapes one parsed entry ({ key, type, fields }) into the Library vault record schema.
+export function libraryEntryFromParsed(parsed, rawText, index = 0) {
+  const f = parsed?.fields || {};
   return {
-    id: `bib_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-    key: first.key,
-    type: first.type || 'misc',
+    id: `bib_${Date.now()}_${Math.random().toString(36).slice(2, 7)}_${index}`,
+    key: parsed?.key,
+    type: parsed?.type || 'misc',
     title: f.title || '',
     author: f.author || f.editor || '',
     year: f.year || '',
@@ -250,4 +248,14 @@ export function bibEntryFromRaw(rawText) {
     raw: String(rawText || '').trim(),
     createdAt: Date.now()
   };
+}
+
+/**
+ * Shapes the first parsed BibTeX entry into a Library vault record.
+ * @returns {Object|null} entry or null when nothing parseable was found
+ */
+export function bibEntryFromRaw(rawText) {
+  const parsed = parseBibtex(rawText);
+  if (parsed.length === 0) return null;
+  return libraryEntryFromParsed(parsed[0], rawText);
 }

@@ -5,7 +5,7 @@
  * floating toolbar opens from beside Macros.
  */
 
-import { OpenLibraryModal } from '../../../03_Library.js';
+import { OpenLibraryModal } from '../../03_Library.js';
 
 export function GetLibraryButtonHTML() {
   return `

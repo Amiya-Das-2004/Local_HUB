@@ -72,14 +72,15 @@ Universal, dependency-free UI modules shared across all Local_HUB workspace tabs
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `GetImportButtonHTML()` | 2 - 43 | Returns HTML markup and styling for the header icon Import button. |
-| `DEFAULT_MACROS` | 45 - 87 | Default equations and TikZ style definitions used for fallback note schema sanitization during import. |
-| `sanitizeImportedNote(n, idx = 0)` | 89 - 118 | Validates note schema and populates required properties (id, slug, title, folder, tags, blocks, macros, meta) to prevent data corruption. |
-| `TriggerImport(onSuccess = null)` | 121 - 259 | Opens JSON file picker, parses multi-tab or single-tab payloads, auto-creates missing fields (including ProfessorsData and profftrack:v1), synchronizes script vaults and in-memory window states, and writes localStorage caches. |
-| `GetExportButtonHTML()` | 262 - 272 | Returns HTML markup and styling for the header icon Export button. |
-| `TriggerExport()` | 275 - 349 | Aggregates all `<script type="application/json">` blocks and active memory states (including ProfessorsData and profftrack:v1) into `Local_HUB_DATA.json` and triggers browser download. |
-| `GetImportExportHTML()` | 352 - 388 | Returns landing page styled text buttons for import and export actions. |
-| `InitImportExport(onImportSuccess = null)` | 391 - 408 | Binds click handlers to import and export action buttons on the page. |
+| `getActiveTabPage()` | 1 - 15 | Detects runtime context via `window.__LOCALHUB_PAGE__` or DOM data script inspection (`'notes'`, `'bookmarks'`, or null for global hub). |
+| `GetImportButtonHTML()` | 17 - 58 | Returns HTML markup and styling for the header icon Import button with dynamic tooltip reflecting active shell context. |
+| `DEFAULT_MACROS` | 60 - 102 | Default equations and TikZ style definitions used for fallback note schema sanitization during import. |
+| `sanitizeImportedNote(n, idx = 0)` | 104 - 133 | Validates note schema and populates required properties (id, slug, title, folder, tags, blocks, macros, meta) to prevent data corruption. |
+| `TriggerImport(onSuccess = null)` | 136 - 424 | Context-aware importer: in isolated tab mode (`Notes.html`), parses and restores exclusively the active tab's vault payload without polluting other tab caches; in global hub mode (`Index.html`), parses multi-tab envelope or maps single-tab files across all tabs (Landing, Bookmarks, Notes, Professors, R&D). |
+| `GetExportButtonHTML()` | 427 - 440 | Returns HTML markup and styling for the header icon Export button with dynamic tooltip reflecting active shell context. |
+| `TriggerExport()` | 443 - 620 | Context-aware exporter: in isolated tab mode, flushes pending edits and exports pure tab schema (`Notes_DATA.json` or `Bookmarks_DATA.json`); in global hub mode, aggregates all script vaults and live window states into `Local_HUB_DATA.json`. |
+| `GetImportExportHTML()` | 623 - 659 | Returns landing page styled text buttons for import and export actions. |
+| `InitImportExport(onImportSuccess = null)` | 662 - 679 | Binds click handlers to import and export action buttons on the page. |
 
 ---
 
