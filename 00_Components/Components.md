@@ -15,6 +15,8 @@ Universal, dependency-free UI modules shared across all Local_HUB workspace tabs
 ├── 04_Import_Export.js        ← Universal JSON backup import & export with schema self-healing
 ├── 05_Save_Button.js          ← Master all-in-one standalone bundler & cache flusher (Local_HUB.html)
 ├── 06_Color_Selector.js       ← Dual-theme color selector [ + | ○ Light | ○ Dark ] & parser
+├── 07_Blob_Store.js           ← IndexedDB binary vault (PDFs live OUTSIDE the HTML; BlobStore_* namespace)
+├── 08_Research_Library.js     ← Canonical cross-tab research registry (PapersData vault; RL_* namespace)
 └── Components.md              ← This architecture & API reference
 ```
 
@@ -93,9 +95,9 @@ Universal, dependency-free UI modules shared across all Local_HUB workspace tabs
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
 | `GetSaveButtonHTML()` | 2 - 68 | Returns HTML and responsive styles for the primary application Save button. |
-| `syncAllStatesToDOM(doc)` | 71 - 156 | Synchronizes in-memory window states (`window.BookmarkState`, `window.NotesState`, `window.AppState`, `window.ProfessorsState`) and localStorage caches into DOM `<script type="application/json">` vault tags. |
-| `bundleFile(filePath)` | 159 - 182 | Fetches a modular JavaScript file and strips ES module `import`/`export` syntax into a single flat scope. |
-| `SaveAndDownloadApp()` | 185 - 470 | Bundles all modular JS files across components, landing, bookmarks, notes, and professors, embeds live data vaults, flushes unsaved caches, and downloads standalone `Local_HUB.html`. |
+| `syncAllStatesToDOM(doc)` | 71 - 160 | Synchronizes in-memory window states (`window.BookmarkState`, `window.NotesState`, `window.AppState`, `window.ProfessorsState`) and localStorage caches into DOM `<script type="application/json">` vault tags. JSON is `<`-escaped to `\u003c` so vault data can never close the host `<script>` block in the generated standalone. |
+| `bundleFile(filePath)` | 193 - 226 | Fetches a modular JavaScript file and strips ES module `import`/`export` syntax into a single flat scope, then escapes literal `</script` sequences to `<\/script` (source-level only — runtime strings are unchanged) so embedded sources (e.g. the Professors/R&D standalone templates) cannot terminate the host script block. |
+| `SaveAndDownloadApp()` | 183 - 482 | Bundles all modular JS files across components, landing, bookmarks, notes, professors, and R&D, embeds live data vaults, flushes unsaved caches, and downloads standalone `Local_HUB.html`. **Bundle lists must be dependency-ordered** (imported leaf modules before their importers — see `rdFiles` comment): the flat bundle executes top-level code in list order, unlike dev-mode ES modules which resolve lazily. |
 | `ClearAllLocalCaches()` | 473 - 504 | Sweeps and removes all unsaved recovery caches (`*_Local_Cache`) and clears block undo/redo stacks after a successful save. |
 | `InitSaveButtonLogic()` | 507 - 514 | Attaches click listener to `#save-btn` to trigger `SaveAndDownloadApp()`. |
 
@@ -116,6 +118,76 @@ Universal, dependency-free UI modules shared across all Local_HUB workspace tabs
 
 ---
 
+## 07_Blob_Store.js
+
+IndexedDB binary vault for Local_HUB. Stores large payloads (PDF attachments, images) in the `LocalHUB_Blobs` database so the JSON data vaults (`#PapersData`, `#ProfessorsData`, …) hold only lightweight pointers (`blobKey`, `pdfUrl`) and saved `.html` files stay featherweight. IndexedDB is bound to the browser profile/origin and does **not** travel inside the `.html` file — callers must surface attachment-origin status in the UI and rely on `pdfUrl`/DOI fallback plus Archive Export for device migration. Falls back to a best-effort in-memory map when IndexedDB is unavailable (private mode, blocked storage).
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| *(reserved — to be wired into `05_R&D/04_Modals/02_Item_Modal.js` and `04_Professors/04_Modals/03_Paper_Modal.js` in the Research Registry rollout, Phases 1–2)* | | |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `BlobStore_WarnFallback(err)` | 24 - 28 | Internal: one-time console warning when falling back to in-memory storage. |
+| `BlobStore_Open()` | 30 - 48 | Internal: opens/caches the `LocalHUB_Blobs` v1 DB, creating the `files` object store on upgrade. |
+| `BlobStore_Store(mode)` | 50 - 53 | Internal: returns a transaction's `files` object store. |
+| `BlobStore_Request(store, method, ...args)` | 55 - 61 | Internal: promise wrapper around IDBRequest results. |
+| `BlobStore_Put(key, blob, meta)` | 70 - 88 | Persists `{blob, name, type, size, savedAt}` under a stable string key (e.g. `blob_pap_…`); in-memory fallback on failure. |
+| `BlobStore_PutDataUrl(key, dataUrl, meta)` | 94 - 111 | Decodes a legacy base64 data URL into a real Blob and stores it (migration helper for stripping `attachment.data` from vaults). |
+| `BlobStore_Get(key)` | 114 - 124 | Returns the stored record `{blob, name, type, size, savedAt}` or `null`. |
+| `BlobStore_Has(key)` | 126 - 136 | True when a record exists under `key`. |
+| `BlobStore_Delete(key)` | 138 - 149 | Removes a record (mirrors the delete into the in-memory fallback). |
+| `BlobStore_AllKeys()` | 151 - 159 | All stored keys (used by Archive Export to walk attachments). |
+| `BlobStore_Usage()` | 162 - 179 | `navigator.storage.estimate()` when available, else a sum of stored record sizes. |
+| `BlobStore_ObjectURL(key)` | 182 - 186 | Convenience: resolves a stored blob into a temporary object URL for open/download. |
+| `BlobStore_Available()` | 189 - 195 | True when IndexedDB is usable (no in-memory fallback required). |
+
+---
+
+## 08_Research_Library.js
+
+Canonical cross-tab research registry — the "common ground" for papers, books, theses, preprints and misc items. Owns the shared `<script type="application/json" id="PapersData">` vault (present in `Index.html`, `03_Notes/Notes.html`, `04_Professors/Professor.html`, `05_R&D/R&D.html`) plus the `PapersData_Local_Cache` localStorage key, and mirrors live state onto `window.PapersState`. Every tab adds/reads items through this component so an item is stored exactly once no matter which tab it came from (`origin`: `rd | professors | notes`).
+
+**Import safety (critical):** `RL_Upsert` / `RL_MergePapers` / `RL_ImportSlice` are strictly additive, identity-resolved merges (priority: `id` → normalized `doi` → `citeKey`; title match opt-in via `byTitle`). **No code path may blind-replace `PapersData`** — single-tab exports carry only a subset of the library, and wholesale replacement would erase the rest.
+
+**Cascade events:** `RL_Upsert` dispatches `localhub:paper-upserted`; `RL_Delete` dispatches `localhub:paper-deleted` (detail `{id, item}`) so R&D can purge orphan links/queue entries and ProffTrack can purge `paperRefs`.
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| *(reserved — to be consumed by `05_R&D/00_State.js`, `04_Professors` paper modal and `03_Notes/03_Library.js` in the Research Registry rollout, Phases 1–3)* | | |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `RL_VAULT_ID` / `RL_CACHE_KEY` / `RL_SCHEMA_VERSION` / `RL_MIGRATION_VERSION` | 25 - 28 | Vault element id (`PapersData`), cache key, schema version, migration watermark. |
+| `RL_TYPES` / `RL_STATUSES` | 30 - 31 | Allowed item types (`paper, book, thesis, preprint, misc, software, web`) and statuses (`wishlist, reading, read`). |
+| `RL_State` | 33 - 38 | Live state `{schema, migration, items, loaded}`; mirrored onto `window.PapersState`. |
+| `RL_NewId()` | 45 - 47 | Generates `pap_<base36 time><rand>` ids. |
+| `RL_NormalizeTitle(title)` | 50 - 52 | Dedupe fingerprint: lowercase alphanumeric-only title. |
+| `RL_NormalizeDOI(doi)` | 55 - 60 | Strips `https://doi.org/` / `doi:` prefixes, lowercases. |
+| `RL_NormalizeItem(raw)` | 63 - 108 | Coerces any raw/imported object into a valid item (never throws); preserves legacy `attachment.data` untouched for later migration; drops empty attachments. |
+| `RL_Load()` | 115 - 137 | Reads the `#PapersData` vault (fallback: localStorage cache) and hydrates `RL_State`. |
+| `RL_EnsureLoaded()` | 139 - 142 | Lazy idempotent loader. |
+| `RL_SyncVault()` | 145 - 164 | Serializes state into the DOM vault tag (creates it if missing) + localStorage cache. |
+| `RL_Emit(name, detail)` | 166 - 170 | Internal: dispatches `localhub:<name>` CustomEvents on `window`. |
+| `RL_All()` | 176 - 179 | All items (live array reference). |
+| `RL_Get(id)` | 181 - 184 | Item by id or `null`. |
+| `RL_FindByDOI(doi)` | 186 - 191 | Item by normalized DOI or `null`. |
+| `RL_FindByISBN(isbn)` | 193 - 198 | Item by digits-normalized ISBN or `null`. |
+| `RL_FindByTitle(title)` | 200 - 205 | Item by normalized-title fingerprint or `null`. |
+| `RL_FindByKey(citeKey)` | 207 - 212 | Item by case-insensitive cite key or `null`. |
+| `RL_Search(query)` | 215 - 224 | Substring search across title/authors/tags/venue/citeKey. |
+| `RL_SuggestCiteKey(item)` | 230 - 237 | Internal: author-year-word citation key suggestion. |
+| `RL_EnsureUniqueCiteKey(item)` | 240 - 251 | Internal: guarantees a library-wide unique citeKey (`_2`, `_3`… suffixes). |
+| `RL_Upsert(item, {origin, deferSync})` | 259 - 295 | Insert-or-merge ONE item (identity: id → DOI → citeKey); unions tags, keeps earliest `createdAt`, stabilizes citeKey on merge; syncs vault + emits `paper-upserted`. |
+| `RL_MergePapers(incoming, {byTitle})` | 306 - 321 | Merge-safe bulk import — the ONLY sanctioned path for importing arrays; never truncates existing entries; single vault sync at the end. |
+| `RL_Delete(id)` | 323 - 332 | Removes an item, syncs, emits `localhub:paper-deleted` (cascade cleanup signal). |
+| `RL_ResetLibrary()` | 335 - 340 | Explicit full wipe — callers MUST confirm with the user first. |
+| `RL_ExportSlice()` | 346 - 349 | Deep-cloned `{schema, migration, items}` slice for JSON envelopes. |
+| `RL_ImportSlice(slice, opts)` | 352 - 355 | Merge-safe import of a `Papers` slice from any envelope. |
+| `RL_MigrateLegacy()` | 366 - 373 | Versioned one-time migration hook (base64 → IndexedDB, embedded papers → registry; registered in later phases, no-op now). |
+
+---
+
 ## Multi-Shell Workspace (resilient per-tab pages)
 
 `Index.html` is the hub, but it is no longer a single point of failure. Each tab folder carries its own modular HTML page and its own handler files, so if `Index.html` (or a shared component) breaks while editing, the tabs still open and save directly:
@@ -133,6 +205,7 @@ How the isolation works:
 - The handler files are **never referenced by `Index.html`** and are **not registered in the all-in-one bundler lists** — Index.html's Save button and routing stay byte-for-byte original. Adding a handler file requires no bundler registration.
 - The per-tab `Tab_Save_Handler.js` is self-contained (its own copy of the vault-sync, bundler, and cache-clear logic, resolving paths relative to the project root). Inside a compiled standalone it short-circuits: Save re-emits that single file with freshly synced vaults.
 - All three JSON vaults (`#LandingPageData`, `#Bookmarks`, `#NotesData`) exist in every page, so Import/Export produce and consume the same master JSON from anywhere. Live edits travel through the `<vaultId>_Local_Cache` localStorage keys (origin-global); two pages open at once are last-writer-wins.
+- The shared research registry vault `#PapersData` additionally exists in `Index.html`, `03_Notes/Notes.html`, `04_Professors/Professor.html` and `05_R&D/R&D.html`; it is owned by `08_Research_Library.js` (cache key `PapersData_Local_Cache`, mirror `window.PapersState`). It must only ever be written through its merge-safe APIs (`RL_Upsert` / `RL_MergePapers` / `RL_ImportSlice`) — never wholesale-replaced.
 - Landing orb tabs declare `"PageUrl"` (e.g. `"02_Bookmarks/Bookmarks.html"`) next to their hash `"Url"`. In the dev workspace orbs open the `PageUrl`; inside the all-in-one standalone build (`__IS_STANDALONE__`) they fall back to the hash `Url`.
 - Per-tab standalone files are **not** self-sufficient hubs: keep them next to `Index.html` so the logo has somewhere to go. The all-in-one `Local_HUB.html` remains the portable everything-file.
 - Serve the folder over http(s) (e.g. a local dev server) when using multiple pages — cross-file localStorage on `file://` is browser-dependent.

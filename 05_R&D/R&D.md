@@ -3,6 +3,7 @@
 Modular Vanilla JS extraction of `workspace-a37acb61-8e9d-446b-84c9-92facd3a1b79` (Research & Development Library v1.8.0). Designed to conform strictly to Local HUB's 100% pure modular Vanilla JS architecture (following the proven pattern of `02_Bookmarks/` and `04_Professors/`).
 
 - **Zero External CSS**: No `.css` files. All CSS is encapsulated as template literals inside `05_R&D/02_Styles.js` via `GetRDStyles()` / `InitRDStyles()`.
+- **Dual Theme (Light + Dark)**: Dark by default. The header moon/sun button (`#rd-theme-btn`, `data-action="toggle-theme"`) flips `state.rd.ui.theme` via `SetUI()` (persisted in the vault/localStorage) and `ApplyTheme()` (in `RD.js`) sets `data-theme` on the `#root` container. All theming is token-driven in `02_Styles.js`: dark tokens on `:root`, complete light overrides on `#root[data-theme="light"]`. Theme rules must target `#root` (the actual container id) — `#rd-root` from `test.html` does not exist in the modular app.
 - **Dual Mode Compatibility**: Runs identically in Dev Mode (modular ES6 imports via HTTP / local server) and Standalone Export Mode (bundled single-file HTML).
 - **Single Tab Standalone Ready**: Users can open `05_R&D/R&D.html` directly, edit their library, and click "Save HTML" to download a self-contained, self-saving single-file app.
 - **Hub Integrated**: Fully wired into `Index.html` (Landing orb, `#RDData` vault, SPA hash router) and `00_Components/05_Save_Button.js` (all-in-one standalone hub exporter).
@@ -45,7 +46,8 @@ Modular Vanilla JS extraction of `workspace-a37acb61-8e9d-446b-84c9-92facd3a1b79
 │   ├── 04_Queue_Panel.js                  ← Reading queue slide-over panel with drag-drop reordering
 │   ├── 05_Stats_Popover.js                ← Donut chart, status breakdown, tag frequency cloud, year histogram
 │   ├── 06_Health_Modal.js                 ← Duplicates scanner, compare & merge dialog, library health checks
-│   └── 07_Help_Modal.js                   ← Onboarding guide, Command Palette (Ctrl+K), global keyboard shortcuts
+│   ├── 07_Help_Modal.js                   ← Onboarding guide, Command Palette (Ctrl+K), global keyboard shortcuts
+│   └── 08_Link_Modal.js                   ← Non-blocking floating link panel, note math editor, style & direction settings
 │
 └── 05_Data_IO/                            ← Persistence & interoperability
     ├── 01_Save_Button.js                  ← Recursive standalone HTML builder (RD_TEMPLATE, self-saving offline exporter)
@@ -104,7 +106,7 @@ The following tables document where every modular JS file derives its logic and 
 | `04_Footer.js` | `GetFooterHTML()`, `RenderFooter()` | `public/js/ui.js` | 1265 – 1330 | Bottom status bar and quick library reset / health summary triggers. |
 | `01_List_View.js` | `GetListViewHTML()`, `RenderListView()`, `InitListDnD()` | `public/js/ui.js` | 1360 – 1550 | Group-sectioned card list, status pills, star toggles, drag-to-reorder. |
 | `02_Timeline_View.js` | `GetTimelineHTML()`, `RenderTimelineView()`, `AttachTimelinePanZoom()` | `public/js/ui.js` | 1555 – 1820 | Infinite 2D timeline canvas, chronological bob clusters, minimap. |
-| `03_Map_View.js` | `GetMapViewHTML()`, `RenderMapView()`, `AttachMapLinking()` | `public/js/ui.js` | 1825 – 2150 | Interactive mind map canvas, bezier SVG connections, drag-and-drop link creation. |
+| `03_Map_View.js` | `RenderMap()`, `RenderLinkPaths()`, `BuildCurvePathInfo()`, `BuildOrthogonalPathInfo()`, `DetectDirection()` | `05_R&D/test.html` | 5387 – 5715, 6320 – 6353 | Interactive mind map canvas, curved bezier & orthogonal straight routing, direction detection, marker arrowheads, in-between note badges. |
 | `04_Group_View.js` | `GetGroupViewHTML()`, `RenderGroupView()`, `AttachGroupDnD()` | `public/js/ui.js` | 2155 – 2450 | 2D spatial group clusters, auto-bounding box layout, drag items between groups. |
 
 ### 5. `04_Modals/`
@@ -118,6 +120,7 @@ The following tables document where every modular JS file derives its logic and 
 | `05_Stats_Popover.js` | `ToggleStats()`, `RenderStats()` | `public/js/ui.js` | 725 – 830 | SVG donut chart, reading velocity, type breakdown, year histogram. |
 | `06_Health_Modal.js` | `OpenHealthModal()`, `RenderDuplicates()`, `MergeItems()` | `public/js/ui.js` | 835 – 980 | Duplicate item detection and side-by-side comparison & merge tool. |
 | `07_Help_Modal.js` | `ShowHelpPanel()`, `OpenPalette()`, `InitGlobalKeys()` | `public/js/ui.js` | 985 – 1120 | Command palette (Ctrl+K) and full keyboard shortcuts guide. |
+| `08_Link_Modal.js` | `GetLinkFloatingPanelHTML()`, `InitLinkModal()`, `OpenLinkFloatingPanel()`, `CloseLinkFloatingPanel()`, `renderMathPreview()` | `05_R&D/test.html` | 1146–1553, 5716–5850, 6320–6353 | Non-blocking floating link settings panel, live note/math editor with KaTeX preview, line style switcher (curved vs straight/orthogonal), direction detection & arrow markers, shape badges (capsule, rect, circle, oval). |
 
 ### 6. `05_Data_IO/` & `RD.js`
 

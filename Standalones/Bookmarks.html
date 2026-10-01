@@ -27,7 +27,7 @@
     "ALL",
     "Writing"
   ],
-  "_lastSaved": 1790710166965
+  "_lastSaved": 1790850998467
 }</script>
 <style>*, ::before, ::after{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }/* ! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com */*,::after,::before{box-sizing:border-box;border-width:0;border-style:solid;border-color:#e5e7eb}::after,::before{--tw-content:''}:host,html{line-height:1.5;-webkit-text-size-adjust:100%;-moz-tab-size:4;tab-size:4;font-family:ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";font-feature-settings:normal;font-variation-settings:normal;-webkit-tap-highlight-color:transparent}body{margin:0;line-height:inherit}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,pre,samp{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;font-feature-settings:normal;font-variation-settings:normal;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}button,input,optgroup,select,textarea{font-family:inherit;font-feature-settings:inherit;font-variation-settings:inherit;font-size:100%;font-weight:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:transparent;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dd,dl,figure,h1,h2,h3,h4,h5,h6,hr,p,pre{margin:0}fieldset{margin:0;padding:0}legend{padding:0}menu,ol,ul{list-style:none;margin:0;padding:0}dialog{padding:0}textarea{resize:vertical}input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}[role=button],button{cursor:pointer}:disabled{cursor:default}audio,canvas,embed,iframe,img,object,svg,video{display:block;vertical-align:middle}img,video{max-width:100%;height:auto}[hidden]:where(:not([hidden=until-found])){display:none}.hidden{display:none}</style></head>
 
@@ -409,8 +409,28 @@ function InitScrollbar() {
 
 
 /* --- 00_Components/04_Import_Export.js --- */
+function getActiveTabPage() {
+  if (typeof window === 'undefined') return null;
+  if (window.__LOCALHUB_PAGE__ && window.__LOCALHUB_PAGE__ !== 'hub') {
+    return String(window.__LOCALHUB_PAGE__).toLowerCase().trim();
+  }
+  if (typeof document !== 'undefined') {
+    if (document.getElementById('NotesData') && !document.getElementById('LandingPageData') && !document.getElementById('Bookmarks')) {
+      return 'notes';
+    }
+    if (document.getElementById('Bookmarks') && !document.getElementById('LandingPageData') && !document.getElementById('NotesData')) {
+      return 'bookmarks';
+    }
+  }
+  return null;
+}
+
 // HTML CSS For svg Logo Import Button
 function GetImportButtonHTML() {
+  const activeTab = getActiveTabPage();
+  const tooltip = activeTab
+    ? (activeTab === 'notes' ? 'Import Notes Data (JSON)' : activeTab === 'bookmarks' ? 'Import Bookmarks Data (JSON)' : 'Import Tab Data (JSON)')
+    : 'Import Data (JSON)';
   return `
     <style>
       .notes-icon-btn {
@@ -443,7 +463,7 @@ function GetImportButtonHTML() {
         flex-shrink: 0;
       }
     </style>
-    <button class="notes-icon-btn" id="btn-import" type="button" title="Import Data (JSON)">
+    <button class="notes-icon-btn" id="btn-import" type="button" title="${tooltip}">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
         <polyline points="7 10 12 15 17 10"/>
@@ -545,23 +565,152 @@ function TriggerImport(onSuccess = null) {
         }
 
         const now = Date.now();
-        let masterBlocks = {};
+        const activeTab = getActiveTabPage();
 
-        // 1. Identify format: Master multi-tab container vs Single-tab direct payload
-        if (importedData.LandingPageData || importedData.Bookmarks || importedData.NotesData) {
+        // ========================================================
+        // INDIVIDUAL TAB MODE: Isolated to active tab only
+        // ========================================================
+        if (activeTab === 'notes') {
+          let targetData = null;
+          if (importedData.NotesData && typeof importedData.NotesData === 'object') {
+            targetData = importedData.NotesData;
+          } else if (Array.isArray(importedData.notes) || importedData.vaultMeta) {
+            targetData = importedData;
+          } else {
+            throw new Error('No notes data found in this file.');
+          }
+
+          let cleanData = JSON.parse(JSON.stringify(targetData));
+          delete cleanData._unsaved;
+          delete cleanData._savedAt;
+
+          cleanData.vaultMeta = cleanData.vaultMeta || { title: "My Research & Notes Vault", version: "1.0.0" };
+          cleanData.vaultMeta.lastSaved = now;
+          cleanData.globalMacros = cleanData.globalMacros || { ...DEFAULT_MACROS };
+          cleanData.tableTemplates = Array.isArray(cleanData.tableTemplates) ? cleanData.tableTemplates : [];
+          cleanData.tikzTemplates = Array.isArray(cleanData.tikzTemplates) ? cleanData.tikzTemplates : [];
+          cleanData.bibliography = Array.isArray(cleanData.bibliography) ? cleanData.bibliography : [];
+          cleanData.citationStyle = typeof cleanData.citationStyle === 'string' ? cleanData.citationStyle : 'numeric';
+          cleanData.notes = Array.isArray(cleanData.notes) ? cleanData.notes.map(sanitizeImportedNote) : [];
+          cleanData.folders = Array.isArray(cleanData.folders) && cleanData.folders.length > 0 
+            ? cleanData.folders 
+            : Array.from(new Set(cleanData.notes.map(n => n.folder || 'General').filter(Boolean)));
+          cleanData.tags = Array.isArray(cleanData.tags) && cleanData.tags.length > 0 
+            ? cleanData.tags 
+            : Array.from(new Set(cleanData.notes.flatMap(n => n.tags || []).filter(Boolean)));
+
+          // Update DOM script block
+          let scriptBlock = document.getElementById('NotesData');
+          if (!scriptBlock) {
+            scriptBlock = document.createElement('script');
+            scriptBlock.type = 'application/json';
+            scriptBlock.id = 'NotesData';
+            document.head.appendChild(scriptBlock);
+          }
+          scriptBlock.textContent = JSON.stringify(cleanData, null, 2);
+
+          // Update live memory
+          if (typeof window !== 'undefined' && window.NotesState) {
+            Object.assign(window.NotesState, cleanData);
+          }
+
+          // Update localStorage cache
+          try {
+            if (typeof localStorage !== 'undefined') {
+              const cachePayload = {
+                ...cleanData,
+                _unsaved: true,
+                _savedAt: now
+              };
+              localStorage.setItem('NotesData_Local_Cache', JSON.stringify(cachePayload));
+            }
+          } catch (err) {
+            console.warn('[Notes Import] Failed to cache in localStorage:', err);
+          }
+
+          alert('Notes imported successfully! Remember to click SAVE to make it permanent in your HTML.');
+          if (onSuccess) {
+            onSuccess(cleanData);
+          } else {
+            window.location.reload();
+          }
+          return;
+        }
+
+        if (activeTab === 'bookmarks') {
+          let targetData = null;
+          if (importedData.Bookmarks && typeof importedData.Bookmarks === 'object') {
+            targetData = importedData.Bookmarks;
+          } else if (Array.isArray(importedData.bookmarks) || importedData.sectionOrder) {
+            targetData = importedData;
+          } else {
+            throw new Error('No bookmarks data found in this file.');
+          }
+
+          let cleanData = JSON.parse(JSON.stringify(targetData));
+          delete cleanData._unsaved;
+          delete cleanData._savedAt;
+          cleanData.bookmarks = Array.isArray(cleanData.bookmarks) ? cleanData.bookmarks : [];
+          cleanData.sectionOrder = Array.isArray(cleanData.sectionOrder) ? cleanData.sectionOrder : ['ALL'];
+          if (!cleanData.sectionOrder.includes('ALL')) cleanData.sectionOrder.unshift('ALL');
+          cleanData._lastSaved = now;
+
+          let scriptBlock = document.getElementById('Bookmarks');
+          if (!scriptBlock) {
+            scriptBlock = document.createElement('script');
+            scriptBlock.type = 'application/json';
+            scriptBlock.id = 'Bookmarks';
+            document.head.appendChild(scriptBlock);
+          }
+          scriptBlock.textContent = JSON.stringify(cleanData, null, 2);
+
+          if (typeof window !== 'undefined' && window.BookmarkState) {
+            Object.assign(window.BookmarkState, cleanData);
+          }
+
+          try {
+            if (typeof localStorage !== 'undefined') {
+              const cachePayload = {
+                ...cleanData,
+                _unsaved: true,
+                _savedAt: now
+              };
+              localStorage.setItem('Bookmarks_Local_Cache', JSON.stringify(cachePayload));
+            }
+          } catch (err) {
+            console.warn('[Bookmarks Import] Failed to cache in localStorage:', err);
+          }
+
+          alert('Bookmarks imported successfully! Remember to click SAVE to make it permanent in your HTML.');
+          if (onSuccess) {
+            onSuccess(cleanData);
+          } else {
+            window.location.reload();
+          }
+          return;
+        }
+
+        // ========================================================
+        // GLOBAL HUB MODE: Master multi-tab container & single payloads
+        // ========================================================
+        let masterBlocks = {};
+        if (importedData.LandingPageData || importedData.Bookmarks || importedData.NotesData || importedData.ProfessorsData || importedData.RDData) {
           masterBlocks = importedData;
         } else if (Array.isArray(importedData.notes) || importedData.vaultMeta) {
           masterBlocks['NotesData'] = importedData;
         } else if (Array.isArray(importedData.bookmarks) || importedData.sectionOrder) {
           masterBlocks['Bookmarks'] = importedData;
+        } else if (Array.isArray(importedData.professors)) {
+          masterBlocks['ProfessorsData'] = importedData;
+        } else if (Array.isArray(importedData.items) || importedData.groupOrder || importedData.links) {
+          masterBlocks['RDData'] = importedData;
         } else if (Array.isArray(importedData.tabs)) {
           masterBlocks['LandingPageData'] = importedData;
         } else {
-          // Generic master dictionary
           masterBlocks = importedData;
         }
 
-        // 2. Universally sanitize, auto-create missing fields, and sync to DOM & localStorage
+        // Universally sanitize, auto-create missing fields, and sync to DOM & localStorage
         for (const [id, rawData] of Object.entries(masterBlocks)) {
           if (!rawData || typeof rawData !== 'object') continue;
 
@@ -576,6 +725,8 @@ function TriggerImport(onSuccess = null) {
             cleanData.globalMacros = cleanData.globalMacros || { ...DEFAULT_MACROS };
             cleanData.tableTemplates = Array.isArray(cleanData.tableTemplates) ? cleanData.tableTemplates : [];
             cleanData.tikzTemplates = Array.isArray(cleanData.tikzTemplates) ? cleanData.tikzTemplates : [];
+            cleanData.bibliography = Array.isArray(cleanData.bibliography) ? cleanData.bibliography : [];
+            cleanData.citationStyle = typeof cleanData.citationStyle === 'string' ? cleanData.citationStyle : 'numeric';
             cleanData.notes = Array.isArray(cleanData.notes) ? cleanData.notes.map(sanitizeImportedNote) : [];
             cleanData.folders = Array.isArray(cleanData.folders) && cleanData.folders.length > 0 
               ? cleanData.folders 
@@ -590,6 +741,36 @@ function TriggerImport(onSuccess = null) {
             cleanData.sectionOrder = Array.isArray(cleanData.sectionOrder) ? cleanData.sectionOrder : ['ALL'];
             if (!cleanData.sectionOrder.includes('ALL')) cleanData.sectionOrder.unshift('ALL');
             cleanData._lastSaved = now;
+          }
+          // Auto-create missing parts for ProfessorsData
+          else if (id === 'ProfessorsData' || Array.isArray(cleanData.professors)) {
+            cleanData.version = cleanData.version || 1;
+            cleanData.updatedAt = new Date().toISOString();
+            cleanData.professors = Array.isArray(cleanData.professors) ? cleanData.professors : [];
+            try {
+              if (typeof localStorage !== 'undefined') {
+                localStorage.setItem('profftrack:v1', JSON.stringify(cleanData));
+              }
+            } catch (err) {
+              console.warn('[Import] Failed to save profftrack:v1 in localStorage:', err);
+            }
+          }
+          // Auto-create missing parts for RDData
+          else if (id === 'RDData' || Array.isArray(cleanData.items)) {
+            cleanData.version = cleanData.version || 1;
+            cleanData.updatedAt = new Date().toISOString();
+            cleanData.items = Array.isArray(cleanData.items) ? cleanData.items : [];
+            cleanData.groups = Array.isArray(cleanData.groups) ? cleanData.groups : [];
+            cleanData.groupOrder = Array.isArray(cleanData.groupOrder) ? cleanData.groupOrder : [];
+            cleanData.itemOrder = Array.isArray(cleanData.itemOrder) ? cleanData.itemOrder : [];
+            cleanData.links = Array.isArray(cleanData.links) ? cleanData.links : [];
+            try {
+              if (typeof localStorage !== 'undefined') {
+                localStorage.setItem('rd_library_v1', JSON.stringify({ rd: cleanData }));
+              }
+            } catch (err) {
+              console.warn('[Import] Failed to save rd_library_v1 in localStorage:', err);
+            }
           }
           // Auto-create missing parts for LandingPageData
           else if (id === 'LandingPageData' || Array.isArray(cleanData.tabs)) {
@@ -614,12 +795,19 @@ function TriggerImport(onSuccess = null) {
             if (id === 'NotesData' && window.NotesState) Object.assign(window.NotesState, cleanData);
             if (id === 'Bookmarks' && window.BookmarkState) Object.assign(window.BookmarkState, cleanData);
             if (id === 'LandingPageData' && window.AppState) Object.assign(window.AppState, cleanData);
+            if (id === 'ProfessorsData') {
+              if (window.ProfessorsState) Object.assign(window.ProfessorsState, cleanData);
+              if (typeof window.replaceState === 'function') window.replaceState(cleanData);
+            }
+            if (id === 'RDData') {
+              if (window.RDState) Object.assign(window.RDState, { rd: cleanData });
+              if (window.RD && typeof window.RD.replaceState === 'function') window.RD.replaceState(cleanData);
+            }
             if (window[id + 'State']) Object.assign(window[id + 'State'], cleanData);
             if (window[id]) Object.assign(window[id], cleanData);
           }
 
           // C. Save to LocalStorage with _unsaved: true and _savedAt: now
-          // This guarantees that after page reload, each state module detects fresh uncommitted edits and restores them!
           try {
             if (typeof localStorage !== 'undefined') {
               const cachePayload = {
@@ -652,8 +840,12 @@ function TriggerImport(onSuccess = null) {
 
 // HTML CSS For svg Logo Export Button
 function GetExportButtonHTML() {
+  const activeTab = getActiveTabPage();
+  const tooltip = activeTab
+    ? (activeTab === 'notes' ? 'Export Notes Data (JSON)' : activeTab === 'bookmarks' ? 'Export Bookmarks Data (JSON)' : 'Export Tab Data (JSON)')
+    : 'Export All Vault Data (JSON)';
   return `
-    <button class="notes-icon-btn" id="btn-export" type="button" title="Export All Vault Data (JSON)">
+    <button class="notes-icon-btn" id="btn-export" type="button" title="${tooltip}">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
         <polyline points="17 8 12 3 7 8"/>
@@ -665,13 +857,122 @@ function GetExportButtonHTML() {
 
 // Logic For Universal Dynamic Export
 function TriggerExport() {
+  if (typeof window !== 'undefined' && typeof window.flushNotesSave === 'function') {
+    try { window.flushNotesSave(); } catch (e) { }
+  }
+
+  const activeTab = getActiveTabPage();
+  const now = Date.now();
+
+  // ========================================================
+  // INDIVIDUAL TAB MODE: Isolated to active tab only
+  // ========================================================
+  if (activeTab === 'notes') {
+    let foundData = null;
+    if (typeof window !== 'undefined' && window.NotesState && typeof window.NotesState === 'object') {
+      foundData = window.NotesState;
+    }
+    if (!foundData) {
+      const script = document.getElementById('NotesData');
+      if (script && script.textContent.trim()) {
+        try { foundData = JSON.parse(script.textContent); } catch (e) { }
+      }
+    }
+    if (!foundData) {
+      try {
+        const cached = typeof localStorage !== 'undefined' ? localStorage.getItem('NotesData_Local_Cache') : null;
+        if (cached) foundData = JSON.parse(cached);
+      } catch (e) { }
+    }
+
+    const cleanData = JSON.parse(JSON.stringify(foundData || {}));
+    delete cleanData._unsaved;
+    delete cleanData._savedAt;
+
+    cleanData.vaultMeta = cleanData.vaultMeta || { title: "My Research & Notes Vault", version: "1.0.0" };
+    cleanData.vaultMeta.lastSaved = now;
+    cleanData.globalMacros = cleanData.globalMacros || { ...DEFAULT_MACROS };
+    cleanData.tableTemplates = Array.isArray(cleanData.tableTemplates) ? cleanData.tableTemplates : [];
+    cleanData.tikzTemplates = Array.isArray(cleanData.tikzTemplates) ? cleanData.tikzTemplates : [];
+    cleanData.bibliography = Array.isArray(cleanData.bibliography) ? cleanData.bibliography : [];
+    cleanData.citationStyle = typeof cleanData.citationStyle === 'string' ? cleanData.citationStyle : 'numeric';
+    cleanData.notes = Array.isArray(cleanData.notes) ? cleanData.notes.map(sanitizeImportedNote) : [];
+    cleanData.folders = Array.isArray(cleanData.folders) && cleanData.folders.length > 0
+      ? cleanData.folders
+      : Array.from(new Set(cleanData.notes.map(n => n.folder || 'General').filter(Boolean)));
+    cleanData.tags = Array.isArray(cleanData.tags) && cleanData.tags.length > 0
+      ? cleanData.tags
+      : Array.from(new Set(cleanData.notes.flatMap(n => n.tags || []).filter(Boolean)));
+
+    const dataStr = JSON.stringify(cleanData, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Notes_DATA.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    return;
+  }
+
+  if (activeTab === 'bookmarks') {
+    let foundData = null;
+    if (typeof window !== 'undefined' && window.BookmarkState && typeof window.BookmarkState === 'object') {
+      foundData = window.BookmarkState;
+    }
+    if (!foundData) {
+      const script = document.getElementById('Bookmarks');
+      if (script && script.textContent.trim()) {
+        try { foundData = JSON.parse(script.textContent); } catch (e) { }
+      }
+    }
+    if (!foundData) {
+      try {
+        const cached = typeof localStorage !== 'undefined' ? localStorage.getItem('Bookmarks_Local_Cache') : null;
+        if (cached) foundData = JSON.parse(cached);
+      } catch (e) { }
+    }
+
+    const cleanData = JSON.parse(JSON.stringify(foundData || {}));
+    delete cleanData._unsaved;
+    delete cleanData._savedAt;
+    cleanData.bookmarks = Array.isArray(cleanData.bookmarks) ? cleanData.bookmarks : [];
+    cleanData.sectionOrder = Array.isArray(cleanData.sectionOrder) ? cleanData.sectionOrder : ['ALL'];
+    if (!cleanData.sectionOrder.includes('ALL')) cleanData.sectionOrder.unshift('ALL');
+    cleanData._lastSaved = now;
+
+    const dataStr = JSON.stringify(cleanData, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Bookmarks_DATA.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    return;
+  }
+
+  // ========================================================
+  // GLOBAL HUB MODE: Master multi-tab container export
+  // ========================================================
   const masterBackup = {};
   const scripts = document.querySelectorAll('script[type="application/json"][id]');
   scripts.forEach(script => {
     const id = script.id;
     let foundData = null;
 
-    // Check live in-memory window state matching id first
+    if (id === 'RDData') {
+      if (typeof window !== 'undefined' && window.RD && typeof window.RD.state === 'function') {
+        foundData = window.RD.state();
+      } else if (typeof window !== 'undefined' && window.RDState) {
+        foundData = window.RDState.rd || window.RDState;
+      }
+    }
+
     const candidateKeys = [
       id,
       id + 'State',
@@ -679,21 +980,27 @@ function TriggerExport() {
       'App' + id,
       'AppState',
       'BookmarkState',
-      'NotesState'
+      'NotesState',
+      'ProfessorsState',
+      'RDState'
     ];
 
-    for (const key of candidateKeys) {
-      if (typeof window !== 'undefined' && window[key] && typeof window[key] === 'object' && Object.keys(window[key]).length > 0) {
-        if (
-          key === id ||
-          key === id + 'State' ||
-          key === id.replace(/Data$/, '') + 'State' ||
-          (id === 'LandingPageData' && key === 'AppState') ||
-          (id === 'Bookmarks' && key === 'BookmarkState') ||
-          (id === 'NotesData' && key === 'NotesState')
-        ) {
-          foundData = window[key];
-          break;
+    if (!foundData) {
+      for (const key of candidateKeys) {
+        if (typeof window !== 'undefined' && window[key] && typeof window[key] === 'object' && Object.keys(window[key]).length > 0) {
+          if (
+            key === id ||
+            key === id + 'State' ||
+            key === id.replace(/Data$/, '') + 'State' ||
+            (id === 'LandingPageData' && key === 'AppState') ||
+            (id === 'Bookmarks' && key === 'BookmarkState') ||
+            (id === 'NotesData' && key === 'NotesState') ||
+            (id === 'ProfessorsData' && key === 'ProfessorsState') ||
+            (id === 'RDData' && key === 'RDState')
+          ) {
+            foundData = (id === 'RDData' && window[key].rd) ? window[key].rd : window[key];
+            break;
+          }
         }
       }
     }
@@ -701,6 +1008,30 @@ function TriggerExport() {
     if (!foundData) {
       try {
         foundData = JSON.parse(script.textContent);
+      } catch (e) { }
+    }
+
+    if ((!foundData || !foundData.professors || foundData.professors.length === 0) && id === 'ProfessorsData') {
+      try {
+        const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('profftrack:v1') : null;
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed && Array.isArray(parsed.professors) && parsed.professors.length > 0) {
+            foundData = parsed;
+          }
+        }
+      } catch (e) { }
+    }
+
+    if ((!foundData || !foundData.items || foundData.items.length === 0) && id === 'RDData') {
+      try {
+        const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('rd_library_v1') : null;
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed && typeof parsed === 'object') {
+            foundData = parsed.rd || parsed;
+          }
+        }
       } catch (e) { }
     }
 
@@ -864,7 +1195,15 @@ function syncAllStatesToDOM(doc) {
     const id = script.id;
     let foundData = null;
 
-    // 1. Check window state matching id (e.g. window.BookmarkState, window.NotesState, window.AppState, window[id])
+    // 1. Check window state matching id (e.g. window.BookmarkState, window.NotesState, window.AppState, window.RD, window[id])
+    if (id === 'RDData') {
+      if (window.RD && typeof window.RD.state === 'function') {
+        foundData = window.RD.state();
+      } else if (window.RDState) {
+        foundData = window.RDState.rd || window.RDState;
+      }
+    }
+
     const candidateKeys = [
       id,
       id + 'State',
@@ -872,21 +1211,27 @@ function syncAllStatesToDOM(doc) {
       'App' + id,
       'AppState',
       'BookmarkState',
-      'NotesState'
+      'NotesState',
+      'ProfessorsState',
+      'RDState'
     ];
 
-    for (const key of candidateKeys) {
-      if (window[key] && typeof window[key] === 'object' && Object.keys(window[key]).length > 0) {
-        if (
-          key === id ||
-          key === id + 'State' ||
-          key === id.replace(/Data$/, '') + 'State' ||
-          (id === 'LandingPageData' && key === 'AppState') ||
-          (id === 'Bookmarks' && key === 'BookmarkState') ||
-          (id === 'NotesData' && key === 'NotesState')
-        ) {
-          foundData = window[key];
-          break;
+    if (!foundData) {
+      for (const key of candidateKeys) {
+        if (window[key] && typeof window[key] === 'object' && Object.keys(window[key]).length > 0) {
+          if (
+            key === id ||
+            key === id + 'State' ||
+            key === id.replace(/Data$/, '') + 'State' ||
+            (id === 'LandingPageData' && key === 'AppState') ||
+            (id === 'Bookmarks' && key === 'BookmarkState') ||
+            (id === 'NotesData' && key === 'NotesState') ||
+            (id === 'ProfessorsData' && key === 'ProfessorsState') ||
+            (id === 'RDData' && key === 'RDState')
+          ) {
+            foundData = (id === 'RDData' && window[key].rd) ? window[key].rd : window[key];
+            break;
+          }
         }
       }
     }
@@ -894,13 +1239,14 @@ function syncAllStatesToDOM(doc) {
     // 2. Check localStorage cache for latest edits only if not found in live window state
     if (!foundData) {
       const cacheKeys = [id + '_Local_Cache', id.replace(/Data$/, '') + '_Local_Cache', id];
+      if (id === 'RDData') cacheKeys.push('rd_library_v1');
       for (const ck of cacheKeys) {
         try {
           const cached = localStorage.getItem(ck);
           if (cached) {
             const parsed = JSON.parse(cached);
             if (parsed && typeof parsed === 'object') {
-              foundData = parsed;
+              foundData = (id === 'RDData' && parsed.rd) ? parsed.rd : parsed;
               break;
             }
           }
@@ -921,6 +1267,8 @@ function syncAllStatesToDOM(doc) {
           if (window.NotesState && window.NotesState.vaultMeta) {
             window.NotesState.vaultMeta.lastSaved = now;
           }
+        } else if (id === 'RDData') {
+          cleanData.updatedAt = new Date().toISOString();
         } else {
           cleanData._lastSaved = now;
           if (id === 'Bookmarks' && window.BookmarkState) {
@@ -988,7 +1336,9 @@ async function SaveAndDownloadApp() {
       '00_Components/03_Scrollbar.js',
       '00_Components/04_Import_Export.js',
       '00_Components/05_Save_Button.js',
-      '00_Components/06_Color_Selector.js'
+      '00_Components/06_Color_Selector.js',
+      '00_Components/07_Blob_Store.js',
+      '00_Components/08_Research_Library.js'
     ];
 
     const landingFiles = [
@@ -1020,6 +1370,8 @@ async function SaveAndDownloadApp() {
     const noteFiles = [
       '03_Notes/00_State.js',
       '03_Notes/02_Utils.js',
+      '03_Notes/Writing_Engine/BibTeX_Parser.js',
+      '03_Notes/03_Library.js',
       '03_Notes/Writing_Engine/Bullet_Engine.js',
       '03_Notes/Writing_Engine/Block_Engine.js',
       '03_Notes/Writing_Engine/Numbering_Engine.js',
@@ -1041,6 +1393,8 @@ async function SaveAndDownloadApp() {
       '03_Notes/B_Editor_View/01_Blocks/Text_Block/Text_Widgets.js',
       '03_Notes/B_Editor_View/01_Blocks/Text_Block/Text_Parser.js',
       '03_Notes/B_Editor_View/01_Blocks/Text_Block/Text_Keyboard.js',
+      '03_Notes/B_Editor_View/01_Blocks/Text_Block/Cite_Autocomplete.js',
+      '03_Notes/B_Editor_View/01_Blocks/Text_Block/Cite_Preview.js',
       '03_Notes/B_Editor_View/01_Blocks/Text_Block/Text_Block_Markdown.js',
       '03_Notes/B_Editor_View/01_Blocks/Text_Block.js',
       '03_Notes/B_Editor_View/01_Blocks/Equation_Block.js',
@@ -1060,6 +1414,7 @@ async function SaveAndDownloadApp() {
       '03_Notes/B_Editor_View/03_Floating_ToolBar/02_Note_Fonts.js',
       '03_Notes/B_Editor_View/03_Floating_ToolBar/03_Font_Size.js',
       '03_Notes/B_Editor_View/03_Floating_ToolBar/04_Macros_Modal.js',
+      '03_Notes/B_Editor_View/03_Floating_ToolBar/05_Citation_Style.js',
       '03_Notes/B_Editor_View/02_Floating_Toolbar.js',
       '03_Notes/B_Editor_View/03_Study_View.js',
       '03_Notes/B_Editor_View/04_LaTeX_Editor.js',
@@ -1069,12 +1424,74 @@ async function SaveAndDownloadApp() {
       '03_Notes/A_Notes_Card_View/01_Navbar/04_Graph_Toggle.js',
       '03_Notes/A_Notes_Card_View/01_Navbar/05_Delete_Button.js',
       '03_Notes/A_Notes_Card_View/01_Navbar/06_Add_Edit_Button.js',
+      '03_Notes/A_Notes_Card_View/01_Navbar/07_Library_Button.js',
       '03_Notes/A_Notes_Card_View/01_Navbar.js',
       '03_Notes/A_Notes_Card_View/02_Notes_Card.js',
       '03_Notes/A_Notes_Card_View/A_Notes_Card_View.js',
+      '03_Notes/C_Graph_View/Graph_Data.js',
+      '03_Notes/C_Graph_View/Graph_Physics.js',
       '03_Notes/C_Graph_View/Graph_View.js',
       '03_Notes/01_Header.js',
       '03_Notes/Notes.js'
+    ];
+
+    const professorFiles = [
+      '04_Professors/00_State.js',
+      '04_Professors/01_Utils.js',
+      '04_Professors/02_Styles.js',
+      '04_Professors/03_Seed_Data.js',
+      '04_Professors/01_HTML_Page/01_Header.js',
+      '04_Professors/01_HTML_Page/02_Toolbar.js',
+      '04_Professors/01_HTML_Page/03_Theme_Toggle.js',
+      '04_Professors/01_HTML_Page/04_Footer.js',
+      '04_Professors/02_Dashboard/01_Stats_Bar.js',
+      '04_Professors/02_Dashboard/02_Resume_Section.js',
+      '04_Professors/02_Dashboard/03_Heatmap.js',
+      '04_Professors/02_Dashboard/04_Tag_Bar.js',
+      '04_Professors/03_Professor_List/01_Prof_Cards.js',
+      '04_Professors/03_Professor_List/02_List_Actions.js',
+      '04_Professors/04_Modals/01_Modal_Core.js',
+      '04_Professors/04_Modals/02_Professor_Modal.js',
+      '04_Professors/04_Modals/03_Paper_Modal.js',
+      '04_Professors/04_Modals/04_Journal_Modal.js',
+      '04_Professors/04_Modals/05_Journal_Browser.js',
+      '04_Professors/04_Modals/06_Compare_Modal.js',
+      '04_Professors/04_Modals/07_Bulk_Add_Modal.js',
+      '04_Professors/04_Modals/08_Paste_Import_Modal.js',
+      '04_Professors/04_Modals/09_Shortcuts_Modal.js',
+      '04_Professors/05_Data_IO/01_Save_Button.js',
+      '04_Professors/05_Data_IO/02_Export.js',
+      '04_Professors/05_Data_IO/03_Import.js',
+      '04_Professors/Professors.js'
+    ];
+
+    const rdFiles = [
+      '05_R&D/00_State.js',
+      '05_R&D/01_Utils.js',
+      '05_R&D/02_Styles.js',
+      '05_R&D/03_Seed_Data.js',
+      '05_R&D/01_HTML_Page/01_Header.js',
+      '05_R&D/01_HTML_Page/02_Navbar.js',
+      '05_R&D/01_HTML_Page/03_Toolbar.js',
+      '05_R&D/01_HTML_Page/04_Footer.js',
+      '05_R&D/02_Bibtex_Doi/01_Bibtex.js',
+      '05_R&D/02_Bibtex_Doi/02_Doi.js',
+      '05_R&D/03_Views/01_List_View.js',
+      '05_R&D/03_Views/02_Timeline_View.js',
+      '05_R&D/03_Views/03_Map_View.js',
+      '05_R&D/03_Views/04_Group_View.js',
+      '05_R&D/04_Modals/01_Modal_Core.js',
+      '05_R&D/04_Modals/02_Item_Modal.js',
+      '05_R&D/04_Modals/03_Drawer.js',
+      '05_R&D/04_Modals/04_Queue_Panel.js',
+      '05_R&D/04_Modals/05_Stats_Popover.js',
+      '05_R&D/04_Modals/06_Health_Modal.js',
+      '05_R&D/04_Modals/07_Help_Modal.js',
+      '05_R&D/04_Modals/08_Link_Modal.js',
+      '05_R&D/05_Data_IO/01_Save_Button.js',
+      '05_R&D/05_Data_IO/02_Export.js',
+      '05_R&D/05_Data_IO/03_Import.js',
+      '05_R&D/RD.js'
     ];
 
     const bundleGroup = async (files) => {
@@ -1083,11 +1500,13 @@ async function SaveAndDownloadApp() {
       return out;
     };
 
-    const [bundledComponents, bundledLanding, bundledBookmarks, bundledNotes] = await Promise.all([
+    const [bundledComponents, bundledLanding, bundledBookmarks, bundledNotes, bundledProfessors, bundledRD] = await Promise.all([
       bundleGroup(componentFiles),
       bundleGroup(landingFiles),
       bundleGroup(bookmarkFiles),
-      bundleGroup(noteFiles)
+      bundleGroup(noteFiles),
+      bundleGroup(professorFiles),
+      bundleGroup(rdFiles)
     ]);
 
     const threeImportLine = 'imp' + 'ort * as THREE from \'https://unpkg.com/three@0.160.0/build/three.module.js\';';
@@ -1127,6 +1546,22 @@ ${bundledNotes}
 }
 
 /* ==========================================================================
+   PROFESSORS PAGE MODULE (ProffTrack)
+   ========================================================================== */
+function LoadProfessorsPage() {
+${bundledProfessors}
+  if (typeof initProfessorsApp === 'function') initProfessorsApp();
+}
+
+/* ==========================================================================
+   R&D LIBRARY MODULE
+   ========================================================================== */
+function LoadRDPage() {
+${bundledRD}
+  if (typeof initRDApp === 'function') initRDApp();
+}
+
+/* ==========================================================================
    MASTER ROUTER
    ========================================================================== */
 function handleRoute() {
@@ -1139,6 +1574,10 @@ function handleRoute() {
     LoadBookmarkPage();
   } else if (lowerHash.startsWith('#notes')) {
     LoadNotesPage();
+  } else if (lowerHash.startsWith('#professors')) {
+    LoadProfessorsPage();
+  } else if (lowerHash.startsWith('#rd') || lowerHash.startsWith('#r&d')) {
+    LoadRDPage();
   } else {
     LoadLandingPage();
   }
@@ -1155,7 +1594,10 @@ handleRoute();
         s.textContent.includes('handleRoute') ||
         s.textContent.includes('Bookmarks.js') ||
         s.textContent.includes('Main.js') ||
-        s.textContent.includes('initLandingPage')
+        s.textContent.includes('initLandingPage') ||
+        s.textContent.includes('RD.js') ||
+        s.textContent.includes('R&D.js') ||
+        s.textContent.includes('initRDApp')
       ) {
         const inlineScript = document.createElement('script');
         inlineScript.type = 'module';
@@ -1583,7 +2025,8 @@ const sharedComponentFiles = [
 
 const tabHandlerFiles = [
   '02_Bookmarks/Tab_Save_Handler.js',
-  '02_Bookmarks/Tab_Logo_Handler.js'
+  '02_Bookmarks/Tab_Logo_Handler.js',
+  '02_Bookmarks/Tab_Import_Export_Handler.js'
 ];
 
 const tabModuleFiles = [
@@ -1638,6 +2081,7 @@ ${bundledTab}
   if (typeof initBookmarksApp === 'function') initBookmarksApp();
   if (typeof InitTabSaveOverride === 'function') InitTabSaveOverride();
   if (typeof InitTabLogoOverride === 'function') InitTabLogoOverride();
+  if (typeof InitTabImportExportOverride === 'function') InitTabImportExportOverride();
 }
 
 /* ==========================================================================
@@ -1759,6 +2203,180 @@ function InitTabLogoOverride() {
       window.location.hash = '';
     }
   });
+}
+
+
+/* --- 02_Bookmarks/Tab_Import_Export_Handler.js --- */
+// Per-tab Import/Export handler for 02_Bookmarks/Bookmarks.html.
+//
+// Self-contained on purpose: not listed in the all-in-one bundler, not needed
+// by Index.html. Its only job: on the Bookmarks.html page, the Import/Export
+// buttons operate strictly on Bookmarks data ('Bookmarks_DATA.json').
+// It is also resilient: if a user uploads a full 'Local_HUB_DATA.json' backup,
+// it automatically extracts the Bookmarks slice.
+
+// Dedicated Bookmarks tab export
+function TriggerTabExport() {
+  let foundData = null;
+
+  if (typeof window !== 'undefined' && window.BookmarkState && typeof window.BookmarkState === 'object') {
+    foundData = window.BookmarkState;
+  }
+
+  if (!foundData) {
+    const script = document.getElementById('Bookmarks');
+    if (script && script.textContent.trim()) {
+      try {
+        foundData = JSON.parse(script.textContent);
+      } catch (e) { }
+    }
+  }
+
+  if (!foundData) {
+    try {
+      const cached = typeof localStorage !== 'undefined' ? localStorage.getItem('Bookmarks_Local_Cache') : null;
+      if (cached) {
+        foundData = JSON.parse(cached);
+      }
+    } catch (e) { }
+  }
+
+  const now = Date.now();
+  const rawBookmarks = foundData?.bookmarks || foundData?.bookmark || [];
+  let secOrder = Array.isArray(foundData?.sectionOrder) ? [...foundData.sectionOrder] : ['ALL'];
+  if (!secOrder.includes('ALL')) secOrder.unshift('ALL');
+
+  const cleanData = {
+    bookmarks: Array.isArray(rawBookmarks) ? rawBookmarks : [],
+    sectionOrder: secOrder,
+    _lastSaved: now
+  };
+
+  const dataStr = JSON.stringify(cleanData, null, 2);
+  const blob = new Blob([dataStr], { type: 'application/json;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'Bookmarks_DATA.json';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// Dedicated Bookmarks tab import with multi-tab envelope resilience
+function TriggerTabImport(onSuccess = null) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const importedData = JSON.parse(event.target.result);
+        if (!importedData || typeof importedData !== 'object') {
+          throw new Error('Imported file does not contain a valid JSON object.');
+        }
+
+        // Resilient extraction: direct bookmarks vs global multi-tab envelope
+        let targetData = null;
+        if (importedData.Bookmarks && typeof importedData.Bookmarks === 'object') {
+          targetData = importedData.Bookmarks;
+        } else if (Array.isArray(importedData.bookmarks) || importedData.sectionOrder) {
+          targetData = importedData;
+        } else if (Array.isArray(importedData.bookmark)) {
+          targetData = { bookmarks: importedData.bookmark, sectionOrder: ['ALL'] };
+        } else {
+          throw new Error('No bookmarks data found in this file.');
+        }
+
+        const now = Date.now();
+        const bms = Array.isArray(targetData.bookmarks) ? targetData.bookmarks : (Array.isArray(targetData.bookmark) ? targetData.bookmark : []);
+        let secOrder = Array.isArray(targetData.sectionOrder) ? [...targetData.sectionOrder] : ['ALL'];
+        if (!secOrder.includes('ALL')) secOrder.unshift('ALL');
+
+        const cleanData = {
+          bookmarks: bms,
+          sectionOrder: secOrder,
+          _lastSaved: now
+        };
+
+        // 1. Sync to DOM script block
+        let scriptBlock = document.getElementById('Bookmarks');
+        if (!scriptBlock) {
+          scriptBlock = document.createElement('script');
+          scriptBlock.type = 'application/json';
+          scriptBlock.id = 'Bookmarks';
+          document.head.appendChild(scriptBlock);
+        }
+        scriptBlock.textContent = JSON.stringify(cleanData, null, 2);
+
+        // 2. Sync to in-memory state
+        if (typeof window !== 'undefined') {
+          if (window.BookmarkState) {
+            window.BookmarkState.bookmarks = cleanData.bookmarks;
+            window.BookmarkState.sectionOrder = cleanData.sectionOrder;
+            window.BookmarkState._lastSaved = now;
+          } else {
+            window.BookmarkState = cleanData;
+          }
+        }
+
+        // 3. Save to localStorage with recovery buffer
+        try {
+          if (typeof localStorage !== 'undefined') {
+            const cachePayload = {
+              ...cleanData,
+              _unsaved: true,
+              _savedAt: now
+            };
+            localStorage.setItem('Bookmarks_Local_Cache', JSON.stringify(cachePayload));
+          }
+        } catch (err) {
+          console.warn('[Bookmarks Import] Failed to cache in localStorage:', err);
+        }
+
+        alert('Bookmarks imported successfully! Remember to click SAVE to make it permanent in your HTML.');
+
+        if (onSuccess) {
+          onSuccess(cleanData);
+        } else {
+          window.location.reload();
+        }
+      } catch (err) {
+        alert('Invalid JSON file: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+// Swaps the shared Import/Export bindings for the local copies above.
+// Called after initBookmarksApp() mounts the header.
+function InitTabImportExportOverride() {
+  const importBtn = document.getElementById('btn-import');
+  const exportBtn = document.getElementById('btn-export');
+
+  if (exportBtn) {
+    const clone = exportBtn.cloneNode(true);
+    exportBtn.replaceWith(clone);
+    clone.addEventListener('click', (e) => {
+      e.preventDefault();
+      TriggerTabExport();
+    });
+  }
+
+  if (importBtn) {
+    const clone = importBtn.cloneNode(true);
+    importBtn.replaceWith(clone);
+    clone.addEventListener('click', (e) => {
+      e.preventDefault();
+      TriggerTabImport(null);
+    });
+  }
 }
 
 
@@ -2011,6 +2629,8 @@ function GetHeaderHTML() {
         </div>
 
         <div class="header-right">
+          ${GetImportButtonHTML()}
+          ${GetExportButtonHTML()}
           ${GetSaveButtonHTML()}
           ${GetThemeToggleHTML()}
         </div>
@@ -2023,6 +2643,7 @@ function InitHeader(container) {
     container.innerHTML = GetHeaderHTML();
   }
   InitLogoLogic();
+  InitImportExport();
   InitThemeToggleLogic();
 }
 
@@ -4378,6 +4999,7 @@ if (typeof window !== 'undefined') {
   if (typeof initBookmarksApp === 'function') initBookmarksApp();
   if (typeof InitTabSaveOverride === 'function') InitTabSaveOverride();
   if (typeof InitTabLogoOverride === 'function') InitTabLogoOverride();
+  if (typeof InitTabImportExportOverride === 'function') InitTabImportExportOverride();
 }
 
 /* ==========================================================================

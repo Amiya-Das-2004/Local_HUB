@@ -1336,8 +1336,260 @@
 <script id="app-data" type="application/json">
 {
   "version": 1,
-  "updatedAt": null,
-  "professors": []
+  "updatedAt": "2026-10-01T10:58:50.537Z",
+  "professors": [
+    {
+      "id": "p_mun3mspe9a79ms",
+      "name": "Dr. Aleksander Madry",
+      "title": "Professor",
+      "department": "EECS · CSAIL",
+      "college": "Massachusetts Institute of Technology (MIT)",
+      "qsRank": 1,
+      "areas": [
+        "Adversarial ML",
+        "Robust Optimization"
+      ],
+      "email": "",
+      "website": "https://madry-lab.ml/",
+      "photo": "",
+      "bio": "Known for foundational work on adversarial robustness and building reliable, understandable ML systems.",
+      "createdAt": "2026-08-20T19:58:24.722Z",
+      "papers": [
+        {
+          "id": "pp_mun3mspe0fokk0",
+          "title": "Towards Deep Learning Models Resistant to Adversarial Attacks",
+          "authors": "Madry, Makelov, Schmidt, Tsipras, Vladu",
+          "year": 2018,
+          "venue": "ICLR",
+          "url": "https://arxiv.org/pdf/1706.06083",
+          "readDate": "2026-09-08",
+          "startedOn": "2026-09-06",
+          "finishedOn": "2026-09-08",
+          "rating": 5,
+          "tags": [
+            "adversarial",
+            "robustness"
+          ],
+          "summary": "Introduces PGD (projected gradient descent) as a universal first-order adversary and frames robust optimization for deep nets.",
+          "notes": "Re-read section 4 before the seminar; the attack/defense framing still holds up.",
+          "createdAt": "2026-09-08T19:58:24.722Z",
+          "status": "read"
+        }
+      ]
+    },
+    {
+      "id": "p_mun3mspe97i4va",
+      "name": "Dr. Christopher D. Manning",
+      "title": "Professor",
+      "department": "Linguistics & Computer Science",
+      "college": "Stanford University",
+      "qsRank": 6,
+      "areas": [
+        "NLP",
+        "Computational Linguistics"
+      ],
+      "email": "",
+      "website": "https://nlp.stanford.edu/~manning/",
+      "photo": "",
+      "bio": "Author of classic NLP textbooks; focuses on representation learning for language and human language understanding.",
+      "createdAt": "2026-08-25T19:58:24.722Z",
+      "papers": [
+        {
+          "id": "pp_mun3msper22dx6",
+          "title": "GloVe: Global Vectors for Word Representation",
+          "authors": "Pennington, Socher, Manning",
+          "year": 2014,
+          "venue": "EMNLP",
+          "url": "https://nlp.stanford.edu/pdfs/glove.pdf",
+          "readDate": "2026-08-30",
+          "startedOn": "2026-08-27",
+          "finishedOn": "2026-08-30",
+          "rating": 4,
+          "tags": [
+            "embeddings",
+            "word-vectors"
+          ],
+          "summary": "Learns word embeddings by combining global matrix factorization statistics with local context-window objectives.",
+          "notes": "Compare against word2vec in the survey I am writing.",
+          "createdAt": "2026-08-30T19:58:24.722Z",
+          "status": "read"
+        },
+        {
+          "id": "pp_mun3mspei9vp1m",
+          "title": "A Fast and Accurate Dependency Parser using Neural Networks",
+          "authors": "Chen, Manning",
+          "year": 2014,
+          "venue": "EMNLP",
+          "url": "https://aclanthology.org/D14-1082.pdf",
+          "readDate": null,
+          "startedOn": "2026-09-24",
+          "finishedOn": null,
+          "rating": 4,
+          "tags": [
+            "parsing",
+            "neural-nets"
+          ],
+          "summary": "Greedy transition-based parsing with dense features and embeddings — near state-of-the-art speed at the time.",
+          "notes": "",
+          "status": "reading",
+          "journal": [
+            {
+              "d": "2026-09-24",
+              "t": "Started as the commute read — §2 dense-feature arc-standard system is surprisingly readable."
+            }
+          ],
+          "createdAt": "2026-09-17T19:58:24.722Z"
+        }
+      ]
+    },
+    {
+      "id": "p_mun3mspe6gmcqv",
+      "name": "Dr. Christopher Ré",
+      "title": "Professor",
+      "department": "Computer Science",
+      "college": "Stanford University",
+      "qsRank": 6,
+      "areas": [
+        "Information Extraction",
+        "ML Systems"
+      ],
+      "email": "",
+      "website": "",
+      "photo": "",
+      "bio": "Leads the Hazy Research group; works on data-centric AI and efficient foundation-model systems.",
+      "createdAt": "2026-09-01T19:58:24.722Z",
+      "papers": [
+        {
+          "id": "pp_mun3mspeva3run",
+          "title": "SpanBERT: Improving Pre-training by Representing and Predicting Spans",
+          "authors": "Joshi, Chen, Liu, Weld, Zettlemoyer, Ré",
+          "year": 2020,
+          "venue": "TACL",
+          "url": "https://arxiv.org/pdf/1907.10529",
+          "readDate": "2026-09-11",
+          "startedOn": "2026-09-09",
+          "finishedOn": "2026-09-11",
+          "rating": 4,
+          "tags": [
+            "pretraining",
+            "qa"
+          ],
+          "summary": "Span-masking + span-boundary objective improves transfer to extractive QA and relation extraction.",
+          "notes": "",
+          "createdAt": "2026-09-11T19:58:24.722Z",
+          "status": "read"
+        },
+        {
+          "id": "pp_mun3mspe7wl74v",
+          "title": "FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness",
+          "authors": "Dao, Fu, Ermon, Rudra, Ré",
+          "year": 2022,
+          "venue": "NeurIPS",
+          "url": "https://arxiv.org/pdf/2205.14135",
+          "readDate": "2026-09-29",
+          "startedOn": "2026-09-25",
+          "finishedOn": "2026-09-29",
+          "rating": 5,
+          "tags": [
+            "efficiency",
+            "attention"
+          ],
+          "summary": "Recomputes attention tiles in SRAM instead of materializing the N×N matrix — exact attention with far less memory traffic.",
+          "notes": "Great IO-complexity framing; try sketching the tiling diagram from memory.",
+          "journal": [
+            {
+              "d": "2026-09-25",
+              "t": "Skimmed §2 — the IO-cost framing clicks once you count HBM reads instead of FLOPs."
+            },
+            {
+              "d": "2026-09-29",
+              "t": "Finished + redrew the tiling diagram from memory; got the softmax rescale right on the second try."
+            }
+          ],
+          "createdAt": "2026-09-23T19:58:24.722Z",
+          "status": "read"
+        },
+        {
+          "id": "pp_mun3mspel9qhyi",
+          "title": "Scaling Data-Constrained Language Models",
+          "authors": "Muennighoff, Rush, Barak, et al.",
+          "year": 2023,
+          "venue": "arXiv",
+          "url": "https://arxiv.org/abs/2305.16264",
+          "readDate": null,
+          "rating": 3,
+          "tags": [
+            "scaling",
+            "data"
+          ],
+          "summary": "Asks how far LMs can scale when training data is bounded — introduces epoch-reuse scaling laws.",
+          "notes": "Queued for the data-centric reading group.",
+          "status": "wishlist",
+          "createdAt": "2026-09-26T19:58:24.722Z"
+        }
+      ]
+    },
+    {
+      "id": "p_mun3mspfvm1jmc",
+      "name": "Dr. Yoshua Bengio",
+      "title": "Professor",
+      "department": "MILA · Computer Science",
+      "college": "Université de Montréal",
+      "qsRank": 159,
+      "areas": [
+        "Deep Learning",
+        "Machine Learning Theory"
+      ],
+      "email": "",
+      "website": "",
+      "photo": "",
+      "bio": "Turing Award laureate; long-standing research on representation learning, generative models and the science of deep learning.",
+      "createdAt": "2026-08-10T19:58:24.723Z",
+      "papers": [
+        {
+          "id": "pp_mun3mspf486e83",
+          "title": "A Neural Probabilistic Language Model",
+          "authors": "Bengio, Ducharme, Vincent, Jauvin",
+          "year": 2003,
+          "venue": "JMLR",
+          "url": "https://www.jmlr.org/papers/volume3/bengio03a/bengio03a.pdf",
+          "readDate": "2026-09-03",
+          "startedOn": "2026-08-31",
+          "finishedOn": "2026-09-03",
+          "rating": 5,
+          "tags": [
+            "language-models",
+            "classic"
+          ],
+          "summary": "The original neural LM: learns distributed word features and a probability function simultaneously.",
+          "notes": "Amazing how much of modern LLMs is already visible here.",
+          "createdAt": "2026-09-03T19:58:24.723Z",
+          "status": "read"
+        },
+        {
+          "id": "pp_mun3mspft41ouk",
+          "title": "Neural Machine Translation by Jointly Learning to Align and Translate",
+          "authors": "Bahdanau, Cho, Bengio",
+          "year": 2015,
+          "venue": "ICLR",
+          "url": "https://arxiv.org/pdf/1409.0473",
+          "readDate": "2026-09-28",
+          "startedOn": "2026-09-26",
+          "finishedOn": "2026-09-28",
+          "rating": 5,
+          "tags": [
+            "attention",
+            "translation"
+          ],
+          "summary": "Introduced additive attention for NMT — the decoder softly aligns to source words as it translates.",
+          "notes": "",
+          "createdAt": "2026-09-20T19:58:24.723Z",
+          "status": "read"
+        }
+      ]
+    }
+  ],
+  "theme": "light"
 }
 </script>
 

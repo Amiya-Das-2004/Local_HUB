@@ -58,7 +58,7 @@ export class Orb {
     this.Vel = new THREE.Vector3((Math.random() - 0.5) * 0.4, (Math.random() - 0.5) * 0.4, 0);
     this.Radius = 3.5;
     // Scaling The Orb When Hovering
-    this.MaxScale = 1.5;
+    this.MaxScale = 1.1;
 
     this.Group = new THREE.Group();
     this.Group.position.copy(this.Pos);

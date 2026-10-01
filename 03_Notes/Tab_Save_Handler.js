@@ -227,6 +227,8 @@ const tabModuleFiles = [
   '03_Notes/A_Notes_Card_View/01_Navbar.js',
   '03_Notes/A_Notes_Card_View/02_Notes_Card.js',
   '03_Notes/A_Notes_Card_View/A_Notes_Card_View.js',
+  '03_Notes/C_Graph_View/Graph_Data.js',
+  '03_Notes/C_Graph_View/Graph_Physics.js',
   '03_Notes/C_Graph_View/Graph_View.js',
   '03_Notes/01_Header.js',
   '03_Notes/Notes.js'

@@ -170,6 +170,12 @@ import {
   ClosePalette,
   InitGlobalKeys
 } from './04_Modals/07_Help_Modal.js';
+import {
+  GetLinkFloatingPanelHTML,
+  InitLinkModal,
+  OpenLinkFloatingPanel,
+  CloseLinkFloatingPanel
+} from './04_Modals/08_Link_Modal.js';
 
 export function GetAppHTML() {
   return `
@@ -190,7 +196,7 @@ export function GetAppHTML() {
           <div class="rd-canvas-wrap" id="wrap-map">
             <div class="rd-canvas-world" id="world-map"></div>
             ${GetCanvasControlsHTML('map')}
-            <div class="rd-canvas-legend">${ICONS.network} Drag from a dot to link &middot; Shift-drag selects &middot; Click a link to remove it</div>
+            <div class="rd-canvas-legend">${ICONS.network} Drag from a dot to link &middot; Shift-drag selects &middot; Click line or badge to edit note & settings</div>
           </div>
         </section>
         <section class="rd-tab-panel" id="panel-group" aria-label="Groups view">
@@ -212,6 +218,7 @@ export function GetAppHTML() {
     <div id="rd-palette-root"></div>
     <div id="rd-modal-root"></div>
     <div id="rd-confirm-root"></div>
+    ${GetLinkFloatingPanelHTML()}
   `;
 }
 
@@ -286,20 +293,13 @@ export async function CopyBibtexForItem(id) {
 
 export function InitDelegatedEvents() {
   document.addEventListener('click', async (e) => {
+    const linkBadge = e.target.closest('.rd-link-badge');
     const linkPath = e.target.closest('.rd-link-path');
-    if (linkPath && linkPath.dataset && linkPath.dataset.linkId) {
-      const link = GetLinks().find((l) => l.id === linkPath.dataset.linkId);
-      if (link) {
-        const snapshot = JSON.parse(JSON.stringify(state.rd));
-        DeleteLink(link.id);
-        ShowToast('info', 'Link removed', 'Connections delete on click.', {
-          actionLabel: 'Undo',
-          duration: 6500,
-          onAction: () => { ReplaceAll(snapshot); RenderAll(); }
-        });
-        RenderMap();
-        return;
-      }
+    const linkEl = linkBadge || linkPath;
+    if (linkEl && linkEl.dataset && linkEl.dataset.linkId) {
+      e.stopPropagation();
+      OpenLinkFloatingPanel(linkEl.dataset.linkId);
+      return;
     }
 
     const actionEl = e.target.closest('[data-action]');
@@ -858,6 +858,7 @@ export function initRDApp(container) {
   AttachCanvasEvents('map');
   AttachCanvasEvents('group');
   InitGlobalKeys();
+  InitLinkModal();
   ApplyTheme();
 
   const modalRoot = document.getElementById('rd-modal-root');
@@ -879,6 +880,9 @@ export function initRDApp(container) {
     }, 650);
   }
 
+  window.openLinkFloatingPanel = OpenLinkFloatingPanel;
+  window.closeLinkFloatingPanel = CloseLinkFloatingPanel;
+
   window.RD = {
     version: '1.8.0',
     state: () => state.rd,
@@ -889,6 +893,7 @@ export function initRDApp(container) {
     healthCheck: (filter) => OpenHealthModal(filter),
     fitView: (view) => FitView(view || CurrentTab()),
     showHelp: () => ShowHelpPanel(),
+    openLinkPanel: (id) => OpenLinkFloatingPanel(id),
     onNotes: null
   };
 
@@ -903,7 +908,9 @@ export function initRDApp(container) {
     EnsureMinimap,
     ApplyView,
     SwitchTab,
-    OpenDuplicatesModal
+    OpenDuplicatesModal,
+    OpenLinkFloatingPanel,
+    CloseLinkFloatingPanel
   };
 
   console.info('%c R&D Library v1.8.0 ready — window.RD is available ', 'background:#8b6dff;color:#fff;padding:2px 8px;border-radius:4px;');

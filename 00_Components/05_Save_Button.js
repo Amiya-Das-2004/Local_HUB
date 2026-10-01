@@ -161,13 +161,17 @@ function syncAllStatesToDOM(doc) {
           }
         }
 
-        script.textContent = JSON.stringify(cleanData, null, 2);
+        // \u003c-escape `<` so vault data (note content can contain markup)
+        // can never close the host <script> block in the standalone file.
+        const safeJson = JSON.stringify(cleanData, null, 2).replace(/</g, '\\u003c');
+
+        script.textContent = safeJson;
 
         // Also update live in-memory document script tag
         if (typeof document !== 'undefined') {
           const liveScript = document.getElementById(id);
           if (liveScript && liveScript !== script) {
-            liveScript.textContent = JSON.stringify(cleanData, null, 2);
+            liveScript.textContent = safeJson;
           }
         }
       } catch (e) { }
@@ -206,6 +210,12 @@ export async function SaveAndDownloadApp() {
         code = code.replace(/^\s*export\s*\{[\s\S]*?\};?\s*$/gm, '');
         code = code.replace(/^\s*export\s+default\s+/gm, '');
         code = code.replace(/^\s*export\s+(async\s+)?(function|const|let|var|class)/gm, (m, p1, p2) => (p1 || '') + p2);
+        // Escape literal script-closers so embedded sources (templates in
+        // 04_Professors/Professors.js, the per-tab Data_IO builders, …) cannot
+        // terminate the host <script> block of the generated standalone.
+        // Source-level escape only: `\/` evaluates to `/`, so runtime strings
+        // and the per-tab builders' own generated HTML stay byte-identical.
+        code = code.replace(/<\/script/gi, '<\\/script');
         return `\n/* --- ${cleanPath} --- */\n${code}\n`;
       } catch (e) {
         console.warn(`[Bundler] Error reading ${filePath}:`, e);
@@ -219,7 +229,9 @@ export async function SaveAndDownloadApp() {
       '00_Components/03_Scrollbar.js',
       '00_Components/04_Import_Export.js',
       '00_Components/05_Save_Button.js',
-      '00_Components/06_Color_Selector.js'
+      '00_Components/06_Color_Selector.js',
+      '00_Components/07_Blob_Store.js',
+      '00_Components/08_Research_Library.js'
     ];
 
     const landingFiles = [
@@ -309,6 +321,8 @@ export async function SaveAndDownloadApp() {
       '03_Notes/A_Notes_Card_View/01_Navbar.js',
       '03_Notes/A_Notes_Card_View/02_Notes_Card.js',
       '03_Notes/A_Notes_Card_View/A_Notes_Card_View.js',
+      '03_Notes/C_Graph_View/Graph_Data.js',
+      '03_Notes/C_Graph_View/Graph_Physics.js',
       '03_Notes/C_Graph_View/Graph_View.js',
       '03_Notes/01_Header.js',
       '03_Notes/Notes.js'
@@ -345,10 +359,15 @@ export async function SaveAndDownloadApp() {
     ];
 
     const rdFiles = [
-      '05_R&D/00_State.js',
+      // Dependency-ordered for the flat bundle: 00_State.js eagerly seeds the
+      // library at evaluation time, touching RD_LAYOUT/palettes from
+      // 03_Seed_Data.js and uid() from 01_Utils.js. In dev, ES module imports
+      // resolve lazily, but the concatenated bundle executes top-level code in
+      // list order — leaves must come first or const bindings hit the TDZ.
       '05_R&D/01_Utils.js',
-      '05_R&D/02_Styles.js',
       '05_R&D/03_Seed_Data.js',
+      '05_R&D/00_State.js',
+      '05_R&D/02_Styles.js',
       '05_R&D/01_HTML_Page/01_Header.js',
       '05_R&D/01_HTML_Page/02_Navbar.js',
       '05_R&D/01_HTML_Page/03_Toolbar.js',
@@ -366,6 +385,7 @@ export async function SaveAndDownloadApp() {
       '05_R&D/04_Modals/05_Stats_Popover.js',
       '05_R&D/04_Modals/06_Health_Modal.js',
       '05_R&D/04_Modals/07_Help_Modal.js',
+      '05_R&D/04_Modals/08_Link_Modal.js',
       '05_R&D/05_Data_IO/01_Save_Button.js',
       '05_R&D/05_Data_IO/02_Export.js',
       '05_R&D/05_Data_IO/03_Import.js',

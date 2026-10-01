@@ -79,7 +79,9 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 │       └── 05_Citation_Style.js            ← Citation format switcher (Numeric/Author-Year)
 │
 ├── C_Graph_View/                           ← Interactive 2D knowledge graph
-│   └── Graph_View.js                       ← Canvas-based force-directed note & tag relationship graph
+│   ├── Graph_Data.js                       ← Graph model builder: group→note membership + shared-tag links (tags invisible)
+│   ├── Graph_Physics.js                    ← Alpha-cooled force simulation: repulsion, springs, collision separation
+│   └── Graph_View.js                       ← Canvas renderer: theme-aware orbs/labels, drag, pan/zoom, hover, fit-to-view
 │
 └── Writing_Engine/                         ← Core text, math, TikZ, and formatting compilers
     ├── BibTeX_Parser.js                    ← BibTeX (.bib) tokenizer, parser, and citation formatter
@@ -315,7 +317,7 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 | :--- | :--- | :--- |
 | `parseWikiLinks(text = '', allNotes = [])` | 8 - 23 | Parses [[Note Title]] wiki-link syntax in text, converting matches into clickable note navigation links or unresolved indicator spans. |
 | `extractOutgoingLinks(note)` | 25 - 38 | Scans all blocks within a note to extract a deduplicated array of outgoing [[wiki-link]] target note titles. |
-| `buildGraphData(allNotes = [])` | 40 - 71 | Processes all notes and their outgoing links into nodes and links data arrays suitable for 2D force-directed graph visualization. |
+| `buildGraphData(allNotes = [])` | 40 - 71 | Legacy [[wiki-link]]-based graph data builder; currently has no consumer (the graph view now builds its model via `C_Graph_View/Graph_Data.js → BuildGraphModel` using folders + shared tags). |
 
 **Math_Renderer.js**
 
@@ -1059,13 +1061,42 @@ Delegated document-level `mouseover`/`click` listeners (registered once, marker-
 | `InitCitationStyleLogic(onStyleChange = null)` | 112 - 142 | Initializes citation style dropdown menu interactions, style switching (`numeric`, `authoryear`, `authortitle`), persistence, and re-render callbacks. |
 
 ## C_Graph_View
+
+Physics-based knowledge graph: **Groups (folders) → membership links → Notes → shared-tag links → Notes**. Tags are relationship metadata only — they never appear as nodes or labels.
+
+**Graph_Data.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| *(none — pure data transform over its arguments)* | | |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `GRAPH_MODEL_*` constants | 8 - 10 | Fixed orb radii (groups 1.2× a note, notes 11 — sizes never vary) and the 8-member limit before a shared-tag fan-out chains instead of pair-linking. |
+| `BuildGraphModel(notes, folders)` | 19 - 96 | Builds `{nodes, links, groupNodes, noteNodes}`: one group node per folder name (default `General`), one note node per note (duplicate ids from cache recovery are guarded), one `member` link per note (membership is data-driven, never positional — dragging cannot change groups), and deduplicated `tag` links between notes sharing tags (multiple shared tags collapse into ONE edge). |
+
+**Graph_Physics.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| *(none — pure simulation over its arguments)* | | |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `GRAPH_SIM_*` constants | 12 - 24 | Alpha cooling (0.02 decay ≈ 300 ticks to rest), velocity decay 0.85, repulsion charges & 520u cutoff, springs (member 130/0.09 stiff, tag 210/0.018 loose), weak centering gravity, collision padding 14u. |
+| `CreateGraphSimulation(nodes, links)` | 30 - 118 | Returns `{step(), wake(strength), alpha}`: O(n²) mutual repulsion with distance cutoff, springs (membership stiff; shared-tag loose and stretchy — never breaking), weak gravity, velocity integration honoring `pinned` (drag), hard collision separation so orbs never overlap, alpha cooling to a stable, oscillation-free rest. |
+
 **Graph_View.js**
 
 | Import Location | Functions Imported | used in Functions |
 | :--- | :--- | :--- |
 | `../00_State.js` | `NotesState` | `renderGraphView()` |
-| `../Writing_Engine/Link_Parser.js` | `buildGraphData` | `renderGraphView()` |
+| `./Graph_Data.js` | `BuildGraphModel` | `renderGraphView()` |
+| `./Graph_Physics.js` | `CreateGraphSimulation` | `renderGraphView()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `renderGraphView()` | 9 - 259 | Renders interactive HTML5 2D canvas force-directed knowledge graph with pan, zoom, node drag-and-drop physics, and click-to-open note navigation. |
+| `GRAPH_VIEW_*` constants | 17 - 26 | Zoom clamps (0.12–4), label metrics (12/13px world-unit fonts, 150w wrap, max 4 lines), label hide threshold (scale 0.35), hub accent colors. |
+| `GRAPH_VIEW_Hue(name)` | 29 - 34 | Deterministic per-folder hue (FNV-1a hash × golden angle) driving all derived node colors; theme lightness adapts on `data-theme` change. |
+| `GRAPH_VIEW_WrapText(ctx, title, maxWidth, maxLines)` | 36 - 58 | Word-wraps titles for canvas labels (ellipsis on the final allowed line); orb size is never affected by title length. |
+| `renderGraphView()` | 60 - 471 | Mounts the graph canvas: seeded ring layout, theme palette re-derived from group hues on `data-theme` mutation; draws membership links (subtle, always visible) behind shared-tag links behind orbs behind wrapped labels; screen-space label de-overlap once settled; camera re-fits after settle + label displacement so nothing clips; pointer interaction — drag groups/notes (pinned while held, manual position kept on release, surroundings keep adapting via `wake`), background pan, cursor-anchored wheel zoom, hover highlight with unrelated-element dimming; single click intentionally inert, double-click opens a note (`#Notes?id=…`) or focuses a group cluster; ⛶ Center/Fit computes the graph bounding box and sets a dynamic zoom %; ResizeObserver + full teardown on DOM detach. |

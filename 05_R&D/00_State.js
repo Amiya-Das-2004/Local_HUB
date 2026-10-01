@@ -140,7 +140,11 @@ export function NormalizeState(raw) {
     fromAnchor: l.fromAnchor || 'a-e',
     to: l.to || l.target || null,
     toAnchor: l.toAnchor || 'a-w',
-    label: l.label || ''
+    label: l.label || '',
+    style: l.style || 'curve',
+    shape: l.shape || 'capsule',
+    direction: l.direction || 'forward',
+    color: l.color || '#8b6dff'
   })).filter((l) => l.from && l.to);
 
   const itemIds = new Set(out.items.map((i) => i.id));
@@ -565,22 +569,41 @@ export function AssignItemToGroup(itemId, groupId, opts) {
   return item;
 }
 
-export function AddLink(from, to, fromAnchor, toAnchor, label) {
+export function AddLink(from, to, fromAnchor, toAnchor, label, opts) {
   if (!from || !to || from === to) return null;
   const exists = state.rd.links.find((l) =>
     (l.from === from && l.to === to) || (l.from === to && l.to === from));
   if (exists) return exists;
+  const o = opts || {};
   const link = {
     id: uid('lnk'),
     from,
     fromAnchor: fromAnchor || 'a-e',
     to,
     toAnchor: toAnchor || 'a-w',
-    label: label || ''
+    label: label || o.label || '',
+    style: o.style || 'curve',
+    shape: o.shape || 'capsule',
+    direction: o.direction || 'forward',
+    color: o.color || '#8b6dff'
   };
   state.rd.links.push(link);
   persist();
   return link;
+}
+
+export function GetLink(id) {
+  return state.rd.links.find((l) => l.id === id) || null;
+}
+
+export function UpdateLink(id, patch) {
+  const l = GetLink(id);
+  if (!l || !patch) return null;
+  ['label', 'style', 'shape', 'direction', 'color', 'fromAnchor', 'toAnchor'].forEach((k) => {
+    if (patch[k] !== undefined) l[k] = patch[k];
+  });
+  persist();
+  return l;
 }
 
 export function DeleteLink(id) {
@@ -1102,6 +1125,8 @@ export const RDPapers = {
   AddLink,
   DeleteLink,
   GetLinks,
+  GetLink,
+  UpdateLink,
   MatchesFilters,
   VisibleItems,
   ItemsBySection,
