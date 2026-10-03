@@ -4,7 +4,30 @@
  * Eliminates cursor drag stutter/rubber-banding by scoping CSS transitions to border-color/box-shadow only.
  */
 
-import { attachBlockHistory } from '../../Writing_Engine/Block_History.js';
+import { attachBlockHistory, recordBlockSnapshot } from '../../Writing_Engine/Block_History.js';
+
+// Sticky-editing + scroll containment styles (injected once)
+if (typeof document !== 'undefined' && !document.getElementById('notes-code-editor-sticky-styles')) {
+  const stickyStyle = document.createElement('style');
+  stickyStyle.id = 'notes-code-editor-sticky-styles';
+  stickyStyle.textContent = `
+    .notes-code-editor-root.sticky-editing {
+      position: sticky;
+      z-index: 35;
+      box-shadow: 0 22px 48px -20px rgba(0, 0, 0, 0.55);
+      border-radius: 0.75rem;
+    }
+    /* Wheel over the writing area scrolls the code, never the page */
+    .notes-code-editor-root .code-editor-body,
+    .notes-code-editor-root .code-editor-textarea {
+      overscroll-behavior: contain;
+    }
+    .notes-code-editor-root.sticky-editing .code-editor-body {
+      max-height: min(55vh, 520px);
+    }
+  `;
+  document.head.appendChild(stickyStyle);
+}
 
 /**
  * Creates and returns a smoothly resizable editor textarea element.
@@ -486,6 +509,10 @@ export function createCodeEditor({
     </div>
 
     <div class="flex items-center gap-1.5 font-mono">
+      <button type="button" class="btn-detach-toggle code-editor-btn flex items-center gap-1 px-2.5 py-0.5 rounded text-[11px] font-medium cursor-pointer" title="Pop the writing area out into a mini window (typing keeps syncing to the block)">
+        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="12" height="12" rx="2"></rect><path d="M14 9h7v10h-7z" fill="currentColor" stroke="none" opacity="0.35"></path><rect x="14" y="9" width="7" height="10" rx="1.5"></rect></svg>
+        <span class="detach-label">Pop out</span>
+      </button>
       <button type="button" class="btn-drawer-toggle code-editor-btn flex items-center gap-1 px-2.5 py-0.5 rounded text-[11px] font-medium cursor-pointer" title="Toggle Code Editor Visibility">
         <svg class="drawer-icon transition-transform duration-200" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
         <span class="drawer-label">Collapse</span>
@@ -497,6 +524,8 @@ export function createCodeEditor({
   const btnDrawerToggle = header.querySelector('.btn-drawer-toggle');
   const drawerIcon = header.querySelector('.drawer-icon');
   const drawerLabel = header.querySelector('.drawer-label');
+  const btnDetachToggle = header.querySelector('.btn-detach-toggle');
+  const detachLabel = header.querySelector('.detach-label');
 
   // ---------------------------------------------------------------------------
   // 2. Editor Body: Gutter + Monospace Textarea
@@ -855,13 +884,61 @@ export function createCodeEditor({
         }
       }
 
+      // Tab edits set .value programmatically (no input event), so record the
+      // resulting state explicitly to keep indent/outdent as distinct undo steps.
       fullCode = textarea.value;
+      if (blockId) {
+        recordBlockSnapshot(blockId, fullCode, textarea.selectionStart, textarea.selectionEnd, { immediate: true });
+      }
       syncGutter();
       if (onInput) onInput(fullCode, e);
       return;
     }
 
     if (onKeyDown) onKeyDown(e);
+  });
+
+  // Copying while folded must yield the underlying code, not the folded display
+  // lines (which contain "..." placeholders). Maps the visible selection back
+  // onto fullCode and writes the real source to the clipboard.
+  textarea.addEventListener('copy', (e) => {
+    if (foldedLineMap.size === 0) return;
+    const selStart = textarea.selectionStart;
+    const selEnd = textarea.selectionEnd;
+    if (selStart === selEnd) return;
+
+    const visibleLines = textarea.value.split('\n');
+    let visOff = 0;   // offset consumed in the folded (visible) text
+    let fullOff = 0;  // corresponding offset in fullCode
+    let curOrig = 1;
+    let fullStart = -1;
+    let fullEnd = -1;
+
+    for (let v = 0; v < visibleLines.length; v++) {
+      const lineLen = visibleLines[v].length + 1; // +1 for the joining newline
+      const foldMeta = foldedLineMap.get(curOrig);
+      const origLen = foldMeta ? foldMeta.originalLines.join('\n').length + 1 : lineLen;
+
+      if (fullStart === -1 && selStart < visOff + lineLen) {
+        fullStart = (foldMeta && selStart > visOff) ? fullOff : fullOff + (selStart - visOff);
+      }
+      if (fullStart !== -1 && selEnd <= visOff + lineLen) {
+        fullEnd = (foldMeta && selEnd > visOff)
+          ? fullOff + origLen // reaching into a folded line includes its hidden source
+          : fullOff + (selEnd - visOff);
+        break;
+      }
+      visOff += lineLen;
+      fullOff += origLen;
+      curOrig = foldMeta ? foldMeta.origEndLine + 1 : curOrig + 1;
+    }
+
+    if (fullStart === -1) fullStart = fullCode.length;
+    if (fullEnd === -1) fullEnd = fullCode.length;
+    if (fullEnd < fullStart) fullEnd = fullStart;
+
+    e.preventDefault();
+    e.clipboardData.setData('text/plain', fullCode.substring(fullStart, fullEnd));
   });
 
   // ---------------------------------------------------------------------------
@@ -883,6 +960,181 @@ export function createCodeEditor({
       container.classList.remove('opacity-90');
       syncGutter();
       textarea.focus();
+    }
+  });
+
+  // ---------------------------------------------------------------------------
+  // 3b. Sticky-Below-Header Editing + Detachable Writing Area
+  // ---------------------------------------------------------------------------
+  const applyStickyOffset = () => {
+    const hdr = document.querySelector('header');
+    const off = hdr ? Math.round(hdr.getBoundingClientRect().bottom) : 76;
+    container.style.top = `${Math.max(off, 0) + 8}px`;
+  };
+
+  textarea.addEventListener('focus', () => {
+    applyStickyOffset();
+    container.classList.add('sticky-editing');
+    // If the editor sits under the header, glide it up so it docks right below
+    requestAnimationFrame(() => {
+      const rect = container.getBoundingClientRect();
+      if (rect.top < parseFloat(container.style.top || '0')) {
+        window.scrollBy({ top: rect.top - parseFloat(container.style.top), behavior: 'smooth' });
+      }
+    });
+  });
+
+  // Detach: move gutter+textarea into a browser mini-window (or an in-page floating
+  // panel when popups are blocked); input/undo/gutter closures keep running, so
+  // typing still syncs to the main-window preview & vault.
+  let popupWin = null;
+  let popupPanel = null;
+  let popupHost = null;
+  let popupPoll = null;
+
+  const syncDetachButton = () => {
+    const detached = (popupWin && !popupWin.closed) || Boolean(popupPanel);
+    if (detachLabel) detachLabel.textContent = detached ? 'Reattach' : 'Pop out';
+    if (btnDetachToggle) btnDetachToggle.title = detached ? 'Reattach the writing area into the block' : 'Pop the writing area out into a mini window';
+  };
+
+  const buildDetachChrome = (doc, hostAppendTarget, isPopup) => {
+    const headerEl = doc.createElement('div');
+    headerEl.style.cssText = isPopup
+      ? 'flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 12px;background:#141724;border-bottom:1px solid #2a2e40;color:#e8eaf2;font:600 11px ui-monospace,Menlo,monospace;letter-spacing:0.03em;user-select:none;'
+      : 'flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 12px;background:#141724;border-bottom:1px solid #2a2e40;color:#e8eaf2;font:600 11px ui-monospace,Menlo,monospace;letter-spacing:0.03em;user-select:none;cursor:move;border-radius:12px 12px 0 0;';
+    headerEl.className = 'detach-chrome-header';
+    headerEl.innerHTML = `<span style="display:flex;align-items:center;gap:8px;min-width:0;"><span style="background:rgba(139,109,255,0.2);color:#c4b5fd;border:1px solid rgba(139,109,255,0.35);padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;">${badge}</span><span style="opacity:0.55;font-weight:400;">typing syncs to the note — this window is disposable</span></span>`;
+    const reBtn = doc.createElement('button');
+    reBtn.type = 'button';
+    reBtn.textContent = '⧉ Reattach';
+    reBtn.style.cssText = 'background:#181b27;border:1px solid #2a2e40;color:#a0a4b8;padding:4px 10px;border-radius:6px;cursor:pointer;font:600 11px ui-monospace,Menlo,monospace;transition:all 0.15s ease;';
+    reBtn.addEventListener('mouseenter', () => { reBtn.style.borderColor = 'rgba(139,109,255,0.45)'; reBtn.style.color = '#fff'; });
+    reBtn.addEventListener('mouseleave', () => { reBtn.style.borderColor = '#2a2e40'; reBtn.style.color = '#a0a4b8'; });
+    reBtn.addEventListener('click', (e) => { e.stopPropagation(); attachEditor(); });
+    headerEl.appendChild(reBtn);
+    hostAppendTarget.appendChild(headerEl);
+
+    // Draggable header (in-page panel only)
+    if (!isPopup) {
+      headerEl.style.cursor = 'move';
+      let dragState = null;
+      headerEl.addEventListener('mousedown', (e) => {
+        if (e.target.closest('button')) return;
+        const panel = headerEl.parentElement;
+        const r = panel.getBoundingClientRect();
+        dragState = { dx: e.clientX - r.left, dy: e.clientY - r.top };
+        panel.style.right = 'auto';
+        panel.style.bottom = 'auto';
+        panel.style.left = r.left + 'px';
+        panel.style.top = r.top + 'px';
+        e.preventDefault();
+      });
+      window.addEventListener('mousemove', (e) => {
+        if (!dragState) return;
+        if (!headerEl.isConnected) { dragState = null; return; }
+        const panel = headerEl.parentElement;
+        const x = Math.min(Math.max(0, e.clientX - dragState.dx), Math.max(0, window.innerWidth - 80));
+        const y = Math.min(Math.max(0, e.clientY - dragState.dy), Math.max(0, window.innerHeight - 40));
+        panel.style.left = x + 'px';
+        panel.style.top = y + 'px';
+      });
+      window.addEventListener('mouseup', () => { dragState = null; });
+    }
+
+    const contentHost = doc.createElement('div');
+    contentHost.className = 'detach-content-host';
+    contentHost.style.cssText = 'flex:1 1 auto;min-height:0;display:flex;';
+    hostAppendTarget.appendChild(contentHost);
+    return { headerEl, contentHost };
+  };
+
+  const attachEditor = () => {
+    if (popupPoll) { clearInterval(popupPoll); popupPoll = null; }
+    if (popupWin && !popupWin.closed) popupWin.close();
+    popupWin = null;
+    if (popupPanel && popupPanel.parentNode) popupPanel.remove();
+    popupPanel = null;
+    if (popupHost && popupHost.parentNode) {
+      popupHost.replaceWith(body);
+    }
+    popupHost = null;
+    // Restore the inline styles the detach surface overrode
+    body.style.height = height;
+    body.style.minHeight = minHeight;
+    body.style.maxHeight = '';
+    body.style.resize = 'vertical';
+    if (!isDrawerCollapsed) syncGutter();
+    syncDetachButton();
+  };
+
+  const detachEditor = () => {
+    if ((popupWin && !popupWin.closed) || popupPanel) {
+      if (popupWin && !popupWin.closed) popupWin.focus();
+      return;
+    }
+    popupWin = window.open('', 'localhub-editor', 'width=780,height=560,menubar=no,toolbar=no,location=no,status=no');
+
+    if (popupWin) {
+      const doc = popupWin.document;
+      doc.title = `${badge} — Local_HUB Editor`;
+      doc.body.style.cssText = 'margin:0;background:#0e1018;box-sizing:border-box;height:100vh;display:flex;flex-direction:column;';
+      const mainStyles = document.getElementById('notes-code-editor-styles');
+      const styleEl = doc.createElement('style');
+      styleEl.textContent = (mainStyles ? mainStyles.textContent : '') + `
+        :root {
+          --text: #e8eaf2; --text-dim: #6b7088; --border: #2a2e40;
+          --surface: #181b27; --surface-hover: rgba(255,255,255,0.06); --accent: #8b6dff;
+        }
+        html, body { height: 100%; overflow: hidden; }
+        /* Popup docs have no Tailwind — replicate the layout utilities the editor relies on */
+        .code-editor-body { display: flex !important; width: 100% !important; position: relative; overflow: hidden; }
+        .code-editor-gutter { flex: 0 0 auto !important; overflow: hidden; }
+        .code-editor-textarea { flex: 1 1 0% !important; width: 100% !important; min-width: 0 !important; }
+        .code-editor-root, .notes-code-editor-root { width: 100% !important; }
+      `;
+      doc.head.appendChild(styleEl);
+
+      const { contentHost } = buildDetachChrome(doc, doc.body, true);
+      popupHost = document.createElement('div');
+      popupHost.className = 'code-editor-detach-host';
+      body.replaceWith(popupHost);
+      contentHost.appendChild(document.adoptNode(body));
+    } else {
+      // Popup blocked (or unavailable): floating in-page panel with the same mechanics
+      popupPanel = document.createElement('div');
+      popupPanel.className = 'code-editor-float-panel';
+      popupPanel.style.cssText = 'position:fixed;right:16px;bottom:88px;width:min(640px,calc(100vw - 32px));height:min(440px,62vh);z-index:80;background:#0e1018;border:1px solid #2a2e40;border-radius:12px;box-shadow:0 24px 60px rgba(0,0,0,0.55);display:flex;flex-direction:column;overflow:hidden;';
+      const { contentHost } = buildDetachChrome(document, popupPanel, false);
+      popupHost = document.createElement('div');
+      popupHost.className = 'code-editor-detach-host';
+      body.replaceWith(popupHost);
+      contentHost.appendChild(body);
+      document.body.appendChild(popupPanel);
+    }
+
+    // Full-height writing area in the detached surface
+    body.style.height = '100%';
+    body.style.maxHeight = 'none';
+    body.style.resize = 'none';
+    body.style.minHeight = '0';
+
+    syncGutter();
+    syncDetachButton();
+    popupPoll = setInterval(() => {
+      if (popupWin && !popupWin.closed) return;
+      if (popupPanel && popupPanel.isConnected) return;
+      attachEditor();
+    }, 500);
+    setTimeout(() => textarea.focus(), 60);
+  };
+
+  btnDetachToggle?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if ((popupWin && !popupWin.closed) || popupPanel) {
+      attachEditor();
+    } else {
+      detachEditor();
     }
   });
 
@@ -917,6 +1169,7 @@ export function createCodeEditor({
 
     container.__cleanup = () => {
       if (typeof detachHistory === 'function') detachHistory();
+      if (typeof attachEditor === 'function') attachEditor();
       if (container.__ro) {
         container.__ro.disconnect();
         container.__ro = null;
@@ -924,6 +1177,7 @@ export function createCodeEditor({
     };
   } else {
     container.__cleanup = () => {
+      if (typeof attachEditor === 'function') attachEditor();
       if (container.__ro) {
         container.__ro.disconnect();
         container.__ro = null;

@@ -50,7 +50,8 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 │   │   ├── Figure_Utils.js                 ← Figure numbering, caption labels, subcaptions
 │   │   ├── Heading_Block.js                ← Heading 1-6 block with dynamic TOC anchoring
 │   │   ├── Image_Block.js                  ← Resizable image embed block with captions
-│   │   ├── Multi_Column_Block.js           ← 2/3 column layout container with nested blocks
+│   │   ├── Multi_Column_Block.js           ← Orientation container (reference model, rows of docked member blocks)
+│   │   ├── Orientation_Modal.js            ← Orientation Manager dialog + shared member-row renderer
 │   │   ├── Table_Block.js                  ← Interactive markdown table with add/del row/col
 │   │   ├── Table_Templates.js              ← Predefined academic table templates
 │   │   ├── Table_Templates_Modal.js        ← Visual gallery modal for table templates
@@ -109,7 +110,8 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 | :--- | :--- | :--- |
 | `DEFAULT_GLOBAL_MACROS` | 3 - 45 | Default LaTeX macros dictionary containing predefined equation shortcuts (`\mb`, `\cancelto`, `\comment`, `\R`, `\C`, `\N`, `\Z`) and TikZ styles/libraries. |
 | `NotesState` | 48 - 58 | Central in-memory reactive state object holding vault metadata, global macros, table templates, tikz templates, bibliography entries, citation style, folders, tags, and notes. |
-| `sanitizeNote(n, idx = 0)` | 68 - 97 | Validates note object schema, fills missing fallback properties (id, slug, title, folder, tags, blocks, macros, autoNumbering), and prevents data corruption. |
+| `sanitizeNote(n, idx = 0)` | 68 - 102 | Validates note object schema, fills missing fallback properties (id, slug, title, folder, tags, blocks, macros, autoNumbering), prevents data corruption, and runs the orientation-container migration. |
+| `migrateOrientationContainers(note)` | 105 - 139 | One-time legacy migration: hoists Multi-Column `cols[]` embedded children to top-level blocks (inserted right after the container) and rewrites them as non-destructive `members`/`rows` references. |
 | `LoadNotesState(forceReload = false)` | 100 - 202 | Reads and parses notes from DOM script vault (#NotesData), recovers newer uncommitted edits from localStorage, and reuses in-memory state when not stale to eliminate multi-MB JSON re-parsing on route changes. |
 | `flushNotesSave()` | 234 - 238 | Immediately flushes any pending debounced state writes to DOM #NotesData and localStorage. |
 | `SaveNotesState(newState = null, { immediate = false } = {})` | 247 - 275 | Re-derives active folder/tag lists, synchronizes window.NotesState, and persists unsaved buffer to DOM vault and localStorage with debouncing (~280ms) for high-speed typing. |
@@ -242,6 +244,8 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 | `BLOCK_DEF_MAP` | 156 | Fast lookup Map mapping block type string keys to their corresponding block schema definitions. |
 | `createNewBlock(type, options = {})` | 161 - 168 | Instantiates a new note block object with a unique timestamped ID, block type, and default payload schema. |
 | `insertBlockAt(blocks = [], newBlock, targetIndex = -1)` | 175 - 183 | Inserts a block object into a blocks array at a specified index or appends it to the end if index is out of bounds. |
+| `isOrientationContainer(block)` | 189 - 199 | Returns true for Callout ('block'/'theorem') and Multi-Column ('columns'/'multicolumn'/'multi-column') blocks — the orientation container types that reference members by ID. |
+| `normalizeOrientationRows(block)` | 201 - 222 | Normalizes a container's `members`/`rows`: every member id appears in exactly one row, rows only reference live members, unplaced members append as a trailing row. Returns `{ members, rows }`. |
 
 **Block_History.js**
 
@@ -251,12 +255,13 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `recordBlockSnapshot(blockId, text, cursorStart, cursorEnd, options)` | 49 - 90 | Records debounced or immediate text snapshots into an isolated undo stack keyed by block ID. |
-| `undoBlockHistory(blockId, currentText)` | 98 - 122 | Performs undo by stepping back to previous snapshot, pushing current state to redo stack. |
-| `redoBlockHistory(blockId, currentText)` | 130 - 144 | Performs redo by popping from redo stack and pushing back to undo stack. |
-| `attachBlockHistory(element, config)` | 156 - 229 | Binds input listeners and intercepts Ctrl+Z and Ctrl+Y/Ctrl+Shift+Z on an editor/textarea element. |
-| `clearAllBlockHistory()` | 235 - 238 | Clears all in-memory per-block history stacks upon standalone HTML file save and download. |
-| `getBlockHistory(blockId)` | 244 - 246 | Retrieves the raw history stack object for a given block ID. |
+| `recordBlockSnapshot(blockId, text, cursorStart, cursorEnd, options)` | 46 - 86 | Records debounced (380ms typing) or immediate text snapshots into an isolated undo stack keyed by block ID (80-entry cap, clears redo, no-op when top text is unchanged). |
+| `undoBlockHistory(blockId, currentText)` | 95 - 119 | Performs undo by stepping back to previous snapshot, pushing current state to redo stack. |
+| `redoBlockHistory(blockId, currentText)` | 128 - 149 | Performs redo by popping from redo stack and pushing back to undo stack. |
+| `getCaretTextOffset(rootEl)` | 160 - 173 | Counts the pre-order text-content offset of the current selection caret inside a contenteditable surface; exported for clipboard handlers so cut/paste snapshots use the same caret space as typing. |
+| `attachBlockHistory(element, config)` | 229 - 311 | Binds input listeners and intercepts Ctrl+Z and Ctrl+Y/Ctrl+Shift+Z on an editor/textarea/contenteditable element, restoring text and caret after each undo/redo. |
+| `clearAllBlockHistory()` | 317 - 320 | Clears all in-memory per-block history stacks upon standalone HTML file save and download. |
+| `getBlockHistory(blockId)` | 327 - 329 | Retrieves the raw history stack object for a given block ID. |
 
 **Bullet_Engine.js**
 
@@ -347,8 +352,10 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 | `renderKatex(tex, isDisplayMode = false, noteContext = null)` | 376 - 416 | Synchronously compiles a LaTeX formula to HTML/MathML using KaTeX, utilizing a bounded LRU cache `katexCache` for 0ms re-rendering. |
 | `parseAndRenderMathInText(rawText = '')` | 418 - 420 | Convenience wrapper calling formatRichTextWithMath to parse and render inline math within text. |
 | `resolveCitationLabels(keysRaw)` | 473 - 508 | Resolves comma-separated citation keys against the library vault and formats badges per `NotesState.citationStyle`. |
+| `setActiveEquationTagMap(map)` | 117 - 119 | Sets the active equation tag map (normalized tag → `{ label, blockId, subIndex }`) computed by `computeEquationNumbers()`. |
+| `getActiveEquationTagMap()` | 121 - 123 | Returns the active equation tag map. Both `\eq{}` render paths (view + live widget) read it. |
 | `formatRichTextWithMath(rawText = '', options = {})` | 511 - 699 | Full-featured text compiler handling display math ($$...$$), inline math ($...$), task checkboxes ([ ], [x]), bullet lists, and markdown formatting. |
-| `parseInlineMarkdownAndLatex(str)` | 701 - 737 | Parses inline formatting tokens (bold, italic, strikethrough, code), `\fig` citations, `\cite` bibliography citations, and LaTeX text styling (`\textcolor`, `\underline`, `\textbf`, `\textit`, `\cancel`). |
+| `parseInlineMarkdownAndLatex(str)` | 749 - 785 | Parses inline formatting tokens (bold, italic, strikethrough, code), `\fig` figure citations, `\eq{name}` / `\eq{name:2}` equation reference badges (emerald, click-to-jump), `\cite` bibliography citations, and LaTeX text styling (`\textcolor`, `\underline`, `\textbf`, `\textit`, `\cancel`). Document-level click handlers (fig: lines 76-111; eq: ~133-160) drive scroll-to-target + highlight pulse for both badge types. |
 
 **Numbering_Engine.js**
 
@@ -362,8 +369,9 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 | `toAlpha(num, upper)` | 28 - 38 | Converts an integer into alphabetic representation (uppercase A, B, C or lowercase a, b, c). |
 | `formatSingleNumber(num, style)` | 40 - 47 | Formats an integer using the chosen numbering style (numeric, roman-upper, roman-lower, alpha-upper, alpha-lower). |
 | `computeHeadingPrefixes(blocks, autoNumberingConfig)` | 65 - 136 | Calculates hierarchical section numbering prefixes (e.g. 1., 1.1., 1.1.1.) across all heading blocks based on configuration. |
-| `computeFigureNumbers(blocks)` | 142 - 196 | Calculates sequential figure numbers across Image and TikZ blocks, returning a block-to-figure metadata map and a tag citation lookup map. |
-| `computeCitationNumbers(blocks)` | 206 - 238 | Traverses note text blocks in document order to assign sequential first-appearance numbers to `\cite{...}` keys for numeric citation formatting. |
+| `computeFigureNumbers(blocks)` | 142 - 204 | Calculates sequential figure numbers across Image and TikZ blocks, returning a block-to-figure metadata map and a tag citation lookup map. |
+| `computeEquationNumbers(blocks, style)` | 215 - 292 | Computes equation numbers across equation blocks in document order per the global style (numeric / alphabetic_small / roman_small). Semantics: single equation gets its own number; blank-line separated parts with distinct per-part `\tag{}`s get independent numbers; a block with exactly ONE `\tag{name}` becomes a group sharing one base number with roman sub-members (3.i, 3.ii). Returns `{ eqMap, tagMap }` — tagMap also indexes `name:2` / `name:ii` member refs. |
+| `computeCitationNumbers(blocks)` | 294 - 327 | Traverses note text blocks in document order to assign sequential first-appearance numbers to `\cite{...}` keys for numeric citation formatting. |
 
 **Table_Parser.js**
 
@@ -578,7 +586,7 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `CreateFloatingToolbar(options)` | 19 - 119 | Creates bottom floating dock toolbar integrating sidebar drawer toggle, study view switch, font family selector, font size selector, LaTeX macros modal, BibTeX library vault dialog, and citation style selector. |
+| `CreateFloatingToolbar(options)` | 20 - 134 | Creates bottom floating dock toolbar integrating sidebar drawer toggle, study view switch, font family selector, font size selector, LaTeX macros modal, BibTeX library vault dialog, citation style selector, and equation numbering style selector (per-note `note.equationNumbering`, triggers full re-render on change). |
 
 **03_Study_View.js**
 
@@ -607,7 +615,7 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `RenderLaTeXEditor(container, noteId, isEditMode = true)` | 24 - 628 | Master LaTeX editor module connecting sidebar outline, document header, reactive block deck, zero-lag in-place block activation/closing, isolated divider insertion, font customizer, and study mode rendering. |
+| `RenderLaTeXEditor(container, noteId, isEditMode = true)` | 24 - 744 | Master LaTeX editor module connecting sidebar outline, document header, reactive block deck, zero-lag in-place block activation/closing, isolated divider insertion, font customizer, and study mode rendering. Computes and distributes figure + equation numbering maps (`computeEquationNumbers` per `note.equationNumbering`), implements the Wrap-Beside pairing pass (a `wrap: true` figure with Fit ≤ 60% consumes the next text/tikz/image block into a side-by-side `.notes-wrap-row`; wrap notes re-render fully on activation), uses parent-based single-block replacement for nested rows, and drives orientation containers — docked member blocks are skipped from the reading/study flow (`collectDockedIds()`), badged "⧉ docked" in edit view, and undocked automatically when deleted. |
 
 ## B_Editor_View/01_Blocks
 **Block_Actions.js**
@@ -631,11 +639,12 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 | `../../Writing_Engine/Highlight_Sync.js` | `attachHighlightSync` | `renderBlockBlock()` |
 | `../../02_Utils.js` | `escapeHtml` | `renderBlockBlock()` |
 | `./Block_Actions.js` | `getBlockActionsHTML`, `initBlockActions` | `renderBlockBlock()` |
+| `../../Writing_Engine/Block_History.js` | `attachBlockHistory` | `renderBlockBlock()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `BLOCK_THEME_STYLES` | 13 - 25 | Theme styling dictionary mapping callout environment types (Theorem, Definition, Proof, Lemma, Corollary, Proposition, Example, Remark, Note, Warning, Info) to CSS borders, badges, and colors. |
-| `renderBlockBlock(block, isEditing = false, onUpdate = null, allNotes = [], options = {})` | 27 - 142 | Renders callout/theorem blocks in view mode or interactive edit mode with live preview, environment selector, title input, resizable textarea, and highlight synchronization. |
+| `BLOCK_THEME_STYLES` | 14 - 26 | Theme styling dictionary mapping callout environment types (Theorem, Definition, Proof, Lemma, Corollary, Proposition, Example, Remark, Note, Warning, Info) to CSS borders, badges, and colors. |
+| `renderBlockBlock(block, isEditing = false, onUpdate = null, allNotes = [], options = {})` | 30 - 194 | Renders callout/theorem blocks in view mode or interactive edit mode with live preview, environment selector, title input, resizable textarea, highlight synchronization, persistent per-block undo/redo history on content and title inputs (survives Done/reopen cycles), and Orientation container support — reading view renders docked member rows via `renderOrientationMemberRows`, edit mode offers a Configure Layout bar opening the Orientation Manager. |
 
 **Block_Dispatcher.js**
 
@@ -663,29 +672,46 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `CreateBlockItem(options)` | 8 - 95 | Wraps an individual block in an interactive wrapper element handling selection focus, hover borders, multi-column block picker states, and rendering content via renderBlockContent. |
+| `CreateBlockItem(options)` | 8 - 113 | Wraps an individual block in an interactive wrapper element handling selection focus, hover borders, multi-column block picker states, and rendering content via renderBlockContent. Forwards `figureInfo`/`eqInfo` plus the full `figureMap`/`eqMap`/`prefixMap` (for container member rendering) and renders a "⧉ docked" badge when `isDocked` is set. |
+
+**Orientation_Modal.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| `../../02_Utils.js` | `escapeHtml` | `OpenOrientationModal()`, chip rendering |
+| `../../Writing_Engine/Block_Engine.js` | `normalizeOrientationRows` | `OpenOrientationModal()`, `renderOrientationMemberRows()` |
+| `./Block_Dispatcher.js` | `renderBlockContent` | `renderOrientationMemberRows()` |
+| `../../00_State.js` | `SaveNotesState` | `renderOrientationMemberRows()` |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `OpenOrientationModal(containerBlock, note = null, { onCommit = null } = {})` | 78 - 285 | Opens the Orientation Manager dialog: available (undocked) blocks listed by note index with add buttons, layout rows with per-chip reorder (◀ ▶ within row, ▲ ▼ across rows) and remove (un-dock only), add-row support, and Save/Cancel committing `{ members, rows }` back to the container block. Escape/backdrop dismissible. |
+| `CloseOrientationModal()` | 287 - 294 | Removes the modal backdrop and its document key listener. |
+| `renderOrientationMemberRows(containerBlock, options = {})` | 302 - 342 | Renders a container's member rows in view/study mode — each row a flex group of member blocks (equal share) rendered via `renderBlockContent` with per-member `figureInfo`/`eqInfo`/`prefix` from the maps in options, per-member view persistence (task checkboxes) via a scoped onUpdate, and a depth guard against circular nesting. |
 
 **Block_Textarea.js**
 
 | Import Location | Functions Imported | used in Functions |
 | :--- | :--- | :--- |
-| - | - | - |
+| `../../Writing_Engine/Block_History.js` | `attachBlockHistory`, `recordBlockSnapshot` | `createBlockTextarea()`, `createCodeEditor()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `createBlockTextarea(options)` | 21 - 69 | Creates and returns a smoothly resizable editor textarea element with soft text-wrapping and input, change, and keydown listeners. |
-| `createCodeEditor(options)` | 423 - 860 | Creates an Obsidian/VS-Code grade code editor featuring multi-line Tab/Shift+Tab indentation, soft-wrapping without horizontal scroll, dynamic line-numbered gutter height synchronization via offscreen measurer, ResizeObserver adaptation, safe non-destructive multiline code folding for TikZ ({...}, [...], (...), \begin...\end), and drawer collapse toggle. |
+| `createBlockTextarea(options)` | 24 - 83 | Creates and returns a smoothly resizable editor textarea element with soft text-wrapping, input/change/keydown listeners, and per-block undo/redo history attachment. |
+| `createCodeEditor(options)` | 478 - 1094 | Creates an Obsidian/VS-Code grade code editor featuring multi-line Tab/Shift+Tab indentation with immediate undo snapshots, soft-wrapping without horizontal scroll, dynamic line-numbered gutter height synchronization via offscreen measurer, ResizeObserver adaptation, safe non-destructive multiline code folding for TikZ ({...}, [...], (...), \begin...\end), a folded-state Ctrl+C clipboard handler that maps the visible selection back onto the real code (never copies "..." placeholders), drawer collapse toggle, sticky-below-header editing (focus pins the editor under the app header; `overscroll-behavior: contain` keeps the wheel scrolling the code area, not the page), and a detachable writing area ("Pop out" moves gutter+textarea into a browser mini-window via `document.adoptNode` while typing keeps syncing to the main-window preview; Reattach button or popup-close poll restores it). |
 
 **Code_Block.js**
 
 | Import Location | Functions Imported | used in Functions |
 | :--- | :--- | :--- |
 | `../../Writing_Engine/Code_Highlighter.js` | `highlightCode`, `ensureHighlightJsLoaded` | `renderCodeBlock()` |
+| `../../Writing_Engine/Block_History.js` | `attachBlockHistory`, `recordBlockSnapshot` | `renderCodeBlock()` |
 | `../../02_Utils.js` | `escapeHtml` | (Unused) |
+| `./Block_Actions.js` | `getBlockActionsHTML`, `initBlockActions`, `copyBlockTextWithFeedback` | `renderCodeBlock()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `renderCodeBlock(block, isEditing = false, onUpdate = null, options = {})` | 121 - 380 | Renders syntax-highlighted code block with language selection dropdown, custom title input, copy-to-clipboard button, and live preview. |
+| `renderCodeBlock(block, isEditing = false, onUpdate = null, options = {})` | 125 - 458 | Renders syntax-highlighted code block with language selection dropdown, custom title input, copy-to-clipboard button, live preview, and Tab/Shift+Tab indentation recorded as immediate undo snapshots. |
 
 **Equation_Block.js**
 
@@ -696,10 +722,11 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 | `../../../00_Components/06_Color_Selector.js` | `CreateColorSelector` | `renderEquationBlock()` |
 | `./Block_Actions.js` | `getBlockActionsHTML`, `initBlockActions`, `copyBlockTextWithFeedback` | `renderEquationBlock()` |
 | `./Block_Textarea.js` | `createCodeEditor` | `renderEquationBlock()` |
+| `../../Writing_Engine/Block_History.js` | `recordBlockSnapshot` | `renderEquationBlock()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `renderEquationBlock(block, isEditing = false, onUpdate = null, options = {})` | 20 - 239 | Renders standalone centered display LaTeX equation block with live KaTeX preview, monotonic min-height retention and error preview freeze during editing, border toggle, color selector, integrated monospace code editor with line numbering, line spacing, AST highlight synchronization, and clipboard copy. |
+| `renderEquationBlock(block, isEditing = false, onUpdate = null, options = {})` | 20 - 305 | Renders standalone centered display LaTeX equation block with live KaTeX preview, alignment selector (left/center/right, `block.align`), `\tag{name}` stripping before KaTeX, group-mode member rendering with (base.sub) labels from `eqInfo.members`, click-to-jump anchor (`id="eq-<blockId>"` + `data-eq-block-id`), error preview freeze during editing, border toggle, color selector (insertions recorded as immediate undo snapshots), integrated monospace code editor with line numbering, line spacing, AST highlight synchronization, and clipboard copy. |
 
 **Figure_Utils.js**
 
@@ -721,10 +748,11 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 | `../../02_Utils.js` | `escapeHtml` | `renderHeadingBlock()` |
 | `../../Writing_Engine/Math_Renderer.js` | `formatRichTextWithMath` | `renderHeadingBlock()` |
 | `./Block_Actions.js` | `getBlockActionsHTML`, `initBlockActions` | `renderHeadingBlock()` |
+| `../../Writing_Engine/Block_History.js` | `attachBlockHistory` | `renderHeadingBlock()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `renderHeadingBlock(block, isEditing = false, onUpdate = null, options = {})` | 10 - 175 | Renders section heading block (H1, H2, H3) with container anchor ID, dynamic note font-family, proportional font-size scaling, hierarchical numbering prefix, KaTeX inline math rendering, level dropdown, auto-numbering format menu (numeric, roman, alpha, off), and anchor ID generation. |
+| `renderHeadingBlock(block, isEditing = false, onUpdate = null, options = {})` | 11 - 183 | Renders section heading block (H1, H2, H3) with container anchor ID, dynamic note font-family, proportional font-size scaling, hierarchical numbering prefix, KaTeX inline math rendering, level dropdown, auto-numbering format menu (numeric, roman, alpha, off), persistent per-block undo history on the title input, and anchor ID generation. |
 
 **Image_Block.js**
 
@@ -738,25 +766,22 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 | :--- | :--- | :--- |
 | `processAndCompressImage(fileOrDataUrl)` | 16 - 65 | Downsamples and compresses raster images (PNG/JPG) using an off-screen canvas, keeping vector SVGs intact. |
 | `compressRasterDataUrl(dataUrl, maxDim, quality)` | 67 - 106 | Internal helper compressing image on canvas to JPEG data URL with dimensions constrained to maxDim. |
-| `renderImageBlock(block, isEditing = false, onUpdate = null, options = {})` | 108 - 478 | Renders image figure block supporting file upload, clipboard paste, URL linking, customizable Fit % width with auto aspect-ratio height, surrounding border toggle, scientific captioning, and figure numbering. |
+| `renderImageBlock(block, isEditing = false, onUpdate = null, options = {})` | 108 - 833 | Renders image figure block supporting file upload, clipboard paste, URL linking, customizable Fit % width with auto aspect-ratio height, Wrap-Beside toggle + L/R side control, a Grid Collage mode (`block.grid`: N×M cells with click-two-then-Merge rectangle spans, per-column/row `1:2:1` ratio inputs, cover/contain cell fit, per-cell upload/paste/drop/clear, persisted via `block.gridOn`), surrounding border toggle, scientific captioning, and figure numbering. All mutations persist through the shared `commitFields()` helper. |
 
-**Multi_Column_Block.js**
+**Multi_Column_Block.js** *(rewritten — reference-model orientation container)*
 
 | Import Location | Functions Imported | used in Functions |
 | :--- | :--- | :--- |
-| `./Block_Dispatcher.js` | `renderBlockContent` | `renderChildBlock()` |
+| `./Block_Dispatcher.js` | `renderBlockContent` | via `renderOrientationMemberRows()` |
 | `./Block_Actions.js` | `getBlockActionsHTML`, `initBlockActions` | `renderMultiColumnBlock()` |
-| `../../Writing_Engine/Block_Engine.js` | `createNewBlock` | `normalizeColumnBlocks()`, `renderMultiColumnBlock()` |
-| `../../00_State.js` | `SaveNotesState` | `renderMultiColumnBlock()` |
+| `../../Writing_Engine/Block_Engine.js` | `normalizeOrientationRows` | `renderMultiColumnBlock()` |
 | `../../02_Utils.js` | `escapeHtml` | `renderMultiColumnBlock()` |
+| `./Orientation_Modal.js` | `OpenOrientationModal`, `renderOrientationMemberRows` | `renderMultiColumnBlock()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `normalizeColumnBlocks(block)` | 78 - 109 | Normalizes block.cols array ensuring every entry is a valid block object, maintaining backwards compatibility. |
-| `getGridTemplate(layout, colCount)` | 114 - 129 | Computes grid-template-columns CSS value based on column count and split ratio (e.g. 50-50, 33-33-33, 70-30). |
-| `getLayoutOptionsHtml(layout, colCount)` | 134 - 160 | Internal helper generating HTML <option> list for grid layout ratios. |
-| `renderChildBlock(child, isEditing, onUpdate, allNotes, options)` | 165 - 167 | Internal helper delegating child column block rendering to renderBlockContent. |
-| `renderMultiColumnBlock(block, isEditing = false, onUpdate = null, allNotes = [], options = {})` | 172 - 661 | Main multi-column container component supporting 2, 3, or 4 column responsive grids, child block drag-and-drop, layout ratio switches, and existing block picking. |
+| `getGridTemplate(layout, colCount)` | 13 - 26 | Parses legacy ratio keys ('50-50', '33-33-33', '70-30', '25-25-25-25', …) into grid-template-columns values for single-row layouts. |
+| `renderMultiColumnBlock(block, isEditing = false, onUpdate = null, allNotes = [], options = {})` | 38 - 137 | Orientation container (reference model): reading/study view renders member rows — a single row honors `block.layout` ratios as a CSS grid, multiple rows stack as flex groups — via `renderOrientationMemberRows`; edit mode renders a compact card (block/row summary + Configure Layout button opening the Orientation Manager) while docked members stay editable in the main flow. Legacy `cols[]` data is migrated by `00_State.js`. |
 
 **Table_Block.js**
 
@@ -806,6 +831,7 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 | `../../02_Utils.js` | `escapeHtml` | `renderTextBlock()` |
 | `../../../00_Components/06_Color_Selector.js` | `CreateColorSelector` | `renderTextBlock()` |
 | `../../Writing_Engine/Math_Renderer.js` | `renderKatex` | `renderTextBlock()` |
+| `../../Writing_Engine/Block_History.js` | `attachBlockHistory`, `recordBlockSnapshot`, `getCaretTextOffset` | `renderTextBlock()` |
 | `./Block_Actions.js` | `getBlockActionsHTML`, `initBlockActions` | `renderTextBlock()` |
 | `./Text_Block/Text_Parser.js` | `LINE_SPACING_OPTIONS`, `getSpacingValue`, `getSpacingLabel`, `getNumberForLineAtIndent`, `serializeElement`, `parseTextToFragment`, `renderSingleLineToDom`, `serializeSelection`, `getLineCaretSplit`, `deleteSelectionAndHeal`, `setCaretAtOffsetInLine` | `renderTextBlock()` |
 | `./Text_Block/Text_Widgets.js` | `renderBulletIcon`, `createLiveWidget` | `renderTextBlock()` |
@@ -814,7 +840,7 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `renderTextBlock(block, isEditing = false, onUpdate = null, allNotes = [], options = {})` | 64 - 1072 | Main rich text block component featuring permanent Live Preview mode, top floating window formatting dock (`#notes-text-floating-dock`), in-place click-to-expand raw code, auto-collapse on navigating away, 5-icon block action toolbar, clean KaTeX-safe cut and copy serialization (`serializeSelection`), context-aware single & multiline paste splitting and instant inline markdown token hydration, pure HTML/Unicode bullet markers, dynamic font size scaling, line spacing selector, interactive checkboxes, and keyboard navigation. |
+| `renderTextBlock(block, isEditing = false, onUpdate = null, allNotes = [], options = {})` | 68 - 1230 | Main rich text block component featuring permanent Live Preview mode, top floating window formatting dock (`#notes-text-floating-dock`), in-place click-to-expand raw code, auto-collapse on navigating away, 5-icon block action toolbar, clean KaTeX-safe cut with a raw-block guard (cuts inside `data-is-raw-block` editors fall back to native behavior to protect the expanded surface), clean copy serialization (`serializeSelection`), context-aware single & multiline paste splitting and instant inline markdown token hydration, explicit undo snapshots via `recordClipboardSnapshot()` for all cut/paste DOM surgery, pure HTML/Unicode bullet markers, dynamic font size scaling, line spacing selector, interactive checkboxes, and keyboard navigation. |
 
 **Tikz_Block.js**
 
@@ -827,10 +853,11 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 | `./Block_Actions.js` | `getBlockActionsHTML`, `initBlockActions` | `renderTikzBlock()` |
 | `./Figure_Utils.js` | `applyFigureAttributes`, `formatFigureCaptionText`, `appendFigureCaption` | `renderTikzBlock()` |
 | `./Block_Textarea.js` | `createCodeEditor` | `renderTikzBlock()` |
+| `../../Writing_Engine/Block_History.js` | `recordBlockSnapshot` | `renderTikzBlock()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `renderTikzBlock(block, isEditing = false, onUpdate = null, options = {})` | 71 - 550 | Main TikZ block renderer supporting live on-demand vector SVG compilation, customizable Fit % width with auto aspect-ratio height, dual-theme color selector, surrounding border toggle, template browser modal, scientific captioning, figure numbering, and integrated monospace code editor. |
+| `renderTikzBlock(block, isEditing = false, onUpdate = null, options = {})` | 72 - 602 | Main TikZ block renderer supporting live on-demand vector SVG compilation (heal-on-compile recorded as an immediate undo snapshot), customizable Fit % width with auto aspect-ratio height, Wrap-Beside toggle + L/R side control (pairs with the next block via the LaTeX_Editor wrap-row layout), dual-theme color selector, surrounding border toggle, template browser modal, scientific captioning, figure numbering, and integrated monospace code editor. |
 
 **Tikz_Templates.js**
 
@@ -929,7 +956,7 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
 | `renderBulletIcon(prefix)` | 110 - 120 | Compiles and renders bullet icon markup for unordered, ordered, or custom LaTeX list markers. |
-| `createLiveWidget(type, raw, contentHtml, options)` | 122 - 222 | Creates live interactive inline DOM widgets with seamless text selection (select-text) for math ($...$), formatting (**bold**, *italic*, <u>underline</u>), code (`code`), or citation links (`\fig`). |
+| `createLiveWidget(type, raw, contentHtml, options)` | 122 - 234 | Creates live interactive inline DOM widgets with seamless text selection (select-text) for math ($...$), formatting (**bold**, *italic*, <u>underline</u>), code (`code`), equation references (`\eq{name}` — emerald badge resolving labels via `getActiveEquationTagMap()`), or figure citations (`\fig`). Figure/equation badges navigate on click through the document-level handlers and deliberately skip the expand-to-raw behavior. |
 
 **Cite_Autocomplete.js**
 
@@ -1059,6 +1086,17 @@ Delegated document-level `mouseover`/`click` listeners (registered once, marker-
 | :--- | :--- | :--- |
 | `GetCitationStyleHTML()` | 19 - 110 | Returns HTML markup and styling for the citation style dropdown button in the floating editor toolbar. |
 | `InitCitationStyleLogic(onStyleChange = null)` | 112 - 142 | Initializes citation style dropdown menu interactions, style switching (`numeric`, `authoryear`, `authortitle`), persistence, and re-render callbacks. |
+
+**06_Equation_Numbering.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| - | - | - |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `GetEquationNumberingHTML(note = null)` | 12 - 32 | Returns HTML markup for the equation numbering style dropdown (`#eq-numbering-wrap`) in the floating editor toolbar, showing the active style badge. |
+| `InitEquationNumberingLogic(note = null, onStyleChange = null)` | 34 - 90 | Binds dropdown open/close, outside-click dismissal, and style switching (`numeric`, `alphabetic_small`, `roman_small`) persisting to `note.equationNumbering` with a re-render callback. |
 
 ## C_Graph_View
 

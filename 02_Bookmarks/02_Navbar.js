@@ -5,12 +5,31 @@ import { GetCheckLinksHTML, InitCheckLinks } from './02_Navbar/03_Check_Links.js
 export function GetNavbarHTML() {
   return `
     <style>
+      .app-navbar {
+        position: sticky;
+        top: var(--header-height, 74px);
+        z-index: 60;
+        width: 100%;
+        backdrop-filter: blur(16px) saturate(160%);
+        -webkit-backdrop-filter: blur(16px) saturate(160%);
+        background: var(--header-bg, rgba(11, 13, 20, 0.85));
+        transition: background-color var(--transition, 0.2s);
+      }
+
+      .navbar-inner {
+        max-width: 800px;
+        width: 100%;
+        margin: 0 auto;
+        padding: 22px 16px 12px;
+        box-sizing: border-box;
+      }
+
       .toolbar {
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 10px;
-        margin-bottom: 26px;
+        margin: 0;
         flex-wrap: nowrap;
         width: 100%;
         box-sizing: border-box;
@@ -71,8 +90,8 @@ export function GetNavbarHTML() {
         width: 36px;
         height: 36px;
         border-radius: 8px;
-        border: 1px solid var(--border, #2a2e40);
-        background: var(--surface, #181b27);
+        border: 1px solid var(--border, #262a3d);
+        background: var(--surface, #151824);
         color: var(--text, #e8eaf2);
         cursor: pointer;
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -97,9 +116,11 @@ export function GetNavbarHTML() {
       }
 
       @media (max-width: 600px) {
+        .navbar-inner {
+          padding: 16px 12px 10px;
+        }
         .toolbar {
           gap: 6px;
-          margin-bottom: 18px;
         }
         .toolbar-left,
         .toolbar-right {
@@ -114,6 +135,18 @@ export function GetNavbarHTML() {
         .icon-toolbar-btn svg {
           width: 15px;
           height: 15px;
+        }
+      }
+
+      @media (max-width: 440px) {
+        .navbar-inner {
+          padding: 14px 8px 8px;
+        }
+      }
+
+      @media (max-height: 500px) {
+        .navbar-inner {
+          padding: 6px 16px;
         }
       }
 
@@ -152,23 +185,27 @@ export function GetNavbarHTML() {
       }
     </style>
 
-    <div class="toolbar">
-      <div class="toolbar-left">
-        ${GetDensityViewHTML()}
-        ${GetSortGroupsHTML()}
-      </div>
+    <nav class="app-navbar">
+      <div class="navbar-inner">
+        <div class="toolbar">
+          <div class="toolbar-left">
+            ${GetDensityViewHTML()}
+            ${GetSortGroupsHTML()}
+          </div>
 
-      <div class="toolbar-right">
-        ${GetCheckLinksHTML()}
-        <button class="primary-icon-btn" id="add-bookmark-btn" title="Add Bookmark">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M19 21l-7-4.5L5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />
-            <line x1="12" y1="8" x2="12" y2="14" />
-            <line x1="9" y1="11" x2="15" y2="11" />
-          </svg>
-        </button>
+          <div class="toolbar-right">
+            ${GetCheckLinksHTML()}
+            <button class="primary-icon-btn" id="add-bookmark-btn" title="Add Bookmark">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 21l-7-4.5L5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />
+                <line x1="12" y1="8" x2="12" y2="14" />
+                <line x1="9" y1="11" x2="15" y2="11" />
+              </svg>
+            </button>
+          </div>
+        </div>
       </div>
-    </div>
+    </nav>
   `;
 }
 

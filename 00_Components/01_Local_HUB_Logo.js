@@ -29,10 +29,18 @@ const LOGO_VARIANTS = {
     markSvg: HUB_MARK_SVG
   },
   bookmarks: {
-    title: 'Local <span style="color:#d6316f;">HUB</span>',
-    subtitle: 'personal bookmarks',
-    accent: '#d6316f',
-    // SWAP ARTWORK: placeholder bookmark-ribbon mark (matches the BOOKMARK orb color)
+    title: 'Local <span style="color:#ef4444;">HUB</span>',
+    subtitle: 'BOOKMARKS',
+    accent: '#991b1b',
+    markColor: '#ef4444',
+    markHover: '#991b1b',
+    subtitleColor: '#ef4444',
+    subtitleOpacity: '1',
+    subtitleSize: '12px',
+    subtitleWeight: '800',
+    subtitleSpacing: '0.16em',
+    tooltip: 'Back to Landing Page',
+    // Bookmark-ribbon mark (matches the BOOKMARK tab identity)
     markSvg: `
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
           <path d="M19 21l-7-4.5L5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" fill="currentColor" />
@@ -60,8 +68,25 @@ export function GetLogoHTML(options = {}) {
   const title = options.title || variant.title;
   const subtitle = options.subtitle || variant.subtitle;
   const accent = options.accent !== undefined ? options.accent : variant.accent;
-  const tooltip = options.tooltip || 'Back to Landing Page';
-  const accentStyle = accent ? ` style="--accent: ${accent};"` : '';
+  const markColor = options.markColor || variant.markColor;
+  const markHover = options.markHover || variant.markHover;
+  const subtitleColor = options.subtitleColor || variant.subtitleColor;
+  const subtitleOpacity = options.subtitleOpacity || variant.subtitleOpacity;
+  const subtitleSize = options.subtitleSize || variant.subtitleSize;
+  const subtitleWeight = options.subtitleWeight || variant.subtitleWeight;
+  const subtitleSpacing = options.subtitleSpacing || variant.subtitleSpacing;
+  const tooltip = options.tooltip || variant.tooltip || 'Back to Landing Page';
+
+  const styleProps = [];
+  if (accent) styleProps.push(`--accent: ${accent}`);
+  if (markColor) styleProps.push(`--mark-color: ${markColor}`);
+  if (markHover) styleProps.push(`--mark-hover: ${markHover}`);
+  if (subtitleColor) styleProps.push(`--subtitle-color: ${subtitleColor}`);
+  if (subtitleOpacity) styleProps.push(`--subtitle-opacity: ${subtitleOpacity}`);
+  if (subtitleSize) styleProps.push(`--subtitle-size: ${subtitleSize}`);
+  if (subtitleWeight) styleProps.push(`--subtitle-weight: ${subtitleWeight}`);
+  if (subtitleSpacing) styleProps.push(`--subtitle-spacing: ${subtitleSpacing}`);
+  const styleAttr = styleProps.length ? ` style="${styleProps.join('; ')};"` : '';
 
   return `
     <style>
@@ -82,7 +107,33 @@ export function GetLogoHTML(options = {}) {
 
       @media (max-width: 440px) {
         .logo-btn {
-          gap: 10px;
+          gap: 8px;
+        }
+        .logo-mark svg {
+          height: 38px;
+          width: 28px;
+        }
+        .site-name .title {
+          font-size: 18px;
+        }
+        .site-name .subtitle {
+          font-size: 10px;
+        }
+      }
+
+      @media (max-width: 360px) {
+        .logo-btn {
+          gap: 6px;
+        }
+        .logo-mark svg {
+          height: 32px;
+          width: 24px;
+        }
+        .site-name .title {
+          font-size: 16px;
+        }
+        .site-name .subtitle {
+          font-size: 9px;
         }
       }
 
@@ -91,12 +142,12 @@ export function GetLogoHTML(options = {}) {
         display: flex;
         align-items: center;
         justify-content: center;
-        color: var(--text, #e8eaf2);
+        color: var(--mark-color, var(--text, #e8eaf2));
         transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), color 0.2s;
       }
 
       .logo-btn:hover .logo-mark {
-        color: var(--accent, #8b6dff);
+        color: var(--mark-hover, var(--accent, #8b6dff));
         transform: scale(1.05);
       }
 
@@ -122,18 +173,18 @@ export function GetLogoHTML(options = {}) {
       }
 
       .site-name .subtitle {
-        font-size: 8.5px;
-        font-weight: 500;
-        color: var(--text-secondary, #a0a4b8);
-        opacity: 0.65;
+        font-size: var(--subtitle-size, 8.5px);
+        font-weight: var(--subtitle-weight, 700);
+        color: var(--subtitle-color, var(--text-secondary, #a0a4b8));
+        opacity: var(--subtitle-opacity, 0.65);
         text-transform: uppercase;
-        letter-spacing: 0.08em;
+        letter-spacing: var(--subtitle-spacing, 0.12em);
         margin-top: 3px;
         white-space: nowrap;
       }
     </style>
 
-    <button class="logo-btn" id="logo-btn" title="${tooltip}"${accentStyle}>
+    <button class="logo-btn" id="logo-btn" title="${tooltip}"${styleAttr}>
       <span class="logo-mark">
 ${markSvg}
       </span>
@@ -146,10 +197,9 @@ ${markSvg}
 }
 
 // Click on Logo takes you back to the hub:
-//  - shells that define window.__LOCALHUB_HUB_URL__ (Bookmarks.html / Notes.html and their
-//    standalone builds) navigate to that hub file;
-//  - everywhere else (Index.html and the all-in-one Local_HUB.html) the original
-//    "clear the hash" SPA navigation is used.
+//  - shells that define window.__LOCALHUB_HUB_URL__ navigate to that hub file;
+//  - everywhere else (Index.html and the all-in-one Local_HUB.html) the
+//    "clear the hash" SPA navigation is used to return to the Landing Page.
 export function InitLogoLogic() {
   const logoBtn = document.getElementById('logo-btn');
   if (logoBtn) {
@@ -164,7 +214,17 @@ export function InitLogoLogic() {
         window.location.href = hubUrl;
       } else {
         // Navigate back to the Landing Page by clearing hash
-        window.location.hash = '';
+        if (window.location.hash && window.location.hash !== '#') {
+          window.location.hash = '';
+        } else {
+          // If hash is already empty or '#', dispatch hashchange so router re-evaluates
+          window.location.hash = '#';
+          try {
+            window.dispatchEvent(new HashChangeEvent('hashchange'));
+          } catch (_) {
+            window.dispatchEvent(new Event('hashchange'));
+          }
+        }
       }
     });
   }

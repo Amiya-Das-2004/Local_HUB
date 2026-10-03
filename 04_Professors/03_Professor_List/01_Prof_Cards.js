@@ -155,9 +155,10 @@ export function profCardHTML(p) {
   var rated = papers.filter(function (x) { return typeof x.rating === 'number' && x.rating > 0; });
   var avg = rated.length ? (rated.reduce(function (s, x) { return s + x.rating; }, 0) / rated.length).toFixed(1) : null;
   var areaChips = (p.areas || []).map(function (a) { return '<span class="chip">' + esc(a) + '</span>'; }).join('');
+  var pc = p.color || avatarColor(p.name);
   var photo = p.photo
-    ? '<img class="avatar" src="' + esc(p.photo) + '" alt="Photo of ' + esc(p.name) + '" onerror="this.outerHTML=window.__avatarFallback(\'' + esc(p.id) + '\')"/>'
-    : '<span class="avatar" aria-hidden="true" style="background:' + avatarColor(p.name) + '">' + esc(initials(p.name)) + '</span>';
+    ? '<img class="avatar" src="' + esc(p.photo) + '" style="--prof-c:' + pc + '" alt="Photo of ' + esc(p.name) + '" onerror="this.outerHTML=window.__avatarFallback(\'' + esc(p.id) + '\')"/>'
+    : '<span class="avatar" aria-hidden="true" style="background:' + pc + ';--prof-c:' + pc + '">' + esc(initials(p.name)) + '</span>';
   var contact = '';
   if (p.email) contact += '<a href="mailto:' + esc(p.email) + '">' + ICONS.mail + esc(p.email) + '</a>';
   if (p.website) contact += '<a href="' + esc(p.website) + '" target="_blank" rel="noopener noreferrer">' + ICONS.link + 'Website / Scholar</a>';
@@ -175,7 +176,7 @@ export function profCardHTML(p) {
         '<button type="button" class="btn btn-line btn-sm" data-action="bulk-add" title="Paste a whole list of papers — one per line">' + ICONS.list + 'Bulk add papers</button>' +
         '<button type="button" class="btn btn-line btn-sm" data-action="dl-prof-list">' + ICONS.download + 'Papers list (.txt)</button>' +
         '<button type="button" class="btn btn-line btn-sm" data-action="dl-prof-bib" title="Download all of this professor&#39;s papers as a BibTeX .bib file — ready for LaTeX">' + ICONS.fileText + 'BibTeX (.bib)</button>' +
-        '<button type="button" class="btn btn-line btn-sm" data-action="copy-prof" title="Copy this professor (with papers) as JSON — paste it into any other ProffTrack library via the footer link">' + ICONS.copy + 'Copy JSON</button>' +
+        '<button type="button" class="btn btn-line btn-sm" data-action="copy-prof" title="Copy this professor (with papers) as JSON — paste it into any other ProfessorTrack library via the footer link">' + ICONS.copy + 'Copy JSON</button>' +
         '<span class="spacer"></span>' +
         '<button type="button" class="icon-btn' + (p.fav ? ' fav-on' : '') + '" data-action="fav-prof" title="' + (p.fav ? 'Remove from favorites' : 'Mark as favorite — floats to the top of its college group (F)') + '" aria-label="Toggle favorite" aria-pressed="' + (!!p.fav) + '">' + ICONS.star + '</button>' +
         '<button type="button" class="icon-btn" data-action="edit-prof" title="Edit professor" aria-label="Edit professor">' + ICONS.edit + '</button>' +
@@ -216,7 +217,7 @@ export function renderEmptyState() {
     '<div class="empty-state">' +
       '<div class="empty-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/></svg></div>' +
       '<h2>Your library is empty</h2>' +
-      '<p>Add the professors you follow — their college, its QS ranking and the papers you&#39;ve read. ProffTrack groups them by college and ranks them automatically, and the whole library lives inside this single HTML file.</p>' +
+      '<p>Add the professors you follow — their college, its QS ranking and the papers you&#39;ve read. ProfessorTrack groups them by college and ranks them automatically, and the whole library lives inside this single HTML file.</p>' +
       '<div class="empty-actions">' +
         '<button type="button" class="btn btn-primary" id="emptyAddBtn">' + ICONS.plus + 'Add your first professor</button>' +
         '<button type="button" class="btn btn-line" id="emptySeedBtn">Load sample library</button>' +

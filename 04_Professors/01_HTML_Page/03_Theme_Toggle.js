@@ -1,7 +1,9 @@
 /* ==========================================================================
    PROFESSORS — 01_HTML_Page/03_Theme_Toggle.js
-   Light / dark theme (proff.html's own sun/moon toggle, data-theme class on
-   <html>, persisted in ProfState). Extracted from proff.html lines 2373-2382.
+   Light / dark theme (ProfessorTrack's own sun/moon toggle). The theme class
+   is scoped to the #ProfessorsApp container (+ body for page-background and
+   scrollbar rules) so it can never leak into the landing page or other tabs
+   (spec §21). Persisted in ProfState.
    ==========================================================================
 */
 
@@ -10,7 +12,10 @@ import { $ } from '../01_Utils.js';
 
 /* theme (light / dark) — persisted in state, so saved files reopen with your theme */
 export function applyTheme(t) {
-  document.documentElement.classList.toggle('dark', t === 'dark');
+  const dark = t === 'dark';
+  const app = document.getElementById('ProfessorsApp');
+  if (app) app.classList.toggle('prof-dark', dark);
+  document.body.classList.toggle('prof-dark', dark);
 }
 export function toggleTheme() {
   state.theme = (state.theme === 'dark') ? 'light' : 'dark';

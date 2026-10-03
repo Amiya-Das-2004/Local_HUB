@@ -15,7 +15,7 @@ Interactive 3D WebGL portal and entry point for the Local_HUB workspace suite. P
 ├── 03_Orbs.js             ← Interactive 3D Three.js orbs, raycasting, physics, and routing
 ├── 04_Save_Icon_Logo.js   ← Standalone app download button & SVG logo renderer
 ├── 05_Import_Export.js    ← Landing-specific import/export adapter & canvas reload handler
-├── 06_Header.js           ← Top navigation header with status badge and backup buttons
+├── 06_Header.js           ← Top navigation header with global backup import/export action buttons
 ├── 07_Footer.js           ← Bottom branding bar, Local HUB typography, and download icon
 ├── 08_Loading.js          ← Full-screen initialization loader overlay with orbital spinners
 ├── Landing_Page.md        ← This architecture & API reference
@@ -75,9 +75,9 @@ Interactive 3D WebGL portal and entry point for the Local_HUB workspace suite. P
 | `ShellGeoTab` | 5 | Shared `IcosahedronGeometry(4.0, 2)` wireframe cage geometry for tab orbs. |
 | `MakeLabel(Text, Color)` | 7 - 47 | Dynamically renders high-resolution 2D canvas text sprite with accent glow and outline stroke for tab titles. |
 | `Orb` | 49 - 239 | Class encapsulating 3D sphere mesh, wireframe shell, inner cluster nodes, rotation physics, hover enlargement, and dragging state. |
-| `NavigateToTab(Tab)` | 244 - 256 | Routes user to clicked tab via `PageUrl` (multi-file dev mode) or URL hash (standalone build / external URL). |
-| `SetupInputs(Renderer, Camera, Orbs, Viewport)` | 258 - 359 | Binds pointer, touch, and mouse wheel listeners to enable raycasted hover detection, 3D dragging, and click navigation. |
-| `InitOrbs(container, state)` | 361 - 416 | Sets up Three.js Scene, PerspectiveCamera, WebGLRenderer, lights, creates `Orb` instances for each registered tab, and starts continuous animation loop. |
+| `NavigateToTab(Tab)` | 245 - 267 | Routes user to clicked tab via internal hash route (in `Index.html` SPA hub or standalone build) or `PageUrl` (isolated tab runners / external). |
+| `SetupInputs(Renderer, Camera, Orbs, Viewport)` | 269 - 370 | Binds pointer, touch, and mouse wheel listeners to enable raycasted hover detection, 3D dragging, and click navigation. |
+| `InitOrbs(container, state)` | 372 - 427 | Sets up Three.js Scene, PerspectiveCamera, WebGLRenderer, lights, creates `Orb` instances for each registered tab, and starts continuous animation loop. |
 
 ---
 
@@ -118,7 +118,7 @@ Interactive 3D WebGL portal and entry point for the Local_HUB workspace suite. P
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `InitHeader(container, state)` | 3 - 33 | Renders fixed top navigation bar with animated pulsing TABS badge and Import/Export buttons. |
+| `InitHeader(container, state)` | 3 - 25 | Renders fixed top navigation bar with right-aligned global Import (JSON upload) and Export (JSON download) action buttons. |
 
 ---
 

@@ -110,6 +110,46 @@ if (typeof document !== 'undefined' && !document.getElementById('note-fig-citati
   });
 }
 
+// Active equation tag map for the note being rendered (normalized tag -> { label, blockId, subIndex }),
+// computed by computeEquationNumbers() and set by the editor render loop.
+let activeEquationTagMap = new Map();
+
+export function setActiveEquationTagMap(map) {
+  activeEquationTagMap = map || new Map();
+}
+
+export function getActiveEquationTagMap() {
+  return activeEquationTagMap;
+}
+
+// Global click handler for equation reference badges (3) — scrolls to the equation
+// block and pulses a highlight ring, mirroring the figure citation behavior.
+if (typeof document !== 'undefined' && !document.getElementById('note-eq-citation-handler')) {
+  const marker = document.createElement('div');
+  marker.id = 'note-eq-citation-handler';
+  marker.style.display = 'none';
+  document.head.appendChild(marker);
+
+  document.addEventListener('click', (e) => {
+    const citation = e.target.closest('.note-eq-citation');
+    if (!citation) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const blockId = citation.getAttribute('data-eq-block');
+    if (!blockId) return;
+
+    const targetEl = document.querySelector(`[data-eq-block-id="${CSS.escape(blockId)}"]`);
+    if (targetEl) {
+      targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      targetEl.classList.add('ring-2', 'ring-purple-500', 'ring-offset-2', 'ring-offset-[var(--card)]', 'transition-all', 'duration-300');
+      setTimeout(() => {
+        targetEl.classList.remove('ring-2', 'ring-purple-500', 'ring-offset-2', 'ring-offset-[var(--card)]');
+      }, 1600);
+    }
+  });
+}
+
 
 /**
  * Parses \newcommand, \renewcommand, and \def macros into a KaTeX macros dictionary
@@ -707,6 +747,14 @@ function parseInlineMarkdownAndLatex(str) {
     const resolvedNum = activeFigureTagMap.get(norm) ?? (activeFigureTagMap.get(rawTag) ?? null);
     const displayLabel = resolvedNum !== null && resolvedNum !== undefined ? `Fig. ${resolvedNum}` : `Fig. ${escapeHtml(rawTag)}`;
     return `<a class="note-fig-citation font-semibold text-purple-400 hover:text-purple-300 bg-purple-500/10 hover:bg-purple-500/20 px-1.5 py-0.5 rounded border border-purple-500/30 transition-colors inline-flex items-center gap-0.5 cursor-pointer select-none no-underline" href="#fig-${escapeHtml(norm)}" data-fig-target="${escapeHtml(norm)}" data-fig-num="${resolvedNum || ''}" title="Jump to ${displayLabel}">[${displayLabel}]</a>`;
+  });
+
+  // LaTeX \eq{name} or \eq{name:2} equation reference — label from computeEquationNumbers tag map
+  s = s.replace(/\\eq\{([a-zA-Z0-9_\-\.\:]+)\}/g, (match, rawTag) => {
+    const norm = rawTag.trim().toLowerCase();
+    const entry = activeEquationTagMap.get(norm) || null;
+    const displayLabel = entry ? `(${entry.label})` : `(?)`;
+    return `<a class="note-eq-citation font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 px-1.5 py-0.5 rounded border border-emerald-500/30 transition-colors inline-flex items-center gap-0.5 cursor-pointer select-none no-underline" href="#eq-${escapeHtml(norm)}" data-eq-target="${escapeHtml(norm)}" data-eq-block="${entry ? escapeHtml(entry.blockId) : ''}" title="Jump to equation ${displayLabel}">${displayLabel}</a>`;
   });
 
   // LaTeX \cite{key1,key2} bibliography citation (label per NotesState.citationStyle)

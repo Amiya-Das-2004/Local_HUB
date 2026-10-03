@@ -98,6 +98,12 @@ export function RL_NormalizeItem(raw) {
     bibtex: String(raw.bibtex || ''),
     attachment,
     origin: ['rd', 'professors', 'notes'].includes(raw.origin) ? raw.origin : 'rd',
+    // research-workflow fields (spec §17-18): the canonical paper carries the
+    // full reading lifecycle; professors reference it via paperRefs.
+    professorId: String(raw.professorId || ''),
+    startedOn: String(raw.startedOn || ''),
+    finishedOn: String(raw.finishedOn || ''),
+    rereads: Array.isArray(raw.rereads) ? raw.rereads.map(x => String(x)).filter(Boolean) : [],
     createdAt: num(raw.createdAt) || Date.now(),
     updatedAt: num(raw.updatedAt) || Date.now()
   };

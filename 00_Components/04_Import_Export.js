@@ -51,6 +51,29 @@ export function GetImportButtonHTML() {
         height: 17px;
         flex-shrink: 0;
       }
+
+      @media (max-width: 440px) {
+        .notes-icon-btn {
+          width: 32px;
+          height: 32px;
+        }
+        .notes-icon-btn svg {
+          width: 15px;
+          height: 15px;
+        }
+      }
+
+      @media (max-width: 360px) {
+        .notes-icon-btn {
+          width: 28px;
+          height: 28px;
+          border-radius: 6px;
+        }
+        .notes-icon-btn svg {
+          width: 13px;
+          height: 13px;
+        }
+      }
     </style>
     <button class="notes-icon-btn" id="btn-import" type="button" title="${tooltip}">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -649,9 +672,9 @@ export function GetImportExportHTML() {
   return `
     <style>
       .import-export-actions .action-btn {
-        background: transparent;
-        border: 1px solid var(--border);
-        color: var(--muted);
+        background: rgba(107, 140, 255, 0.1);
+        border: 1px solid rgba(107, 140, 255, 0.3);
+        color: var(--accent, #6b8cff);
         font-family: 'JetBrains Mono', monospace;
         font-size: 0.6rem;
         letter-spacing: 0.1em;
@@ -659,27 +682,32 @@ export function GetImportExportHTML() {
         cursor: pointer;
         transition: all 0.3s ease;
         border-radius: 4px;
+        user-select: none;
       }
 
       .import-export-actions .action-btn:hover {
-        border-color: var(--accent);
-        color: var(--accent);
-        background: rgba(107, 140, 255, 0.05);
+        background: rgba(107, 140, 255, 0.2);
+        border-color: var(--accent, #6b8cff);
+        color: var(--accent, #6b8cff);
       }
 
-      .import-export-actions .action-btn.export {
+      .import-export-actions .action-btn.export,
+      .import-export-actions .action-btn.import {
         background: rgba(107, 140, 255, 0.1);
-        color: var(--accent);
+        color: var(--accent, #6b8cff);
         border-color: rgba(107, 140, 255, 0.3);
       }
 
-      .import-export-actions .action-btn.export:hover {
+      .import-export-actions .action-btn.export:hover,
+      .import-export-actions .action-btn.import:hover {
         background: rgba(107, 140, 255, 0.2);
+        border-color: var(--accent, #6b8cff);
+        color: var(--accent, #6b8cff);
       }
     </style>
 
-    <button class="action-btn" id="btn-import" type="button">IMPORT</button>
-    <button class="action-btn export" id="btn-export" type="button">EXPORT</button>
+    <button class="action-btn import" id="btn-import" type="button" title="Import Workspace Data (JSON)">IMPORT</button>
+    <button class="action-btn export" id="btn-export" type="button" title="Export Workspace Data (JSON)">EXPORT</button>
   `;
 }
 

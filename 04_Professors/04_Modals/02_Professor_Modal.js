@@ -7,7 +7,7 @@
 */
 
 import { ui, upsertProf } from '../00_State.js';
-import { $, toast } from '../01_Utils.js';
+import { $, toast, AVATAR_COLORS, avatarColor } from '../01_Utils.js';
 import { matchCollege } from '../03_Seed_Data.js';
 import { openModal, closeModal } from './01_Modal_Core.js';
 import { render } from '../Professors.js';
@@ -66,6 +66,11 @@ export function GetProfessorModalHTML() {
             <label for="pf-bio">Bio / Notes</label>
             <textarea id="pf-bio" name="bio" rows="3" placeholder="Why you follow this professor, meeting notes…"></textarea>
           </div>
+          <div class="field span-2">
+            <label for="pf-color">Identity color <small>(orb accent across ProfessorTrack &amp; R&amp;D)</small></label>
+            <div class="prof-color-picker" id="pf-color-picker"></div>
+            <input type="hidden" name="color" id="pf-color"/>
+          </div>
         </div>
         <p class="field-hint" id="collegeHint" hidden>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
@@ -102,11 +107,43 @@ export function openProfModal(prof) {
     form.elements.website.value = prof.website || '';
     form.elements.photo.value = prof.photo || '';
     form.elements.bio.value = prof.bio || '';
+    setProfColor(prof.color || avatarColor(prof.name) || AVATAR_COLORS[0]);
   }
+  if (!prof) setProfColor(avatarColor(form.elements.name.value) || AVATAR_COLORS[0]);
   openModal('#profModal');
   setTimeout(function () { form.elements.name.focus(); }, 60);
 }
+function setProfColor(color) {
+  var input = document.getElementById('pf-color');
+  if (!input) return;
+  input.value = color || AVATAR_COLORS[0];
+  var picker = document.getElementById('pf-color-picker');
+  if (!picker) return;
+  picker.querySelectorAll('button').forEach(function (b) {
+    b.classList.toggle('active', (b.dataset.color || '').toLowerCase() === input.value.toLowerCase());
+  });
+}
+
 export function InitProfessorModal() {
+  var picker = document.getElementById('pf-color-picker');
+  if (picker && !picker.children.length) {
+    AVATAR_COLORS.forEach(function (c) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.color = c;
+      b.style.background = c;
+      b.title = c;
+      b.setAttribute('aria-label', 'Identity color ' + c);
+      b.addEventListener('click', function () { setProfColor(c); });
+      picker.appendChild(b);
+    });
+    var custom = document.createElement('input');
+    custom.type = 'color';
+    custom.value = '#0f766e';
+    custom.title = 'Custom color';
+    custom.addEventListener('input', function () { setProfColor(custom.value); });
+    picker.appendChild(custom);
+  }
   $('#pf-college').addEventListener('change', function () {
     var m = matchCollege(this.value);
     var hint = $('#collegeHint'), hintTxt = $('#collegeHintText');
@@ -141,7 +178,8 @@ export function InitProfessorModal() {
       qsRank: isNaN(rank) ? null : rank,
       areas: f.elements.areas.value.split(',').map(function (s) { return s.trim(); }).filter(Boolean),
       email: f.elements.email.value.trim(), website: f.elements.website.value.trim(),
-      photo: f.elements.photo.value.trim(), bio: f.elements.bio.value.trim()
+      photo: f.elements.photo.value.trim(), bio: f.elements.bio.value.trim(),
+      color: f.elements.color.value || avatarColor(name)
     };
     var saved = upsertProf(data);
     ui.expandedProf = saved.id;

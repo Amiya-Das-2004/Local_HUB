@@ -11,7 +11,7 @@
 import { escapeHtml } from '../../02_Utils.js';
 import { CreateColorSelector } from '../../../00_Components/06_Color_Selector.js';
 import { renderKatex } from '../../Writing_Engine/Math_Renderer.js';
-import { attachBlockHistory } from '../../Writing_Engine/Block_History.js';
+import { attachBlockHistory, recordBlockSnapshot, getCaretTextOffset } from '../../Writing_Engine/Block_History.js';
 import { getBlockActionsHTML, initBlockActions } from './Block_Actions.js';
 import { maybeShowCiteAutocomplete, handleCiteAutocompleteKeydown, hideCiteAutocomplete } from './Text_Block/Cite_Autocomplete.js';
 import { hideCitePreview } from './Text_Block/Cite_Preview.js';
@@ -280,6 +280,14 @@ export function renderTextBlock(
         lineSpacing: block.lineSpacing || 'normal'
       });
     }
+  };
+
+  // Discrete clipboard operations (cut/paste) perform manual DOM surgery and never
+  // fire the input event, so their resulting state is recorded explicitly to keep
+  // per-block undo/redo granular across clipboard boundaries.
+  const recordClipboardSnapshot = () => {
+    const caret = getCaretTextOffset(liveSurface);
+    recordBlockSnapshot(block.id, serializeSurface(), caret, caret, { immediate: true });
   };
 
   let currentExpandedNode = null;
@@ -587,6 +595,17 @@ export function renderTextBlock(
     if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
 
     const range = sel.getRangeAt(0);
+
+    // Inside the expanded raw editor the container owns its own plain text;
+    // deleteSelectionAndHeal would replace it with a single rendered line and
+    // destroy the editing surface, so let native cut run (its input event keeps history in sync).
+    const cutStartLine = getContainingLine(range.startContainer, liveSurface);
+    const cutEndLine = getContainingLine(range.endContainer, liveSurface);
+    if ((cutStartLine && cutStartLine.getAttribute('data-is-raw-block') === 'true') ||
+        (cutEndLine && cutEndLine.getAttribute('data-is-raw-block') === 'true')) {
+      return;
+    }
+
     const cleanMd = serializeSelection(range, liveSurface);
     if (!cleanMd) return;
 
@@ -594,6 +613,7 @@ export function renderTextBlock(
     e.clipboardData.setData('text/plain', cleanMd);
 
     deleteSelectionAndHeal(range, liveSurface, editModeOptions, triggerUpdate);
+    recordClipboardSnapshot();
   });
 
   // Seamless clean copy handler: extracts pure markdown without KaTeX DOM/MathML distortion
@@ -644,6 +664,7 @@ export function renderTextBlock(
       const newEl = renderSingleLineToDom(pastedText, editModeOptions);
       liveSurface.appendChild(newEl);
       setCaretAtOffsetInLine(newEl, pastedText.length);
+      recordClipboardSnapshot();
       triggerUpdate();
       return;
     }
@@ -686,6 +707,7 @@ export function renderTextBlock(
       newR.collapse(false);
       freshSel.removeAllRanges();
       freshSel.addRange(newR);
+      recordClipboardSnapshot();
       triggerUpdate();
       return;
     }
@@ -714,6 +736,7 @@ export function renderTextBlock(
       const caretOffsetInLastLine = pastedLines[pastedLines.length - 1].length;
       setCaretAtOffsetInLine(lastEl, caretOffsetInLastLine);
 
+      recordClipboardSnapshot();
       triggerUpdate();
       return;
     }
@@ -727,6 +750,7 @@ export function renderTextBlock(
     const targetCaretOffset = split.beforeText.length + pastedText.length;
     setCaretAtOffsetInLine(combinedEl, targetCaretOffset);
 
+    recordClipboardSnapshot();
     triggerUpdate();
   });
 

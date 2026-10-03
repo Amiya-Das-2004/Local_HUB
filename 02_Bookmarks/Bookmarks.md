@@ -19,12 +19,13 @@ Bookmark manager for Local_HUB. Features group/section categorization, responsiv
 ├── 03_Add_Edit_Delete.js                   ← Add/Edit bookmark modal dialog, favicon parser, custom icon palette
 ├── 04_Bookmark_Cards.js                    ← Bookmark sections, responsive cards, letter logos, drag reordering
 ├── 05_Footer.js                            ← Bottom footer bar with copyright notice
-├── Bookmarks.html                          ← Standalone single-tab HTML runner for Bookmarks
 ├── Bookmarks.js                            ← Master lifecycle orchestrator and window exporter
 ├── Bookmarks.md                            ← This architecture & API reference
-├── Tab_Import_Export_Handler.js            ← Tab-isolated JSON backup and recovery adapter
-├── Tab_Logo_Handler.js                     ← Standalone navigation override returning to Hub index
-└── Tab_Save_Handler.js                     ← Standalone single-tab HTML compiler and cache purger
+└── 01_Tab_Bookmarks/
+    ├── Bookmarks.html                      ← Standalone single-tab HTML runner for Bookmarks
+    ├── Tab_Import_Export_Handler.js        ← Tab-isolated JSON backup and recovery adapter
+    ├── Tab_Logo_Handler.js                 ← Standalone navigation override returning to Hub index
+    └── Tab_Save_Handler.js                 ← Standalone single-tab HTML compiler and cache purger
 ```
 
 ---
@@ -55,9 +56,9 @@ Bookmark manager for Local_HUB. Features group/section categorization, responsiv
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `GetHeaderHTML()` | 7 - 151 | Generates responsive sticky header HTML with bookmarks logo variant, center title badge, Import/Export buttons, Save Button, and Theme Toggle. |
-| `InitHeader(container)` | 153 - 160 | Mounts header markup into container and attaches logo click routing, import/export, and theme toggle listeners. |
-| `InitSaveButtonLogic, InitImportExport` | 162 | Re-exported from components. |
+| `GetHeaderHTML()` | 7 - 78 | Generates responsive sticky header HTML with bookmarks logo variant (top 'Local HUB' with red HUB, bottom red 'BOOKMARKS', permanent red ribbon mark turning dark red on hover), Import/Export buttons, Save Button, and Theme Toggle. |
+| `InitHeader(container)` | 80 - 86 | Mounts header markup into container and attaches logo click routing, import/export, and theme toggle listeners. |
+| `InitSaveButtonLogic, InitImportExport` | 88 | Re-exported from components. |
 
 ---
 
@@ -71,9 +72,9 @@ Bookmark manager for Local_HUB. Features group/section categorization, responsiv
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `GetNavbarHTML()` | 5 - 173 | Generates toolbar HTML markup combining view density toggles, group dropdown/sorter, link health checker, and Add Bookmark button. |
-| `InitNavbar(state, callbacks)` | 175 - 184 | Initializes density switcher, sort groups, broken links checker, and wires click listener on `#add-bookmark-btn`. |
-| `RenderSectionsDropdownGrid` | 186 | Re-exported from `02_Navbar/02_Sort_Groups.js`. |
+| `GetNavbarHTML()` | 5 - 203 | Generates sticky toolbar HTML markup (pinned below the header) combining view density toggles, group dropdown/sorter, link health checker, and Add Bookmark button. |
+| `InitNavbar(state, callbacks)` | 205 - 214 | Initializes density switcher, sort groups, broken links checker, and wires click listener on `#add-bookmark-btn`. |
+| `RenderSectionsDropdownGrid` | 216 | Re-exported from `02_Navbar/02_Sort_Groups.js`. |
 
 ---
 
@@ -189,7 +190,13 @@ Bookmark manager for Local_HUB. Features group/section categorization, responsiv
 
 ---
 
-## Tab_Import_Export_Handler.js
+## 01_Tab_Bookmarks/Bookmarks.html
+
+Standalone single-tab HTML runner for Bookmarks. Houses the `#Bookmarks` DOM vault, imports `../Bookmarks.js` along with `./Tab_Save_Handler.js`, `./Tab_Logo_Handler.js`, and `./Tab_Import_Export_Handler.js`.
+
+---
+
+## 01_Tab_Bookmarks/Tab_Import_Export_Handler.js
 
 | Import Location | Functions Imported | used in Functions |
 | :--- | :--- | :--- |
@@ -197,13 +204,13 @@ Bookmark manager for Local_HUB. Features group/section categorization, responsiv
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `TriggerTabExport()` | 9 - 52 | Exports only Bookmarks data as `Bookmarks_DATA.json`. |
-| `TriggerTabImport(onSuccess = null)` | 55 - 151 | Resilient bookmarks importer: accepts direct bookmarks payload or extracts Bookmarks from a multi-tab envelope. |
-| `InitTabImportExportOverride()` | 155 - 177 | Swaps header button click listeners to use the single-tab bookmarks handlers. |
+| `TriggerTabExport()` | 10 - 56 | Exports only Bookmarks data as `Bookmarks_DATA.json`. |
+| `TriggerTabImport(onSuccess = null)` | 59 - 146 | Resilient bookmarks importer: accepts direct bookmarks payload or extracts Bookmarks from a multi-tab envelope. |
+| `InitTabImportExportOverride()` | 150 - 171 | Swaps header button click listeners to use the single-tab bookmarks handlers. |
 
 ---
 
-## Tab_Logo_Handler.js
+## 01_Tab_Bookmarks/Tab_Logo_Handler.js
 
 | Import Location | Functions Imported | used in Functions |
 | :--- | :--- | :--- |
@@ -211,11 +218,11 @@ Bookmark manager for Local_HUB. Features group/section categorization, responsiv
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `InitTabLogoOverride()` | 12 - 30 | Replaces default logo click listener with direct URL navigation to `window.__LOCALHUB_HUB_URL__` (or hash reset) for standalone `Bookmarks.html`. |
+| `InitTabLogoOverride()` | 9 - 27 | Keeps logo navigation strictly within the isolated Bookmarks tab (resets hash without redirecting to `Index.html`). |
 
 ---
 
-## Tab_Save_Handler.js
+## 01_Tab_Bookmarks/Tab_Save_Handler.js
 
 | Import Location | Functions Imported | used in Functions |
 | :--- | :--- | :--- |
@@ -225,7 +232,7 @@ Bookmark manager for Local_HUB. Features group/section categorization, responsiv
 | :--- | :--- | :--- |
 | `syncTabStatesToDOM(doc)` | 15 - 99 | Synchronizes active `BookmarkState` and localStorage caches into the DOM `<script id="Bookmarks">` vault block. |
 | `clearAllTabLocalCaches()` | 102 - 118 | Purges all `_Local_Cache` items from browser `localStorage` upon standalone build save. |
-| `bundleTabFile(filePath)` | 122 - 146 | Asynchronously fetches module code and strips ES module `import`/`export` syntax for bundling. |
+| `bundleTabFile(filePath)` | 122 - 146 | Asynchronously fetches module code and strips ES module `import`/`export` syntax for bundling. Resolves paths two levels deep (`../../`) relative to repository root. |
 | `bundleTabGroup(files)` | 148 - 152 | Sequentially bundles an array of file paths. |
-| `SaveBookmarksStandalone()` | 184 - 298 | Compiles shared components, tab handlers, and bookmark modules into a self-contained standalone `Bookmarks.html` file and triggers browser download. |
-| `InitTabSaveOverride()` | 302 - 311 | Overrides the shared header save button listener to trigger `SaveBookmarksStandalone()`. |
+| `SaveBookmarksStandalone()` | 185 - 299 | Compiles shared components, tab handlers, and bookmark modules into a self-contained standalone `Bookmarks.html` file and triggers browser download. |
+| `InitTabSaveOverride()` | 303 - 312 | Overrides the shared header save button listener to trigger `SaveBookmarksStandalone()`. |

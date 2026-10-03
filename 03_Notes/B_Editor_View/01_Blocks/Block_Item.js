@@ -14,6 +14,11 @@ export function CreateBlockItem({
   allNotes,
   prefix = '',
   figureInfo = null,
+  eqInfo = null,
+  figureMap = null,
+  eqMap = null,
+  prefixMap = null,
+  isDocked = false,
   note = null,
   pickerState = null,
   onPickBlock = null,
@@ -67,6 +72,14 @@ export function CreateBlockItem({
     }
   }
 
+  // Docked badge: this block is referenced by a Callout / Multi-Column container
+  if (isDocked && isEditMode) {
+    const dockBadge = document.createElement('div');
+    dockBadge.className = 'absolute -top-2 left-3 px-2 py-0.5 rounded-full bg-purple-600/90 text-white font-bold text-[9px] shadow-sm z-10 select-none pointer-events-none';
+    dockBadge.textContent = '⧉ docked';
+    wrap.appendChild(dockBadge);
+  }
+
   // Unified Action Parameters passed to each block's top toolbar
   const actionHandlers = {
     isEditMode,
@@ -78,6 +91,11 @@ export function CreateBlockItem({
     index,
     totalBlocks,
     figureInfo,
+    eqInfo,
+    figureMap,
+    eqMap,
+    prefixMap,
+    isDocked,
     prefix,
     note,
     onConfigUpdate,

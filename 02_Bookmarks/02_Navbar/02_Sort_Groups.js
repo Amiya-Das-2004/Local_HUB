@@ -96,6 +96,7 @@ export function GetSortGroupsHTML() {
         left: 0;
         z-index: 100;
         max-width: min(calc(100vw - 20px), 800px);
+        max-height: min(480px, calc(100vh - 120px));
         background: var(--surface, #181b27);
         border: 1px solid var(--border, #2a2e40);
         border-radius: 14px;
@@ -105,6 +106,10 @@ export function GetSortGroupsHTML() {
         -webkit-backdrop-filter: blur(20px);
         box-sizing: border-box;
         overflow: hidden;
+      }
+
+      .sections-dropdown-window.hidden {
+        display: none !important;
       }
 
       .dropdown-header {
@@ -117,6 +122,7 @@ export function GetSortGroupsHTML() {
         border-bottom: 1px solid var(--border, #2a2e40);
         width: 100%;
         box-sizing: border-box;
+        flex-shrink: 0;
       }
 
       .dropdown-search-box {
@@ -214,7 +220,7 @@ export function GetSortGroupsHTML() {
       .sections-grid-container {
         display: grid;
         gap: 8px;
-        max-height: 380px;
+        max-height: min(360px, calc(100vh - 200px));
         overflow-y: auto;
         overflow-x: hidden;
         padding-right: 2px;

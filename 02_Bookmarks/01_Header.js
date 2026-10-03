@@ -13,7 +13,7 @@ export function GetHeaderHTML() {
         z-index: 70;
         backdrop-filter: blur(16px) saturate(160%);
         -webkit-backdrop-filter: blur(16px) saturate(160%);
-        background: var(--header-bg, rgba(14, 16, 24, 0.85));
+        background: var(--header-bg, rgba(11, 13, 20, 0.85));
         width: 100%;
         transition: background-color var(--transition, 0.2s);
       }
@@ -27,9 +27,9 @@ export function GetHeaderHTML() {
         align-items: center;
         justify-content: space-between;
         gap: 12px;
-        height: 74px;
+        height: var(--header-height, 74px);
         box-sizing: border-box;
-        border-bottom: 1px solid var(--border, #2a2e40);
+        border-bottom: 1px solid var(--border, #262a3d);
         transition: border-color var(--transition, 0.2s);
       }
 
@@ -37,43 +37,6 @@ export function GetHeaderHTML() {
         display: flex;
         align-items: center;
         flex-shrink: 0;
-      }
-
-      .header-center {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-
-      .tab-title-group {
-        display: inline-flex;
-        align-items: center;
-        gap: 9px;
-        user-select: none;
-      }
-
-      .tab-title-icon {
-        width: 20px;
-        height: 20px;
-        color: var(--accent, #8b6dff);
-        flex-shrink: 0;
-        transition: color var(--transition, 0.2s), transform 0.2s;
-        filter: drop-shadow(0 0 8px var(--accent-glow, rgba(139, 109, 255, 0.4)));
-      }
-
-      .tab-title-group:hover .tab-title-icon {
-        transform: translateY(-1px) scale(1.08);
-      }
-
-      .tab-title-text {
-        font-size: 18px;
-        font-weight: 800;
-        letter-spacing: 0.12em;
-        color: var(--text, #e8eaf2);
-        font-family: inherit;
-        text-transform: uppercase;
-        white-space: nowrap;
-        transition: color var(--transition, 0.2s);
       }
 
       .header-right {
@@ -85,42 +48,30 @@ export function GetHeaderHTML() {
 
       @media (max-width: 600px) {
         .header-inner {
-          height: 66px;
+          height: var(--header-height, 66px);
           padding: 0 12px;
           gap: 8px;
-        }
-        .tab-title-text {
-          font-size: 16px;
-          letter-spacing: 0.08em;
-        }
-        .tab-title-icon {
-          width: 17px;
-          height: 17px;
         }
       }
 
       @media (max-width: 440px) {
         .header-inner {
-          height: 60px;
+          height: var(--header-height, 60px);
           padding: 0 8px;
+          gap: 6px;
         }
-        .site-name .subtitle {
-          display: none;
-        }
-        .tab-title-text {
-          font-size: 13px;
-          letter-spacing: 0.05em;
-        }
-        .tab-title-icon {
-          width: 15px;
-          height: 15px;
+        .header-right {
           gap: 6px;
         }
       }
 
-      @media (max-width: 320px) {
-        .tab-title-text {
-          display: none;
+      @media (max-width: 360px) {
+        .header-inner {
+          padding: 0 6px;
+          gap: 4px;
+        }
+        .header-right {
+          gap: 4px;
         }
       }
     </style>
@@ -129,15 +80,6 @@ export function GetHeaderHTML() {
       <div class="header-inner">
         <div class="header-left">
           ${GetLogoHTML({ variant: 'bookmarks' })}
-        </div>
-
-        <div class="header-center">
-          <div class="tab-title-group">
-            <svg class="tab-title-icon" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M19 21l-7-4.5L5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />
-            </svg>
-            <span class="tab-title-text">BOOKMARKS</span>
-          </div>
         </div>
 
         <div class="header-right">

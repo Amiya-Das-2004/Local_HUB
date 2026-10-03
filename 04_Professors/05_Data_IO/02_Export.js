@@ -13,7 +13,7 @@ import { render } from '../Professors.js';
 
 export function paperDetailsText(paper, prof) {
   var L = [];
-  L.push('ProffTrack — Paper Details');
+  L.push('ProfessorTrack — Paper Details');
   L.push('==========================================');
   L.push('Title    : ' + paper.title);
   if (paper.authors) L.push('Author(s): ' + paper.authors);
@@ -39,12 +39,12 @@ export function paperDetailsText(paper, prof) {
   if (paper.summary) { L.push('SUMMARY'); L.push(paper.summary); L.push(''); }
   if (paper.notes) { L.push('MY NOTES'); L.push(paper.notes); L.push(''); }
   L.push('------------------------------------------');
-  L.push('Exported from ProffTrack on ' + new Date().toLocaleString());
+  L.push('Exported from ProfessorTrack on ' + new Date().toLocaleString());
   return L.join('\n');
 }
 export function profPapersText(prof) {
   var L = [];
-  L.push('ProffTrack — Papers I\'ve read');
+  L.push('ProfessorTrack — Papers I\'ve read');
   L.push('Professor: ' + prof.name + (prof.title ? ' (' + prof.title + ')' : '') + (prof.department ? ' · ' + prof.department : ''));
   L.push('College  : ' + prof.college + (typeof prof.qsRank === 'number' ? ' — QS #' + prof.qsRank : ''));
   if ((prof.areas || []).length) L.push('Areas    : ' + prof.areas.join(', '));
@@ -66,7 +66,7 @@ export function profPapersText(prof) {
     L.push('');
   });
   L.push('------------------------------------------');
-  L.push('Exported from ProffTrack on ' + new Date().toLocaleString());
+  L.push('Exported from ProfessorTrack on ' + new Date().toLocaleString());
   return L.join('\n');
 }
 export function downloadPaperFile(paper, prof) {
@@ -139,7 +139,7 @@ export function citationText(paper) {
 function bibEscape(s) { return String(s == null ? '' : s).replace(/[\\{}]/g, '').replace(/\s*\n\s*/g, ' ').trim(); }
 export function bibtexText(prof) {
   var used = {};
-  var L = ['% BibTeX — papers logged under ' + prof.name + ' (exported from ProffTrack on ' + new Date().toLocaleDateString() + ')', ''];
+  var L = ['% BibTeX — papers logged under ' + prof.name + ' (exported from ProfessorTrack on ' + new Date().toLocaleDateString() + ')', ''];
   var papers = (prof.papers || []).slice().sort(function (a, b) { return String(a.year || '').localeCompare(String(b.year || '')); });
   papers.forEach(function (pp) {
     var authors = String(pp.authors || '').trim();
@@ -156,7 +156,7 @@ export function bibtexText(prof) {
     if (pp.venue) L.push('  howpublished = {' + bibEscape(pp.venue) + '},');
     if (pp.year) L.push('  year         = {' + bibEscape(pp.year) + '},');
     if (pp.url) L.push('  url          = {' + String(pp.url).trim() + '}');
-    var note = 'Logged in ProffTrack · ' + STATUS_META[statusOf(pp)].label + (pp.rating ? ' · rated ' + pp.rating + '/5' : '');
+    var note = 'Logged in ProfessorTrack · ' + STATUS_META[statusOf(pp)].label + (pp.rating ? ' · rated ' + pp.rating + '/5' : '');
     L.push('  note         = {' + note + '}', '}');
   });
   if (!papers.length) L.push('% (no papers logged yet)');

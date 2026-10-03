@@ -15,6 +15,7 @@ import { GetFontSizeHTML, InitFontSizeLogic } from './03_Floating_ToolBar/03_Fon
 import { OpenMacrosModal } from './03_Floating_ToolBar/04_Macros_Modal.js';
 import { OpenLibraryModal } from '../03_Library.js';
 import { GetCitationStyleHTML, InitCitationStyleLogic } from './03_Floating_ToolBar/05_Citation_Style.js';
+import { GetEquationNumberingHTML, InitEquationNumberingLogic } from './03_Floating_ToolBar/06_Equation_Numbering.js';
 
 export function CreateFloatingToolbar({
   currentFont = 'serif',
@@ -25,7 +26,8 @@ export function CreateFloatingToolbar({
   onSizeChange = null,
   onToggleStudy = null,
   onMacrosChange = null,
-  onCiteStyleChange = null
+  onCiteStyleChange = null,
+  onEqStyleChange = null
 } = {}) {
   const toolbar = document.createElement('div');
   toolbar.className = 'notes-insert-floating-dock notes-floating-toolbar fixed bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 z-40 p-1 sm:p-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md shadow-2xl flex items-center justify-center gap-1.5 sm:gap-2 select-none transition-all duration-200 max-w-[calc(100vw-16px)]';
@@ -75,6 +77,14 @@ export function CreateFloatingToolbar({
     <!-- Divider -->
     <div class="w-[1px] h-5 bg-[var(--border)]/70 flex-shrink-0"></div>
 
+    <!-- 6b. Equation Numbering Style Selector -->
+    <div class="flex items-center flex-shrink-0">
+      ${GetEquationNumberingHTML(note)}
+    </div>
+
+    <!-- Divider -->
+    <div class="w-[1px] h-5 bg-[var(--border)]/70 flex-shrink-0"></div>
+
     <!-- 7. LaTeX & TikZ Macros Button -->
     <div class="flex items-center flex-shrink-0">
       <button type="button" class="btn-macros-toggle notes-ghost-btn h-8 px-2.5 sm:px-3 text-xs font-semibold rounded-full flex items-center gap-1.5 transition-all text-[var(--text)] hover:text-purple-400 hover:border-purple-500/50 hover:bg-purple-500/10 cursor-pointer shadow-xs" title="Manage Global & Local LaTeX/TikZ Macros">
@@ -113,6 +123,7 @@ export function CreateFloatingToolbar({
     }
 
     InitCitationStyleLogic(onCiteStyleChange);
+    InitEquationNumberingLogic(note, onEqStyleChange);
   }, 0);
 
   return toolbar;

@@ -157,7 +157,8 @@ const sharedComponentFiles = [
   '00_Components/03_Scrollbar.js',
   '00_Components/04_Import_Export.js',
   '00_Components/05_Save_Button.js',
-  '00_Components/06_Color_Selector.js'
+  '00_Components/06_Color_Selector.js',
+  '00_Components/09_Icon_Button.js'
 ];
 
 const tabHandlerFiles = [
@@ -204,6 +205,7 @@ const tabModuleFiles = [
   '03_Notes/B_Editor_View/01_Blocks/Block_Block.js',
   '03_Notes/B_Editor_View/01_Blocks/Block_Dispatcher.js',
   '03_Notes/B_Editor_View/01_Blocks/Multi_Column_Block.js',
+  '03_Notes/B_Editor_View/01_Blocks/Orientation_Modal.js',
   '03_Notes/B_Editor_View/01_Blocks/Block_Item.js',
   '03_Notes/B_Editor_View/01_Doc_Header.js',
   '03_Notes/B_Editor_View/02_Sidebar/01_Sidebar_Logo.js',
@@ -214,6 +216,7 @@ const tabModuleFiles = [
   '03_Notes/B_Editor_View/03_Floating_ToolBar/03_Font_Size.js',
   '03_Notes/B_Editor_View/03_Floating_ToolBar/04_Macros_Modal.js',
   '03_Notes/B_Editor_View/03_Floating_ToolBar/05_Citation_Style.js',
+  '03_Notes/B_Editor_View/03_Floating_ToolBar/06_Equation_Numbering.js',
   '03_Notes/B_Editor_View/02_Floating_Toolbar.js',
   '03_Notes/B_Editor_View/03_Study_View.js',
   '03_Notes/B_Editor_View/04_LaTeX_Editor.js',

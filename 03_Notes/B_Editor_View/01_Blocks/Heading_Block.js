@@ -6,6 +6,7 @@
 import { escapeHtml } from '../../02_Utils.js';
 import { formatRichTextWithMath } from '../../Writing_Engine/Math_Renderer.js';
 import { getBlockActionsHTML, initBlockActions } from './Block_Actions.js';
+import { attachBlockHistory } from '../../Writing_Engine/Block_History.js';
 
 export function renderHeadingBlock(block, isEditing = false, onUpdate = null, { prefix = '', note = null, onConfigUpdate = null, onDone = null, onMoveUp = null, onMoveDown = null, onDelete = null, index = 0, totalBlocks = 1 } = {}) {
   const container = document.createElement('div');
@@ -123,6 +124,12 @@ export function renderHeadingBlock(block, isEditing = false, onUpdate = null, { 
   };
 
   input.addEventListener('input', update);
+
+  // Persistent per-block undo/redo for the section title (survives Done/reopen cycles)
+  attachBlockHistory(input, {
+    blockId: `${block.id}::title`,
+    onUpdate: () => update()
+  });
 
   levelSelect.addEventListener('change', () => {
     update();

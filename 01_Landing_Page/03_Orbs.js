@@ -238,15 +238,26 @@ export class Orb {
   }
 }
 
-// Tab click navigation. In the multi-file dev workspace a tab's PageUrl opens its
-// standalone HTML page (same tab). Inside the all-in-one standalone build
-// (__IS_STANDALONE__) there are no sibling pages, so the hash router is used.
+// Tab click navigation. When running inside Index.html (the global SPA hub) or the
+// all-in-one standalone build (__IS_STANDALONE__), hash routing is used (#Bookmarks, #Notes, etc.)
+// so the user stays in the app and can return to the 3D landing page by clicking the logo.
+// Outside the hub SPA, a tab's PageUrl opens its standalone HTML page.
 export function NavigateToTab(Tab) {
   const targetUrl = (Tab && Tab.Url) || '';
   const pageUrl = (Tab && Tab.PageUrl) || '';
   const isStandaloneApp = typeof window !== 'undefined' && window.__IS_STANDALONE__ === true;
+  const pathname = (typeof window !== 'undefined' && window.location.pathname) || '';
+  const isIndexSpa = typeof window !== 'undefined' && (
+    isStandaloneApp ||
+    pathname.toLowerCase().endsWith('/index.html') ||
+    pathname.toLowerCase().endsWith('index.html') ||
+    pathname.endsWith('/') ||
+    pathname === ''
+  );
 
-  if (pageUrl && !isStandaloneApp && !/^(https?:)?\/\//i.test(pageUrl)) {
+  if (isIndexSpa && targetUrl.startsWith('#')) {
+    window.location.hash = targetUrl;
+  } else if (pageUrl && !isStandaloneApp && !/^(https?:)?\/\//i.test(pageUrl)) {
     window.location.href = pageUrl;
   } else if (targetUrl.startsWith('#')) {
     window.location.hash = targetUrl;

@@ -181,3 +181,40 @@ export function insertBlockAt(blocks = [], newBlock, targetIndex = -1) {
   blocks.splice(targetIndex, 0, newBlock);
   return targetIndex;
 }
+
+/**
+ * Orientation containers (Callout + Multi-Column) reference member blocks by ID
+ * instead of embedding them — removing a block from a container never touches the block itself.
+ */
+export function isOrientationContainer(block) {
+  return Boolean(block) && (
+    block.type === 'block' || block.type === 'theorem' ||
+    block.type === 'columns' || block.type === 'multicolumn' || block.type === 'multi-column'
+  );
+}
+
+/**
+ * Normalizes a container's membership/rows: every member id appears in exactly one row,
+ * rows only reference live members, and unplaced members are appended as a trailing row.
+ * @returns {{ members: string[], rows: string[][] }}
+ */
+export function normalizeOrientationRows(block) {
+  const members = Array.isArray(block?.members) ? block.members.filter(Boolean) : [];
+  let rows = (Array.isArray(block?.rows) && block.rows.length)
+    ? block.rows.map((r) => (Array.isArray(r) ? r.filter(Boolean) : []))
+    : [];
+
+  const seen = new Set();
+  rows = rows
+    .map((row) => row.filter((id) => {
+      if (seen.has(id) || !members.includes(id)) return false;
+      seen.add(id);
+      return true;
+    }))
+    .filter((row) => row.length > 0);
+
+  const missing = members.filter((id) => !seen.has(id));
+  if (missing.length > 0) rows.push(missing);
+
+  return { members: rows.flat(), rows };
+}

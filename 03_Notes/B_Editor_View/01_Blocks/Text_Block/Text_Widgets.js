@@ -3,7 +3,7 @@
  * In-place Live Preview widget constructors and inline styles.
  */
 
-import { renderKatex, getActiveFigureTagMap, resolveCitationLabels } from '../../../Writing_Engine/Math_Renderer.js';
+import { renderKatex, getActiveFigureTagMap, getActiveEquationTagMap, resolveCitationLabels } from '../../../Writing_Engine/Math_Renderer.js';
 import { escapeHtml } from '../../../02_Utils.js';
 import { resolveThemeColors } from '../../../../00_Components/06_Color_Selector.js';
 
@@ -167,6 +167,16 @@ export const createLiveWidget = (type, raw, contentHtml = '', options = {}) => {
     span.setAttribute('data-fig-target', norm);
     span.setAttribute('data-fig-num', resolvedNum || '');
     span.innerHTML = `[${displayLabel}]`;
+  } else if (type === 'eq') {
+    // Equation reference \eq{name} / \eq{name:2} — label from computeEquationNumbers tag map
+    const norm = (contentHtml || '').trim().toLowerCase();
+    const eqMap = getActiveEquationTagMap ? getActiveEquationTagMap() : null;
+    const entry = eqMap ? (eqMap.get(norm) || null) : null;
+    const displayLabel = entry ? `(${entry.label})` : `(?)`;
+    span.className = `live-widget live-eq note-eq-citation font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 px-1.5 py-0.5 rounded border border-emerald-500/30 transition-colors inline-flex items-center align-middle gap-0.5 cursor-pointer select-text`;
+    span.setAttribute('data-eq-target', norm);
+    span.setAttribute('data-eq-block', entry ? (entry.blockId || '') : '');
+    span.innerHTML = displayLabel;
   } else if (type === 'cite') {
     // Bibliography citation \cite{key} — label per NotesState.citationStyle + numbering map
     const { parts, missing } = resolveCitationLabels(contentHtml || '');
@@ -211,7 +221,9 @@ export const createLiveWidget = (type, raw, contentHtml = '', options = {}) => {
     });
   }
 
-  if (!isViewMode && onExpand) {
+  // Reference badges (\fig, \eq) navigate on click via the document-level citation
+  // handlers — they must NOT expand to raw tokens on click, so skip onExpand for them.
+  if (!isViewMode && onExpand && type !== 'fig' && type !== 'eq') {
     span.addEventListener('click', (e) => {
       e.stopPropagation();
       onExpand(span);

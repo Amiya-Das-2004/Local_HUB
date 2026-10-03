@@ -37,7 +37,7 @@ export function GetSaveButtonHTML() {
         flex-shrink: 0;
       }
 
-      @media (max-width: 420px) {
+      @media (max-width: 440px) {
         .save-btn {
           height: 32px;
           padding: 0 10px;
@@ -45,14 +45,27 @@ export function GetSaveButtonHTML() {
         }
       }
 
-      @media (max-width: 320px) {
+      @media (max-width: 380px) {
         .save-btn span {
           display: none;
         }
         .save-btn {
           width: 32px;
+          height: 32px;
           padding: 0;
           justify-content: center;
+        }
+      }
+
+      @media (max-width: 360px) {
+        .save-btn {
+          width: 28px;
+          height: 28px;
+          border-radius: 6px;
+        }
+        .save-btn svg {
+          width: 13px;
+          height: 13px;
         }
       }
     </style>
@@ -231,7 +244,8 @@ export async function SaveAndDownloadApp() {
       '00_Components/05_Save_Button.js',
       '00_Components/06_Color_Selector.js',
       '00_Components/07_Blob_Store.js',
-      '00_Components/08_Research_Library.js'
+      '00_Components/08_Research_Library.js',
+      '00_Components/09_Icon_Button.js'
     ];
 
     const landingFiles = [
@@ -298,6 +312,7 @@ export async function SaveAndDownloadApp() {
       '03_Notes/B_Editor_View/01_Blocks/Block_Block.js',
       '03_Notes/B_Editor_View/01_Blocks/Block_Dispatcher.js',
       '03_Notes/B_Editor_View/01_Blocks/Multi_Column_Block.js',
+      '03_Notes/B_Editor_View/01_Blocks/Orientation_Modal.js',
       '03_Notes/B_Editor_View/01_Blocks/Block_Item.js',
       '03_Notes/B_Editor_View/01_Doc_Header.js',
       '03_Notes/B_Editor_View/02_Sidebar/01_Sidebar_Logo.js',
@@ -308,6 +323,7 @@ export async function SaveAndDownloadApp() {
       '03_Notes/B_Editor_View/03_Floating_ToolBar/03_Font_Size.js',
       '03_Notes/B_Editor_View/03_Floating_ToolBar/04_Macros_Modal.js',
       '03_Notes/B_Editor_View/03_Floating_ToolBar/05_Citation_Style.js',
+      '03_Notes/B_Editor_View/03_Floating_ToolBar/06_Equation_Numbering.js',
       '03_Notes/B_Editor_View/02_Floating_Toolbar.js',
       '03_Notes/B_Editor_View/03_Study_View.js',
       '03_Notes/B_Editor_View/04_LaTeX_Editor.js',
@@ -466,7 +482,11 @@ function handleRoute() {
   const currentHash = (window.location.hash || '').trim();
   const lowerHash = currentHash.toLowerCase();
   const root = document.getElementById('root');
-  if (root) root.innerHTML = '';
+  if (root) {
+    root.innerHTML = '';
+    root.removeAttribute('data-theme');
+  }
+  document.body.classList.remove('prof-dark');
 
   if (lowerHash.startsWith('#bookmarks')) {
     LoadBookmarkPage();

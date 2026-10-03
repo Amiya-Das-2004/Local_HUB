@@ -1,48 +1,90 @@
 /* ==========================================================================
    PROFESSORS — 01_HTML_Page/01_Header.js
-   Site header (brand, theme + save + add buttons, toolbar row markup) and
-   Add-Professor / back-to-top behaviour. Extracted from proff.html lines 833-902
-   and the toolbar/boot bindings.
+   ProfessorTrack header (UI spec §6-13):
+     Row 1: [cap logo] ProfessorTrack · global nav cluster · theme · io · save
+     Row 2: [chart] [search bar] [add professor]
+     Row 3: secondary list utilities (sort / filters / journal …)
+   Every control is an SVG icon with a tooltip; no permanent text labels.
    ==========================================================================
 */
 
 import { $ } from '../01_Utils.js';
 import { openProfModal } from '../04_Modals/02_Professor_Modal.js';
+import { GlobalNavHTML, SCHOLAR_CAP_SVG, EnsureIconButtonStyles } from '../../00_Components/09_Icon_Button.js';
+
+const PERSON_ADD_SVG = `
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <circle cx="9.5" cy="7.8" r="3.6"/><path d="M3.4 20c.6-3.6 3-5.7 6.1-5.7 1.6 0 3 .5 4.1 1.4"/>
+    <path d="M18.4 13.9v5.6"/><path d="M15.6 16.7h5.6"/>
+  </svg>`.trim();
+
+const CHART_SVG = `
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M4 20v-7"/><path d="M10 20V5"/><path d="M16 20v-10"/><path d="M21.5 20H2.5"/>
+  </svg>`.trim();
+
+const IO_ARROWS_SVG = `
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="m3.5 15.5 3.75 3.75L11 15.5"/><path d="M7.25 19V4"/>
+    <path d="m20.5 8.5-3.75-3.75L13 8.5"/><path d="M16.75 5v15"/>
+  </svg>`.trim();
+
+const SAVE_SVG = `
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+    <path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/>
+  </svg>`.trim();
 
 export function GetHeaderHTML() {
+  EnsureIconButtonStyles();
   return `
   <header class="site-header">
     <div class="header-inner">
       <div class="brand-row">
-        <a class="brand" href="#" onclick="return false" aria-label="ProffTrack home">
-          <span class="logo" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/></svg>
-          </span>
+        <a class="brand" href="#" onclick="return false" aria-label="ProfessorTrack home">
+          <span class="logo" aria-hidden="true">${SCHOLAR_CAP_SVG}</span>
           <span class="brand-text">
-            <strong>ProffTrack</strong>
+            <strong>ProfessorTrack</strong>
             <small>Professors &amp; Papers Library</small>
           </span>
         </a>
+        <div class="pt-global-nav-wrap">${GlobalNavHTML({ active: 'professors', accent: '#0f766e' })}</div>
         <div class="header-actions">
-          <button id="themeBtn" class="btn btn-ghost" type="button" title="Toggle light / dark theme" aria-label="Toggle light or dark theme">
+          <button id="themeBtn" class="icb-btn" type="button" data-tip="Change theme" aria-label="Change theme">
             <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
             <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
           </button>
-          <button id="saveBtn" class="btn btn-accent" type="button" title="Download this website with all your data inside (Ctrl/Cmd+S)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            <span>Save &amp; Download</span>
-          </button>
-          <button id="addProfBtn" class="btn btn-primary" type="button" title="Add a new professor">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-            <span>Add Professor</span>
+          <div class="pt-io-wrap">
+            <button id="ioMenuBtn" class="icb-btn" type="button" data-tip="ProfessorTrack data — import / export" aria-label="Import or export ProfessorTrack data" aria-haspopup="true" aria-expanded="false">
+              ${IO_ARROWS_SVG}
+            </button>
+            <div class="pt-io-menu" id="ptIoMenu" hidden>
+              <button type="button" data-io="importJson">Import JSON…</button>
+              <button type="button" data-io="importCsv">Import CSV…</button>
+              <button type="button" data-io="exportJson">Export JSON</button>
+              <button type="button" data-io="exportCsv">Export CSV</button>
+            </div>
+          </div>
+          <button id="saveBtn" class="icb-btn icb-accent" type="button" data-tip="Save — download ProfessorTrack as one offline file" aria-label="Save ProfessorTrack data">
+            ${SAVE_SVG}
           </button>
         </div>
       </div>
-      <div class="toolbar-row">
+
+      <div class="pt-row2">
+        <button id="chartToggleBtn" class="icb-btn" type="button" data-tip="Stats — toggle the reading dashboard" aria-label="Toggle reading dashboard" aria-pressed="true">
+          ${CHART_SVG}
+        </button>
         <div class="search-wrap">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
           <input id="searchInput" type="search" placeholder="Search professors, colleges, departments, papers…" aria-label="Search library"/>
         </div>
+        <button id="addProfBtn" class="icb-btn icb-accent" type="button" data-tip="Add Professor" aria-label="Add Professor">
+          ${PERSON_ADD_SVG}
+        </button>
+      </div>
+
+      <div class="toolbar-row pt-row3">
         <label class="sort-wrap">
           <span>Sort by</span>
           <select id="sortSelect" aria-label="Sort professors">
@@ -88,6 +130,48 @@ export function GetHeaderHTML() {
 let scrollBound = false;
 export function InitHeader() {
   $('#addProfBtn').addEventListener('click', function () { openProfModal(null); });
+
+  /* io menu — reuses the footer's wired export/import buttons */
+  var ioBtn = $('#ioMenuBtn');
+  var ioMenu = $('#ptIoMenu');
+  if (ioBtn && ioMenu) {
+    ioBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      ioMenu.hidden = !ioMenu.hidden;
+      ioBtn.setAttribute('aria-expanded', String(!ioMenu.hidden));
+    });
+    ioMenu.addEventListener('click', function (e) {
+      var item = e.target.closest('[data-io]');
+      if (!item) return;
+      ioMenu.hidden = true;
+      ioBtn.setAttribute('aria-expanded', 'false');
+      var map = {
+        importJson: 'importJsonBtn', importCsv: 'importCsvBtn',
+        exportJson: 'exportJsonBtn', exportCsv: 'exportCsvBtn'
+      };
+      var target = document.getElementById(map[item.dataset.io]);
+      if (target) target.click();
+    });
+    document.addEventListener('click', function (e) {
+      if (!ioMenu.hidden && !e.target.closest('.pt-io-wrap')) {
+        ioMenu.hidden = true;
+        ioBtn.setAttribute('aria-expanded', 'false');
+      }
+    });
+  }
+
+  /* chart icon — toggle the reading dashboard (stats bar + heatmap) */
+  var chartBtn = $('#chartToggleBtn');
+  if (chartBtn) {
+    chartBtn.addEventListener('click', function () {
+      ['#statsBar', '#heatSection'].forEach(function (sel) {
+        var el = document.querySelector(sel);
+        if (el) el.hidden = !el.hidden;
+      });
+      var pressed = chartBtn.getAttribute('aria-pressed') !== 'true';
+      chartBtn.setAttribute('aria-pressed', String(pressed));
+    });
+  }
 
   /* brand link → back to the hub (LocalHUB logo semantics): the standalone
      Professor.html shell sets __LOCALHUB_HUB_URL__; inside the Index.html SPA

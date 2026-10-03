@@ -9,6 +9,9 @@ import { parseWikiLinks } from '../../Writing_Engine/Link_Parser.js';
 import { attachHighlightSync } from '../../Writing_Engine/Highlight_Sync.js';
 import { escapeHtml } from '../../02_Utils.js';
 import { getBlockActionsHTML, initBlockActions } from './Block_Actions.js';
+import { attachBlockHistory } from '../../Writing_Engine/Block_History.js';
+import { normalizeOrientationRows } from '../../Writing_Engine/Block_Engine.js';
+import { OpenOrientationModal, renderOrientationMemberRows } from './Orientation_Modal.js';
 
 export const BLOCK_THEME_STYLES = {
   Theorem: { border: 'border-purple-500/60', bg: 'bg-purple-500/5', title: 'text-purple-400', badge: 'bg-purple-500/20 text-purple-300' },
@@ -24,7 +27,7 @@ export const BLOCK_THEME_STYLES = {
   Info: { border: 'border-teal-500/60', bg: 'bg-teal-500/5', title: 'text-teal-400', badge: 'bg-teal-500/20 text-teal-300' }
 };
 
-export function renderBlockBlock(block, isEditing = false, onUpdate = null, allNotes = [], { onDone = null, onMoveUp = null, onMoveDown = null, onDelete = null, index = 0, totalBlocks = 1 } = {}) {
+export function renderBlockBlock(block, isEditing = false, onUpdate = null, allNotes = [], { onDone = null, onMoveUp = null, onMoveDown = null, onDelete = null, index = 0, totalBlocks = 1, note = null, figureMap = null, eqMap = null, prefixMap = null, isDocked = false } = {}) {
   const container = document.createElement('div');
   container.className = 'w-full my-1.5';
   
@@ -53,6 +56,15 @@ export function renderBlockBlock(block, isEditing = false, onUpdate = null, allN
       </div>
     `;
     container.appendChild(wrap);
+
+    // Orientation members (reading/study view): referenced blocks rendered inside the callout
+    if (note) {
+      const { rows } = normalizeOrientationRows(block);
+      if (rows.length > 0 && rows.flat().length > 0) {
+        container.appendChild(renderOrientationMemberRows(block, { note, allNotes, figureMap, eqMap, prefixMap }));
+      }
+    }
+
     return container;
   }
 
@@ -99,6 +111,12 @@ export function renderBlockBlock(block, isEditing = false, onUpdate = null, allN
     <div class="w-full">
       <textarea class="content-input w-full p-2.5 font-mono text-sm leading-snug rounded-lg border border-[var(--border)] bg-[var(--surface)] focus:border-purple-500 outline-none box-border text-[var(--text)]" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" style="min-height: 85px; height: 95px; resize: vertical; scrollbar-width: thin; transition: border-color 0.15s ease, box-shadow 0.15s ease;" placeholder="Statement, markdown text, equations ($a^2 + b^2 = c^2$, $$\\int f(x)dx$$)...">${escapeHtml(content)}</textarea>
     </div>
+
+    <!-- Orientation: dock other blocks into this callout (non-destructive references) -->
+    <div class="orientation-bar flex items-center gap-2 w-full flex-wrap select-none">
+      <span class="orientation-summary text-[11px] font-mono text-[var(--text-dim)]"></span>
+      <button type="button" class="btn-configure-orientation notes-ghost-btn h-7 px-2.5 text-[11px] font-semibold" title="Dock blocks into this callout and arrange them into rows">Configure Layout</button>
+    </div>
   `;
 
   const envSelect = editWrap.querySelector('.env-select');
@@ -130,6 +148,41 @@ export function renderBlockBlock(block, isEditing = false, onUpdate = null, allN
   envSelect.addEventListener('change', update);
   titleInput.addEventListener('input', update);
   textarea.addEventListener('input', update);
+
+  // Orientation Manager wiring
+  const orientationSummary = editWrap.querySelector('.orientation-summary');
+  const syncOrientationSummary = () => {
+    if (!orientationSummary) return;
+    const { rows } = normalizeOrientationRows(block);
+    const count = rows.flat().length;
+    orientationSummary.textContent = count > 0
+      ? `Orientation: ${count} block${count === 1 ? '' : 's'} · ${rows.length} row${rows.length === 1 ? '' : 's'}`
+      : 'Orientation: no blocks docked';
+  };
+  syncOrientationSummary();
+
+  editWrap.querySelector('.btn-configure-orientation')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (!note) return;
+    OpenOrientationModal(block, note, {
+      onCommit: (result) => {
+        block.members = result.members;
+        block.rows = result.rows;
+        syncOrientationSummary();
+        if (onUpdate) onUpdate({ members: result.members, rows: result.rows });
+      }
+    });
+  });
+
+  // Persistent per-block undo/redo for content and title (native undo dies on Done/reopen)
+  attachBlockHistory(textarea, {
+    blockId: block.id,
+    onUpdate: () => update()
+  });
+  attachBlockHistory(titleInput, {
+    blockId: `${block.id}::title`,
+    onUpdate: () => update()
+  });
 
   attachHighlightSync(preview, textarea);
 

@@ -24,14 +24,14 @@ export function initBookmarksApp() {
     <style>
       /* ===== BOOKMARKS PAGE THEME & BASE STYLES ===== */
       :root {
-        --bg: #0e1018;
-        --bg-secondary: #131521;
-        --header-bg: rgba(14, 16, 24, 0.85);
-        --surface: #181b27;
-        --card: #1c1f2e;
-        --card-hover: #242840;
-        --border: #2a2e40;
-        --border-light: #353a52;
+        --bg: #0b0d14;
+        --bg-secondary: #10131d;
+        --header-bg: rgba(11, 13, 20, 0.85);
+        --surface: #151824;
+        --card: #181b28;
+        --card-hover: #222638;
+        --border: #262a3d;
+        --border-light: #323750;
         --text: #e8eaf2;
         --text-secondary: #a0a4b8;
         --text-dim: #6b7088;
@@ -39,6 +39,8 @@ export function initBookmarksApp() {
         --accent-hover: #7c5cff;
         --accent-soft: rgba(139, 109, 255, 0.1);
         --accent-glow: rgba(139, 109, 255, 0.22);
+        --header-height: 74px;
+        --navbar-height: 70px;
         --green: #4ade80;
         --orange: #fb923c;
         --red: #f87171;
@@ -55,14 +57,36 @@ export function initBookmarksApp() {
         --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
       }
 
-      [data-theme="light"] {
-        --bg: #f3f4f8;
-        --header-bg: rgba(243, 244, 248, 0.85);
+      @media (max-width: 600px) {
+        :root {
+          --header-height: 66px;
+          --navbar-height: 58px;
+        }
+      }
+
+      @media (max-width: 440px) {
+        :root {
+          --header-height: 60px;
+          --navbar-height: 50px;
+        }
+      }
+
+      @media (max-height: 500px) {
+        :root {
+          --header-height: 52px;
+          --navbar-height: 44px;
+        }
+      }
+
+      :root[data-theme="light"] {
+        --bg: #f8f9fc;
+        --bg-secondary: #eef1f8;
+        --header-bg: rgba(248, 249, 252, 0.88);
         --surface: #ffffff;
         --card: #ffffff;
-        --card-hover: #f9faff;
-        --border: #e0e2ea;
-        --border-light: #ebeef4;
+        --card-hover: #f5f6fc;
+        --border: #e0e3ed;
+        --border-light: #eaedf6;
         --text: #1a1d2e;
         --text-secondary: #555870;
         --text-dim: #9499b0;
@@ -86,7 +110,11 @@ export function initBookmarksApp() {
       }
 
       body {
-        background: var(--bg, #0e1018);
+        background-color: var(--bg, #0b0d14);
+        background-image:
+          radial-gradient(circle at 85% 30%, rgba(139, 109, 255, 0.04), transparent 40%);
+        background-attachment: fixed;
+        background-repeat: no-repeat;
         color: var(--text, #e8eaf2);
         font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         min-height: 100vh;
@@ -108,9 +136,15 @@ export function initBookmarksApp() {
         box-sizing: border-box;
       }
 
-      @media (max-width: 640px) {
+      @media (max-width: 600px) {
         .main-content {
-          padding: 16px 10px 40px;
+          padding: 18px 12px 40px;
+        }
+      }
+
+      @media (max-width: 440px) {
+        .main-content {
+          padding: 14px 8px 40px;
         }
       }
 
@@ -136,6 +170,15 @@ export function initBookmarksApp() {
         display: none !important;
       }
 
+      @media (max-width: 440px) {
+        .toast-notification {
+          left: 16px;
+          right: 16px;
+          bottom: 16px;
+          text-align: center;
+        }
+      }
+
       @keyframes fadeIn {
         from { opacity: 0; transform: translateY(8px); }
         to { opacity: 1; transform: translateY(0); }
@@ -143,9 +186,9 @@ export function initBookmarksApp() {
     </style>
 
     <div id="header-mount"></div>
+    <div id="navbar-mount"></div>
 
     <main class="main-content">
-      <div id="navbar-mount"></div>
       <div id="cards-mount"></div>
     </main>
 

@@ -154,8 +154,10 @@ function isEditableSurface(el) {
   return el && el.isContentEditable === true;
 }
 
-// Text-content offset of the caret: pre-order count of characters across descendant text nodes
-function getCaretTextOffset(rootEl) {
+// Text-content offset of the caret: pre-order count of characters across descendant text nodes.
+// Exported so clipboard handlers (cut/paste DOM surgery) can record snapshots with the same
+// caret space that getLiveCaret uses during typing.
+export function getCaretTextOffset(rootEl) {
   const sel = typeof window !== 'undefined' ? window.getSelection() : null;
   if (!sel || sel.rangeCount === 0) return 0;
   const range = sel.getRangeAt(0);

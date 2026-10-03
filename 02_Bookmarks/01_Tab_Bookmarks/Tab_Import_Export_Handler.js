@@ -1,4 +1,4 @@
-// Per-tab Import/Export handler for 02_Bookmarks/Bookmarks.html.
+// Per-tab Import/Export handler for 02_Bookmarks/01_Tab_Bookmarks/Bookmarks.html.
 //
 // Self-contained on purpose: not listed in the all-in-one bundler, not needed
 // by Index.html. Its only job: on the Bookmarks.html page, the Import/Export

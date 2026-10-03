@@ -62,7 +62,7 @@ export function initNotesApp() {
         --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
       }
 
-      [data-theme="light"] {
+      :root[data-theme="light"] {
         --bg: #f3f4f8;
         --bg-secondary: #eaecf5;
         --header-bg: rgba(243, 244, 248, 0.85);
@@ -248,13 +248,13 @@ export function initNotesApp() {
         background: rgba(255, 255, 255, 0.85);
       }
 
-      [data-theme="light"] .notes-sidebar-drawer {
+      :root[data-theme="light"] .notes-sidebar-drawer {
         scrollbar-color: rgba(26, 29, 46, 0.45) transparent;
       }
-      [data-theme="light"] .notes-sidebar-drawer::-webkit-scrollbar-thumb {
+      :root[data-theme="light"] .notes-sidebar-drawer::-webkit-scrollbar-thumb {
         background: rgba(26, 29, 46, 0.42);
       }
-      [data-theme="light"] .notes-sidebar-drawer::-webkit-scrollbar-thumb:hover {
+      :root[data-theme="light"] .notes-sidebar-drawer::-webkit-scrollbar-thumb:hover {
         background: rgba(0, 0, 0, 0.85);
       }
 

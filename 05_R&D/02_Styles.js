@@ -18,7 +18,11 @@ export function GetRDStyles() {
   padding: 0;
 }
 
-:root {
+/* Dark tokens are scoped to the R&D app container (NOT :root) so they can
+   never out-rank the landing page's or other tabs' head-level variables —
+   #rd-root is the standalone builder shell, .rd-app is the app wrapper. */
+.rd-app,
+#rd-root {
   --bg: #0e1018;
   --bg-secondary: #131521;
   --header-bg: rgba(14, 16, 24, 0.85);
@@ -57,8 +61,11 @@ export function GetRDStyles() {
   --band: rgba(139, 109, 255, 0.14);
 }
 
-/* Light theme — palette ported from the user's Local HUB test.html */
-#root[data-theme="light"] {
+/* Light theme — palette ported from the user's Local HUB test.html.
+   Applied ON the app container (not just #root) so it out-ranks the dark
+   tokens declared directly on .rd-app below. */
+#root[data-theme="light"] .rd-app,
+#rd-root[data-theme="light"] {
   --bg: #f3f4f8;
   --bg-secondary: #eceef6;
   --header-bg: rgba(243, 244, 248, 0.88);
@@ -242,8 +249,8 @@ input, select, textarea { font-family: inherit; }
 
 .rd-theme-btn-icon { display: block; }
 .theme-icon-light { display: none; }
-#root[data-theme="light"] .theme-icon-light { display: block; }
-#root[data-theme="light"] .theme-icon-dark { display: none; }
+#root[data-theme="light"] .theme-icon-light, #rd-root[data-theme="light"] .theme-icon-light { display: block; }
+#root[data-theme="light"] .theme-icon-dark, #rd-root[data-theme="light"] .theme-icon-dark { display: none; }
 
 .rd-chip-sep {
   width: 1px;
@@ -2848,6 +2855,9 @@ mark.rd-hl {
 
 /* --- Queue button badge --- */
 .rd-queue-badge {
+  position: absolute;
+  top: -5px;
+  right: -6px;
   min-width: 17px;
   height: 17px;
   padding: 0 5px;

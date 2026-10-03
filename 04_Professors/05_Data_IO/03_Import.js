@@ -1,6 +1,6 @@
 /* ==========================================================================
    PROFESSORS — 05_Data_IO/03_Import.js
-   Library import: ProffTrack HTML/JSON merge (by id or name+college, never
+   Library import: ProfessorTrack HTML/JSON merge (by id or name+college, never
    duplicating) and CSV import matching the app's own Export CSV format.
    Extracted verbatim from proff.html (lines 2910-2978, 2981-3071).
    ==========================================================================
@@ -92,7 +92,7 @@ export function InitImport() {
     reader.onload = function () {
       var data = null;
       try { data = parseLibraryText(String(reader.result), file.name); } catch (e) {}
-      if (!data || !Array.isArray(data.professors)) { toast('That file is not a ProffTrack page or JSON export.'); return; }
+      if (!data || !Array.isArray(data.professors)) { toast('That file is not a ProfessorTrack page or JSON export.'); return; }
       if (!state.professors.length) {
         replaceState({ version: 1, updatedAt: new Date().toISOString(), theme: state.theme, professors: data.professors });
         sanitizeIds();

@@ -347,6 +347,24 @@ export function GetBookmarkCardsContainerHTML() {
         color: #ef4444;
         border-color: #ef4444;
       }
+
+      @media (hover: none), (max-width: 600px) {
+        .group-grid.view-grid .card-actions {
+          opacity: 0.85;
+          background: rgba(14, 16, 24, 0.7);
+          backdrop-filter: blur(4px);
+          -webkit-backdrop-filter: blur(4px);
+          border-radius: 6px;
+          padding: 2px;
+        }
+        .group-grid.view-list .card-actions {
+          opacity: 0.9;
+        }
+        .action-icon {
+          width: 22px;
+          height: 22px;
+        }
+      }
     </style>
 
     <div id="bookmark-section-container" class="bookmark-section-container"></div>

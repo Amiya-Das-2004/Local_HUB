@@ -23,13 +23,15 @@ export function GetModalHTML() {
         transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
       }
 
-      .modal-overlay.hidden {
+      .modal-overlay.hidden,
+      .combobox-dropdown.hidden {
         display: none !important;
       }
 
       .modal-card {
         width: 400px;
         max-width: min(400px, calc(100vw - 24px));
+        max-height: min(580px, calc(100vh - 24px));
         background: var(--surface, #181b27);
         border: 1px solid var(--border, #2a2e40);
         border-radius: 14px;
@@ -49,6 +51,7 @@ export function GetModalHTML() {
         border-bottom: 1px solid var(--border, #2a2e40);
         background: #0f121c;
         box-sizing: border-box;
+        flex-shrink: 0;
       }
 
       [data-theme="light"] .modal-header {
@@ -79,15 +82,27 @@ export function GetModalHTML() {
         color: var(--text, #e8eaf2);
       }
 
-      /* Compact Modal Body - Max Height <= 410px with No Body Scrollbar */
+      /* Responsive Scrollable Modal Body */
       .modal-body {
         padding: 12px 18px 4px 18px;
         display: flex;
         flex-direction: column;
         gap: 8px;
-        max-height: 380px;
-        overflow: hidden;
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
         box-sizing: border-box;
+        scrollbar-width: thin;
+        scrollbar-color: var(--border, #3a3f58) transparent;
+      }
+
+      .modal-body::-webkit-scrollbar {
+        width: 4px;
+      }
+
+      .modal-body::-webkit-scrollbar-thumb {
+        background: var(--border, #3a3f58);
+        border-radius: 4px;
       }
 
       .modal-footer {
@@ -100,6 +115,25 @@ export function GetModalHTML() {
         border-top: none;
         background: transparent;
         box-sizing: border-box;
+        flex-shrink: 0;
+      }
+
+      @media (max-height: 480px) {
+        .modal-card {
+          max-height: calc(100vh - 16px);
+        }
+        .modal-header {
+          height: 40px;
+          padding: 0 14px;
+        }
+        .modal-body {
+          padding: 8px 14px 4px 14px;
+          gap: 6px;
+        }
+        .modal-footer {
+          height: 38px;
+          padding: 0 14px 6px 14px;
+        }
       }
 
       .form-group {

@@ -196,6 +196,94 @@ export function computeFigureNumbers(blocks = []) {
 }
 
 /**
+ * Computes equation numbers across equation blocks in document order (recursing into
+ * multi-column children). Style: 'numeric' (1,2,3 — default), 'alpha_lower'/'alphabetic_small'
+ * (a,b,c), 'roman_lower'/'roman_small' (i,ii,iii).
+ *
+ * Tag semantics (matching the user-facing convention):
+ * - Single equation (no blank lines): one base number; `\tag{name}` names it.
+ * - Blank-line separated equations, tag on EACH line (distinct names): independent
+ *   numbers — each part consumes its own counter value.
+ * - Blank-line separated equations with exactly ONE \tag{name} for the whole block:
+ *   group mode — one base number shared by all parts, members labeled `${base}.${i}`
+ *   with lowercase roman sub-indices (e.g. 3.i, 3.ii). `\eq{name}` -> base, `\eq{name:2}` -> member.
+ *
+ * @param {Array<Object>} blocks - note blocks
+ * @param {string} style - global equation numbering style
+ * @returns {{ eqMap: Map<string, {eqNumber, baseLabel, members, isGroup, allowNumbering, tag}>, tagMap: Map<string, {label, blockId, subIndex}> }}
+ */
+export function computeEquationNumbers(blocks = [], style = 'numeric') {
+  const eqMap = new Map();   // (block.id || idx) -> equation metadata
+  const tagMap = new Map();  // normalized tag -> { label, blockId, subIndex }
+  let counter = 0;
+
+  const fmtBase = (n) => {
+    if (style === 'alpha_lower' || style === 'alphabetic_small') return toAlpha(n, false);
+    if (style === 'roman_lower' || style === 'roman_small') return toRoman(n, false);
+    return String(n);
+  };
+  const fmtSub = (n) => toRoman(n, false);
+  const splitParts = (tex) => String(tex || '').split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+  const tagsIn = (text) => [...String(text || '').matchAll(/\\tag\{([^}]*)\}/g)].map(m => m[1].trim()).filter(Boolean);
+
+  const processBlock = (block, fallbackKey) => {
+    if (!block || typeof block !== 'object') return;
+    if (block.type === 'columns' || block.type === 'multicolumn' || block.type === 'multi-column') {
+      (block.cols || []).forEach((child, cIdx) => processBlock(child, `${block.id || fallbackKey}_col_${cIdx}`));
+      return;
+    }
+    if (block.type !== 'equation') return;
+
+    const tex = block.tex || block.content || '';
+    const parts = splitParts(tex);
+    const blockId = block.id || fallbackKey;
+
+    if (parts.length === 0) {
+      eqMap.set(blockId, { eqNumber: null, baseLabel: '', members: [], isGroup: false, allowNumbering: true, tag: '' });
+      return;
+    }
+
+    const allTags = tagsIn(tex);
+
+    if (parts.length === 1) {
+      counter++;
+      const label = fmtBase(counter);
+      eqMap.set(blockId, { eqNumber: counter, baseLabel: label, members: [label], isGroup: false, allowNumbering: true, tag: allTags[0] || '' });
+      tagsIn(parts[0]).forEach(t => tagMap.set(t.toLowerCase(), { label, blockId, subIndex: null }));
+      return;
+    }
+
+    if (allTags.length === 1) {
+      // Group mode: whole block shares one number, parts get roman sub-indices
+      counter++;
+      const base = fmtBase(counter);
+      const members = parts.map((_, i) => `${base}.${fmtSub(i + 1)}`);
+      eqMap.set(blockId, { eqNumber: counter, baseLabel: base, members, isGroup: true, allowNumbering: true, tag: allTags[0] });
+      const baseName = allTags[0].toLowerCase();
+      tagMap.set(baseName, { label: base, blockId, subIndex: null });
+      members.forEach((label, i) => {
+        tagMap.set(`${baseName}:${i + 1}`, { label, blockId, subIndex: i + 1 });
+        tagMap.set(`${baseName}:${fmtSub(i + 1)}`, { label, blockId, subIndex: i + 1 });
+      });
+      return;
+    }
+
+    // Independent mode: each part is its own numbered equation
+    const members = [];
+    parts.forEach((part) => {
+      counter++;
+      const label = fmtBase(counter);
+      members.push(label);
+      tagsIn(part).forEach(t => tagMap.set(t.toLowerCase(), { label, blockId, subIndex: members.length }));
+    });
+    eqMap.set(blockId, { eqNumber: counter, baseLabel: members[0], members, isGroup: false, allowNumbering: true, tag: '' });
+  };
+
+  blocks.forEach((block, idx) => processBlock(block, idx));
+  return { eqMap, tagMap };
+}
+
+/**
  * Collects \cite{key1,key2} occurrences across all text blocks in document order and
  * assigns first-appearance numbers, mirroring computeFigureNumbers' walk (recursing
  * into multi-column children). Unresolved keys still get a number so numeric labels

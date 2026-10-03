@@ -5,7 +5,7 @@
  */
 
 import { NotesState, SaveNotesState, flushNotesSave } from '../00_State.js';
-import { computeHeadingPrefixes, computeFigureNumbers, computeCitationNumbers } from '../Writing_Engine/Numbering_Engine.js';
+import { computeHeadingPrefixes, computeFigureNumbers, computeEquationNumbers, computeCitationNumbers } from '../Writing_Engine/Numbering_Engine.js';
 import {
   createNewBlock,
   insertBlockAt,
@@ -18,7 +18,7 @@ import { CreateDocHeader } from './01_Doc_Header.js';
 import { CreateFloatingToolbar } from './02_Floating_Toolbar.js';
 import { CreateBlockItem } from './01_Blocks/Block_Item.js';
 import { escapeHtml } from '../02_Utils.js';
-import { setActiveNoteContext, setActiveFigureTagMap, setActiveCitationMap } from '../Writing_Engine/Math_Renderer.js';
+import { setActiveNoteContext, setActiveFigureTagMap, setActiveEquationTagMap, setActiveCitationMap } from '../Writing_Engine/Math_Renderer.js';
 import { setActiveTikzNoteContext } from '../Writing_Engine/Tikz_Renderer.js';
 
 export function RenderLaTeXEditor(container, noteId, isEditMode = true) {
@@ -52,6 +52,9 @@ export function RenderLaTeXEditor(container, noteId, isEditMode = true) {
   setActiveTikzNoteContext(note);
   const initialFigures = computeFigureNumbers(note.blocks || []);
   setActiveFigureTagMap(initialFigures.tagMap);
+  const initialEquations = computeEquationNumbers(note.blocks || [], note.equationNumbering);
+  setActiveEquationTagMap(initialEquations.tagMap);
+  let activeEqMap = initialEquations.eqMap;
 
   let activeBlockIndex = -1;
   let activeSelectorIndex = -1; // Index where in-place block selector popup is open, or -1
@@ -247,13 +250,28 @@ export function RenderLaTeXEditor(container, noteId, isEditMode = true) {
     }
   }
 
+  function collectDockedIds() {
+    const set = new Set();
+    (note.blocks || []).forEach((b) => {
+      if (b && Array.isArray(b.members)) b.members.forEach((id) => set.add(id));
+    });
+    return set;
+  }
+
   function createConfiguredBlockItem(block, idx, isEditing, prefixMap, figureMap) {
     const blocks = note.blocks || [];
     const prefix = prefixMap ? (prefixMap.get(block.id || idx) || '') : '';
     const figureInfo = figureMap ? (figureMap.get(block.id || idx) || null) : null;
+    const eqInfo = activeEqMap ? (activeEqMap.get(block.id || idx) || null) : null;
+    const isDocked = isEditMode && Boolean(block.id && collectDockedIds().has(block.id));
 
     const blockEl = CreateBlockItem({
       block: block,
+      eqInfo: eqInfo,
+      figureMap: figureMap,
+      eqMap: activeEqMap,
+      prefixMap: prefixMap,
+      isDocked: isDocked,
       index: idx,
       totalBlocks: blocks.length,
       isEditing: isEditing,
@@ -311,7 +329,19 @@ export function RenderLaTeXEditor(container, noteId, isEditMode = true) {
         refreshSidebar();
       },
       onDelete: () => {
+        const removedBlock = blocks[idx];
         blocks.splice(idx, 1);
+        // Deleting a block also undocks it from any orientation container
+        if (removedBlock && removedBlock.id) {
+          (note.blocks || []).forEach((b) => {
+            if (b && Array.isArray(b.members) && b.members.includes(removedBlock.id)) {
+              b.members = b.members.filter((id) => id !== removedBlock.id);
+              b.rows = (Array.isArray(b.rows) ? b.rows : [])
+                .map((r) => r.filter((id) => id !== removedBlock.id))
+                .filter((r) => r.length > 0);
+            }
+          });
+        }
         activeBlockIndex = -1;
         activeSelectorIndex = -1;
         SaveNotesState();
@@ -346,10 +376,14 @@ export function RenderLaTeXEditor(container, noteId, isEditMode = true) {
     const prefixMap = computeHeadingPrefixes(blocks, note.autoNumbering);
     const { figureMap, tagMap } = computeFigureNumbers(blocks);
     setActiveFigureTagMap(tagMap);
+    const eqResult = computeEquationNumbers(blocks, note.equationNumbering);
+    activeEqMap = eqResult.eqMap;
+    setActiveEquationTagMap(eqResult.tagMap);
     setActiveCitationMap(computeCitationNumbers(blocks));
 
     const newBlockEl = createConfiguredBlockItem(block, idx, isEditing, prefixMap, figureMap);
-    blocksContainer.replaceChild(newBlockEl, existingEl);
+    // Parent-based replace: the element may live inside a wrap-row container, not directly in blocksContainer
+    (existingEl.parentNode || blocksContainer).replaceChild(newBlockEl, existingEl);
   }
 
   function setActiveBlock(newIdx) {
@@ -364,6 +398,15 @@ export function RenderLaTeXEditor(container, noteId, isEditMode = true) {
     }
 
     const blocks = note.blocks || [];
+
+    // Notes containing wrap-beside pairs re-render fully on activation so the
+    // side-by-side row keeps its sizing attributes after single-block replacement.
+    const hasWrapPairing = blocks.some((b) => b && b.wrap && Number(b.width ?? 100) <= 60);
+    if (hasWrapPairing) {
+      renderBlocks();
+      return;
+    }
+
     if (oldIdx !== -1 && oldIdx < blocks.length) {
       updateSingleBlockInPlace(oldIdx, false);
     }
@@ -454,6 +497,9 @@ export function RenderLaTeXEditor(container, noteId, isEditMode = true) {
     const prefixMap = computeHeadingPrefixes(blocks, note.autoNumbering);
     const { figureMap, tagMap } = computeFigureNumbers(blocks);
     setActiveFigureTagMap(tagMap);
+    const eqResult = computeEquationNumbers(blocks, note.equationNumbering);
+    activeEqMap = eqResult.eqMap;
+    setActiveEquationTagMap(eqResult.tagMap);
     setActiveCitationMap(computeCitationNumbers(blocks));
 
     // Render Picking Banner if active
@@ -500,7 +546,33 @@ export function RenderLaTeXEditor(container, noteId, isEditMode = true) {
     }
 
     const fragment = document.createDocumentFragment();
+
+    // Inject wrap-row layout styles once (Fit % becomes the figure's share of the row;
+    // the inner preview fills that share instead of compounding percentages)
+    if (!document.getElementById('notes-wrap-row-styles')) {
+      const wrapStyle = document.createElement('style');
+      wrapStyle.id = 'notes-wrap-row-styles';
+      wrapStyle.textContent = `
+        .notes-wrap-row > [data-wrap-fig] { flex: 0 0 auto; }
+        .notes-wrap-row > [data-wrap-partner] { flex: 1 1 0%; min-width: 0; }
+        .notes-wrap-row > [data-wrap-fig] .preview-inner,
+        .notes-wrap-row > [data-wrap-fig] .image-preview-fit-box { width: 100% !important; }
+      `;
+      document.head.appendChild(wrapStyle);
+    }
+
+    // Wrap-Beside pairing: a figure block with wrap ON and Fit ≤ 60% consumes the
+    // next wrappable block into a side-by-side row (LaTeX wrapfigure-style layout)
+    const isWrappableType = (b) => b && (b.type === 'text' || b.type === 'tikz' || b.type === 'image');
+    const wrapConsumed = new Set();
+    const dockedIds = collectDockedIds();
+
     blocks.forEach((block, idx) => {
+      if (wrapConsumed.has(idx)) return;
+
+      // Reading/study view: docked members render inside their container, not in the flow
+      if (!isEditMode && block.id && dockedIds.has(block.id)) return;
+
       // 1. In-between hover divider before this block
       if (isEditMode) {
         if (activeSelectorIndex === idx) {
@@ -513,6 +585,39 @@ export function RenderLaTeXEditor(container, noteId, isEditMode = true) {
       // 2. Render block item
       const isEditing = isEditMode && (idx === activeBlockIndex);
       const blockEl = createConfiguredBlockItem(block, idx, isEditing, prefixMap, figureMap);
+
+      let pairIdx = null;
+      const wrapPct = Number(block.width ?? 100);
+      if (block.wrap && isFinite(wrapPct) && wrapPct <= 60) {
+        const next = blocks[idx + 1];
+        if (next && !wrapConsumed.has(idx + 1) && isWrappableType(next)) {
+          pairIdx = idx + 1;
+        }
+      }
+
+      if (pairIdx !== null) {
+        wrapConsumed.add(pairIdx);
+        const pairEl = createConfiguredBlockItem(blocks[pairIdx], pairIdx, isEditMode && (pairIdx === activeBlockIndex), prefixMap, figureMap);
+
+        const rowEl = document.createElement('div');
+        rowEl.className = 'notes-wrap-row flex items-start gap-3 w-full' + (isEditMode ? ' border border-dashed border-purple-500/40 rounded-lg p-1 my-1' : '');
+        if (block.wrapSide === 'right') {
+          pairEl.setAttribute('data-wrap-partner', '');
+          blockEl.setAttribute('data-wrap-fig', '');
+          rowEl.appendChild(pairEl);
+          rowEl.appendChild(blockEl);
+        } else {
+          blockEl.setAttribute('data-wrap-fig', '');
+          pairEl.setAttribute('data-wrap-partner', '');
+          rowEl.appendChild(blockEl);
+          rowEl.appendChild(pairEl);
+        }
+        rowEl.style.setProperty('--wrap-w', `${Math.max(10, Math.min(100, wrapPct))}%`);
+        blockEl.style.width = `var(--wrap-w)`;
+        fragment.appendChild(rowEl);
+        return;
+      }
+
       fragment.appendChild(blockEl);
     });
 
@@ -561,6 +666,11 @@ export function RenderLaTeXEditor(container, noteId, isEditMode = true) {
       // Library or citation-style changed — re-render so \cite labels/numbers update everywhere
       renderBlocks();
       refreshSidebar();
+    },
+    onEqStyleChange: () => {
+      // Equation numbering style changed — re-render so \eq labels/numbers update everywhere
+      SaveNotesState();
+      renderBlocks();
     }
   });
 

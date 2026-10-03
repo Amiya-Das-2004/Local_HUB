@@ -71,7 +71,7 @@
   <script type="application/json" id="LandingPageData">
     {
       "tabs": [
-        { "Name": "BOOKMARK", "Url": "#Bookmarks", "PageUrl": "02_Bookmarks/Bookmarks.html", "Color": 14037359 },
+        { "Name": "BOOKMARK", "Url": "#Bookmarks", "PageUrl": "02_Bookmarks/01_Tab_Bookmarks/Bookmarks.html", "Color": 14037359 },
         { "Name": "NOTES", "Url": "#Notes", "PageUrl": "03_Notes/Notes.html", "Color": 4048447 },
         { "Name": "PROFESSORS", "Url": "#Professors", "PageUrl": "04_Professors/Professor.html", "Color": 1013358 },
         { "Name": "R&D", "Url": "#RD", "PageUrl": "05_R&D/R&D.html", "Color": 9137663 }
@@ -419,6 +419,16 @@
     async function handleRoute() {
       const currentHash = (window.location.hash || '').trim();
       const lowerHash = currentHash.toLowerCase();
+      const routeRoot = document.getElementById('root');
+
+      // Hygiene between routes: never let a previous tab's DOM or theme state
+      // bleed into the next app (apps that don't clear #root themselves would
+      // stack, and a leftover data-theme attribute would re-skin other tabs).
+      if (routeRoot) {
+        routeRoot.innerHTML = '';
+        routeRoot.removeAttribute('data-theme');
+      }
+      document.body.classList.remove('prof-dark');
 
       try {
         if (lowerHash.startsWith('#bookmarks')) {

@@ -66,7 +66,7 @@ export function GetThemeToggleHTML() {
         flex-shrink: 0;
       }
 
-      @media (max-width: 420px) {
+      @media (max-width: 440px) {
         .icon-btn {
           width: 32px;
           height: 32px;
@@ -74,6 +74,18 @@ export function GetThemeToggleHTML() {
         .icon-btn svg {
           width: 15px;
           height: 15px;
+        }
+      }
+
+      @media (max-width: 360px) {
+        .icon-btn {
+          width: 28px;
+          height: 28px;
+          border-radius: 6px;
+        }
+        .icon-btn svg {
+          width: 13px;
+          height: 13px;
         }
       }
     </style>

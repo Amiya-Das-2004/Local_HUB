@@ -77,7 +77,7 @@ function sanitizeNote(n, idx = 0) {
       meta: { created: new Date().toISOString().slice(0, 10), author: 'User' }
     };
   }
-  return {
+  const note = {
     id: n.id || `note_${Date.now()}_${idx}`,
     slug: n.slug || (n.title ? n.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') : `note-${idx}`),
     title: n.title || 'Untitled Note',
@@ -94,6 +94,47 @@ function sanitizeNote(n, idx = 0) {
       tikz: n.macros.tikz || ''
     } : { equation: '', tikz: '' }
   };
+  migrateOrientationContainers(note);
+  return note;
+}
+
+// One-time migration: legacy Multi-Column blocks embed children by value (block.cols[]).
+// Hoist children to top-level blocks (right after the container) and reference them via
+// members/rows so containers become non-destructive orientation layouts. Callout blocks
+// keep their content string and simply gain members/rows when configured.
+function migrateOrientationContainers(note) {
+  if (!note || !Array.isArray(note.blocks)) return;
+  const isContainerType = (b) => b && (b.type === 'columns' || b.type === 'multicolumn' || b.type === 'multi-column');
+
+  for (let i = 0; i < note.blocks.length; i++) {
+    const block = note.blocks[i];
+    if (!isContainerType(block)) continue;
+
+    if (Array.isArray(block.cols) && block.cols.length > 0) {
+      // The old renderer auto-created empty text blocks as column padding — hoisting
+      // those would litter the flow with "Empty text block" placeholders, so drop them.
+      const children = block.cols
+        .filter((c) => c && typeof c === 'object' && c.id)
+        .filter((c) => !(c.type === 'text' && !(c.content || '').trim()));
+
+      const merged = Array.isArray(block.members) ? block.members.slice() : [];
+      children.forEach((child) => {
+        if (!merged.includes(child.id)) merged.push(child.id);
+      });
+      block.members = merged;
+      block.rows = [merged.slice()];
+
+      delete block.cols;
+      delete block.left;
+      delete block.right;
+
+      note.blocks.splice(i + 1, 0, ...children);
+      i += children.length;
+    } else {
+      if (!Array.isArray(block.members)) block.members = [];
+      if (!Array.isArray(block.rows) || block.rows.length === 0) block.rows = [block.members.slice()];
+    }
+  }
 }
 
 // Loads notes from HTML vault (#NotesData) and optionally recovers uncommitted edits from localStorage

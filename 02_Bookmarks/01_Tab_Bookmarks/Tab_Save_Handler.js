@@ -1,4 +1,4 @@
-// Per-tab standalone Save handler for 02_Bookmarks/Bookmarks.html.
+// Per-tab standalone Save handler for 02_Bookmarks/01_Tab_Bookmarks/Bookmarks.html.
 //
 // This file is deliberately SELF-CONTAINED (no imports from 00_Components) and is
 // NOT part of the all-in-one bundler lists in 00_Components/05_Save_Button.js.
@@ -118,11 +118,11 @@ function clearAllTabLocalCaches() {
 }
 
 // Fetches one modular JS file and strips ES module syntax for flat embedding.
-// Resolves paths against the project root (this file sits one level deep).
+// Resolves paths against the project root (this file sits two levels deep).
 async function bundleTabFile(filePath) {
   try {
     const cleanPath = filePath.endsWith('.js') ? filePath : filePath + '.js';
-    const resolvedUrl = new URL('../' + cleanPath, import.meta.url).href;
+    const resolvedUrl = new URL('../../' + cleanPath, import.meta.url).href;
     const res = await fetch(resolvedUrl);
     if (!res.ok) {
       console.warn(`[TabBundler] Skipping unavailable file: ${cleanPath} (${res.status})`);
@@ -157,13 +157,14 @@ const sharedComponentFiles = [
   '00_Components/03_Scrollbar.js',
   '00_Components/04_Import_Export.js',
   '00_Components/05_Save_Button.js',
-  '00_Components/06_Color_Selector.js'
+  '00_Components/06_Color_Selector.js',
+  '00_Components/09_Icon_Button.js'
 ];
 
 const tabHandlerFiles = [
-  '02_Bookmarks/Tab_Save_Handler.js',
-  '02_Bookmarks/Tab_Logo_Handler.js',
-  '02_Bookmarks/Tab_Import_Export_Handler.js'
+  '02_Bookmarks/01_Tab_Bookmarks/Tab_Save_Handler.js',
+  '02_Bookmarks/01_Tab_Bookmarks/Tab_Logo_Handler.js',
+  '02_Bookmarks/01_Tab_Bookmarks/Tab_Import_Export_Handler.js'
 ];
 
 const tabModuleFiles = [
@@ -198,7 +199,6 @@ export async function SaveBookmarksStandalone() {
     const finalModuleCode = `
 window.__IS_STANDALONE__ = true;
 window.__LOCALHUB_PAGE__ = 'bookmarks';
-window.__LOCALHUB_HUB_URL__ = 'Index.html';
 
 /* ==========================================================================
    SHARED COMPONENTS

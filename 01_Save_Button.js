@@ -161,12 +161,3 @@ export async function DownloadStandaloneHTML() {
     ShowToast('error', 'Export failed', err.message || 'Could not bundle application sources.');
   }
 }
-
-export const RDSaveButton = {
-  IsStandalone,
-  buildSaveHtml,
-  DownloadStandaloneHTML
-};
-if (typeof window !== 'undefined') {
-  window.RDSaveButton = RDSaveButton;
-}

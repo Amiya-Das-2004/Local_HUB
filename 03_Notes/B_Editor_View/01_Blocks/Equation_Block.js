@@ -10,24 +10,51 @@
 
 import { renderKatex } from '../../Writing_Engine/Math_Renderer.js';
 import { attachHighlightSync } from '../../Writing_Engine/Highlight_Sync.js';
+import { escapeHtml } from '../../02_Utils.js';
 import { CreateColorSelector } from '../../../00_Components/06_Color_Selector.js';
 import { getBlockActionsHTML, initBlockActions, copyBlockTextWithFeedback } from './Block_Actions.js';
 import { createCodeEditor } from './Block_Textarea.js';
+import { recordBlockSnapshot } from '../../Writing_Engine/Block_History.js';
 
 export { attachHighlightSync as setupBidirectionalHighlight };
 
-export function renderEquationBlock(block, isEditing = false, onUpdate = null, { onDone = null, onMoveUp = null, onMoveDown = null, onDelete = null, index = 0, totalBlocks = 1 } = {}) {
+export function renderEquationBlock(block, isEditing = false, onUpdate = null, { onDone = null, onMoveUp = null, onMoveDown = null, onDelete = null, index = 0, totalBlocks = 1, eqInfo = null } = {}) {
   const container = document.createElement('div');
   container.className = 'w-full';
+
+  // Navigation anchor for \eq{name} reference badges
+  if (block.id) {
+    container.id = `eq-${block.id}`;
+    container.setAttribute('data-eq-block-id', block.id);
+  }
+
   const rawTex = block.tex || block.content || '';
   const hasBorder = block.hasBorder !== false; // ON by default
+  const currentAlign = (block.align === 'left' || block.align === 'right') ? block.align : 'center';
+  const alignCss = currentAlign === 'left' ? 'flex-start' : (currentAlign === 'right' ? 'flex-end' : 'center');
+
+  const stripTags = (tex) => String(tex || '').replace(/\\tag\{[^}]*\}/g, '');
 
   const getRenderedEquationHtml = (tex) => {
-    const trimmed = (tex || '').trim();
+    const trimmed = stripTags(tex).trim();
     if (!trimmed) {
       return '<div class="italic text-[var(--text-dim)] text-xs select-none py-1">Equation preview appears here...</div>';
     }
     return renderKatex(trimmed, true);
+  };
+
+  // Group-mode rendering: blank-line separated parts, each with its (base.sub) label
+  const getRenderedEquationPartsHtml = (tex, info) => {
+    const parts = stripTags(tex).split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+    if (parts.length <= 1 || !info || !Array.isArray(info.members) || info.members.length !== parts.length) {
+      return getRenderedEquationHtml(tex);
+    }
+    return parts.map((p, i) => `
+      <div class="flex items-center gap-3 w-full" style="justify-content: ${alignCss};" data-eq-member="${i + 1}">
+        <div class="min-w-0 overflow-x-auto" style="scrollbar-width: thin;">${renderKatex(p, true)}</div>
+        <span class="flex-shrink-0 text-xs font-mono text-[var(--text-dim)] select-none px-1">(${escapeHtml(info.members[i])})</span>
+      </div>
+    `).join('');
   };
 
   const isKatexError = (html) => {
@@ -44,17 +71,21 @@ export function renderEquationBlock(block, isEditing = false, onUpdate = null, {
       ? 'border border-[var(--border)] bg-[var(--surface)] shadow-xs'
       : 'border border-transparent bg-transparent';
 
-    eqWrap.className = `my-1.5 py-2 px-3 rounded-xl overflow-x-auto text-center select-text transition-all ${borderClasses}`;
+    eqWrap.className = `my-1.5 py-2 px-3 rounded-xl overflow-x-auto select-text transition-all ${borderClasses}`;
     eqWrap.style.scrollbarWidth = 'thin';
-    eqWrap.innerHTML = getRenderedEquationHtml(rawTex);
+    eqWrap.style.display = 'flex';
+    eqWrap.style.flexDirection = 'column';
+    eqWrap.style.alignItems = alignCss;
+    eqWrap.innerHTML = getRenderedEquationPartsHtml(rawTex, eqInfo);
     container.appendChild(eqWrap);
     return container;
   }
 
   // 2. Edit Mode
   let currentBorderState = hasBorder;
+  let currentAlignState = currentAlign;
 
-  const initialRender = getRenderedEquationHtml(rawTex);
+  const initialRender = getRenderedEquationPartsHtml(rawTex, eqInfo);
   let lastValidHtml = !isKatexError(initialRender) && rawTex.trim() ? initialRender : '';
   let peakMinHeight = 44;
 
@@ -72,6 +103,13 @@ export function renderEquationBlock(block, isEditing = false, onUpdate = null, {
           <span>Border</span>
         </button>
 
+        <!-- Alignment: Left | Center | Right -->
+        <div class="flex items-center rounded-md border border-[var(--border)] overflow-hidden flex-shrink-0 select-none" title="Equation Alignment">
+          <button type="button" data-align="left" class="btn-eq-align h-7 w-8 text-xs font-bold flex items-center justify-center cursor-pointer transition-colors ${currentAlignState === 'left' ? 'bg-purple-500/15 text-purple-400' : 'text-[var(--text-dim)] hover:bg-[var(--surface-hover)]'}" title="Align Left">⇤</button>
+          <button type="button" data-align="center" class="btn-eq-align h-7 w-8 text-xs font-bold flex items-center justify-center cursor-pointer transition-colors border-x border-[var(--border)] ${currentAlignState === 'center' ? 'bg-purple-500/15 text-purple-400' : 'text-[var(--text-dim)] hover:bg-[var(--surface-hover)]'}" title="Align Center">↔</button>
+          <button type="button" data-align="right" class="btn-eq-align h-7 w-8 text-xs font-bold flex items-center justify-center cursor-pointer transition-colors ${currentAlignState === 'right' ? 'bg-purple-500/15 text-purple-400' : 'text-[var(--text-dim)] hover:bg-[var(--surface-hover)]'}" title="Align Right">⇥</button>
+        </div>
+
         <div class="eq-color-mount inline-flex items-center flex-shrink-0"></div>
       </div>
 
@@ -80,7 +118,7 @@ export function renderEquationBlock(block, isEditing = false, onUpdate = null, {
     </div>
 
     <!-- Middle: Live Compiled Equation Preview (Grows in size, thin horizontal scrollbar) -->
-    <div class="preview-pane w-full p-3 rounded-xl text-center overflow-x-auto min-h-[44px] ${currentBorderState ? 'border border-[var(--border)] bg-[var(--surface)]' : 'border border-transparent bg-transparent'}" style="scrollbar-width: thin;">
+    <div class="preview-pane w-full p-3 rounded-xl overflow-x-auto min-h-[44px] ${currentBorderState ? 'border border-[var(--border)] bg-[var(--surface)]' : 'border border-transparent bg-transparent'}" style="scrollbar-width: thin; display: flex; flex-direction: column; align-items: ${alignCss};">
       ${initialRender}
     </div>
 
@@ -110,7 +148,7 @@ export function renderEquationBlock(block, isEditing = false, onUpdate = null, {
       return;
     }
 
-    const rendered = getRenderedEquationHtml(trimmed);
+    const rendered = getRenderedEquationPartsHtml(trimmed, eqInfo);
     const hasError = isKatexError(rendered);
 
     // Ensure peakMinHeight retains the maximum height reached so far
@@ -183,10 +221,10 @@ export function renderEquationBlock(block, isEditing = false, onUpdate = null, {
 
     if (currentBorderState) {
       borderToggleBtn.className = 'btn-border-toggle h-7 px-2.5 py-0 text-xs font-semibold rounded-md border flex items-center justify-center gap-1.5 transition-all flex-shrink-0 cursor-pointer border-purple-500 bg-purple-500/15 text-purple-400 shadow-xs';
-      preview.className = 'preview-pane w-full p-3 rounded-xl text-center overflow-x-auto min-h-[44px] border border-[var(--border)] bg-[var(--surface)]';
+      preview.className = 'preview-pane w-full p-3 rounded-xl overflow-x-auto min-h-[44px] border border-[var(--border)] bg-[var(--surface)]';
     } else {
       borderToggleBtn.className = 'btn-border-toggle h-7 px-2.5 py-0 text-xs font-semibold rounded-md border flex items-center justify-center gap-1.5 transition-all flex-shrink-0 cursor-pointer border-[var(--border)] bg-[var(--surface)] text-[var(--text-dim)] opacity-70';
-      preview.className = 'preview-pane w-full p-3 rounded-xl text-center overflow-x-auto min-h-[44px] border border-transparent bg-transparent';
+      preview.className = 'preview-pane w-full p-3 rounded-xl overflow-x-auto min-h-[44px] border border-transparent bg-transparent';
     }
 
     borderToggleBtn.title = `Surrounding Rounded Rectangle Border: ${currentBorderState ? 'ON' : 'OFF'}`;
@@ -194,6 +232,26 @@ export function renderEquationBlock(block, isEditing = false, onUpdate = null, {
     if (onUpdate) {
       onUpdate({ hasBorder: currentBorderState });
     }
+  });
+
+  // Equation Alignment Handling (Left | Center | Right)
+  const syncAlignButtons = () => {
+    editWrap.querySelectorAll('.btn-eq-align').forEach((b) => {
+      const active = b.getAttribute('data-align') === currentAlignState;
+      b.className = `btn-eq-align h-7 w-8 text-xs font-bold flex items-center justify-center cursor-pointer transition-colors ${b.getAttribute('data-align') === 'center' ? 'border-x border-[var(--border)] ' : ''}${active ? 'bg-purple-500/15 text-purple-400' : 'text-[var(--text-dim)] hover:bg-[var(--surface-hover)]'}`;
+    });
+  };
+
+  editWrap.querySelectorAll('.btn-eq-align').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      currentAlignState = btn.getAttribute('data-align');
+      block.align = currentAlignState;
+      const alignCssValue = currentAlignState === 'left' ? 'flex-start' : (currentAlignState === 'right' ? 'flex-end' : 'center');
+      preview.style.alignItems = alignCssValue;
+      syncAlignButtons();
+      if (onUpdate) onUpdate({ align: currentAlignState });
+    });
   });
 
   // 2. Dual-Theme Color Selector [ + | ○ Light | ○ Dark ]
@@ -210,6 +268,8 @@ export function renderEquationBlock(block, isEditing = false, onUpdate = null, {
         codeEditor.setValue(updatedVal);
         textarea.selectionStart = start + insertText.length - 1; // place caret inside {}
         textarea.selectionEnd = start + insertText.length - 1;
+        // Programmatic setValue bypasses the input event; keep the insertion as an undo step
+        recordBlockSnapshot(block.id, updatedVal, textarea.selectionStart, textarea.selectionEnd, { immediate: true });
         textarea.focus();
         updateLivePreview(updatedVal);
         if (onUpdate) onUpdate({ tex: updatedVal, content: updatedVal });

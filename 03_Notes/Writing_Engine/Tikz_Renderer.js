@@ -651,10 +651,18 @@ export function renderTikzToElement(tikzCode, targetContainer, onComplete = null
         if (targetContainer.__tikzRenderId !== currentRenderId) return;
         console.error('TikzJax compilation error:', err);
         targetContainer.innerHTML = `
-          <div class="p-3 text-xs text-red-400 bg-red-950/20 border border-red-800/40 rounded-lg select-text text-center">
-            <strong>TikZ Compilation Failed:</strong> ${err.message || 'Check syntax and semicolons.'}
+          <div class="p-3 text-xs text-red-400 bg-red-950/20 border border-red-800/40 rounded-lg select-text text-center flex flex-col items-center gap-2">
+            <div><strong>TikZ Compilation Failed:</strong> ${err.message || 'Check syntax and semicolons.'}</div>
+            <button type="button" class="tikz-retry-btn px-2.5 py-1 rounded-md border border-red-700/60 bg-red-900/30 hover:bg-red-900/60 text-red-200 text-[11px] font-semibold cursor-pointer transition-colors" title="Try compiling again (the tikzjax.com engine can be busy or briefly unreachable)">↻ Retry Compile</button>
           </div>
         `;
+        const retryBtn = targetContainer.querySelector('.tikz-retry-btn');
+        if (retryBtn) {
+          retryBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            renderTikzToElement(tikzCode, targetContainer, onComplete, noteContext);
+          });
+        }
         if (onComplete) onComplete(false, err);
       }
     });

@@ -91,7 +91,7 @@ export function openJournalBrowser() {
 }
 export function journalBrowserText() {
   var all = journalEntries();
-  var L = ['ProffTrack — Reading Journal (all entries)', '=========================================='];
+  var L = ['ProfessorTrack — Reading Journal (all entries)', '=========================================='];
   if (!all.length) L.push('(no journal entries yet)');
   all.forEach(function (en) {
     L.push('');
@@ -101,6 +101,6 @@ export function journalBrowserText() {
   });
   L.push('');
   L.push('------------------------------------------');
-  L.push('Exported from ProffTrack on ' + new Date().toLocaleString());
+  L.push('Exported from ProfessorTrack on ' + new Date().toLocaleString());
   return L.join('\n');
 }

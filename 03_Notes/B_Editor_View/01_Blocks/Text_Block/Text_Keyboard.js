@@ -96,6 +96,7 @@ export const checkAutoCollapseTokensNearCaret = ({ editModeOptions, hideKatexPil
     { type: 'color', regex: /(\\textcolor\{([#a-zA-Z0-9|]+)\}\{((?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})+)\})\s*$/ },
     { type: 'fig', regex: /(\\fig\{([^}]+)\})\s*$/ },
     { type: 'cite', regex: /(\\cite\{([^}]*)\})\s*$/ },
+    { type: 'eq', regex: /(\\eq\{([^}]+)\})\s*$/ },
     { type: 'wikilink', regex: /(\[\[([^\]\n\r]+)\]\])\s*$/ }
   ];
 
@@ -123,6 +124,7 @@ export const checkAutoCollapseTokensNearCaret = ({ editModeOptions, hideKatexPil
       else if (p.type === 'color') contentVal = match[3] || '';
       else if (p.type === 'fig') contentVal = match[2] || fullToken.slice(5, -1);
       else if (p.type === 'cite') contentVal = match[2] || fullToken.slice(6, -1);
+      else if (p.type === 'eq') contentVal = match[2] || fullToken.slice(5, -1);
       else if (p.type === 'wikilink') contentVal = match[2] || fullToken.slice(2, -2);
 
       const widget = createLiveWidget(widgetType, fullToken, contentVal, editModeOptions);

@@ -41,7 +41,7 @@ export function GetProfessorsStyles() {
     --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
     --radius:16px;
   }
-  html.dark{
+  #ProfessorsApp.prof-dark{
     --paper:#121a17;
     --surface:#1a2420;
     --surface-2:#202c27;
@@ -75,7 +75,7 @@ export function GetProfessorsStyles() {
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
   [hidden]{display:none!important}
   ::selection{background:rgba(15,118,110,.28)}
-  html.dark ::selection{background:rgba(45,212,191,.32)}
+  #ProfessorsApp.prof-dark ::selection{background:rgba(45,212,191,.32)}
   body{
     font-family:var(--sans);
     color:var(--ink);
@@ -87,7 +87,7 @@ export function GetProfessorsStyles() {
       var(--paper);
     transition:background .3s ease,color .3s ease;
   }
-  html.dark body{
+  body.prof-dark{
     background:
       radial-gradient(1200px 500px at 85% -10%, rgba(45,212,191,.07), transparent 60%),
       radial-gradient(900px 420px at -10% 0%, rgba(240,179,92,.05), transparent 55%),
@@ -96,7 +96,7 @@ export function GetProfessorsStyles() {
   body::-webkit-scrollbar{width:11px}
   body::-webkit-scrollbar-track{background:transparent}
   body::-webkit-scrollbar-thumb{background:#d0c9b6;border-radius:8px;border:3px solid var(--paper)}
-  html.dark body::-webkit-scrollbar-thumb{background:#33453d}
+  body.prof-dark::-webkit-scrollbar-thumb{background:#33453d}
 
   body.modal-open{overflow:hidden}
   button{font-family:inherit;cursor:pointer}
@@ -114,9 +114,9 @@ export function GetProfessorsStyles() {
     border-bottom:3px solid #d9a441;
     transition:background .3s ease;
   }
-  html.dark .site-header{box-shadow:0 6px 24px -12px rgba(0,0,0,.8)}
+  #ProfessorsApp.prof-dark .site-header{box-shadow:0 6px 24px -12px rgba(0,0,0,.8)}
   .site-header.scrolled{box-shadow:0 14px 34px -16px rgba(11,63,58,.72)}
-  html.dark .site-header.scrolled{box-shadow:0 14px 34px -16px rgba(0,0,0,.92)}
+  #ProfessorsApp.prof-dark .site-header.scrolled{box-shadow:0 14px 34px -16px rgba(0,0,0,.92)}
   .header-inner{max-width:1080px;margin:0 auto;padding:18px 24px 14px;display:flex;flex-direction:column;gap:14px}
   .brand-row{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
   .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
@@ -261,7 +261,7 @@ export function GetProfessorsStyles() {
     padding:3px 11px;border-radius:999px;border:1px solid var(--teal-border);
   }
   .bio{font-size:.9rem;color:#3d4f48;background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--teal);border-radius:10px;padding:11px 14px}
-  html.dark .bio{color:#c9d3cd}
+  #ProfessorsApp.prof-dark .bio{color:#c9d3cd}
   .added-note{font-size:.76rem;color:var(--muted)}
 
   .prof-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:18px}
@@ -292,10 +292,10 @@ export function GetProfessorsStyles() {
   #expandAllBtn svg{width:15px;height:15px}
   .papers-head h4{font-family:var(--serif);font-size:.98rem;color:var(--heading);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   .papers-head h4 .cnt{background:var(--teal);color:#fff;font-family:var(--sans);font-size:.72rem;border-radius:999px;padding:2px 9px}
-  html.dark .papers-head h4 .cnt{color:#04211e}
+  #ProfessorsApp.prof-dark .papers-head h4 .cnt{color:#04211e}
   .avg-chip{display:inline-flex;align-items:center;gap:4px;background:var(--surface);border:1px solid var(--gold-border);color:var(--gold-deep);font-family:var(--sans);font-size:.7rem;font-weight:700;border-radius:999px;padding:2px 9px}
   .avg-chip svg{width:10px;height:10px;fill:currentColor;stroke:none}
-  html.dark .avg-chip{color:#f3c17a}
+  #ProfessorsApp.prof-dark .avg-chip{color:#f3c17a}
   .papers-list{max-height:440px;overflow-y:auto}
   .papers-list::-webkit-scrollbar{width:9px}
   .papers-list::-webkit-scrollbar-track{background:transparent}
@@ -334,8 +334,8 @@ export function GetProfessorsStyles() {
   /* ---------- Theme toggle ---------- */
   #themeBtn{width:42px;padding:0}
   #themeBtn .moon{display:none}
-  html.dark #themeBtn .moon{display:block}
-  html.dark #themeBtn .sun{display:none}
+  #ProfessorsApp.prof-dark #themeBtn .moon{display:block}
+  #ProfessorsApp.prof-dark #themeBtn .sun{display:none}
 
   /* ---------- Attachment dropzone ---------- */
   .attach-zone{
@@ -372,16 +372,16 @@ export function GetProfessorsStyles() {
   .resume-card::before{content:'';display:block;height:3px;background:linear-gradient(90deg,var(--teal),var(--gold));opacity:.55}
   .resume-head{display:flex;align-items:center;gap:9px;padding:12px 18px;border-bottom:1px dashed var(--line);flex-wrap:wrap}
   .resume-head svg{width:16px;height:16px;color:var(--teal-mid);flex:0 0 auto}
-  html.dark .resume-head svg{color:#5eead4}
+  #ProfessorsApp.prof-dark .resume-head svg{color:#5eead4}
   .resume-head h3{font-family:var(--serif);font-size:1.02rem;color:var(--heading);display:flex;align-items:center;gap:8px}
   .resume-head .cnt{background:var(--teal);color:#fff;font-family:var(--sans);font-size:.72rem;border-radius:999px;padding:2px 9px}
-  html.dark .resume-head .cnt{color:#04211e}
+  #ProfessorsApp.prof-dark .resume-head .cnt{color:#04211e}
   .resume-hint{font-size:.78rem;color:var(--muted);font-style:italic;margin-left:auto}
   .resume-list{display:flex;flex-direction:column;max-height:275px;overflow-y:auto}
   .resume-list::-webkit-scrollbar{width:9px}
   .resume-list::-webkit-scrollbar-track{background:transparent}
   .resume-list::-webkit-scrollbar-thumb{background:#d8d2c2;border-radius:8px;border:2px solid var(--surface)}
-  html.dark .resume-list::-webkit-scrollbar-thumb{background:#33453d}
+  #ProfessorsApp.prof-dark .resume-list::-webkit-scrollbar-thumb{background:#33453d}
   .resume-row{display:flex;align-items:center;gap:12px;padding:10px 18px;border-bottom:1px solid var(--line);transition:background .15s ease}
   .resume-row:last-child{border-bottom:0}
   .resume-row:hover{background:var(--surface-2)}
@@ -393,7 +393,7 @@ export function GetProfessorsStyles() {
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-radius:6px;
   }
   .resume-title:hover{color:var(--teal-mid);text-decoration:underline}
-  html.dark .resume-title:hover{color:#5eead4}
+  #ProfessorsApp.prof-dark .resume-title:hover{color:#5eead4}
   .resume-meta{font-size:.76rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .days-chip{
     flex:0 0 auto;display:inline-flex;align-items:center;gap:5px;
@@ -401,7 +401,7 @@ export function GetProfessorsStyles() {
     font-size:.7rem;font-weight:700;border-radius:999px;padding:3px 9px;letter-spacing:.3px;white-space:nowrap;
   }
   .days-chip svg{width:11px;height:11px}
-  html.dark .days-chip{color:#f3c17a}
+  #ProfessorsApp.prof-dark .days-chip{color:#f3c17a}
   .resume-read{flex:0 0 auto}
   @media (max-width:760px){
     .resume-row{flex-wrap:wrap;row-gap:8px}
@@ -479,7 +479,7 @@ export function GetProfessorsStyles() {
   .modal-body{padding:20px 22px;overflow-y:auto}
   .modal-body::-webkit-scrollbar{width:9px}
   .modal-body::-webkit-scrollbar-thumb{background:#d8d2c2;border-radius:8px}
-  html.dark .modal-body::-webkit-scrollbar-thumb{background:#33453d}
+  #ProfessorsApp.prof-dark .modal-body::-webkit-scrollbar-thumb{background:#33453d}
   .modal-actions{display:flex;justify-content:flex-end;gap:10px;padding-top:16px}
 
   .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
@@ -497,7 +497,7 @@ export function GetProfessorsStyles() {
     margin-top:12px;font-size:.82rem;color:var(--teal-mid);background:var(--teal-soft);
     border:1px solid var(--teal-border);border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:7px;
   }
-  html.dark .field-hint{color:var(--gold-deep)}
+  #ProfessorsApp.prof-dark .field-hint{color:var(--gold-deep)}
   .field-hint svg{width:14px;height:14px;flex:0 0 auto}
 
   /* ---------- Toast ---------- */
@@ -514,12 +514,12 @@ export function GetProfessorsStyles() {
   .toast .ico-info{display:none}
   .toast.info .ico-ok{display:none}
   .toast.info .ico-info{display:block}
-  html.dark .count-chip,html.dark .chip,html.dark .link-btn,html.dark .contact-links a{color:#5eead4}
-  html.dark .stat-ico.teal{color:#5eead4}
-  html.dark .stat-ico.gold{color:#f3c17a}
-  html.dark .stat-ico.green{color:#bef264}
-  html.dark .stat-ico.stone{color:#d6d3d1}
-  html.dark a{color:#5eead4}
+  #ProfessorsApp.prof-dark .count-chip,#ProfessorsApp.prof-dark .chip,#ProfessorsApp.prof-dark .link-btn,#ProfessorsApp.prof-dark .contact-links a{color:#5eead4}
+  #ProfessorsApp.prof-dark .stat-ico.teal{color:#5eead4}
+  #ProfessorsApp.prof-dark .stat-ico.gold{color:#f3c17a}
+  #ProfessorsApp.prof-dark .stat-ico.green{color:#bef264}
+  #ProfessorsApp.prof-dark .stat-ico.stone{color:#d6d3d1}
+  #ProfessorsApp.prof-dark a{color:#5eead4}
   .toast.show{opacity:1;transform:none}
   .toast{border-left:3px solid var(--gold)}
   .toast.info{border-left-color:var(--teal)}
@@ -529,25 +529,25 @@ export function GetProfessorsStyles() {
   .st-pill.st-read{background:#eaf3e2;color:#4d6b1f;border-color:#d7e6c8}
   .st-pill.st-reading{background:var(--teal-soft);color:var(--teal-mid);border-color:var(--teal-border)}
   .st-pill.st-wishlist{background:var(--gold-soft);color:var(--gold-deep);border-color:var(--gold-border)}
-  html.dark .st-pill.st-read{background:rgba(190,242,100,.12);color:#bef264;border-color:#3c4a25}
+  #ProfessorsApp.prof-dark .st-pill.st-read{background:rgba(190,242,100,.12);color:#bef264;border-color:#3c4a25}
   .paper-ico.ico-read{background:#eaf3e2;color:#4d6b1f;border-color:#d7e6c8}
   .paper-ico.ico-reading{background:var(--teal-soft);color:var(--teal-mid);border-color:var(--teal-border)}
-  html.dark .paper-ico.ico-read{background:rgba(190,242,100,.12);color:#bef264;border-color:#3c4a25}
-  html.dark .paper-ico.ico-reading{color:#5eead4}
-  html.dark .st-pill.st-reading{color:#5eead4}
-  html.dark .st-pill.st-wishlist{color:#f3c17a}
+  #ProfessorsApp.prof-dark .paper-ico.ico-read{background:rgba(190,242,100,.12);color:#bef264;border-color:#3c4a25}
+  #ProfessorsApp.prof-dark .paper-ico.ico-reading{color:#5eead4}
+  #ProfessorsApp.prof-dark .st-pill.st-reading{color:#5eead4}
+  #ProfessorsApp.prof-dark .st-pill.st-wishlist{color:#f3c17a}
 
   /* ---------- Tag filter bar ---------- */
   .tag-bar{display:flex;align-items:center;gap:8px;margin:0 0 20px;overflow-x:auto;padding:2px 2px 6px;scrollbar-width:thin}
   .tag-bar::-webkit-scrollbar{height:6px}
   .tag-bar::-webkit-scrollbar-thumb{background:#d8d2c2;border-radius:8px}
-  html.dark .tag-bar::-webkit-scrollbar-thumb{background:#33453d}
+  #ProfessorsApp.prof-dark .tag-bar::-webkit-scrollbar-thumb{background:#33453d}
   .tag-bar-label{flex:0 0 auto;font-size:.72rem;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:700;display:inline-flex;align-items:center;gap:6px;padding-right:4px}
   .tag-bar-label svg{width:13px;height:13px;color:var(--gold-deep)}
   .tag-chip{flex:0 0 auto;background:var(--surface);border:1px solid var(--line);color:var(--muted);font-size:.78rem;font-weight:600;padding:4px 12px;border-radius:999px;transition:background .15s ease,border-color .15s ease,color .15s ease}
   .tag-chip:hover{border-color:var(--teal-border);color:var(--teal-mid);background:var(--teal-soft)}
   .tag-chip.active{background:var(--gold-soft);border-color:var(--gold);color:var(--gold-deep)}
-  html.dark .tag-chip.active{color:#f3c17a}
+  #ProfessorsApp.prof-dark .tag-chip.active{color:#f3c17a}
   .tag-chip .n{opacity:.55;font-weight:500;margin-left:4px;font-size:.72rem}
 
   /* ---------- Collapsible college groups ---------- */
@@ -568,7 +568,7 @@ export function GetProfessorsStyles() {
 
   /* ---------- Count chip when filtering ---------- */
   .count-chip.filtered{background:var(--gold-soft);color:var(--gold-deep)}
-  html.dark .count-chip.filtered{color:#f3c17a}
+  #ProfessorsApp.prof-dark .count-chip.filtered{color:#f3c17a}
 
   /* ---------- Shortcuts modal ---------- */
   .shortcut-grid{display:grid;grid-template-columns:auto 1fr;gap:10px 16px;align-items:center;font-size:.88rem;color:var(--ink)}
@@ -587,8 +587,8 @@ export function GetProfessorsStyles() {
   .prof-card.dragging{opacity:.45;border-style:dashed}
   .prof-card.drag-above{box-shadow:0 -4px 0 -1px var(--gold),var(--shadow-card)}
   .prof-card.drag-below{box-shadow:0 4px 0 -1px var(--gold),var(--shadow-card)}
-  html.dark .prof-card.drag-above{box-shadow:0 -4px 0 -1px #f3c17a,var(--shadow-card)}
-  html.dark .prof-card.drag-below{box-shadow:0 4px 0 -1px #f3c17a,var(--shadow-card)}
+  #ProfessorsApp.prof-dark .prof-card.drag-above{box-shadow:0 -4px 0 -1px #f3c17a,var(--shadow-card)}
+  #ProfessorsApp.prof-dark .prof-card.drag-below{box-shadow:0 4px 0 -1px #f3c17a,var(--shadow-card)}
 
   /* ---------- College mini status bar ---------- */
   .group-bar{display:inline-flex;width:58px;height:6px;border-radius:999px;overflow:hidden;background:var(--line);flex:0 0 auto}
@@ -596,12 +596,12 @@ export function GetProfessorsStyles() {
   .group-bar .gb-read{background:#7ba13f}
   .group-bar .gb-reading{background:var(--teal)}
   .group-bar .gb-wishlist{background:#d98324}
-  html.dark .group-bar{background:#2c3a34}
+  #ProfessorsApp.prof-dark .group-bar{background:#2c3a34}
 
   /* ---------- Reading streak badge ---------- */
   .streak-badge{display:inline-flex;align-items:center;gap:5px;background:linear-gradient(180deg,var(--gold-soft),#f7e3bd);border:1px solid var(--gold-border);color:var(--gold-deep);font-size:.72rem;font-weight:700;border-radius:999px;padding:2px 9px;letter-spacing:.3px}
   .streak-badge svg{width:11px;height:11px;fill:currentColor}
-  html.dark .streak-badge{color:#f3c17a}
+  #ProfessorsApp.prof-dark .streak-badge{color:#f3c17a}
 
   /* ---------- Paste-import modal ---------- */
   .paste-area{width:100%;min-height:150px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.78rem;line-height:1.5;background:var(--field);border:1px solid var(--line);border-radius:10px;padding:12px 14px;color:var(--ink);resize:vertical;outline:0;transition:border-color .15s ease,box-shadow .15s ease}
@@ -617,27 +617,27 @@ export function GetProfessorsStyles() {
   .journal-list{list-style:none;margin:0;padding:2px 0 2px 16px;border-left:2px solid var(--line);display:grid;gap:9px;max-height:230px;overflow-y:auto;scrollbar-width:thin}
   .journal-list::-webkit-scrollbar{width:6px}
   .journal-list::-webkit-scrollbar-thumb{background:#d8d2c2;border-radius:8px}
-  html.dark .journal-list::-webkit-scrollbar-thumb{background:#33453d}
+  #ProfessorsApp.prof-dark .journal-list::-webkit-scrollbar-thumb{background:#33453d}
   .journal-item{position:relative;display:flex;gap:9px;align-items:flex-start;font-size:.85rem;line-height:1.5}
   .journal-item::before{content:'';position:absolute;left:-20.5px;top:7px;width:7px;height:7px;border-radius:50%;background:var(--teal);box-shadow:0 0 0 2.5px var(--surface)}
   .journal-date{flex:0 0 auto;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.68rem;font-weight:700;color:var(--gold-deep);background:var(--gold-soft);border:1px solid var(--gold-border);border-radius:7px;padding:2px 7px;margin-top:1px;white-space:nowrap}
   .journal-txt{color:var(--ink);white-space:pre-wrap;overflow-wrap:anywhere;min-width:0}
   .journal-del{flex:0 0 auto;opacity:0;width:24px;height:24px;margin-left:auto;transition:opacity .15s ease}
   .journal-item:hover .journal-del,.journal-item:focus-within .journal-del{opacity:1}
-  html.dark .journal-date{color:#f3c17a;background:rgba(232,169,78,.12)}
-  html.dark .journal-item::before{box-shadow:0 0 0 2.5px var(--surface)}
+  #ProfessorsApp.prof-dark .journal-date{color:#f3c17a;background:rgba(232,169,78,.12)}
+  #ProfessorsApp.prof-dark .journal-item::before{box-shadow:0 0 0 2.5px var(--surface)}
 
   /* ---------- Favorites ---------- */
   #favBtn.active{border-color:var(--gold-border);background:var(--gold-soft);color:var(--gold-deep)}
   #favBtn.active svg{fill:currentColor}
-  html.dark #favBtn.active{color:#f3c17a;background:rgba(232,169,78,.12)}
+  #ProfessorsApp.prof-dark #favBtn.active{color:#f3c17a;background:rgba(232,169,78,.12)}
   .prof-card.fav{box-shadow:inset 3px 0 0 0 var(--gold),var(--shadow-card)}
   .fav-chip{display:inline-flex;align-items:center;gap:3px;color:var(--gold-deep);background:var(--gold-soft);border:1px solid var(--gold-border);border-radius:999px;font-size:.62rem;font-weight:800;letter-spacing:.5px;text-transform:uppercase;padding:1px 7px;margin-left:8px;vertical-align:2px}
   .fav-chip svg{width:9px;height:9px;fill:currentColor}
-  html.dark .fav-chip{color:#f3c17a;background:rgba(232,169,78,.12)}
+  #ProfessorsApp.prof-dark .fav-chip{color:#f3c17a;background:rgba(232,169,78,.12)}
   .icon-btn.fav-on{color:var(--gold-deep);border-color:var(--gold-border);background:var(--gold-soft)}
   .icon-btn.fav-on svg{fill:currentColor}
-  html.dark .icon-btn.fav-on{color:#f3c17a;background:rgba(232,169,78,.12)}
+  #ProfessorsApp.prof-dark .icon-btn.fav-on{color:#f3c17a;background:rgba(232,169,78,.12)}
 
   /* ---------- Heatmap year-jump menu ---------- */
   .heat-menu{position:absolute;top:calc(100% + 7px);right:0;z-index:40;background:var(--surface);border:1px solid var(--line);border-radius:11px;box-shadow:0 12px 30px rgba(31,41,32,.2);min-width:190px;padding:5px;display:none;animation:menuIn .14s ease}
@@ -647,12 +647,12 @@ export function GetProfessorsStyles() {
   .heat-menu button:hover{background:var(--teal-soft);color:var(--teal-deep)}
   .heat-menu button.on{color:var(--teal);font-weight:700}
   .heat-menu .hm-n{color:var(--muted);font-size:.7rem;font-variant-numeric:tabular-nums}
-  html.dark .heat-menu{box-shadow:0 12px 30px rgba(0,0,0,.5)}
+  #ProfessorsApp.prof-dark .heat-menu{box-shadow:0 12px 30px rgba(0,0,0,.5)}
 
   /* ---------- Resume pause button ---------- */
   .resume-pause{color:var(--muted)}
   .resume-pause:hover{color:var(--gold-deep);border-color:var(--gold-border);background:var(--gold-soft)}
-  html.dark .resume-pause:hover{color:#f3c17a}
+  #ProfessorsApp.prof-dark .resume-pause:hover{color:#f3c17a}
 
   /* ---------- Reading heatmap (52-week calendar) ---------- */
   .heat-section{margin:0 0 22px}
@@ -666,7 +666,7 @@ export function GetProfessorsStyles() {
   .heat-scroll{overflow-x:auto;padding:2px 2px 6px;scrollbar-width:thin}
   .heat-scroll::-webkit-scrollbar{height:6px}
   .heat-scroll::-webkit-scrollbar-thumb{background:#d8d2c2;border-radius:8px}
-  html.dark .heat-scroll::-webkit-scrollbar-thumb{background:#33453d}
+  #ProfessorsApp.prof-dark .heat-scroll::-webkit-scrollbar-thumb{background:#33453d}
   .heat-svg{display:block}
   .heat-svg rect.hl{stroke:transparent;stroke-width:1;transition:opacity .15s ease,stroke .15s ease}
   .heat-svg rect.hl[data-date]{cursor:pointer}
@@ -732,11 +732,11 @@ export function GetProfessorsStyles() {
   .cmp-row .k{color:var(--muted)}
   .cmp-row .v{font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;text-align:right}
   .cmp-row .v.win{color:var(--teal-mid)}
-  html.dark .cmp-row .v.win{color:#5eead4}
+  #ProfessorsApp.prof-dark .cmp-row .v.win{color:#5eead4}
   .cmp-papers{border-top:1px solid var(--line);padding-top:8px;max-height:250px;overflow-y:auto;scrollbar-width:thin}
   .cmp-papers::-webkit-scrollbar{width:8px}
   .cmp-papers::-webkit-scrollbar-thumb{background:#d8d2c2;border-radius:8px}
-  html.dark .cmp-papers::-webkit-scrollbar-thumb{background:#33453d}
+  #ProfessorsApp.prof-dark .cmp-papers::-webkit-scrollbar-thumb{background:#33453d}
   .cmp-paper{padding:6px 1px;border-bottom:1px dashed var(--line)}
   .cmp-paper:last-child{border-bottom:0}
   .cmp-paper .t{font-weight:600;font-size:.8rem;color:var(--ink);display:block;line-height:1.35}
@@ -760,36 +760,36 @@ export function GetProfessorsStyles() {
 
   /* ---------- Journal browser modal ---------- */
   .btn-cnt{min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:var(--teal-soft);border:1px solid var(--teal-border);color:var(--teal-deep);font-size:.7rem;font-weight:800;line-height:17px;text-align:center;display:inline-block;font-variant-numeric:tabular-nums}
-  html.dark .btn-cnt{background:rgba(45,212,191,.12);color:#5eead4}
+  #ProfessorsApp.prof-dark .btn-cnt{background:rgba(45,212,191,.12);color:#5eead4}
   .jrnl-list{max-height:46vh;overflow-y:auto;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:12px;background:var(--surface-2);scrollbar-width:thin}
   .jrnl-list::-webkit-scrollbar{width:6px}
   .jrnl-list::-webkit-scrollbar-thumb{background:#d8d2c2;border-radius:8px}
-  html.dark .jrnl-list::-webkit-scrollbar-thumb{background:#33453d}
+  #ProfessorsApp.prof-dark .jrnl-list::-webkit-scrollbar-thumb{background:#33453d}
   .jrnl-row{display:flex;gap:10px;align-items:flex-start;padding:10px 13px;border-bottom:1px dashed var(--line);cursor:pointer;transition:background .15s ease;width:100%;text-align:left;background:none;border-left:none;border-right:none;border-top:none;font:inherit;color:inherit}
   .jrnl-row:last-child{border-bottom:none}
   .jrnl-row:hover,.jrnl-row:focus-visible{background:var(--teal-soft)}
-  html.dark .jrnl-row:hover,html.dark .jrnl-row:focus-visible{background:rgba(45,212,191,.08)}
+  #ProfessorsApp.prof-dark .jrnl-row:hover,#ProfessorsApp.prof-dark .jrnl-row:focus-visible{background:rgba(45,212,191,.08)}
   .jrnl-date{flex:0 0 auto;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.68rem;font-weight:700;color:var(--gold-deep);background:var(--gold-soft);border:1px solid var(--gold-border);border-radius:7px;padding:2px 7px;margin-top:1px;white-space:nowrap;font-variant-numeric:tabular-nums}
-  html.dark .jrnl-date{color:#f3c17a;background:rgba(232,169,78,.12)}
+  #ProfessorsApp.prof-dark .jrnl-date{color:#f3c17a;background:rgba(232,169,78,.12)}
   .jrnl-body{min-width:0;flex:1;display:flex;flex-direction:column;gap:3px}
   .jrnl-txt{font-size:.88rem;line-height:1.5;color:var(--ink);overflow-wrap:anywhere;white-space:pre-wrap}
   .jrnl-src{font-size:.73rem;color:var(--muted);display:flex;gap:6px;align-items:center;flex-wrap:wrap;min-width:0}
   .jrnl-src .jp{font-weight:700;color:var(--teal-deep);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-  html.dark .jrnl-src .jp{color:#5eead4}
+  #ProfessorsApp.prof-dark .jrnl-src .jp{color:#5eead4}
   .jrnl-src .jc{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px}
   .jrnl-empty{padding:30px 18px;text-align:center;color:var(--muted);font-size:.88rem;display:flex;flex-direction:column;align-items:center;gap:8px}
   .jrnl-empty svg{width:26px;height:26px;opacity:.45}
   .jrnl-count{font-size:.75rem;color:var(--muted);margin:0 2px 8px}
   .jrnl-count b{color:var(--teal-deep);font-variant-numeric:tabular-nums}
-  html.dark .jrnl-count b{color:#5eead4}
+  #ProfessorsApp.prof-dark .jrnl-count b{color:#5eead4}
 
   /* ---------- Goal pace projection ---------- */
   .goal-pace{font-size:.72rem;font-style:italic;display:inline-flex;align-items:center;gap:4px;line-height:1.35}
   .goal-pace svg{width:11px;height:11px;flex:0 0 auto}
   .goal-pace.pace-on{color:var(--teal-deep)}
   .goal-pace.pace-warn{color:var(--gold-deep)}
-  html.dark .goal-pace.pace-on{color:#5eead4}
-  html.dark .goal-pace.pace-warn{color:#f3c17a}
+  #ProfessorsApp.prof-dark .goal-pace.pace-on{color:#5eead4}
+  #ProfessorsApp.prof-dark .goal-pace.pace-warn{color:#f3c17a}
 
   /* ---------- Paper-row flash (jump-to-paper highlight) ---------- */
   .paper-row.flash{animation:flashRing 1.1s ease-in-out 2;border-radius:10px}
@@ -822,7 +822,65 @@ export function GetProfessorsStyles() {
     .stat-card::before{display:none}
     .heat-card,.resume-card{box-shadow:none!important;border-color:#bbb!important;background:#fff!important}
     .resume-list{max-height:none;overflow:visible}
-  }`;
+  }
+/* ===== ProfessorTrack header redesign (spec §6-13) ===== */
+#ProfessorsApp .icb-btn { --icb-accent: var(--teal); --icb-tip-bg: var(--toast-bg, #0b3f3a); --icb-tip-fg: #eef7f4; }
+.pt-global-nav-wrap { margin: 0 10px; }
+.brand .logo svg { width: 22px; height: 22px; display: block; }
+.pt-row2 { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.pt-row2 .search-wrap { flex: 1 1 auto; min-width: 110px; }
+.pt-io-wrap { position: relative; }
+.pt-io-menu {
+  position: absolute; right: 0; top: calc(100% + 8px);
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 12px; padding: 6px;
+  display: flex; flex-direction: column; min-width: 210px; z-index: 70;
+  box-shadow: 0 18px 44px -18px rgba(11, 63, 58, 0.55);
+}
+.pt-io-menu button {
+  text-align: left; padding: 9px 12px; border: 0;
+  background: transparent; border-radius: 8px;
+  color: var(--ink); cursor: pointer; font: inherit; font-size: .87rem;
+}
+.pt-io-menu button:hover { background: var(--teal-soft); }
+@media (max-width: 640px) {
+  .brand-row { flex-wrap: wrap; }
+  .pt-global-nav-wrap { order: 3; width: 100%; margin: 8px 0 0; }
+  .header-actions { margin-left: auto; }
+  .pt-row2 { flex-wrap: wrap; }
+  .pt-row2 .search-wrap { order: 10; flex-basis: 100%; }
+}
+
+/* Professor identity color — subtle by default, theme-aware emphasis on hover (spec §14) */
+#ProfessorsApp .avatar { transition: transform .18s ease, filter .18s ease, box-shadow .18s ease; }
+#ProfessorsApp .prof-card:hover .avatar {
+  filter: brightness(0.88) saturate(1.25);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--prof-c, var(--teal)) 30%, transparent);
+}
+#ProfessorsApp.prof-dark .prof-card:hover .avatar {
+  filter: brightness(1.18) saturate(1.15);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--prof-c, var(--teal)) 42%, transparent);
+}
+
+
+/* Professor identity-color picker (professor modal) */
+#ProfessorsApp .prof-color-picker { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+#ProfessorsApp .prof-color-picker button {
+  width: 26px; height: 26px; border-radius: 50%;
+  border: 2px solid var(--line); cursor: pointer; padding: 0;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+#ProfessorsApp .prof-color-picker button:hover { transform: scale(1.12); }
+#ProfessorsApp .prof-color-picker button.active {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--teal) 30%, transparent);
+}
+#ProfessorsApp .prof-color-picker input[type="color"] {
+  width: 26px; height: 26px; padding: 0; border: 2px dashed var(--line);
+  border-radius: 50%; background: transparent; cursor: pointer;
+}
+
+`;
 }
 
 let stylesInjected = false;

@@ -31,9 +31,9 @@ Universal, dependency-free UI modules shared across all Local_HUB workspace tabs
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
 | `HUB_MARK_SVG` | 11 - 19 | Dual-circle and hub glyph vector SVG markup. |
-| `LOGO_VARIANTS` | 24 - 54 | Predefined tab-specific styling identities (`hub`, `bookmarks`, `notes`). |
-| `GetLogoHTML(options = {})` | 57 - 146 | Returns responsive HTML and CSS markup for the logo button supporting custom marks, tab titles, subtitles, and accents. |
-| `InitLogoLogic()` | 153 - 171 | Attaches click listener navigating back to landing page (clearing hash) or tab-defined `window.__LOCALHUB_HUB_URL__`. |
+| `LOGO_VARIANTS` | 24 - 61 | Predefined tab-specific styling identities (`hub`, `bookmarks`, `notes`). |
+| `GetLogoHTML(options = {})` | 64 - 171 | Returns responsive HTML and CSS markup for the logo button supporting custom marks, tab titles, subtitles, and accents. |
+| `InitLogoLogic()` | 177 - 205 | Attaches click listener navigating back to landing page (clearing hash) or tab-defined `window.__LOCALHUB_HUB_URL__`. |
 
 ---
 
@@ -195,18 +195,18 @@ Canonical cross-tab research registry — the "common ground" for papers, books,
 | Page | Loads | Handler files (inside the tab folder) | Save button output |
 | :--- | :--- | :--- | :--- |
 | `Index.html` | Master hash router: landing, `#bookmarks`, `#notes` | *(uses shared `00_Components`)* | `Local_HUB.html` (all-in-one, original behavior) |
-| `02_Bookmarks/Bookmarks.html` | `./Bookmarks.js` + local handlers | `Tab_Save_Handler.js`, `Tab_Logo_Handler.js` | `Bookmarks.html` (single-tab standalone) |
+| `02_Bookmarks/01_Tab_Bookmarks/Bookmarks.html` | `../Bookmarks.js` + local handlers | `Tab_Save_Handler.js`, `Tab_Logo_Handler.js`, `Tab_Import_Export_Handler.js` | `Bookmarks.html` (single-tab standalone) |
 | `03_Notes/Notes.html` | `./Notes.js` + local handlers | `Tab_Save_Handler.js`, `Tab_Logo_Handler.js`, `Tab_Import_Export_Handler.js` | `Notes.html` (single-tab standalone) |
 
 How the isolation works:
 
 - The per-tab pages are **modular dev shells** (same pattern as `Index.html`): they load the tab's vanilla JS modules directly, carry all three JSON vaults, and re-boot on `hashchange` so in-tab deep links (`#Notes?id=...`) keep working.
-- After the tab app initializes, the page's boot script swaps in the **local handler files** (clone-replace on `#save-btn`, `#logo-btn`, `#btn-import`/`#btn-export`): the logo navigates to `../Index.html` instead of clearing the hash, and Save compiles *only that tab* into a standalone download instead of the all-in-one build.
+- After the tab app initializes, the page's boot script swaps in the **local handler files** (clone-replace on `#save-btn`, `#logo-btn`, `#btn-import`/`#btn-export`): the logo navigates to `../../Index.html` instead of clearing the hash, and Save compiles *only that tab* into a standalone download instead of the all-in-one build.
 - The handler files are **never referenced by `Index.html`** and are **not registered in the all-in-one bundler lists** — Index.html's Save button and routing stay byte-for-byte original. Adding a handler file requires no bundler registration.
 - The per-tab `Tab_Save_Handler.js` is self-contained (its own copy of the vault-sync, bundler, and cache-clear logic, resolving paths relative to the project root). Inside a compiled standalone it short-circuits: Save re-emits that single file with freshly synced vaults.
 - All three JSON vaults (`#LandingPageData`, `#Bookmarks`, `#NotesData`) exist in every page, so Import/Export produce and consume the same master JSON from anywhere. Live edits travel through the `<vaultId>_Local_Cache` localStorage keys (origin-global); two pages open at once are last-writer-wins.
 - The shared research registry vault `#PapersData` additionally exists in `Index.html`, `03_Notes/Notes.html`, `04_Professors/Professor.html` and `05_R&D/R&D.html`; it is owned by `08_Research_Library.js` (cache key `PapersData_Local_Cache`, mirror `window.PapersState`). It must only ever be written through its merge-safe APIs (`RL_Upsert` / `RL_MergePapers` / `RL_ImportSlice`) — never wholesale-replaced.
-- Landing orb tabs declare `"PageUrl"` (e.g. `"02_Bookmarks/Bookmarks.html"`) next to their hash `"Url"`. In the dev workspace orbs open the `PageUrl`; inside the all-in-one standalone build (`__IS_STANDALONE__`) they fall back to the hash `Url`.
+- Landing orb tabs declare `"PageUrl"` (e.g. `"02_Bookmarks/01_Tab_Bookmarks/Bookmarks.html"`) next to their hash `"Url"`. In the dev workspace orbs open the `PageUrl`; inside the all-in-one standalone build (`__IS_STANDALONE__`) they fall back to the hash `Url`.
 - Per-tab standalone files are **not** self-sufficient hubs: keep them next to `Index.html` so the logo has somewhere to go. The all-in-one `Local_HUB.html` remains the portable everything-file.
 - Serve the folder over http(s) (e.g. a local dev server) when using multiple pages — cross-file localStorage on `file://` is browser-dependent.
 - When you add a new JS file to a tab, register it in **two** places: the shared `bookmarkFiles`/`noteFiles` list in `00_Components/05_Save_Button.js` (for the all-in-one build) *and* the `tabModuleFiles` list in that tab's `Tab_Save_Handler.js` (for the per-tab build).
@@ -260,7 +260,7 @@ else if (lowerHash.startsWith('#newtab')) {
 }
 ```
 ### 5. Create the Tab's Own Resilient Page (optional, recommended)
-Copy the pattern from `02_Bookmarks/Bookmarks.html` / `03_Notes/Notes.html` — files live **inside the tab folder**:
+Copy the pattern from `02_Bookmarks/01_Tab_Bookmarks/Bookmarks.html` / `03_Notes/Notes.html` — files live **inside the tab folder**:
 - `<TabFolder>/<Tab>.html`: same favicon, its own `<title>`, all three JSON vaults, flags script (`window.__LOCALHUB_PAGE__ = 'newtab';`, `window.__LOCALHUB_HUB_URL__ = '../Index.html';`), and a boot script with `id="localhub-router"` that imports `./<Main>.js`, calls `initNewTabApp()`, then imports and applies the local handler overrides — re-running on `hashchange`.
 - `<TabFolder>/Tab_Save_Handler.js`: self-contained single-tab compiler (copy the pattern from `02_Bookmarks/Tab_Save_Handler.js`; set `TAB_OUTPUT_NAME`, `tabModuleFiles`, `tabHandlerFiles`). **Never reference these handler files from Index.html and never add them to the all-in-one bundler lists.**
 - `<TabFolder>/Tab_Logo_Handler.js` (+ `Tab_Import_Export_Handler.js` if the tab header has those buttons).
