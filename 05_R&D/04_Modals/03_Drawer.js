@@ -113,6 +113,9 @@ export function GetDrawerHTML(item) {
         <div class="rd-drawer-section-title">Details</div>
         <div class="rd-drawer-meta">
           ${MetaRow('Journal / Institution', item.journal)}
+          ${item.institution ? MetaRow('Institution / Univ', item.institution) : ''}
+          ${item.advisor ? MetaRow('Advisor', item.advisor) : ''}
+          ${item.degree ? MetaRow('Degree', item.degree) : ''}
           ${MetaRow('Publisher', item.publisher)}
           ${item.volume ? MetaRow('Volume', item.volume, { mono: true }) : ''}
           ${item.issue ? MetaRow('Issue / Number', item.issue, { mono: true }) : ''}
@@ -138,6 +141,18 @@ export function GetDrawerHTML(item) {
           </div>` : ''}
         </div>
       </div>
+
+      ${item.localPath ? `
+        <div class="rd-drawer-section rd-drawer-localpath">
+          <div class="rd-drawer-section-title">${ICONS.folderOpen} Local Hard Drive Location</div>
+          <div class="rd-local-path-box" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;">
+            <span class="path-text mono" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(item.localPath)}">${esc(item.localPath)}</span>
+            <button type="button" class="primary-btn sm" data-action="locate-local-file" data-id="${item.id}" title="Copy path &amp; open command">
+              ${ICONS.copy} <span>Copy / Reveal</span>
+            </button>
+          </div>
+        </div>
+      ` : ''}
 
       <div class="rd-drawer-section">
         <div class="rd-drawer-section-title">Tags <span class="rd-drawer-note-hint">right-click any tag to rename it everywhere</span></div>

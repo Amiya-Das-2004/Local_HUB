@@ -6,21 +6,23 @@
 
 /**
  * Applies scientific figure attributes (tag, ID, figure number) to a container element.
- * 
+ *
  * @param {HTMLElement} figureEl - Figure container element
  * @param {Object} options
  * @param {string} [options.tag=''] - Unique citation tag (e.g. 'arch')
  * @param {number|null} [options.figNumber=null] - Computed numeric figure number
+ * @param {string|null} [options.label=null] - Styled figure label (per note.figureNumbering) — used for the anchor id
  */
-export function applyFigureAttributes(figureEl, { tag = '', figNumber = null } = {}) {
+export function applyFigureAttributes(figureEl, { tag = '', figNumber = null, label = null } = {}) {
   if (!figureEl) return;
   const normTag = (tag || '').trim().toLowerCase();
   if (normTag) {
     figureEl.setAttribute('data-fig-tag', normTag);
   }
-  if (figNumber) {
-    figureEl.id = `fig-${figNumber}`;
-    figureEl.setAttribute('data-fig-num', String(figNumber));
+  const anchor = (label !== null && label !== undefined && label !== '') ? label : figNumber;
+  if (anchor !== null && anchor !== undefined && anchor !== '') {
+    figureEl.id = `fig-${anchor}`;
+    figureEl.setAttribute('data-fig-num', String(anchor));
   } else if (normTag) {
     figureEl.id = `fig-${normTag}`;
   }
@@ -28,17 +30,19 @@ export function applyFigureAttributes(figureEl, { tag = '', figNumber = null } =
 
 /**
  * Formats standard scientific caption text: "Fig: X: Caption" or "Fig: X"
- * 
+ *
  * @param {Object} options
  * @param {string} [options.caption=''] - User caption
  * @param {boolean} [options.allowNumbering=true] - Whether numbering is enabled
  * @param {number|null} [options.figNumber=null] - Computed numeric figure number
+ * @param {string|null} [options.label=null] - Styled figure label (per note.figureNumbering; overrides figNumber for display)
  * @returns {string} Formatted caption string
  */
-export function formatFigureCaptionText({ caption = '', allowNumbering = true, figNumber = null } = {}) {
+export function formatFigureCaptionText({ caption = '', allowNumbering = true, figNumber = null, label = null } = {}) {
   const trimmed = (caption || '').trim();
-  if (allowNumbering && figNumber) {
-    return trimmed ? `Fig: ${figNumber}: ${trimmed}` : `Fig: ${figNumber}`;
+  const displayNum = (label !== null && label !== undefined && label !== '') ? label : figNumber;
+  if (allowNumbering && displayNum !== null && displayNum !== undefined && displayNum !== '') {
+    return trimmed ? `Fig: ${displayNum}: ${trimmed}` : `Fig: ${displayNum}`;
   }
   return trimmed;
 }

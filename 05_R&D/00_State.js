@@ -15,6 +15,8 @@ export function DefaultState() {
   return {
     rd: {
       version: 1,
+      goal: 24,
+      goalStart: 0,
       items: [],
       groups: [],
       groupOrder: [],
@@ -28,6 +30,7 @@ export function DefaultState() {
         typeFilter: 'ALL',
         statusFilter: 'ALL',
         starredOnly: false,
+        showDashboard: true,
         queueOpen: false,
         queueOrder: [],
         queueSort: 'smart',
@@ -81,12 +84,15 @@ export function NormalizeState(raw) {
     });
   }
   out.version = 1;
+  out.goal = (typeof out.goal === 'number' && !isNaN(out.goal)) ? out.goal : 24;
+  out.goalStart = (typeof out.goalStart === 'number' && out.goalStart >= 0 && out.goalStart <= 11) ? out.goalStart : 0;
   out.items = Array.isArray(out.items) ? out.items : [];
   out.groups = Array.isArray(out.groups) ? out.groups : [];
   out.groupOrder = Array.isArray(out.groupOrder) ? out.groupOrder : [];
   out.itemOrder = Array.isArray(out.itemOrder) ? out.itemOrder : [];
   out.links = Array.isArray(out.links) ? out.links : [];
   out.ui = Object.assign(DefaultState().rd.ui, out.ui || {});
+  out.ui.showDashboard = out.ui.showDashboard !== false;
   if (!Array.isArray(out.ui.queueOrder)) out.ui.queueOrder = [];
   if (['smart', 'added-desc', 'year-asc', 'year-desc', 'title', 'venue'].indexOf(out.ui.queueSort) === -1) out.ui.queueSort = 'smart';
   if (!Array.isArray(out.ui.collapsedSections)) out.ui.collapsedSections = [];
@@ -95,6 +101,7 @@ export function NormalizeState(raw) {
   out.meta = Object.assign(DefaultState().rd.meta, out.meta || {});
 
   const now = new Date().toISOString();
+  const today = now.slice(0, 10);
   out.items = out.items.map((it) => ({
     id: it.id || uid('it'),
     type: ['paper', 'book', 'thesis'].includes(it.type) ? it.type : 'paper',
@@ -121,6 +128,12 @@ export function NormalizeState(raw) {
     color: typeof it.color === 'string' ? it.color : '',
     tags: Array.isArray(it.tags) ? it.tags : [],
     groupId: it.groupId || null,
+    localPath: typeof it.localPath === 'string' ? it.localPath.trim() : '',
+    startedOn: it.startedOn || (it.status === 'reading' ? today : null),
+    finishedOn: it.finishedOn || (it.status === 'read' ? today : null),
+    institution: typeof it.institution === 'string' ? it.institution.trim() : '',
+    advisor: typeof it.advisor === 'string' ? it.advisor.trim() : '',
+    degree: typeof it.degree === 'string' ? it.degree.trim() : '',
     positions: Object.assign({ timeline: null, map: null, group: null }, it.positions || {}),
     createdAt: it.createdAt || now,
     updatedAt: it.updatedAt || now
@@ -141,7 +154,10 @@ export function NormalizeState(raw) {
     to: l.to || l.target || null,
     toAnchor: l.toAnchor || 'a-w',
     label: l.label || '',
-    style: l.style || 'curve',
+    /* orthogonal is the default link style: it enables the circuit-schematic
+       routing (obstacle avoidance + bridge jumpers + parallel lanes); links
+       explicitly saved as 'curve' keep their style */
+    style: l.style || 'orthogonal',
     shape: l.shape || 'capsule',
     direction: l.direction || 'forward',
     color: l.color || '#8b6dff'
@@ -362,13 +378,38 @@ export function GetAllItems() {
 export function CycleItemStatus(id) {
   const item = GetItem(id);
   if (!item) return null;
+  const today = new Date().toISOString().slice(0, 10);
   item.status = item.status === 'unread' ? 'reading' : item.status === 'reading' ? 'read' : 'unread';
-  if (item.status === 'read') item.progress = 100;
-  if (item.status === 'reading' && (item.progress || 0) === 0) item.progress = 10;
-  if (item.status === 'unread') item.progress = 0;
+  if (item.status === 'read') {
+    item.progress = 100;
+    if (!item.finishedOn) item.finishedOn = today;
+  }
+  if (item.status === 'reading') {
+    if ((item.progress || 0) === 0) item.progress = 10;
+    if (!item.startedOn) item.startedOn = today;
+  }
+  if (item.status === 'unread') {
+    item.progress = 0;
+  }
   item.updatedAt = new Date().toISOString();
   persist();
   return item;
+}
+
+export function SetGoal(goal, startMonth) {
+  if (typeof goal === 'number' && !isNaN(goal) && goal >= 0) {
+    state.rd.goal = Math.round(goal);
+  }
+  if (typeof startMonth === 'number' && startMonth >= 0 && startMonth <= 11) {
+    state.rd.goalStart = startMonth;
+  }
+  persist();
+}
+
+export function SetDashboardOpen(isOpen) {
+  if (!state.rd.ui) state.rd.ui = {};
+  state.rd.ui.showDashboard = !!isOpen;
+  persist();
 }
 
 export function ToggleStar(id) {
@@ -582,7 +623,7 @@ export function AddLink(from, to, fromAnchor, toAnchor, label, opts) {
     to,
     toAnchor: toAnchor || 'a-w',
     label: label || o.label || '',
-    style: o.style || 'curve',
+    style: o.style || 'orthogonal',
     shape: o.shape || 'capsule',
     direction: o.direction || 'forward',
     color: o.color || '#8b6dff'

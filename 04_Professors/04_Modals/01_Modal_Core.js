@@ -15,7 +15,11 @@ import { openCompare } from './06_Compare_Modal.js';
 import { downloadWebsite } from '../05_Data_IO/01_Save_Button.js';
 
 export function openModal(id) {
-  $(id).hidden = false;
+  var m = $(id);
+  m.hidden = false;
+  /* reset any drag offset so the modal re-centers each time it opens */
+  var card = m.querySelector('.modal-card');
+  if (card) { card.style.transform = ''; delete card.dataset.dragX; delete card.dataset.dragY; }
   document.body.classList.add('modal-open');
 }
 export function closeModal(el) {
@@ -38,6 +42,43 @@ function isTyping(el) {
 }
 function modalOpen() { return !!document.querySelector('.modal:not([hidden])'); }
 
+/* drag-to-move: grab a modal by its header bar and drag it anywhere
+   (viewport-clamped). Bound once per modal mount; the offset lives on the
+   .modal-card dataset and openModal() resets it. */
+function bindModalDrag(m) {
+  var card = m.querySelector('.modal-card');
+  var head = m.querySelector('.modal-head');
+  if (!card || !head || head.__dragBound) return;
+  head.__dragBound = true;
+  var drag = null;
+  head.addEventListener('pointerdown', function (e) {
+    if (e.button !== 0) return;
+    if (e.target.closest('button, a, input, select, textarea, .prof-color-picker')) return;
+    var r = card.getBoundingClientRect();
+    drag = {
+      sx: e.clientX, sy: e.clientY,
+      ox: parseFloat(card.dataset.dragX || '0'), oy: parseFloat(card.dataset.dragY || '0'),
+      baseL: r.left - parseFloat(card.dataset.dragX || '0'),
+      baseT: r.top - parseFloat(card.dataset.dragY || '0'),
+      w: r.width, h: r.height
+    };
+    card.classList.add('dragging');
+    try { head.setPointerCapture(e.pointerId); } catch (err) { /* older engines */ }
+    e.preventDefault();
+  });
+  head.addEventListener('pointermove', function (e) {
+    if (!drag) return;
+    var nx = Math.max(8, Math.min(drag.baseL + drag.ox + (e.clientX - drag.sx), window.innerWidth - drag.w - 8));
+    var ny = Math.max(8, Math.min(drag.baseT + drag.oy + (e.clientY - drag.sy), window.innerHeight - drag.h - 8));
+    card.dataset.dragX = String(nx - drag.baseL);
+    card.dataset.dragY = String(ny - drag.baseT);
+    card.style.transform = 'translate(' + (nx - drag.baseL) + 'px,' + (ny - drag.baseT) + 'px)';
+  });
+  function endDrag() { if (!drag) return; drag = null; card.classList.remove('dragging'); }
+  head.addEventListener('pointerup', endDrag);
+  head.addEventListener('pointercancel', endDrag);
+}
+
 export function InitModalCore() {
   document.querySelectorAll('.modal').forEach(function (m) {
     m.addEventListener('mousedown', function (e) { if (e.target === m) closeModal(m); });
@@ -45,6 +86,7 @@ export function InitModalCore() {
     if (xc) xc.addEventListener('click', function () { closeModal(m); });
     var cc = m.querySelector('.modal-cancel');
     if (cc) cc.addEventListener('click', function () { closeModal(m); });
+    bindModalDrag(m);
   });
   /* document-level shortcut handler — bound once, survives app DOM re-mounts;
      inert while the Professors app is not mounted (the all-in-one bundle

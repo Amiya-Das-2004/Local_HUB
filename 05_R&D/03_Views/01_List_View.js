@@ -58,20 +58,42 @@ export function PlayListFlip(panel, prev) {
 export function GetItemRowHTML(item) {
   const group = item.groupId ? GetGroup(item.groupId) : null;
   const stripe = ItemStripeColor(item);
-  const meta = [item.journal || item.publisher || '', item.year || ''].filter(Boolean).join(' &middot; ');
-  const tags = (item.tags || []).slice(0, 4).map((t) => `<span class="rd-tag-pill" data-action="filter-tag" data-tag="${esc(t)}" title="Filter by tag: ${esc(t)}">#${esc(t)}</span>`).join('');
   const q = (state.rd.ui && state.rd.ui.search) || '';
   const sel = SelectedIds.has(item.id);
+  const tags = (item.tags || []).slice(0, 4).map((t) => `<span class="rd-tag-pill" data-action="filter-tag" data-tag="${esc(t)}" title="Filter by tag: ${esc(t)}">#${esc(t)}</span>`).join('');
+  const localBadge = item.localPath ? `
+    <button type="button" class="rd-local-path-badge" data-action="locate-local-file" data-id="${item.id}" title="Local storage: ${esc(item.localPath)} — Click to copy path &amp; open in File Explorer">
+      ${ICONS.folderOpen} <span>${esc(item.localPath.split(/[/\\]/).pop() || 'Local Folder')}</span>
+    </button>
+  ` : '';
+
+  let metaLine = '';
+  if (item.type === 'book') {
+    const pubMeta = [item.publisher || '', item.year || ''].filter(Boolean).join(' · ');
+    metaLine = `${Hl(esc((item.authors || []).join('; ')), q)}${pubMeta ? ' · ' + esc(pubMeta) : ''}`;
+  } else if (item.type === 'thesis') {
+    const instMeta = [item.degree || '', item.institution || item.publisher || '', item.advisor ? 'Advisor: ' + item.advisor : '', item.year || ''].filter(Boolean).join(' · ');
+    metaLine = `${Hl(esc((item.authors || []).join('; ')), q)}${instMeta ? ' · ' + esc(instMeta) : ''}`;
+  } else {
+    const paperMeta = [item.journal || '', item.year || ''].filter(Boolean).join(' · ');
+    metaLine = `${Hl(esc((item.authors || []).slice(0, 3).join('; ')) + ((item.authors || []).length > 3 ? ' et al.' : ''), q)}${paperMeta ? ' · ' + esc(paperMeta) : ''}`;
+  }
+
   return `
-    <article class="rd-item-card ${group ? '' : 'unassigned'} ${item.color ? 'colored' : ''} ${sel ? 'selected' : ''}" data-item-id="${item.id}" data-dblclick="open-notes" tabindex="0"
+    <article class="rd-item-card is-${item.type} ${group ? '' : 'unassigned'} ${item.color ? 'colored' : ''} ${sel ? 'selected' : ''}"
+             data-item-id="${item.id}" data-action="card-click" data-dblclick="locate-local-file" tabindex="0"
              aria-label="${esc(item.title)} — ${TYPE_LABEL[item.type] || 'Paper'}, ${STATUS_LABEL[item.status] || 'Unread'}"
              style="${stripe ? '--card-stripe:' + stripe : ''}" draggable="true">
+      ${item.type === 'book' ? `<div class="rd-card-spine" aria-hidden="true"></div>` : ''}
       <button class="rd-card-check ${sel ? 'checked' : ''}" data-action="toggle-select" data-id="${item.id}"
               aria-pressed="${sel}" aria-label="Select ${esc(item.title)} for bulk actions"
               title="Select for bulk actions (Shift-click for a range)">${ICONS.check}</button>
       <div class="rd-item-card-top">
-        <span class="rd-type-badge ${item.type}">${ICONS[TYPE_ICON[item.type] || 'file']}${TYPE_LABEL[item.type] || 'Paper'}</span>
+        <span class="rd-type-badge ${item.type}">
+          ${ICONS[TYPE_ICON[item.type] || 'file']}${TYPE_LABEL[item.type] || 'Paper'}
+        </span>
         ${item.year ? `<span class="rd-year-badge">${item.year}</span>` : ''}
+        ${item.doi ? `<span class="rd-doi-badge" title="DOI: ${esc(item.doi)}">DOI</span>` : ''}
         <span class="rd-status-pill ${item.status}" data-action="cycle-status" data-id="${item.id}"
               title="Click to cycle: unread → reading → read">
           <span class="rd-status-dot"></span>${STATUS_LABEL[item.status] || 'Unread'}
@@ -79,16 +101,20 @@ export function GetItemRowHTML(item) {
         ${item.starred ? `<span style="color:var(--yellow);display:flex;" title="Starred">${ICONS.star}</span>` : ''}
       </div>
       <h3 class="rd-item-title" data-action="open-drawer" data-id="${item.id}" title="Show details">${Hl(esc(item.title), q)}</h3>
-      <div class="rd-item-meta">${Hl(esc((item.authors || []).slice(0, 3).join('; ')) + ((item.authors || []).length > 3 ? ' et al.' : ''), q)}${meta ? ' &nbsp;·&nbsp; ' + meta : ''}</div>
-      ${tags ? `<div class="rd-item-tags">${tags}</div>` : ''}
+      <div class="rd-item-meta">${metaLine}</div>
+      <div class="rd-item-chips-row">
+        ${tags ? `<div class="rd-item-tags">${tags}</div>` : ''}
+        ${localBadge}
+      </div>
       <div class="rd-progress-track" title="Reading progress: ${item.progress || 0}%">
         <div class="rd-progress-fill ${item.status}" style="width:${item.progress || 0}%"></div>
       </div>
       <div class="rd-item-actions">
         <button class="rd-action-btn" data-action="open-drawer" data-id="${item.id}" title="Details, tags &amp; BibTeX">${ICONS.info}</button>
         <button class="rd-action-btn" data-action="copy-bibtex" data-id="${item.id}" title="Copy BibTeX citation">${ICONS.copy}</button>
-        <button class="rd-action-btn" data-action="edit-item" data-id="${item.id}" title="Edit paper">${ICONS.edit}</button>
-        <button class="rd-action-btn del" data-action="delete-item" data-id="${item.id}" title="Delete paper">${ICONS.trash}</button>
+        ${item.localPath ? `<button class="rd-action-btn" data-action="locate-local-file" data-id="${item.id}" title="Locate in File Explorer">${ICONS.folderOpen}</button>` : ''}
+        <button class="rd-action-btn" data-action="edit-item" data-id="${item.id}" title="Edit item">${ICONS.edit}</button>
+        <button class="rd-action-btn del" data-action="delete-item" data-id="${item.id}" title="Delete item">${ICONS.trash}</button>
       </div>
     </article>
   `;

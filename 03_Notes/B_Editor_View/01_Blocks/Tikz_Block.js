@@ -4,7 +4,7 @@
  * template browser, template naming modal, and flexible \begin{tikzpicture}[...] support.
  */
 
-import { renderTikzToElement, getCachedTikzSvg, healTikzCode } from '../../Writing_Engine/Tikz_Renderer.js';
+import { renderTikzToElement, getCachedTikzSvg, healTikzCode } from '../../Writing_Engine/Tikz_Engine/Tikz_Renderer.js';
 import { escapeHtml } from '../../02_Utils.js';
 import { CreateColorSelector } from '../../../00_Components/06_Color_Selector.js';
 import { GetTikzTemplatesModalHTML, InitTikzTemplatesLogic } from './Tikz_Templates_Modal.js';
@@ -77,6 +77,8 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
   const tag = block.tag || '';
   const hasBorder = Boolean(block.hasBorder); // Default: false (OFF)
   const figNumber = figureInfo ? figureInfo.figNumber : null;
+  const figLabel = figureInfo ? (figureInfo.label || (figureInfo.figNumber !== null && figureInfo.figNumber !== undefined ? String(figureInfo.figNumber) : null)) : null;
+  const showCaptions = figureInfo ? figureInfo.showCaptions !== false : true;
 
   const tikzCode = block.code || block.content || String.raw`\begin{tikzpicture}[
     x=0.024cm,
@@ -110,7 +112,7 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
     wrap.className = `my-1 p-4 rounded-xl ${borderClasses} flex flex-col items-center justify-center w-full select-text transition-all box-border`;
     wrap.style.scrollbarWidth = 'thin';
 
-    applyFigureAttributes(wrap, { tag, figNumber });
+    applyFigureAttributes(wrap, { tag, figNumber, label: figLabel });
 
     const svgWrap = document.createElement('div');
     svgWrap.className = 'preview-inner flex flex-col items-center justify-center transition-all';
@@ -123,7 +125,7 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
     renderTikzToElement(tikzCode, svgWrap);
     wrap.appendChild(svgWrap);
 
-    const captionText = formatFigureCaptionText({ caption, allowNumbering, figNumber });
+    const captionText = showCaptions ? formatFigureCaptionText({ caption, allowNumbering, figNumber, label: figLabel }) : '';
     appendFigureCaption(wrap, captionText);
 
     container.appendChild(wrap);
@@ -240,6 +242,23 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
   const captionInput = editWrap.querySelector('.caption-input');
   const btnCompile = editWrap.querySelector('.btn-compile');
   const editorMount = editWrap.querySelector('.tikz-editor-mount');
+
+  // Tag uniqueness among figure blocks (image/tikz namespace; equation tags are independent).
+  const isTagTaken = (value) => {
+    const v = String(value || '').trim().toLowerCase();
+    if (!v) return false;
+    return figureInfo && figureInfo.usedTags instanceof Set ? figureInfo.usedTags.has(v) : false;
+  };
+  const paintTagState = () => {
+    if (!tagInput) return;
+    const dup = isTagTaken(tagInput.value);
+    tagInput.classList.toggle('border-red-500', dup);
+    tagInput.classList.toggle('text-red-400', dup);
+    tagInput.title = dup ? `Tag "${tagInput.value.trim()}" is already used by another figure — pick a different one` : '';
+    return !dup;
+  };
+  if (tagInput) tagInput.addEventListener('input', paintTagState);
+  paintTagState();
 
   const codeEditor = createCodeEditor({
     blockId: block.id,
@@ -498,7 +517,8 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
 
   const triggerMetaUpdate = () => {
     block.allowNumbering = Boolean(allowNumberingCb?.checked);
-    block.tag = tagInput?.value.trim() || '';
+    const candidateTag = tagInput?.value.trim() || '';
+    if (!isTagTaken(candidateTag)) block.tag = candidateTag;
     block.caption = captionInput?.value || '';
     block.hasBorder = currentBorderState;
     block.width = currentFitPercent;
@@ -574,7 +594,8 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
       block.code = currentVal;
       block.content = currentVal;
       block.allowNumbering = Boolean(allowNumberingCb?.checked);
-      block.tag = tagInput?.value.trim() || '';
+      const candidateTag = tagInput?.value.trim() || '';
+      if (!isTagTaken(candidateTag)) block.tag = candidateTag;
       block.caption = captionInput?.value || '';
       block.hasBorder = currentBorderState;
       block.width = currentFitPercent;

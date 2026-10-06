@@ -336,8 +336,13 @@ export function GetCanvasControlsHTML(view) {
 }
 
 export function GetToolbarHTML() {
+  const isDashOpen = state.rd && state.rd.ui && state.rd.ui.showDashboard !== false;
   return `
     <div class="rd-toolbar" id="rd-toolbar">
+      <button class="icb-btn rd-dashboard-toggle-btn ${isDashOpen ? 'active' : ''}" id="chartToggleBtn" type="button" data-action="toggle-dashboard"
+              data-tip="Stats &amp; Activity — toggle the research dashboard" aria-label="Toggle research dashboard" aria-pressed="${isDashOpen ? 'true' : 'false'}">
+        ${ICONS.chart}
+      </button>
       <div class="rd-search-box">
         ${ICONS.search}
         <input type="text" id="rd-search-input" placeholder="Search title, author, journal, tag...  ( / )"

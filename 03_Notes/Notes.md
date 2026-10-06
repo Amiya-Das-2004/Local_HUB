@@ -13,12 +13,13 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 ├── 01_Header.js                            ← Header shell with title, navigation, import/export, and save triggers
 ├── 02_Utils.js                             ← String escapes, task toggling, raw descriptions, folder extractors
 ├── 03_Library.js                           ← BibTeX bibliography manager, modal dialog, and citation styler
-├── Notes.html                              ← Standalone single-tab HTML runner for Notes
 ├── Notes.js                                ← Master lifecycle orchestrator for card/editor/graph views
 ├── Notes.md                                ← This architecture & API reference
-├── Tab_Import_Export_Handler.js            ← Tab-isolated JSON backup and recovery adapter
-├── Tab_Logo_Handler.js                     ← Custom Notes logo branding click router
-├── Tab_Save_Handler.js                     ← Tab-isolated self-contained standalone HTML bundler
+├── Tab_Notes/                              ← Dedicated standalone single-tab runner and handler adapters
+│   ├── Notes.html                          ← Standalone single-tab HTML runner for Notes
+│   ├── Tab_Import_Export_Handler.js        ← Tab-isolated JSON backup and recovery adapter
+│   ├── Tab_Logo_Handler.js                 ← Custom Notes logo branding click router
+│   └── Tab_Save_Handler.js                 ← Tab-isolated self-contained standalone HTML bundler
 │
 ├── A_Notes_Card_View/                      ← Card deck gallery and management view
 │   ├── 01_Navbar.js                        ← Card view top navigation container
@@ -77,7 +78,9 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 │       ├── 02_Note_Fonts.js                ← Document typography selector (Sans/Serif/Mono)
 │       ├── 03_Font_Size.js                 ← Base text size increment/decrement control
 │       ├── 04_Macros_Modal.js              ← Global & per-note LaTeX macros config modal
-│       └── 05_Citation_Style.js            ← Citation format switcher (Numeric/Author-Year)
+│       ├── 05_Citation_Style.js            ← Citation format switcher (Numeric/Author-Year)
+│       ├── 06_Equation_Numbering.js        ← Equation numbering style selector (1 / a / i)
+│       └── 07_Figure_Numbering.js          ← Figure numbering style + caption visibility (1/A/a/I/i)
 │
 ├── C_Graph_View/                           ← Interactive 2D knowledge graph
 │   ├── Graph_Data.js                       ← Graph model builder: group→note membership + shared-tag links (tags invisible)
@@ -95,7 +98,10 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
     ├── Math_Renderer.js                    ← KaTeX compiler with LaTeX macro expansion support
     ├── Numbering_Engine.js                 ← Automatic equation, theorem, and figure numbering
     ├── Table_Parser.js                     ← Markdown table string parser and serializer
-    └── Tikz_Renderer.js                    ← TikZ standalone SVG compiler via WebAssembly / TikzJax
+    └── Tikz_Engine/                        ← Dedicated OFFLINE TikZ compilation engine (no CDN dependency)
+        ├── Tikz_Renderer.js                ← TikZ standalone SVG compiler; local-first base-cascade loader (v1/ → tikzjax.com CDN fallback)
+        ├── v1/                             ← Self-contained runtime: tikzjax.js (TeX WASM + 160MB core dump embedded as base64), fonts.css (140 BaKoMa fonts as data URIs), tex.wasm + core.dump.gz sources, tikzjax.js.orig pristine copy
+        └── packages/                       ← Tier 1 core libraries & Tier 2 extended package scaffolds (inert .gitkeep placeholders — packages live inside the core dump)
 ```
 
 ---
@@ -145,6 +151,9 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 | `toggleTaskInRawText(rawText, targetIndex, isChecked)` | 17 - 28 | Toggles the completion state of a markdown task checkbox ([ ] or [x]) at a specific zero-based index within raw text. |
 | `formatNoteDescription(rawText, { fallbackText = '' } = {})` | 31 - 37 | Formats raw markdown and LaTeX math note descriptions with optional fallback placeholder text for live preview rendering. |
 | `getNoteRawDescription(note, { forPreview = false } = {})` | 40 - 87 | Extracts raw string representation of a note's description; supports lightweight preview extraction (~300 chars) for card decks to prevent full-document KaTeX compilation. |
+| `getNoteProperties(note)` | 46 - 49 | Returns the sanitized typed property list (`note.properties`) for a note. |
+| `formatNotePropertyValue(p)` | 51 - 62 | Renders one property value per type — checkbox tick, list pills, or rich text with inline $math$ and \href/\url links. |
+| `formatNoteProperties(note)` | 64 - 92 | Renders the full Obsidian-style properties block (key: value rows) injected into note cards; self-injects its stylesheet once. |
 | `getAvailableFolders(state)` | 90 - 103 | Extracts and deduplicates all available folder/group names across active notes and state, ensuring "General" is always present. |
 
 **03_Library.js**
@@ -167,18 +176,19 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 | `ImportBibtexToLibrary(rawBibtex)` | 112 - 125 | Parses one or more BibTeX entries from raw text and upserts them into the bibliography vault; returns `{ added, skipped, entries, errors }`. |
 | `OpenLibraryModal({ onUpdate = null } = {})` | 145 - 409 | Opens an Overleaf-style vault dialog to search, preview, add via BibTeX, edit raw fields, delete citations, and switch active citation style with live callbacks. |
 
-**Tab_Save_Handler.js**
+## Tab_Notes
+**Tab_Notes/Tab_Save_Handler.js**
 
 | Import Location | Functions Imported | used in Functions |
 | :--- | :--- | :--- |
-| `../00_Components/06_Color_Selector.js` | `resolveThemeColors` | `syncTabStatesToDOM()` |
-| `../00_Components/01_Local_HUB_Logo.js` | `LOCAL_HUB_LOGO_SVG` | `bundleTabFile()` |
+| `../../00_Components/06_Color_Selector.js` | `resolveThemeColors` | `syncTabStatesToDOM()` |
+| `../../00_Components/01_Local_HUB_Logo.js` | `LOCAL_HUB_LOGO_SVG` | `bundleTabFile()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
 | `SaveNotesStandalone()` | 231 - 359 | Bundles `Notes.html` into a self-contained, standalone single-file HTML document by flattening modules, embedding script vaults, and triggering browser download. |
 
-**Tab_Logo_Handler.js**
+**Tab_Notes/Tab_Logo_Handler.js**
 
 | Import Location | Functions Imported | used in Functions |
 | :--- | :--- | :--- |
@@ -186,13 +196,13 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `InitTabLogoOverride()` | 12 - 30 | Replaces standard SPA logo click listener on standalone `Notes.html` with explicit navigation to the main hub index URL. |
+| `InitTabLogoOverride()` | 10 - 24 | In isolated tab mode, clears the URL hash to stay within the Notes card deck rather than navigating away to Index.html. |
 
-**Tab_Import_Export_Handler.js**
+**Tab_Notes/Tab_Import_Export_Handler.js**
 
 | Import Location | Functions Imported | used in Functions |
 | :--- | :--- | :--- |
-| `../00_Components/04_Import_Export.js` | `TriggerExport`, `TriggerImport` | `TriggerTabExport()`, `TriggerTabImport()` |
+| `../../00_Components/04_Import_Export.js` | `TriggerExport`, `TriggerImport` | `TriggerTabExport()`, `TriggerTabImport()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
@@ -369,8 +379,8 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 | `toAlpha(num, upper)` | 28 - 38 | Converts an integer into alphabetic representation (uppercase A, B, C or lowercase a, b, c). |
 | `formatSingleNumber(num, style)` | 40 - 47 | Formats an integer using the chosen numbering style (numeric, roman-upper, roman-lower, alpha-upper, alpha-lower). |
 | `computeHeadingPrefixes(blocks, autoNumberingConfig)` | 65 - 136 | Calculates hierarchical section numbering prefixes (e.g. 1., 1.1., 1.1.1.) across all heading blocks based on configuration. |
-| `computeFigureNumbers(blocks)` | 142 - 204 | Calculates sequential figure numbers across Image and TikZ blocks, returning a block-to-figure metadata map and a tag citation lookup map. |
-| `computeEquationNumbers(blocks, style)` | 215 - 292 | Computes equation numbers across equation blocks in document order per the global style (numeric / alphabetic_small / roman_small). Semantics: single equation gets its own number; blank-line separated parts with distinct per-part `\tag{}`s get independent numbers; a block with exactly ONE `\tag{name}` becomes a group sharing one base number with roman sub-members (3.i, 3.ii). Returns `{ eqMap, tagMap }` — tagMap also indexes `name:2` / `name:ii` member refs. |
+| `computeFigureNumbers(blocks, style = 'numeric', showCaptions = true)` | 149 - 224 | Calculates sequential figure numbers across Image and TikZ blocks (recursing into columns), returning a block-to-figure metadata map (numeric `figNumber`, styled `label`, caption `prefix`, `tag`, `showCaptions`) and a tag citation lookup map of formatted labels consumed by `\fig{tag}` chips (first-wins). Each entry carries `usedTags` — tags held by OTHER figure blocks — consumed by the Tag input validation in Image/TikZ blocks. Style per-note `note.figureNumbering` (numeric/alphabetic/alphabetic_small/roman/roman_small), caption visibility per-note `note.showFigureCaptions`. |
+| `computeEquationNumbers(blocks, style)` | 253 - 339 | Computes equation numbers across equation blocks in document order per the global style (numeric / alphabetic_small / roman_small). Semantics: single equation gets its own number; blank-line separated parts with distinct per-part `\tag{}`s get independent numbers; a block with exactly ONE `\tag{name}` becomes a group sharing one base number with roman sub-members (3.i, 3.ii). Tag namespaces: equation tags and figure tags are independent; user tags are FIRST-WINS — later duplicates are reported to the block via `eqMap.dupTags` (⚠ warning chip). Sub-equations: within a single part carrying one `\tag{}`, any row ending `\\ %sub` starts a new sub-equation member (`renderMode: alignedGroup`, `subMemberLines`) — members get `base.i, base.ii` labels rendered at the FAR RIGHT after a thin scalable SVG right brace `}` spanning the member rows (brace auto-sizes to any line count; number column fixed regardless of equation alignment — Left/Center alignment only). Returns `{ eqMap, tagMap }` — tagMap also indexes `name:2` / `name:ii` member refs. |
 | `computeCitationNumbers(blocks)` | 294 - 327 | Traverses note text blocks in document order to assign sequential first-appearance numbers to `\cite{...}` keys for numeric citation formatting. |
 
 **Table_Parser.js**
@@ -389,24 +399,24 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 | `parseLatexTabular(input)` | 242 - 544 | Compiles standard LaTeX `\begin{tabular}` and `\begin{table}` environments into responsive, styled HTML tables with cell formatting and math. |
 | `parseMarkdownTable(markdown)` | 551 - 605 | Fallback parser converting GitHub-flavored Markdown tables into responsive HTML tables with formatted math cells. |
 
-**Tikz_Renderer.js**
+**Tikz_Engine/Tikz_Renderer.js**
 
 | Import Location | Functions Imported | used in Functions |
 | :--- | :--- | :--- |
-| `../../00_Components/06_Color_Selector.js` | `resolveThemeColors` | `renderTikzToElement()` |
-| `../00_State.js` | `NotesState` | `getActiveTikzPreamble()` |
+| `../../../00_Components/06_Color_Selector.js` | `resolveThemeColors` | `renderTikzToElement()` |
+| `../../00_State.js` | `NotesState` | `getActiveTikzPreamble()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `ensureTikzJaxLoaded(callback)` | 6 - 56 | Loads TikZJax scripts dynamically from CDN, patches browser process variables, and configures isolated SVG rendering. |
-| `setActiveTikzNoteContext(note)` | 63 - 65 | Sets the active note context for note-level TikZ preamble and style customization. |
-| `clearTikzSvgCache()` | 83 - 97 | Clears the in-memory cache and sessionStorage of rendered TikZ SVG graphics. |
-| `getCachedTikzSvg(code, theme)` | 99 - 118 | Retrieves cached SVG output with versioned cache keys (`v2_glyph_fix`) from in-memory Map or sessionStorage. |
-| `whenConnected(element, callback)` | 157 - 189 | Ensures target DOM container is attached to document body before triggering TikZJax script execution. |
-| `getActiveTikzPreamble(note)` | 194 - 226 | Combines core math symbol fixes (`\DeclareMathSymbol` for comma and period to `operators`/`cmr10`), default TikZ libraries, global vault preambles, and note-level local TikZ styles with theme color tokens. |
-| `waitForTikzSvg(targetContainer, renderId, timeoutMs)` | 232 - 321 | Polls, listens for TeX engine unhandled rejections, and uses MutationObserver to wait until TikZJax replaces the script tag with compiled SVG markup. |
-| `fixTikzSvgGlyphs(container)` | 391 - 460 | Corrects BaKoMa font encoding mismatches: cmsy bars, cmmi vector accents, cmex delimiters, and normalizes cmmi math commas/turned quotes to baseline cmr commas. |
-| `renderTikzToElement(tikzCode, targetContainer, onComplete, noteContext)` | 471 - 654 | Compiles TikZ code into an SVG element within target container, utilizing 2-tier in-memory and sessionStorage caching with glyph sanitization for 0ms re-rendering without re-invoking TeX WASM. |
+| `ensureTikzJaxLoaded(callback)` | 26 - 96 | Loads the self-contained local TikZ engine (`v1/tikzjax.js` + `v1/fonts.css`, zero network fetches) via a page-relative base cascade: repo root → `../Writing_Engine/` (Tab_Notes shell) → `../03_Notes/` (Standalone/) → sibling `Tikz_Engine/` → tikzjax.com CDN fallback. Captures the engine runner and guards concurrent loads. |
+| `setActiveTikzNoteContext(note)` | 103 - 105 | Sets the active note context for note-level TikZ preamble and style customization. |
+| `clearTikzSvgCache()` | 123 - 137 | Clears the in-memory cache and sessionStorage of rendered TikZ SVG graphics. |
+| `getCachedTikzSvg(code, theme)` | 139 - 161 | Retrieves cached SVG output with versioned cache keys (`v2_glyph_fix`) from in-memory Map or sessionStorage. |
+| `whenConnected(element, callback)` | 200 - 232 | Ensures target DOM container is attached to document body before triggering TikZJax script execution. |
+| `getActiveTikzPreamble(note)` | 237 - 269 | Combines core math punctuation fixes (`\mathcode` primitives mapping comma/period to `operators`/`cmr10` — NOT `\DeclareMathSymbol`, which is preamble-only LaTeX and fatals the TikZJax WASM core when it lands after the engine's injected `\begin{document}`), default TikZ libraries, global vault preambles, and note-level local TikZ styles with theme color tokens. |
+| `waitForTikzSvg(targetContainer, renderId, timeoutMs)` | 275 - 367 | Polls, listens for TeX engine unhandled rejections, and uses MutationObserver to wait until TikZJax replaces the script tag with compiled SVG markup. |
+| `fixTikzSvgGlyphs(container)` | 437 - 508 | Corrects BaKoMa font encoding mismatches: cmsy bars, cmmi vector accents, cmex delimiters, and normalizes cmmi math commas/turned quotes to baseline cmr commas. |
+| `renderTikzToElement(tikzCode, targetContainer, onComplete, noteContext)` | 517 - 710 | Compiles TikZ code into an SVG element within target container, utilizing 2-tier in-memory and sessionStorage caching with glyph sanitization for 0ms re-rendering without re-invoking TeX WASM. |
 
 ## A_Notes_Card_View
 **01_Navbar.js**
@@ -542,11 +552,11 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `GetNoteModalHTML()` | 10 - 334 | Generates modal dialog markup and styles for creating/editing note cards with live Obsidian in-place surface. |
+| `GetNoteModalHTML()` | 16 - 334 | Generates modal dialog markup and styles for creating/editing note cards with Title, Groups, Tags and the Obsidian-style Properties list (+ Add Property, typed value controls). |
 | `renderFolderComboDropdown(filterText)` | 337 - 368 | Renders interactive combo dropdown list for selecting or creating a new folder name. |
-| `OpenNoteModal(note)` | 371 - 418 | Opens modal prefilled with existing note card data for editing, or clean blank fields for creating a new note. |
+| `OpenNoteModal(note)` | 447 - 476 | Opens modal prefilled with existing note data (deep-copies `note.properties` into the editable list) or clean blank fields for a new note. |
 | `CloseNoteModal()` | 421 - 427 | Hides modal dialog, clears input fields, and resets active editing note ID. |
-| `InitNoteModal(onUpdate)` | 430 - 553 | Handles form submission, title validation, Ctrl+Enter quick save, Escape key close, backdrop dismiss, and note persistence. |
+| `InitNoteModal(onUpdate)` | 490 - 625 | Binds ALL modal interactions via document-level DELEGATION (deck re-renders replace the modal DOM — per-element listeners would go stale): save (button + Ctrl+Enter), close, Add/Remove Property, type menu, key/value live binding, folder combo, and note persistence (`collectModalProperties()` infers number/checkbox/date for `automatic` type). |
 | `GetAddNoteButtonHTML()` | 556 - 623 | Returns primary "+" toolbar button markup with accent glow styling and includes note modal HTML. |
 | `InitAddNoteButton(onAddClick)` | 626 - 638 | Attaches click listener to "+" button to trigger note creation modal. |
 
@@ -586,7 +596,7 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `CreateFloatingToolbar(options)` | 20 - 134 | Creates bottom floating dock toolbar integrating sidebar drawer toggle, study view switch, font family selector, font size selector, LaTeX macros modal, BibTeX library vault dialog, citation style selector, and equation numbering style selector (per-note `note.equationNumbering`, triggers full re-render on change). |
+| `CreateFloatingToolbar(options)` | 21 - 145 | Creates bottom floating dock toolbar integrating sidebar drawer toggle, study view switch, font family selector, font size selector, LaTeX macros modal, BibTeX library vault dialog, citation style selector, equation numbering style selector (per-note `note.equationNumbering`), and figure numbering style + caption toggle (per-note `note.figureNumbering` / `note.showFigureCaptions`), each triggering a full re-render on change. |
 
 **03_Study_View.js**
 
@@ -611,7 +621,7 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 | `./01_Blocks/Block_Item.js` | `CreateBlockItem` | `RenderLaTeXEditor()` |
 | `../02_Utils.js` | `escapeHtml` | `RenderLaTeXEditor()` |
 | `../Writing_Engine/Math_Renderer.js` | `setActiveNoteContext`, `setActiveFigureTagMap` | `RenderLaTeXEditor()` |
-| `../Writing_Engine/Tikz_Renderer.js` | `setActiveTikzNoteContext` | `RenderLaTeXEditor()` |
+| `../Writing_Engine/Tikz_Engine/Tikz_Renderer.js` | `setActiveTikzNoteContext` | `RenderLaTeXEditor()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
@@ -846,7 +856,7 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 
 | Import Location | Functions Imported | used in Functions |
 | :--- | :--- | :--- |
-| `../../Writing_Engine/Tikz_Renderer.js` | `renderTikzToElement`, `getCachedTikzSvg`, `healTikzCode` | `renderTikzBlock()` |
+| `../../Writing_Engine/Tikz_Engine/Tikz_Renderer.js` | `renderTikzToElement`, `getCachedTikzSvg`, `healTikzCode` | `renderTikzBlock()` |
 | `../../02_Utils.js` | `escapeHtml` | `renderTikzBlock()` |
 | `../../../00_Components/06_Color_Selector.js` | `CreateColorSelector` | `renderTikzBlock()` |
 | `./Tikz_Templates_Modal.js` | `GetTikzTemplatesModalHTML`, `InitTikzTemplatesLogic` | `renderTikzBlock()` |
@@ -956,7 +966,7 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
 | `renderBulletIcon(prefix)` | 110 - 120 | Compiles and renders bullet icon markup for unordered, ordered, or custom LaTeX list markers. |
-| `createLiveWidget(type, raw, contentHtml, options)` | 122 - 234 | Creates live interactive inline DOM widgets with seamless text selection (select-text) for math ($...$), formatting (**bold**, *italic*, <u>underline</u>), code (`code`), equation references (`\eq{name}` — emerald badge resolving labels via `getActiveEquationTagMap()`), or figure citations (`\fig`). Figure/equation badges navigate on click through the document-level handlers and deliberately skip the expand-to-raw behavior. |
+| `createLiveWidget(type, raw, contentHtml, options)` | 122 - 262 | Creates live interactive inline DOM widgets with seamless text selection (select-text) for math ($...$), formatting (**bold**, *italic*, <u>underline</u>), code (`code`), or inert literal tokens (`littex`). \fig, \eq, \href, \url function ONLY inside $...$ math (rendered by renderKatex preprocessing as real links with data attrs for the delegated navigation handlers); bare occurrences render as dim literal `littex` tokens. |
 
 **Cite_Autocomplete.js**
 
@@ -1097,6 +1107,17 @@ Delegated document-level `mouseover`/`click` listeners (registered once, marker-
 | :--- | :--- | :--- |
 | `GetEquationNumberingHTML(note = null)` | 12 - 32 | Returns HTML markup for the equation numbering style dropdown (`#eq-numbering-wrap`) in the floating editor toolbar, showing the active style badge. |
 | `InitEquationNumberingLogic(note = null, onStyleChange = null)` | 34 - 90 | Binds dropdown open/close, outside-click dismissal, and style switching (`numeric`, `alphabetic_small`, `roman_small`) persisting to `note.equationNumbering` with a re-render callback. |
+
+**07_Figure_Numbering.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| - | - | - |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `GetFigureNumberingHTML(note = null)` | 16 - 41 | Returns HTML markup for the figure numbering dropdown (`#fig-numbering-wrap`) in the floating editor toolbar: five styles (numeric/alphabetic/alphabetic_small/roman/roman_small) plus a "Show captions" checkbox. |
+| `InitFigureNumberingLogic(note = null, onChange = null)` | 43 - 100 | Binds dropdown open/close, style switching persisting to `note.figureNumbering`, caption visibility persisting to `note.showFigureCaptions`, and fires the re-render callback. |
 
 ## C_Graph_View
 

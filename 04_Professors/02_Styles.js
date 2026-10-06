@@ -7,101 +7,107 @@
 
 export function GetProfessorsStyles() {
   return `
-  :root{
-    --paper:#f5f2ea;
-    --surface:#fffdf7;
-    --surface-2:#fbf8f0;
-    --ink:#20312c;
-    --muted:#64756d;
-    --line:#e6e0d0;
-    --teal:#0f766e;
-    --teal-dark:#0b3f3a;
-    --teal-mid:#11645c;
-    --teal-soft:#e7f2ef;
+  :root, [data-theme="light"], .prof-light, #ProfessorsApp:not(.prof-dark){
+    --paper:#f6f3eb;
+    --surface:#fffdf8;
+    --surface-2:#f4efe3;
+    --ink:#1c2e28;
+    --muted:#63756c;
+    --line:#e2dcce;
+    --teal:#115e54;
+    --teal-dark:#0a2923;
+    --teal-mid:#14453b;
+    --teal-soft:#e5f0ec;
     --gold:#b45309;
-    --gold-deep:#8a4b06;
-    --gold-soft:#fdf0dd;
+    --gold-deep:#854d0e;
+    --gold-soft:#fef3c7;
     --danger:#b3372f;
     --danger-soft:#fbeae8;
-    --heading:#0b3f3a;
-    --teal-border:#d3e6e0;
+    --heading:#0c332b;
+    --teal-border:#cce3dc;
     --gold-border:#ecd9b0;
-    --field:#fbf9f3;
-    --backdrop:rgba(15,40,36,.5);
-    --toast-bg:#0b3f3a;
-    --shadow-card:0 1px 2px rgba(32,49,44,.05),0 10px 28px -20px rgba(32,49,44,.4);
-    --shadow-card-hover:0 2px 4px rgba(32,49,44,.06),0 16px 36px -20px rgba(32,49,44,.45);
-    --shadow-modal:0 30px 80px -20px rgba(11,63,58,.55);
-    --heat-0:#e9e3d2;
-    --heat-1:#bcdfd3;
-    --heat-2:#79bbaa;
-    --heat-3:#2f8d7e;
-    --heat-4:#0c5f54;
+    --field:#faf7f0;
+    --backdrop:rgba(10,41,35,.5);
+    --toast-bg:#0d2822;
+    --shadow-card:0 1px 2px rgba(28,46,40,.05),0 10px 28px -20px rgba(28,46,40,.35);
+    --shadow-card-hover:0 2px 4px rgba(28,46,40,.06),0 16px 36px -20px rgba(28,46,40,.4);
+    --shadow-modal:0 30px 80px -20px rgba(10,41,35,.5);
+    --heat-0:#e7e1d0;
+    --heat-1:#bfe0d4;
+    --heat-2:#78baa8;
+    --heat-3:#2d8c7c;
+    --heat-4:#0e5b50;
     --serif:Georgia,'Iowan Old Style','Times New Roman',serif;
     --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
     --radius:16px;
+    --icb-accent:var(--gold);
+    --icb-border:rgba(28,46,40,.18);
+    --icb-bg:rgba(28,46,40,.04);
   }
-  #ProfessorsApp.prof-dark{
-    --paper:#121a17;
-    --surface:#1a2420;
-    --surface-2:#202c27;
-    --ink:#e8e4d6;
-    --muted:#93a39a;
-    --line:#2c3a33;
-    --teal:#14a08f;
-    --teal-dark:#0a211e;
-    --teal-mid:#0f3d38;
-    --teal-soft:rgba(45,212,191,.13);
-    --gold:#e8a94e;
-    --gold-deep:#f3c17a;
-    --gold-soft:rgba(240,179,92,.13);
+  [data-theme="dark"], body.prof-dark, #ProfessorsApp.prof-dark, #root[data-theme="dark"]{
+    --paper:#0e1613;
+    --surface:#15221d;
+    --surface-2:#1b2a24;
+    --ink:#e8e4d8;
+    --muted:#8ea196;
+    --line:#293831;
+    --teal:#1fb59f;
+    --teal-dark:#081714;
+    --teal-mid:#0f332c;
+    --teal-soft:rgba(31,181,159,.14);
+    --gold:#e5a84b;
+    --gold-deep:#f3c47e;
+    --gold-soft:rgba(229,168,75,.14);
     --danger:#e56860;
     --danger-soft:rgba(229,104,96,.14);
-    --heading:#a9d9cd;
-    --teal-border:#1e4b44;
+    --heading:#d5ece5;
+    --teal-border:#1a473f;
     --gold-border:#6b5326;
-    --field:#1b2622;
-    --backdrop:rgba(4,10,8,.64);
-    --toast-bg:#0a1f1c;
+    --field:#131d19;
+    --backdrop:rgba(4,10,8,.68);
+    --toast-bg:#081a16;
     --shadow-card:0 1px 2px rgba(0,0,0,.35),0 12px 30px -18px rgba(0,0,0,.7);
     --shadow-card-hover:0 2px 4px rgba(0,0,0,.4),0 18px 40px -18px rgba(0,0,0,.8);
     --shadow-modal:0 30px 90px -20px rgba(0,0,0,.85);
-    --heat-0:#232f29;
-    --heat-1:#1d4a40;
-    --heat-2:#17816f;
-    --heat-3:#2fae94;
-    --heat-4:#8af0d6;
+    --heat-0:#1b2722;
+    --heat-1:#16433a;
+    --heat-2:#197061;
+    --heat-3:#1eb19b;
+    --heat-4:#62eed6;
+    --icb-accent:var(--gold);
+    --icb-border:rgba(229,168,75,.28);
+    --icb-bg:rgba(229,168,75,.06);
   }
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
   [hidden]{display:none!important}
-  ::selection{background:rgba(15,118,110,.28)}
-  #ProfessorsApp.prof-dark ::selection{background:rgba(45,212,191,.32)}
+  ::selection{background:rgba(17,94,84,.28)}
+  body.prof-dark ::selection,#ProfessorsApp.prof-dark ::selection{background:rgba(31,181,159,.32)}
   body{
     font-family:var(--sans);
     color:var(--ink);
     line-height:1.55;
     min-height:100vh;
     background:
-      radial-gradient(1200px 500px at 85% -10%, rgba(15,118,110,.08), transparent 60%),
-      radial-gradient(900px 420px at -10% 0%, rgba(180,83,9,.07), transparent 55%),
+      radial-gradient(1200px 500px at 85% -10%, rgba(17,94,84,.07), transparent 60%),
+      radial-gradient(900px 420px at -10% 0%, rgba(180,83,9,.06), transparent 55%),
       var(--paper);
     transition:background .3s ease,color .3s ease;
   }
   body.prof-dark{
     background:
-      radial-gradient(1200px 500px at 85% -10%, rgba(45,212,191,.07), transparent 60%),
-      radial-gradient(900px 420px at -10% 0%, rgba(240,179,92,.05), transparent 55%),
+      radial-gradient(1200px 500px at 85% -10%, rgba(31,181,159,.08), transparent 60%),
+      radial-gradient(900px 420px at -10% 0%, rgba(229,168,75,.06), transparent 55%),
       var(--paper);
   }
   body::-webkit-scrollbar{width:11px}
   body::-webkit-scrollbar-track{background:transparent}
   body::-webkit-scrollbar-thumb{background:#d0c9b6;border-radius:8px;border:3px solid var(--paper)}
-  body.prof-dark::-webkit-scrollbar-thumb{background:#33453d}
+  body.prof-dark::-webkit-scrollbar-thumb{background:#2a3d35;border-color:var(--paper)}
 
   body.modal-open{overflow:hidden}
   button{font-family:inherit;cursor:pointer}
   input,select,textarea{font-family:inherit;color:inherit}
-  a{color:var(--teal-mid)}
+  a{color:var(--teal)}
   :focus-visible{outline:2px solid var(--teal);outline-offset:2px;border-radius:6px}
 
   .page{min-height:100vh;display:flex;flex-direction:column}
@@ -109,29 +115,51 @@ export function GetProfessorsStyles() {
   /* ---------- Header ---------- */
   .site-header{
     background:linear-gradient(135deg,var(--teal-dark) 0%,var(--teal-mid) 100%);
-    color:#f3efe4;
-    box-shadow:0 6px 24px -12px rgba(11,63,58,.6);
-    border-bottom:3px solid #d9a441;
-    transition:background .3s ease;
+    color:#f5f2ea;
+    box-shadow:0 4px 20px -8px rgba(10,41,35,.55);
+    border-bottom:1.5px solid var(--gold);
+    transition:background .3s ease,box-shadow .3s ease;
   }
-  #ProfessorsApp.prof-dark .site-header{box-shadow:0 6px 24px -12px rgba(0,0,0,.8)}
-  .site-header.scrolled{box-shadow:0 14px 34px -16px rgba(11,63,58,.72)}
-  #ProfessorsApp.prof-dark .site-header.scrolled{box-shadow:0 14px 34px -16px rgba(0,0,0,.92)}
+  #ProfessorsApp.prof-dark .site-header,body.prof-dark .site-header{
+    border-bottom:1.5px solid rgba(229,168,75,.35);
+    box-shadow:0 4px 20px -8px rgba(0,0,0,.85);
+  }
+  .site-header.scrolled{box-shadow:0 10px 28px -12px rgba(10,41,35,.75)}
+  #ProfessorsApp.prof-dark .site-header.scrolled,body.prof-dark .site-header.scrolled{box-shadow:0 12px 30px -14px rgba(0,0,0,.92)}
   .header-inner{max-width:1080px;margin:0 auto;padding:18px 24px 14px;display:flex;flex-direction:column;gap:14px}
   .brand-row{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
   .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
   .logo{
-    width:46px;height:46px;border-radius:13px;display:grid;place-items:center;flex:0 0 auto;
-    background:rgba(255,255,255,.12);
-    border:1px solid rgba(255,255,255,.22);
+    display:grid;place-items:center;flex:0 0 auto;
     color:#f0d9a8;
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.18);
+    filter:drop-shadow(0 0 10px rgba(240,217,168,.35));
   }
-  .logo svg{width:26px;height:26px}
+  .logo svg{width:36px;height:36px}
   .brand-text{display:flex;flex-direction:column;line-height:1.15}
   .brand-text strong{font-family:var(--serif);font-size:1.45rem;letter-spacing:.4px}
-  .brand-text small{font-size:.78rem;opacity:.75;letter-spacing:.6px;text-transform:uppercase}
+  .brand-text small{font-size:.78rem;opacity:.78;letter-spacing:.6px;text-transform:uppercase}
   .header-actions{display:flex;gap:10px;flex-wrap:wrap}
+
+  .site-header .icb-btn {
+    border-color: rgba(245,242,234,.25);
+    background: rgba(255,255,255,.08);
+    color: #f5f2ea;
+  }
+  .site-header .icb-btn:hover:not(:disabled) {
+    color: var(--gold);
+    border-color: var(--gold);
+    background: rgba(229,168,75,.15);
+  }
+  .site-header .icb-btn.icb-accent {
+    background: var(--gold);
+    color: #fff;
+    border-color: transparent;
+  }
+  .site-header .icb-btn.icb-accent:hover:not(:disabled) {
+    background: var(--gold-deep);
+    color: #fff;
+    filter: brightness(1.08);
+  }
 
   .btn{
     display:inline-flex;align-items:center;justify-content:center;gap:8px;
@@ -142,36 +170,42 @@ export function GetProfessorsStyles() {
   }
   .btn svg{width:17px;height:17px;flex:0 0 auto}
   .btn:active{transform:scale(.97)}
-  .btn-primary{background:var(--teal);color:#fff;box-shadow:0 8px 18px -10px rgba(15,118,110,.8)}
-  .btn-primary:hover{background:#0c635b}
-  .btn-accent{background:#d98324;color:#fff;box-shadow:0 8px 18px -10px rgba(217,131,36,.9)}
-  .btn-accent:hover{background:#c07317}
+  .btn-primary{background:var(--teal);color:#fff;box-shadow:0 8px 18px -10px rgba(17,94,84,.8)}
+  .btn-primary:hover{background:#0a453e}
+  .btn-accent{background:var(--gold);color:#fff;box-shadow:0 8px 18px -10px rgba(180,83,9,.8)}
+  .btn-accent:hover{background:var(--gold-deep)}
   .btn-ghost{background:transparent;border-color:rgba(243,239,228,.35);color:#f3efe4}
   .btn-ghost:hover{background:rgba(255,255,255,.1)}
   .site-header .btn-ghost{border-color:rgba(243,239,228,.35)}
   .btn-line{background:var(--surface);border-color:var(--line);color:var(--ink);box-shadow:var(--shadow-card)}
-  .btn-line:hover{border-color:#cfc7ae}
+  .btn-line:hover{border-color:var(--teal-border)}
   .btn-sm{padding:7px 12px;font-size:.84rem;border-radius:10px}
   .btn[disabled]{opacity:.55;cursor:not-allowed}
 
-  .toolbar-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
   .search-wrap{
     flex:1 1 260px;display:flex;align-items:center;gap:9px;
-    background:rgba(255,255,255,.1);
+    background:rgba(255,255,255,.12);
     border:1px solid rgba(255,255,255,.22);
     border-radius:12px;padding:9px 13px;
+    transition:border-color .15s ease,background .15s ease;
+  }
+  .search-wrap:focus-within{
+    background:rgba(255,255,255,.18);
+    border-color:var(--gold);
   }
   .search-wrap svg{width:16px;height:16px;opacity:.75;flex:0 0 auto}
   .search-wrap input{
-    background:transparent;border:0;outline:0;color:#f3efe4;width:100%;font-size:.94rem;
+    background:transparent;border:0;outline:0;color:#f5f2ea;width:100%;font-size:.94rem;
   }
-  .search-wrap input::placeholder{color:rgba(243,239,228,.55)}
+  .search-wrap input::placeholder{color:rgba(245,242,234,.6)}
   .sort-wrap{display:flex;align-items:center;gap:9px;font-size:.86rem;opacity:.95}
   .sort-wrap select{
-    background:rgba(255,255,255,.1);color:#f3efe4;border:1px solid rgba(255,255,255,.25);
+    background:rgba(255,255,255,.12);color:#f5f2ea;border:1px solid rgba(255,255,255,.22);
     border-radius:10px;padding:8px 10px;font-size:.88rem;outline:0;
+    transition:border-color .15s ease;
   }
-  .sort-wrap select option{color:var(--ink);background:#fff}
+  .sort-wrap select:focus-visible{border-color:var(--gold)}
+  .sort-wrap select option{color:var(--ink);background:var(--surface)}
 
   /* ---------- Content ---------- */
   .content{max-width:1080px;margin:0 auto;padding:26px 24px 40px;width:100%;flex:1}
@@ -257,11 +291,10 @@ export function GetProfessorsStyles() {
   .contact-links svg{width:14px;height:14px}
   .areas{display:flex;gap:7px;flex-wrap:wrap}
   .chip{
-    background:var(--teal-soft);color:var(--teal-mid);font-size:.76rem;font-weight:600;
+    background:var(--teal-soft);color:var(--teal);font-size:.76rem;font-weight:600;
     padding:3px 11px;border-radius:999px;border:1px solid var(--teal-border);
   }
-  .bio{font-size:.9rem;color:#3d4f48;background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--teal);border-radius:10px;padding:11px 14px}
-  #ProfessorsApp.prof-dark .bio{color:#c9d3cd}
+  .bio{font-size:.9rem;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--teal);border-radius:10px;padding:11px 14px}
   .added-note{font-size:.76rem;color:var(--muted)}
 
   .prof-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:18px}
@@ -271,7 +304,7 @@ export function GetProfessorsStyles() {
     display:inline-grid;place-items:center;color:var(--muted);transition:all .15s ease;flex:0 0 auto;
   }
   .icon-btn svg{width:15px;height:15px}
-  .icon-btn:hover{color:var(--teal-mid);border-color:var(--teal-border);background:var(--teal-soft)}
+  .icon-btn:hover{color:var(--teal);border-color:var(--teal-border);background:var(--teal-soft)}
   .icon-btn.danger:hover{color:var(--danger);background:var(--danger-soft);border-color:var(--danger-soft)}
   .icon-btn.armed{background:var(--danger);border-color:var(--danger);color:#fff;width:auto;padding:0 10px;font-size:.78rem;font-weight:700}
 
@@ -288,18 +321,17 @@ export function GetProfessorsStyles() {
   .activity-card{flex-direction:column;align-items:stretch;gap:7px;justify-content:center}
   .activity-card .spark{width:100%;height:30px;display:block}
   .spark rect{transition:opacity .2s ease}
-  #expandAllBtn{padding:9px 14px;font-size:.86rem}
-  #expandAllBtn svg{width:15px;height:15px}
   .papers-head h4{font-family:var(--serif);font-size:.98rem;color:var(--heading);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   .papers-head h4 .cnt{background:var(--teal);color:#fff;font-family:var(--sans);font-size:.72rem;border-radius:999px;padding:2px 9px}
-  #ProfessorsApp.prof-dark .papers-head h4 .cnt{color:#04211e}
+  #ProfessorsApp.prof-dark .papers-head h4 .cnt,body.prof-dark .papers-head h4 .cnt{color:#081a16}
   .avg-chip{display:inline-flex;align-items:center;gap:4px;background:var(--surface);border:1px solid var(--gold-border);color:var(--gold-deep);font-family:var(--sans);font-size:.7rem;font-weight:700;border-radius:999px;padding:2px 9px}
   .avg-chip svg{width:10px;height:10px;fill:currentColor;stroke:none}
-  #ProfessorsApp.prof-dark .avg-chip{color:#f3c17a}
+  #ProfessorsApp.prof-dark .avg-chip,body.prof-dark .avg-chip{color:var(--gold-deep)}
   .papers-list{max-height:440px;overflow-y:auto}
   .papers-list::-webkit-scrollbar{width:9px}
   .papers-list::-webkit-scrollbar-track{background:transparent}
   .papers-list::-webkit-scrollbar-thumb{background:#d8d2c2;border-radius:8px;border:2px solid var(--surface)}
+  #ProfessorsApp.prof-dark .papers-list::-webkit-scrollbar-thumb,body.prof-dark .papers-list::-webkit-scrollbar-thumb{background:#2a3d35;border-color:var(--surface)}
   .papers-empty{padding:22px;text-align:center;color:var(--muted);font-size:.88rem}
 
   /* paper rows */
@@ -371,17 +403,17 @@ export function GetProfessorsStyles() {
   }
   .resume-card::before{content:'';display:block;height:3px;background:linear-gradient(90deg,var(--teal),var(--gold));opacity:.55}
   .resume-head{display:flex;align-items:center;gap:9px;padding:12px 18px;border-bottom:1px dashed var(--line);flex-wrap:wrap}
-  .resume-head svg{width:16px;height:16px;color:var(--teal-mid);flex:0 0 auto}
-  #ProfessorsApp.prof-dark .resume-head svg{color:#5eead4}
+  .resume-head svg{width:16px;height:16px;color:var(--teal);flex:0 0 auto}
+  #ProfessorsApp.prof-dark .resume-head svg,body.prof-dark .resume-head svg{color:var(--teal)}
   .resume-head h3{font-family:var(--serif);font-size:1.02rem;color:var(--heading);display:flex;align-items:center;gap:8px}
   .resume-head .cnt{background:var(--teal);color:#fff;font-family:var(--sans);font-size:.72rem;border-radius:999px;padding:2px 9px}
-  #ProfessorsApp.prof-dark .resume-head .cnt{color:#04211e}
+  #ProfessorsApp.prof-dark .resume-head .cnt,body.prof-dark .resume-head .cnt{color:#081a16}
   .resume-hint{font-size:.78rem;color:var(--muted);font-style:italic;margin-left:auto}
   .resume-list{display:flex;flex-direction:column;max-height:275px;overflow-y:auto}
   .resume-list::-webkit-scrollbar{width:9px}
   .resume-list::-webkit-scrollbar-track{background:transparent}
   .resume-list::-webkit-scrollbar-thumb{background:#d8d2c2;border-radius:8px;border:2px solid var(--surface)}
-  #ProfessorsApp.prof-dark .resume-list::-webkit-scrollbar-thumb{background:#33453d}
+  #ProfessorsApp.prof-dark .resume-list::-webkit-scrollbar-thumb,body.prof-dark .resume-list::-webkit-scrollbar-thumb{background:#2a3d35;border-color:var(--surface)}
   .resume-row{display:flex;align-items:center;gap:12px;padding:10px 18px;border-bottom:1px solid var(--line);transition:background .15s ease}
   .resume-row:last-child{border-bottom:0}
   .resume-row:hover{background:var(--surface-2)}
@@ -392,8 +424,8 @@ export function GetProfessorsStyles() {
     font-family:var(--sans);font-size:.92rem;font-weight:700;color:var(--heading);
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-radius:6px;
   }
-  .resume-title:hover{color:var(--teal-mid);text-decoration:underline}
-  #ProfessorsApp.prof-dark .resume-title:hover{color:#5eead4}
+  .resume-title:hover{color:var(--teal);text-decoration:underline}
+  #ProfessorsApp.prof-dark .resume-title:hover,body.prof-dark .resume-title:hover{color:var(--teal)}
   .resume-meta{font-size:.76rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .days-chip{
     flex:0 0 auto;display:inline-flex;align-items:center;gap:5px;
@@ -401,7 +433,7 @@ export function GetProfessorsStyles() {
     font-size:.7rem;font-weight:700;border-radius:999px;padding:3px 9px;letter-spacing:.3px;white-space:nowrap;
   }
   .days-chip svg{width:11px;height:11px}
-  #ProfessorsApp.prof-dark .days-chip{color:#f3c17a}
+  #ProfessorsApp.prof-dark .days-chip,body.prof-dark .days-chip{color:var(--gold-deep)}
   .resume-read{flex:0 0 auto}
   @media (max-width:760px){
     .resume-row{flex-wrap:wrap;row-gap:8px}
@@ -469,17 +501,20 @@ export function GetProfessorsStyles() {
   }
   .modal-head{
     display:flex;align-items:center;justify-content:space-between;gap:12px;
-    padding:18px 22px;border-bottom:1px solid var(--line);
+    padding:18px 22px;border-bottom:1.5px solid var(--gold);
     background:linear-gradient(135deg,var(--teal-dark),var(--teal-mid));
-    color:#f3efe4;border-radius:20px 20px 0 0;
+    color:#f5f2ea;border-radius:20px 20px 0 0;
+  }
+  #ProfessorsApp.prof-dark .modal-head,body.prof-dark .modal-head{
+    border-bottom:1.5px solid rgba(229,168,75,.35);
   }
   .modal-head h2{font-family:var(--serif);font-size:1.2rem;font-weight:700;letter-spacing:.3px}
-  .modal-head .icon-btn{border-color:rgba(255,255,255,.25);background:rgba(255,255,255,.1);color:#f3efe4}
-  .modal-head .icon-btn:hover{background:rgba(255,255,255,.22);color:#fff}
+  .modal-head .icon-btn{border-color:rgba(255,255,255,.25);background:rgba(255,255,255,.1);color:#f5f2ea}
+  .modal-head .icon-btn:hover{background:rgba(229,168,75,.2);color:var(--gold);border-color:var(--gold)}
   .modal-body{padding:20px 22px;overflow-y:auto}
   .modal-body::-webkit-scrollbar{width:9px}
   .modal-body::-webkit-scrollbar-thumb{background:#d8d2c2;border-radius:8px}
-  #ProfessorsApp.prof-dark .modal-body::-webkit-scrollbar-thumb{background:#33453d}
+  #ProfessorsApp.prof-dark .modal-body::-webkit-scrollbar-thumb,body.prof-dark .modal-body::-webkit-scrollbar-thumb{background:#2a3d35}
   .modal-actions{display:flex;justify-content:flex-end;gap:10px;padding-top:16px}
 
   .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
@@ -490,22 +525,24 @@ export function GetProfessorsStyles() {
   .field input,.field textarea,.field select{
     background:var(--field);border:1px solid var(--line);border-radius:10px;
     padding:9px 12px;font-size:.9rem;outline:0;transition:border .15s ease,box-shadow .15s ease;width:100%;
+    color:var(--ink);
   }
-  .field input:focus,.field textarea:focus,.field select:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(15,118,110,.14)}
+  .field select option{background:var(--surface);color:var(--ink)}
+  .field input:focus,.field textarea:focus,.field select:focus{border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-soft)}
   .field textarea{resize:vertical;min-height:64px}
   .field-hint{
-    margin-top:12px;font-size:.82rem;color:var(--teal-mid);background:var(--teal-soft);
+    margin-top:12px;font-size:.82rem;color:var(--teal);background:var(--teal-soft);
     border:1px solid var(--teal-border);border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:7px;
   }
-  #ProfessorsApp.prof-dark .field-hint{color:var(--gold-deep)}
+  #ProfessorsApp.prof-dark .field-hint,body.prof-dark .field-hint{color:var(--gold-deep);border-color:var(--gold-border);background:var(--gold-soft)}
   .field-hint svg{width:14px;height:14px;flex:0 0 auto}
 
   /* ---------- Toast ---------- */
   .toast{
     position:fixed;bottom:22px;right:22px;z-index:80;max-width:360px;
-    background:var(--toast-bg);color:#f3efe4;font-size:.88rem;font-weight:500;
+    background:var(--toast-bg);color:#f5f2ea;font-size:.88rem;font-weight:500;
     border-radius:13px;padding:13px 17px;border:1px solid rgba(255,255,255,.15);
-    box-shadow:0 18px 44px -14px rgba(11,63,58,.7);
+    box-shadow:0 18px 44px -14px rgba(10,41,35,.7);
     opacity:0;transform:translateY(12px);pointer-events:none;
     transition:opacity .25s ease,transform .25s ease;
     display:flex;gap:9px;align-items:flex-start;
@@ -514,40 +551,41 @@ export function GetProfessorsStyles() {
   .toast .ico-info{display:none}
   .toast.info .ico-ok{display:none}
   .toast.info .ico-info{display:block}
-  #ProfessorsApp.prof-dark .count-chip,#ProfessorsApp.prof-dark .chip,#ProfessorsApp.prof-dark .link-btn,#ProfessorsApp.prof-dark .contact-links a{color:#5eead4}
-  #ProfessorsApp.prof-dark .stat-ico.teal{color:#5eead4}
-  #ProfessorsApp.prof-dark .stat-ico.gold{color:#f3c17a}
-  #ProfessorsApp.prof-dark .stat-ico.green{color:#bef264}
-  #ProfessorsApp.prof-dark .stat-ico.stone{color:#d6d3d1}
-  #ProfessorsApp.prof-dark a{color:#5eead4}
+  #ProfessorsApp.prof-dark .count-chip,#ProfessorsApp.prof-dark .chip,#ProfessorsApp.prof-dark .link-btn,#ProfessorsApp.prof-dark .contact-links a,
+  body.prof-dark .count-chip,body.prof-dark .chip,body.prof-dark .link-btn,body.prof-dark .contact-links a{color:var(--teal)}
+  #ProfessorsApp.prof-dark .stat-ico.teal,body.prof-dark .stat-ico.teal{color:var(--teal)}
+  #ProfessorsApp.prof-dark .stat-ico.gold,body.prof-dark .stat-ico.gold{color:var(--gold-deep)}
+  #ProfessorsApp.prof-dark .stat-ico.green,body.prof-dark .stat-ico.green{color:#a3e635}
+  #ProfessorsApp.prof-dark .stat-ico.stone,body.prof-dark .stat-ico.stone{color:#d6d3d1}
+  #ProfessorsApp.prof-dark a,body.prof-dark a{color:var(--teal)}
   .toast.show{opacity:1;transform:none}
   .toast{border-left:3px solid var(--gold)}
   .toast.info{border-left-color:var(--teal)}
 
   /* ---------- Reading status ---------- */
   .st-pill{display:inline-flex;align-items:center;gap:4px;font-size:.7rem;font-weight:700;border-radius:999px;padding:2px 9px;letter-spacing:.3px;border:1px solid transparent;white-space:nowrap}
-  .st-pill.st-read{background:#eaf3e2;color:#4d6b1f;border-color:#d7e6c8}
-  .st-pill.st-reading{background:var(--teal-soft);color:var(--teal-mid);border-color:var(--teal-border)}
+  .st-pill.st-read{background:#edf7e5;color:#365314;border-color:#cce3be}
+  .st-pill.st-reading{background:var(--teal-soft);color:var(--teal);border-color:var(--teal-border)}
   .st-pill.st-wishlist{background:var(--gold-soft);color:var(--gold-deep);border-color:var(--gold-border)}
-  #ProfessorsApp.prof-dark .st-pill.st-read{background:rgba(190,242,100,.12);color:#bef264;border-color:#3c4a25}
-  .paper-ico.ico-read{background:#eaf3e2;color:#4d6b1f;border-color:#d7e6c8}
-  .paper-ico.ico-reading{background:var(--teal-soft);color:var(--teal-mid);border-color:var(--teal-border)}
-  #ProfessorsApp.prof-dark .paper-ico.ico-read{background:rgba(190,242,100,.12);color:#bef264;border-color:#3c4a25}
-  #ProfessorsApp.prof-dark .paper-ico.ico-reading{color:#5eead4}
-  #ProfessorsApp.prof-dark .st-pill.st-reading{color:#5eead4}
-  #ProfessorsApp.prof-dark .st-pill.st-wishlist{color:#f3c17a}
+  #ProfessorsApp.prof-dark .st-pill.st-read,body.prof-dark .st-pill.st-read{background:rgba(132,204,22,.14);color:#a3e635;border-color:#3b531a}
+  .paper-ico.ico-read{background:#edf7e5;color:#365314;border-color:#cce3be}
+  .paper-ico.ico-reading{background:var(--teal-soft);color:var(--teal);border-color:var(--teal-border)}
+  #ProfessorsApp.prof-dark .paper-ico.ico-read,body.prof-dark .paper-ico.ico-read{background:rgba(132,204,22,.14);color:#a3e635;border-color:#3b531a}
+  #ProfessorsApp.prof-dark .paper-ico.ico-reading,body.prof-dark .paper-ico.ico-reading{color:var(--teal)}
+  #ProfessorsApp.prof-dark .st-pill.st-reading,body.prof-dark .st-pill.st-reading{color:var(--teal)}
+  #ProfessorsApp.prof-dark .st-pill.st-wishlist,body.prof-dark .st-pill.st-wishlist{color:var(--gold-deep)}
 
   /* ---------- Tag filter bar ---------- */
   .tag-bar{display:flex;align-items:center;gap:8px;margin:0 0 20px;overflow-x:auto;padding:2px 2px 6px;scrollbar-width:thin}
   .tag-bar::-webkit-scrollbar{height:6px}
   .tag-bar::-webkit-scrollbar-thumb{background:#d8d2c2;border-radius:8px}
-  #ProfessorsApp.prof-dark .tag-bar::-webkit-scrollbar-thumb{background:#33453d}
+  #ProfessorsApp.prof-dark .tag-bar::-webkit-scrollbar-thumb,body.prof-dark .tag-bar::-webkit-scrollbar-thumb{background:#2a3d35}
   .tag-bar-label{flex:0 0 auto;font-size:.72rem;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:700;display:inline-flex;align-items:center;gap:6px;padding-right:4px}
   .tag-bar-label svg{width:13px;height:13px;color:var(--gold-deep)}
   .tag-chip{flex:0 0 auto;background:var(--surface);border:1px solid var(--line);color:var(--muted);font-size:.78rem;font-weight:600;padding:4px 12px;border-radius:999px;transition:background .15s ease,border-color .15s ease,color .15s ease}
-  .tag-chip:hover{border-color:var(--teal-border);color:var(--teal-mid);background:var(--teal-soft)}
+  .tag-chip:hover{border-color:var(--teal-border);color:var(--teal);background:var(--teal-soft)}
   .tag-chip.active{background:var(--gold-soft);border-color:var(--gold);color:var(--gold-deep)}
-  #ProfessorsApp.prof-dark .tag-chip.active{color:#f3c17a}
+  #ProfessorsApp.prof-dark .tag-chip.active,body.prof-dark .tag-chip.active{color:var(--gold-deep)}
   .tag-chip .n{opacity:.55;font-weight:500;margin-left:4px;font-size:.72rem}
 
   /* ---------- Collapsible college groups ---------- */
@@ -564,11 +602,11 @@ export function GetProfessorsStyles() {
 
   /* ---------- Per-professor paper filter ---------- */
   .paper-filter{background:var(--field);border:1px solid var(--line);border-radius:8px;font-size:.78rem;padding:5px 10px;color:var(--ink);outline:0;width:150px;max-width:44vw;transition:border .15s ease,box-shadow .15s ease}
-  .paper-filter:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(15,118,110,.12)}
+  .paper-filter:focus{border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-soft)}
 
   /* ---------- Count chip when filtering ---------- */
   .count-chip.filtered{background:var(--gold-soft);color:var(--gold-deep)}
-  #ProfessorsApp.prof-dark .count-chip.filtered{color:#f3c17a}
+  #ProfessorsApp.prof-dark .count-chip.filtered,body.prof-dark .count-chip.filtered{color:var(--gold-deep)}
 
   /* ---------- Shortcuts modal ---------- */
   .shortcut-grid{display:grid;grid-template-columns:auto 1fr;gap:10px 16px;align-items:center;font-size:.88rem;color:var(--ink)}
@@ -587,21 +625,21 @@ export function GetProfessorsStyles() {
   .prof-card.dragging{opacity:.45;border-style:dashed}
   .prof-card.drag-above{box-shadow:0 -4px 0 -1px var(--gold),var(--shadow-card)}
   .prof-card.drag-below{box-shadow:0 4px 0 -1px var(--gold),var(--shadow-card)}
-  #ProfessorsApp.prof-dark .prof-card.drag-above{box-shadow:0 -4px 0 -1px #f3c17a,var(--shadow-card)}
-  #ProfessorsApp.prof-dark .prof-card.drag-below{box-shadow:0 4px 0 -1px #f3c17a,var(--shadow-card)}
+  #ProfessorsApp.prof-dark .prof-card.drag-above,body.prof-dark .prof-card.drag-above{box-shadow:0 -4px 0 -1px var(--gold-deep),var(--shadow-card)}
+  #ProfessorsApp.prof-dark .prof-card.drag-below,body.prof-dark .prof-card.drag-below{box-shadow:0 4px 0 -1px var(--gold-deep),var(--shadow-card)}
 
   /* ---------- College mini status bar ---------- */
   .group-bar{display:inline-flex;width:58px;height:6px;border-radius:999px;overflow:hidden;background:var(--line);flex:0 0 auto}
   .group-bar i{display:block;height:100%;min-width:3px}
-  .group-bar .gb-read{background:#7ba13f}
+  .group-bar .gb-read{background:#65a30d}
   .group-bar .gb-reading{background:var(--teal)}
-  .group-bar .gb-wishlist{background:#d98324}
-  #ProfessorsApp.prof-dark .group-bar{background:#2c3a34}
+  .group-bar .gb-wishlist{background:var(--gold)}
+  #ProfessorsApp.prof-dark .group-bar,body.prof-dark .group-bar{background:var(--line)}
 
   /* ---------- Reading streak badge ---------- */
   .streak-badge{display:inline-flex;align-items:center;gap:5px;background:linear-gradient(180deg,var(--gold-soft),#f7e3bd);border:1px solid var(--gold-border);color:var(--gold-deep);font-size:.72rem;font-weight:700;border-radius:999px;padding:2px 9px;letter-spacing:.3px}
   .streak-badge svg{width:11px;height:11px;fill:currentColor}
-  #ProfessorsApp.prof-dark .streak-badge{color:#f3c17a}
+  #ProfessorsApp.prof-dark .streak-badge,body.prof-dark .streak-badge{color:var(--gold-deep);background:var(--gold-soft)}
 
   /* ---------- Paste-import modal ---------- */
   .paste-area{width:100%;min-height:150px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.78rem;line-height:1.5;background:var(--field);border:1px solid var(--line);border-radius:10px;padding:12px 14px;color:var(--ink);resize:vertical;outline:0;transition:border-color .15s ease,box-shadow .15s ease}
@@ -624,35 +662,32 @@ export function GetProfessorsStyles() {
   .journal-txt{color:var(--ink);white-space:pre-wrap;overflow-wrap:anywhere;min-width:0}
   .journal-del{flex:0 0 auto;opacity:0;width:24px;height:24px;margin-left:auto;transition:opacity .15s ease}
   .journal-item:hover .journal-del,.journal-item:focus-within .journal-del{opacity:1}
-  #ProfessorsApp.prof-dark .journal-date{color:#f3c17a;background:rgba(232,169,78,.12)}
-  #ProfessorsApp.prof-dark .journal-item::before{box-shadow:0 0 0 2.5px var(--surface)}
+  #ProfessorsApp.prof-dark .journal-date,body.prof-dark .journal-date{color:var(--gold-deep);background:var(--gold-soft)}
+  #ProfessorsApp.prof-dark .journal-item::before,body.prof-dark .journal-item::before{box-shadow:0 0 0 2.5px var(--surface)}
 
   /* ---------- Favorites ---------- */
-  #favBtn.active{border-color:var(--gold-border);background:var(--gold-soft);color:var(--gold-deep)}
-  #favBtn.active svg{fill:currentColor}
-  #ProfessorsApp.prof-dark #favBtn.active{color:#f3c17a;background:rgba(232,169,78,.12)}
   .prof-card.fav{box-shadow:inset 3px 0 0 0 var(--gold),var(--shadow-card)}
   .fav-chip{display:inline-flex;align-items:center;gap:3px;color:var(--gold-deep);background:var(--gold-soft);border:1px solid var(--gold-border);border-radius:999px;font-size:.62rem;font-weight:800;letter-spacing:.5px;text-transform:uppercase;padding:1px 7px;margin-left:8px;vertical-align:2px}
   .fav-chip svg{width:9px;height:9px;fill:currentColor}
-  #ProfessorsApp.prof-dark .fav-chip{color:#f3c17a;background:rgba(232,169,78,.12)}
+  #ProfessorsApp.prof-dark .fav-chip,body.prof-dark .fav-chip{color:var(--gold-deep);background:var(--gold-soft)}
   .icon-btn.fav-on{color:var(--gold-deep);border-color:var(--gold-border);background:var(--gold-soft)}
   .icon-btn.fav-on svg{fill:currentColor}
-  #ProfessorsApp.prof-dark .icon-btn.fav-on{color:#f3c17a;background:rgba(232,169,78,.12)}
+  #ProfessorsApp.prof-dark .icon-btn.fav-on,body.prof-dark .icon-btn.fav-on{color:var(--gold-deep);background:var(--gold-soft)}
 
   /* ---------- Heatmap year-jump menu ---------- */
   .heat-menu{position:absolute;top:calc(100% + 7px);right:0;z-index:40;background:var(--surface);border:1px solid var(--line);border-radius:11px;box-shadow:0 12px 30px rgba(31,41,32,.2);min-width:190px;padding:5px;display:none;animation:menuIn .14s ease}
   .heat-menu.open{display:block}
   @keyframes menuIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
   .heat-menu button{display:flex;width:100%;justify-content:space-between;gap:12px;align-items:center;border:0;background:transparent;padding:7px 11px;border-radius:8px;font-family:var(--sans);font-size:.8rem;color:var(--ink);cursor:pointer;text-align:left}
-  .heat-menu button:hover{background:var(--teal-soft);color:var(--teal-deep)}
+  .heat-menu button:hover{background:var(--teal-soft);color:var(--teal)}
   .heat-menu button.on{color:var(--teal);font-weight:700}
   .heat-menu .hm-n{color:var(--muted);font-size:.7rem;font-variant-numeric:tabular-nums}
-  #ProfessorsApp.prof-dark .heat-menu{box-shadow:0 12px 30px rgba(0,0,0,.5)}
+  #ProfessorsApp.prof-dark .heat-menu,body.prof-dark .heat-menu{box-shadow:0 12px 30px rgba(0,0,0,.5)}
 
   /* ---------- Resume pause button ---------- */
   .resume-pause{color:var(--muted)}
   .resume-pause:hover{color:var(--gold-deep);border-color:var(--gold-border);background:var(--gold-soft)}
-  #ProfessorsApp.prof-dark .resume-pause:hover{color:#f3c17a}
+  #ProfessorsApp.prof-dark .resume-pause:hover,body.prof-dark .resume-pause:hover{color:var(--gold-deep)}
 
   /* ---------- Reading heatmap (52-week calendar) ---------- */
   .heat-section{margin:0 0 22px}
@@ -731,22 +766,18 @@ export function GetProfessorsStyles() {
   .cmp-row:last-child{border-bottom:0}
   .cmp-row .k{color:var(--muted)}
   .cmp-row .v{font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;text-align:right}
-  .cmp-row .v.win{color:var(--teal-mid)}
-  #ProfessorsApp.prof-dark .cmp-row .v.win{color:#5eead4}
+  .cmp-row .v.win{color:var(--teal)}
+  #ProfessorsApp.prof-dark .cmp-row .v.win,body.prof-dark .cmp-row .v.win{color:var(--teal)}
   .cmp-papers{border-top:1px solid var(--line);padding-top:8px;max-height:250px;overflow-y:auto;scrollbar-width:thin}
   .cmp-papers::-webkit-scrollbar{width:8px}
   .cmp-papers::-webkit-scrollbar-thumb{background:#d8d2c2;border-radius:8px}
-  #ProfessorsApp.prof-dark .cmp-papers::-webkit-scrollbar-thumb{background:#33453d}
+  #ProfessorsApp.prof-dark .cmp-papers::-webkit-scrollbar-thumb,body.prof-dark .cmp-papers::-webkit-scrollbar-thumb{background:#2a3d35}
   .cmp-paper{padding:6px 1px;border-bottom:1px dashed var(--line)}
   .cmp-paper:last-child{border-bottom:0}
   .cmp-paper .t{font-weight:600;font-size:.8rem;color:var(--ink);display:block;line-height:1.35}
   .cmp-paper .m{color:var(--muted);font-size:.72rem;display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:1px}
   .cmp-empty{color:var(--muted);font-size:.84rem;font-style:italic;text-align:center;padding:16px 0}
   @media (max-width:640px){.cmp-grid{grid-template-columns:1fr}}
-
-  /* ---------- Compare toolbar button ---------- */
-  #compareBtn{padding:9px 14px;font-size:.86rem}
-  #compareBtn svg{width:15px;height:15px}
 
   /* ---------- Focus visibility (keyboard users) ---------- */
   :where(a,button,input,select,textarea,[tabindex]):focus-visible{outline:2px solid var(--teal);outline-offset:2px}
@@ -759,37 +790,38 @@ export function GetProfessorsStyles() {
   }
 
   /* ---------- Journal browser modal ---------- */
-  .btn-cnt{min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:var(--teal-soft);border:1px solid var(--teal-border);color:var(--teal-deep);font-size:.7rem;font-weight:800;line-height:17px;text-align:center;display:inline-block;font-variant-numeric:tabular-nums}
-  #ProfessorsApp.prof-dark .btn-cnt{background:rgba(45,212,191,.12);color:#5eead4}
+  .btn-cnt{min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:var(--teal-soft);border:1px solid var(--teal-border);color:var(--teal);font-size:.7rem;font-weight:800;line-height:17px;text-align:center;display:inline-block;font-variant-numeric:tabular-nums}
+  #ProfessorsApp.prof-dark .btn-cnt,body.prof-dark .btn-cnt{background:var(--teal-soft);color:var(--teal);border-color:var(--teal-border)}
   .jrnl-list{max-height:46vh;overflow-y:auto;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:12px;background:var(--surface-2);scrollbar-width:thin}
   .jrnl-list::-webkit-scrollbar{width:6px}
   .jrnl-list::-webkit-scrollbar-thumb{background:#d8d2c2;border-radius:8px}
-  #ProfessorsApp.prof-dark .jrnl-list::-webkit-scrollbar-thumb{background:#33453d}
+  #ProfessorsApp.prof-dark .jrnl-list::-webkit-scrollbar-thumb,body.prof-dark .jrnl-list::-webkit-scrollbar-thumb{background:#2a3d35}
   .jrnl-row{display:flex;gap:10px;align-items:flex-start;padding:10px 13px;border-bottom:1px dashed var(--line);cursor:pointer;transition:background .15s ease;width:100%;text-align:left;background:none;border-left:none;border-right:none;border-top:none;font:inherit;color:inherit}
   .jrnl-row:last-child{border-bottom:none}
   .jrnl-row:hover,.jrnl-row:focus-visible{background:var(--teal-soft)}
-  #ProfessorsApp.prof-dark .jrnl-row:hover,#ProfessorsApp.prof-dark .jrnl-row:focus-visible{background:rgba(45,212,191,.08)}
+  #ProfessorsApp.prof-dark .jrnl-row:hover,#ProfessorsApp.prof-dark .jrnl-row:focus-visible,
+  body.prof-dark .jrnl-row:hover,body.prof-dark .jrnl-row:focus-visible{background:var(--teal-soft)}
   .jrnl-date{flex:0 0 auto;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.68rem;font-weight:700;color:var(--gold-deep);background:var(--gold-soft);border:1px solid var(--gold-border);border-radius:7px;padding:2px 7px;margin-top:1px;white-space:nowrap;font-variant-numeric:tabular-nums}
-  #ProfessorsApp.prof-dark .jrnl-date{color:#f3c17a;background:rgba(232,169,78,.12)}
+  #ProfessorsApp.prof-dark .jrnl-date,body.prof-dark .jrnl-date{color:var(--gold-deep);background:var(--gold-soft)}
   .jrnl-body{min-width:0;flex:1;display:flex;flex-direction:column;gap:3px}
   .jrnl-txt{font-size:.88rem;line-height:1.5;color:var(--ink);overflow-wrap:anywhere;white-space:pre-wrap}
   .jrnl-src{font-size:.73rem;color:var(--muted);display:flex;gap:6px;align-items:center;flex-wrap:wrap;min-width:0}
-  .jrnl-src .jp{font-weight:700;color:var(--teal-deep);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-  #ProfessorsApp.prof-dark .jrnl-src .jp{color:#5eead4}
+  .jrnl-src .jp{font-weight:700;color:var(--teal);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+  #ProfessorsApp.prof-dark .jrnl-src .jp,body.prof-dark .jrnl-src .jp{color:var(--teal)}
   .jrnl-src .jc{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px}
   .jrnl-empty{padding:30px 18px;text-align:center;color:var(--muted);font-size:.88rem;display:flex;flex-direction:column;align-items:center;gap:8px}
   .jrnl-empty svg{width:26px;height:26px;opacity:.45}
   .jrnl-count{font-size:.75rem;color:var(--muted);margin:0 2px 8px}
-  .jrnl-count b{color:var(--teal-deep);font-variant-numeric:tabular-nums}
-  #ProfessorsApp.prof-dark .jrnl-count b{color:#5eead4}
+  .jrnl-count b{color:var(--teal);font-variant-numeric:tabular-nums}
+  #ProfessorsApp.prof-dark .jrnl-count b,body.prof-dark .jrnl-count b{color:var(--teal)}
 
   /* ---------- Goal pace projection ---------- */
   .goal-pace{font-size:.72rem;font-style:italic;display:inline-flex;align-items:center;gap:4px;line-height:1.35}
   .goal-pace svg{width:11px;height:11px;flex:0 0 auto}
-  .goal-pace.pace-on{color:var(--teal-deep)}
+  .goal-pace.pace-on{color:var(--teal)}
   .goal-pace.pace-warn{color:var(--gold-deep)}
-  #ProfessorsApp.prof-dark .goal-pace.pace-on{color:#5eead4}
-  #ProfessorsApp.prof-dark .goal-pace.pace-warn{color:#f3c17a}
+  #ProfessorsApp.prof-dark .goal-pace.pace-on,body.prof-dark .goal-pace.pace-on{color:var(--teal)}
+  #ProfessorsApp.prof-dark .goal-pace.pace-warn,body.prof-dark .goal-pace.pace-warn{color:var(--gold-deep)}
 
   /* ---------- Paper-row flash (jump-to-paper highlight) ---------- */
   .paper-row.flash{animation:flashRing 1.1s ease-in-out 2;border-radius:10px}
@@ -823,32 +855,76 @@ export function GetProfessorsStyles() {
     .heat-card,.resume-card{box-shadow:none!important;border-color:#bbb!important;background:#fff!important}
     .resume-list{max-height:none;overflow:visible}
   }
-/* ===== ProfessorTrack header redesign (spec §6-13) ===== */
-#ProfessorsApp .icb-btn { --icb-accent: var(--teal); --icb-tip-bg: var(--toast-bg, #0b3f3a); --icb-tip-fg: #eef7f4; }
-.pt-global-nav-wrap { margin: 0 10px; }
-.brand .logo svg { width: 22px; height: 22px; display: block; }
-.pt-row2 { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
-.pt-row2 .search-wrap { flex: 1 1 auto; min-width: 110px; }
-.pt-io-wrap { position: relative; }
-.pt-io-menu {
-  position: absolute; right: 0; top: calc(100% + 8px);
-  background: var(--surface); border: 1px solid var(--line);
-  border-radius: 12px; padding: 6px;
-  display: flex; flex-direction: column; min-width: 210px; z-index: 70;
-  box-shadow: 0 18px 44px -18px rgba(11, 63, 58, 0.55);
+/* ===== ProfessorTrack header redesign (reformed 2026-10-03: bare brand mark,
+   flat Import/Export/Save/Theme actions, single command-bar row) ===== */
+#ProfessorsApp .icb-btn { --icb-accent: var(--gold); --icb-tip-bg: var(--toast-bg, #081a16); --icb-tip-fg: #f5f2ea; }
+/* bare brand mark — enlarged scholar cap with a subtle glow, brighter in dark mode */
+#ProfessorsApp.prof-dark .logo { filter: drop-shadow(0 0 11px rgba(240, 217, 168, .48)); }
+/* unified command bar — toggle · sort · search · add as concentric pills */
+.pt-row2 {
+  display: flex; align-items: center; gap: 10px;
+  --icb-size: 36px;
 }
-.pt-io-menu button {
-  text-align: left; padding: 9px 12px; border: 0;
-  background: transparent; border-radius: 8px;
-  color: var(--ink); cursor: pointer; font: inherit; font-size: .87rem;
+.pt-row2 .icb-btn { border-radius: 999px; }
+.pt-row2 .search-wrap {
+  flex: 1 1 auto; min-width: 110px;
+  height: 36px; padding: 0 13px; border-radius: 999px;
 }
-.pt-io-menu button:hover { background: var(--teal-soft); }
+.pt-row2 .sort-wrap { height: 36px; }
+.pt-row2 .sort-wrap select { height: 36px; padding: 0 10px; border-radius: 999px; }
 @media (max-width: 640px) {
   .brand-row { flex-wrap: wrap; }
-  .pt-global-nav-wrap { order: 3; width: 100%; margin: 8px 0 0; }
   .header-actions { margin-left: auto; }
   .pt-row2 { flex-wrap: wrap; }
   .pt-row2 .search-wrap { order: 10; flex-basis: 100%; }
+}
+
+/* ---------- Draggable modals (2026-10-03) ---------- */
+.modal-head { cursor: grab; touch-action: none; }
+.modal-card.dragging { transition: none; user-select: none; }
+.modal-card.dragging .modal-head { cursor: grabbing; }
+
+/* ---------- Professor modal media capture (photo / college logo) ---------- */
+.media-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.media-capture{
+  position:relative;display:grid;place-items:center;height:132px;
+  border-radius:14px;border:1.5px dashed var(--line);background:var(--surface-2);
+  cursor:pointer;overflow:hidden;outline:none;
+  transition:border-color .15s ease,background .15s ease;
+}
+.media-capture:hover,.media-capture:focus-visible{border-color:var(--teal)}
+.media-capture.drag-over{border-color:var(--teal);background:var(--teal-soft)}
+.media-capture .media-preview{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.media-capture .media-preview-contain{object-fit:contain;padding:12px;background:var(--surface)}
+.media-empty{display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--muted);pointer-events:none}
+.media-empty svg{width:30px;height:30px;color:var(--teal-mid);margin-bottom:4px}
+.media-empty strong{font-size:.9rem;color:var(--ink)}
+.media-empty span{font-size:.72rem;text-transform:uppercase;letter-spacing:.6px}
+.media-clear{
+  position:absolute;top:7px;right:7px;width:24px;height:24px;border-radius:50%;
+  border:0;background:rgba(0,0,0,.55);color:#fff;font-size:15px;line-height:1;
+  cursor:pointer;display:grid;place-items:center;padding:0;
+}
+.media-clear:hover{background:rgba(0,0,0,.78)}
+
+/* ---------- proff.html-style card head (big portrait + college logo far right) ---------- */
+.prof-head .avatar-lg{
+  width:64px;height:64px;font-size:1.25rem;
+  box-shadow:inset 0 -8px 14px rgba(0,0,0,.12),0 0 0 2px var(--surface),0 0 0 3.5px var(--prof-c,var(--line));
+}
+.prof-head .avatar-lg.avatar-blank{
+  background:var(--surface-2);border:1.5px dashed var(--line);
+  box-shadow:0 0 0 2px var(--surface),0 0 0 3.5px var(--line);
+}
+.prof-head .avatar-lg img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.college-logo{
+  width:76px;height:54px;object-fit:contain;flex:0 0 auto;padding:5px;
+  background:var(--surface);border:1px solid var(--line);border-radius:10px;
+  box-shadow:var(--shadow-card);
+}
+@media (max-width:760px){
+  .college-logo{display:none}
+  .media-grid{grid-template-columns:1fr}
 }
 
 /* Professor identity color — subtle by default, theme-aware emphasis on hover (spec §14) */

@@ -12,17 +12,25 @@ export function GetRDStyles() {
    Modular vanilla JS · standalone-exportable
    ============================================================ */
 
-* {
+#root, #root *, #rd-root, #rd-root * {
   box-sizing: border-box;
+}
+.rd-app, .rd-app * {
   margin: 0;
   padding: 0;
 }
 
-/* Dark tokens are scoped to the R&D app container (NOT :root) so they can
-   never out-rank the landing page's or other tabs' head-level variables —
-   #rd-root is the standalone builder shell, .rd-app is the app wrapper. */
+/* Dark tokens are scoped to the R&D container (#root / #rd-root / .rd-app)
+   so all child views, modals, drawers, and toasts inherit them. */
+#root,
+#rd-root,
 .rd-app,
-#rd-root {
+#root[data-theme="dark"],
+#rd-root[data-theme="dark"],
+#root[data-theme="dark"] .rd-app,
+.rd-app[data-theme="dark"],
+[data-theme="dark"] .rd-app,
+body[data-theme="dark"] .rd-app {
   --bg: #0e1018;
   --bg-secondary: #131521;
   --header-bg: rgba(14, 16, 24, 0.85);
@@ -56,16 +64,24 @@ export function GetRDStyles() {
   --panel: rgba(28, 31, 46, 0.96);
   --panel-soft: rgba(24, 27, 39, 0.85);
   --panel-ghost: rgba(24, 27, 39, 0.55);
+  --panel-ghost-hover: rgba(255, 255, 255, 0.08);
   --dot: rgba(139, 109, 255, 0.13);
   --app-glow: rgba(139, 109, 255, 0.07);
   --band: rgba(139, 109, 255, 0.14);
+  --heat-0: rgba(24, 27, 39, 0.55);
+  --heat-1: color-mix(in srgb, #8b6dff 30%, transparent);
+  --heat-2: color-mix(in srgb, #8b6dff 55%, transparent);
+  --heat-3: color-mix(in srgb, #8b6dff 80%, transparent);
+  --heat-4: #8b6dff;
 }
 
-/* Light theme — palette ported from the user's Local HUB test.html.
-   Applied ON the app container (not just #root) so it out-ranks the dark
-   tokens declared directly on .rd-app below. */
+/* Light theme — palette with calibrated semantic contrast overrides. */
+#root[data-theme="light"],
+#rd-root[data-theme="light"],
 #root[data-theme="light"] .rd-app,
-#rd-root[data-theme="light"] {
+.rd-app[data-theme="light"],
+[data-theme="light"] .rd-app,
+body[data-theme="light"] .rd-app {
   --bg: #f3f4f8;
   --bg-secondary: #eceef6;
   --header-bg: rgba(243, 244, 248, 0.88);
@@ -81,25 +97,44 @@ export function GetRDStyles() {
   --accent-hover: #3d5ce6;
   --accent-soft: rgba(79, 110, 247, 0.10);
   --accent-glow: rgba(79, 110, 247, 0.20);
+  --green: #15803d;
+  --orange: #c2410c;
+  --red: #b91c1c;
+  --cyan: #0e7490;
+  --yellow: #a16207;
+  --purple: #6d28d9;
+  --pink: #be185d;
+  --teal: #0f766e;
   --shadow-sm: 0 1px 3px rgba(26, 29, 46, 0.08);
   --shadow-md: 0 4px 16px rgba(26, 29, 46, 0.10);
   --shadow-lg: 0 12px 40px rgba(26, 29, 46, 0.16);
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 16px;
+  --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   --panel: rgba(255, 255, 255, 0.97);
   --panel-soft: rgba(255, 255, 255, 0.92);
   --panel-ghost: rgba(255, 255, 255, 0.72);
+  --panel-ghost-hover: rgba(26, 29, 46, 0.06);
   --dot: rgba(79, 110, 247, 0.12);
   --app-glow: rgba(79, 110, 247, 0.06);
   --band: rgba(79, 110, 247, 0.10);
+  --heat-0: rgba(220, 224, 235, 0.75);
+  --heat-1: color-mix(in srgb, #4f6ef7 30%, transparent);
+  --heat-2: color-mix(in srgb, #4f6ef7 55%, transparent);
+  --heat-3: color-mix(in srgb, #4f6ef7 80%, transparent);
+  --heat-4: #4f6ef7;
 }
 
-#root ::selection { background: var(--accent); color: #fff; }
-#root :focus-visible {
+#root ::selection, #rd-root ::selection { background: var(--accent); color: #fff; }
+#root :focus-visible, #rd-root :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
   border-radius: 4px;
 }
 @media (prefers-reduced-motion: reduce) {
-  #root *, #root *::before, #root *::after {
+  #root *, #root *::before, #root *::after,
+  #rd-root *, #rd-root *::before, #rd-root *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
@@ -111,7 +146,7 @@ body {
   min-height: 100vh;
 }
 
-#root {
+#root, #rd-root {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -122,8 +157,10 @@ body {
 
 .hidden { display: none !important; }
 
-button { font-family: inherit; }
-input, select, textarea { font-family: inherit; }
+#root button, #rd-root button { font-family: inherit; }
+#root input, #rd-root input,
+#root select, #rd-root select,
+#root textarea, #rd-root textarea { font-family: inherit; }
 
 /* ===== SPLASH ===== */
 .rd-splash {
@@ -162,9 +199,49 @@ input, select, textarea { font-family: inherit; }
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  color: var(--text);
   background:
     radial-gradient(1200px 500px at 80% -10%, var(--app-glow), transparent 60%),
     var(--bg);
+}
+
+/* Shared LocalHUB icon button integration with R&D theme tokens */
+.rd-app .icb-btn,
+#root .rd-app .icb-btn {
+  color: var(--text-dim);
+  --icb-accent: var(--accent);
+  --icb-bg: var(--panel-ghost);
+  --icb-border: var(--border);
+  --icb-tip-bg: var(--panel);
+  --icb-tip-fg: var(--text);
+  --icb-tip-border: var(--border);
+}
+.rd-app .icb-btn:hover:not(:disabled) {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--panel-ghost-hover, rgba(255, 255, 255, 0.08));
+  transform: none;
+}
+.rd-app .icb-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.rd-app .icb-btn.icb-accent {
+  color: #fff;
+  background: var(--accent);
+  border-color: transparent;
+}
+.rd-app .icb-btn.icb-accent:hover:not(:disabled) {
+  color: #fff;
+  background: var(--accent-hover);
+  filter: brightness(1.08);
+  transform: none;
+}
+.rd-app .icb-btn.icb-active {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
 /* ===== HEADER ===== */
@@ -172,6 +249,7 @@ input, select, textarea { font-family: inherit; }
   position: sticky;
   top: 0;
   z-index: 60;
+  color: var(--text);
   backdrop-filter: blur(14px) saturate(160%);
   -webkit-backdrop-filter: blur(14px) saturate(160%);
   background: var(--header-bg);
@@ -249,8 +327,15 @@ input, select, textarea { font-family: inherit; }
 
 .rd-theme-btn-icon { display: block; }
 .theme-icon-light { display: none; }
-#root[data-theme="light"] .theme-icon-light, #rd-root[data-theme="light"] .theme-icon-light { display: block; }
-#root[data-theme="light"] .theme-icon-dark, #rd-root[data-theme="light"] .theme-icon-dark { display: none; }
+#root[data-theme="light"] .theme-icon-light,
+#rd-root[data-theme="light"] .theme-icon-light,
+.rd-app[data-theme="light"] .theme-icon-light,
+[data-theme="light"] .theme-icon-light { display: block; }
+
+#root[data-theme="light"] .theme-icon-dark,
+#rd-root[data-theme="light"] .theme-icon-dark,
+.rd-app[data-theme="light"] .theme-icon-dark,
+[data-theme="light"] .theme-icon-dark { display: none; }
 
 .rd-chip-sep {
   width: 1px;
@@ -1959,12 +2044,12 @@ textarea.form-control {
 .rd-empty .rd-empty-title { font-size: 15px; font-weight: 700; color: var(--text-secondary); }
 .rd-empty .rd-empty-sub { font-size: 12.5px; max-width: 380px; line-height: 1.5; }
 
-/* ===== SCROLLBARS (global) ===== */
-* { scrollbar-width: thin; scrollbar-color: var(--border-light) transparent; }
-*::-webkit-scrollbar { width: 8px; height: 8px; }
-*::-webkit-scrollbar-track { background: transparent; }
-*::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 8px; }
-*::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+/* ===== SCROLLBARS (scoped to R&D container) ===== */
+#root, #rd-root, .rd-app, .rd-content, .rd-canvas-wrap { scrollbar-width: thin; scrollbar-color: var(--border-light) transparent; }
+#root ::-webkit-scrollbar, #rd-root ::-webkit-scrollbar, .rd-app ::-webkit-scrollbar { width: 8px; height: 8px; }
+#root ::-webkit-scrollbar-track, #rd-root ::-webkit-scrollbar-track, .rd-app ::-webkit-scrollbar-track { background: transparent; }
+#root ::-webkit-scrollbar-thumb, #rd-root ::-webkit-scrollbar-thumb, .rd-app ::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 8px; }
+#root ::-webkit-scrollbar-thumb:hover, #rd-root ::-webkit-scrollbar-thumb:hover, .rd-app ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
 
 /* ===== YEAR FILTER CHIP ===== */
 .rd-year-chip {
@@ -4159,6 +4244,655 @@ mark.rd-hl {
 @media (prefers-reduced-motion: reduce) {
   .rd-node-card.mm-flash, .rd-item-card.mm-flash { animation: none; }
   .rd-tl-now-pulse::after { animation: none; opacity: 0; }
+}
+
+/* ============================================================
+   v2.0 — Redesigned Header View Switcher & Toolbar Toggle
+   (shared icb buttons are token-bound once, in the APP SHELL
+   section near .rd-app — do not duplicate the scope here)
+   ============================================================ */
+
+.rd-view-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: var(--panel-ghost);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 3px;
+}
+.rd-view-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 32px;
+  height: 28px;
+  padding: 0 9px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--text-dim);
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.rd-view-btn svg {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  transition: transform 0.15s ease;
+}
+.rd-view-btn:hover {
+  color: var(--text);
+  background: var(--panel-ghost-hover, rgba(255, 255, 255, 0.06));
+}
+.rd-view-btn.active {
+  color: #fff;
+  background: var(--accent);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 38%, transparent);
+}
+.rd-view-btn.active svg {
+  transform: scale(1.08);
+}
+
+.rd-dashboard-toggle-btn,
+#chartToggleBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  border-radius: 8px;
+  color: var(--text-dim);
+  background: var(--panel-ghost);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.rd-dashboard-toggle-btn svg,
+#chartToggleBtn svg {
+  width: 16px;
+  height: 16px;
+}
+.rd-dashboard-toggle-btn:hover,
+#chartToggleBtn:hover {
+  color: var(--text);
+  border-color: var(--accent);
+  background: var(--panel-ghost-hover, rgba(255, 255, 255, 0.08));
+  transform: none;
+}
+.rd-dashboard-toggle-btn.active,
+#chartToggleBtn.active {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+/* ============================================================
+   v2.0 — Research Reading Dashboard
+   ============================================================ */
+.rd-dashboard-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 24px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  transition: all 0.25s ease;
+}
+.rd-dashboard-wrap[hidden] {
+  display: none !important;
+}
+
+/* Stats Bar */
+.rd-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+}
+.rd-stat-card {
+  position: relative;
+  background: var(--card, var(--surface));
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  overflow: hidden;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+.rd-stat-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+.rd-stat-card .stat-ico {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.rd-stat-card .stat-ico svg {
+  width: 18px;
+  height: 18px;
+}
+.rd-stat-card .stat-ico.accent { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); }
+.rd-stat-card .stat-ico.purple { background: color-mix(in srgb, #a78bfa 15%, transparent); color: #a78bfa; }
+.rd-stat-card .stat-ico.green { background: color-mix(in srgb, var(--green) 15%, transparent); color: var(--green); }
+.rd-stat-card .stat-ico.gold { background: color-mix(in srgb, #eab308 15%, transparent); color: #eab308; }
+.rd-stat-card .stat-num {
+  font-size: 1.35rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--text);
+}
+.rd-stat-card .stat-label {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+}
+.rd-stat-card .stat-sub {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+}
+.rd-stat-card.activity-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  grid-column: span 2;
+  min-width: 280px;
+}
+.streak-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 2px 7px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-radius: 999px;
+  color: #f97316;
+  background: color-mix(in srgb, #f97316 14%, transparent);
+  border: 1px solid color-mix(in srgb, #f97316 35%, transparent);
+}
+.streak-badge svg {
+  width: 12px;
+  height: 12px;
+}
+.goal-row {
+  margin-top: 6px;
+  min-width: 140px;
+}
+.goal-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  margin-bottom: 3px;
+}
+.goal-track {
+  display: block;
+  height: 6px;
+  background: var(--panel-ghost);
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.goal-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+.goal-fill.done {
+  background: var(--green);
+}
+.goal-pace {
+  display: block;
+  font-size: 0.65rem;
+  margin-top: 2px;
+  color: var(--text-dim);
+}
+.goal-pace.pace-on { color: var(--green); }
+.goal-pace.pace-warn { color: #f59e0b; }
+.goal-set-btn {
+  font-size: 0.72rem;
+  color: var(--accent);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 2px 0;
+  text-decoration: underline;
+}
+
+/* Resume Section ("Continue Reading") */
+.rd-resume-card {
+  background: var(--card, var(--surface));
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 16px;
+}
+.rd-resume-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+/* the head injects the book ICONS svg inline — an unsized SVG would balloon
+   to fill the flex row (observed at 1066px) */
+.rd-resume-head > svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  color: var(--accent);
+}
+.rd-resume-head h3 {
+  font-size: 0.88rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text);
+}
+.rd-resume-head .cnt {
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+}
+.rd-resume-hint {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  margin-left: auto;
+}
+.rd-resume-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.rd-resume-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--panel-ghost);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  transition: background 0.15s ease;
+}
+.rd-resume-row:hover {
+  background: var(--panel-ghost-hover, rgba(255, 255, 255, 0.04));
+}
+.rd-resume-type {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  color: var(--text);
+  background: var(--panel-ghost);
+  border: 1px solid var(--border);
+}
+.rd-resume-type svg { width: 14px; height: 14px; }
+.rd-resume-type.book { color: #a78bfa; border-color: rgba(167, 139, 250, 0.3); background: rgba(167, 139, 250, 0.1); }
+.rd-resume-type.thesis { color: var(--green); border-color: color-mix(in srgb, var(--green) 30%, transparent); background: color-mix(in srgb, var(--green) 10%, transparent); }
+.rd-resume-type.paper { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 30%, transparent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.rd-resume-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.rd-resume-title {
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--text);
+  font-weight: 700;
+  font-size: 0.84rem;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rd-resume-title:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+.rd-resume-meta {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rd-days-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  white-space: nowrap;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--panel-ghost);
+  border: 1px solid var(--border);
+}
+.rd-days-chip svg { width: 12px; height: 12px; }
+.rd-resume-ring {
+  flex: none;
+  display: flex;
+  align-items: center;
+}
+.rd-resume-pause, .rd-resume-read {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.rd-resume-pause svg, .rd-resume-read svg { width: 12px; height: 12px; }
+
+/* 52-Week Activity Heatmap */
+.rd-heat-card {
+  background: var(--card, var(--surface));
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 16px;
+}
+.rd-heat-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.rd-heat-head h2 {
+  font-size: 0.88rem;
+  font-weight: 700;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+}
+.rd-heat-head h2 svg { width: 15px; height: 15px; }
+.heat-total {
+  font-size: 0.74rem;
+  color: var(--text-dim);
+}
+.heat-nav {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+  background: var(--panel-ghost);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 2px;
+}
+.hn-btn {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  border-radius: 5px;
+}
+.hn-btn:hover:not(:disabled) { color: var(--text); background: rgba(255,255,255,0.08); }
+.hn-btn:disabled { opacity: 0.35; cursor: default; }
+.hn-btn svg { width: 12px; height: 12px; }
+.hn-label {
+  background: none;
+  border: none;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text);
+  padding: 2px 7px;
+  cursor: pointer;
+  border-radius: 5px;
+}
+.hn-label:hover { background: rgba(255,255,255,0.08); }
+.rd-heat-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  z-index: 50;
+  min-width: 140px;
+}
+.rd-heat-menu.open { display: flex; flex-direction: column; gap: 2px; }
+.rd-heat-menu button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: none;
+  border: none;
+  padding: 5px 8px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--text);
+  border-radius: 5px;
+  cursor: pointer;
+}
+.rd-heat-menu button:hover, .rd-heat-menu button.on {
+  background: var(--panel-ghost);
+  color: var(--accent);
+}
+.rd-heat-menu .hm-n {
+  font-size: 0.68rem;
+  color: var(--text-dim);
+}
+.heat-hint {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+}
+.rd-heat-scroll {
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+.rd-heat-svg {
+  display: block;
+}
+.rd-heat-cell, .hl {
+  cursor: pointer;
+  transition: transform 0.12s ease;
+}
+.rd-heat-cell:hover, .hl:hover {
+  transform: scale(1.25);
+  outline: 1.5px solid var(--text);
+  outline-offset: -1px;
+}
+.rd-heat-cell.heat-0, .hl.hl-0 { fill: var(--heat-0, var(--panel-ghost)); }
+.rd-heat-cell.heat-1, .hl.hl-1 { fill: var(--heat-1, color-mix(in srgb, var(--accent) 30%, transparent)); }
+.rd-heat-cell.heat-2, .hl.hl-2 { fill: var(--heat-2, color-mix(in srgb, var(--accent) 55%, transparent)); }
+.rd-heat-cell.heat-3, .hl.hl-3 { fill: var(--heat-3, color-mix(in srgb, var(--accent) 80%, transparent)); }
+.rd-heat-cell.heat-4, .hl.hl-4 { fill: var(--heat-4, var(--accent)); }
+
+.hm, .hw {
+  font-size: 8.5px;
+  fill: var(--text-dim);
+  font-family: inherit;
+}
+
+.rd-heat-legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  justify-content: flex-end;
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  margin-top: 6px;
+}
+.rd-heat-legend span { margin: 0 3px; }
+.rd-heat-legend .sw {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  vertical-align: middle;
+}
+
+/* Tag Bar */
+.rd-tag-bar-inner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.rd-tag-bar-label {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  display: inline-flex;
+  align-items: center;
+}
+.rd-tag-chips-wrap {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.rd-tag-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border-radius: 999px;
+  background: var(--panel-ghost);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.rd-tag-filter-chip:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+.rd-tag-filter-chip.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.rd-tag-filter-chip .tag-cnt {
+  font-size: 0.66rem;
+  opacity: 0.8;
+}
+.rd-tag-filter-chip.clear {
+  color: var(--red, #ef4444);
+  border-color: color-mix(in srgb, var(--red, #ef4444) 40%, transparent);
+  background: color-mix(in srgb, var(--red, #ef4444) 10%, transparent);
+}
+
+/* Card Differentiation (Books, Theses, Papers) */
+.rd-node-card.is-book, .rd-node-card.book {
+  width: 170px;
+  min-height: 230px;
+  border-left: 5px solid #a78bfa;
+  background: linear-gradient(145deg, var(--card, var(--surface)) 0%, var(--surface) 100%);
+  box-shadow: 4px 6px 20px rgba(0, 0, 0, 0.35), inset 2px 0 4px rgba(255, 255, 255, 0.06);
+}
+.rd-node-card.is-book .rd-node-spine {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 7px;
+  background: linear-gradient(90deg, rgba(0,0,0,0.25), transparent);
+  pointer-events: none;
+}
+.rd-node-card.is-thesis, .rd-node-card.thesis {
+  border-left: 4px solid var(--green);
+  box-shadow: 3px 5px 18px rgba(0, 0, 0, 0.3), inset 0 0 0 1px color-mix(in srgb, var(--green) 22%, transparent);
+}
+.rd-item-card.is-book {
+  border-left: 5px solid #a78bfa !important;
+  background: linear-gradient(145deg, color-mix(in srgb, #a78bfa 7%, var(--card)) 0%, var(--surface) 100%);
+}
+.rd-item-card.is-thesis {
+  border-left: 4px solid var(--green) !important;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--green) 7%, var(--card)) 0%, var(--surface) 100%);
+}
+/* Book spine element (list cards): the markup renders .rd-card-spine for
+   books — these rules give it the leather-spine shading from the
+   Standalone/test.html reference. */
+.rd-item-card .rd-card-spine {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 7px;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.30), rgba(255, 255, 255, 0.07) 55%, rgba(0, 0, 0, 0.16));
+  pointer-events: none;
+}
+
+/* Local Path Chip & Indicator */
+.node-local-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  color: var(--accent);
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.12s ease;
+}
+.node-local-chip:hover {
+  transform: scale(1.15);
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+}
+.node-local-chip svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Timeline View Stem Lines & Milestone Dots */
+.rd-tl-stem-line {
+  pointer-events: none;
+  transition: stroke 0.15s ease;
+}
+.rd-tl-milestone-dot, .rd-tl-stem-dot {
+  pointer-events: auto;
+  cursor: pointer;
+  transition: transform 0.15s ease, r 0.15s ease;
+}
+.rd-tl-milestone-dot:hover, .rd-tl-stem-dot:hover {
+  r: 6px;
 }
 `;
 }

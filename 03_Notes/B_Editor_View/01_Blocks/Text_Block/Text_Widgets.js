@@ -177,6 +177,40 @@ export const createLiveWidget = (type, raw, contentHtml = '', options = {}) => {
     span.setAttribute('data-eq-target', norm);
     span.setAttribute('data-eq-block', entry ? (entry.blockId || '') : '');
     span.innerHTML = displayLabel;
+  } else if (type === 'littex') {
+    // Inert LaTeX token outside math (\fig/\eq/\href/\url only function inside $...$)
+    span.className = `live-widget live-littex font-mono text-[11px] text-[var(--text-dim)] opacity-75 select-text align-middle break-all`;
+    span.title = 'Only works inside $...$ math — wrap it: $' + (raw || '') + '$';
+    span.innerHTML = escapeHtml(raw || contentHtml || '');
+  } else if (type === 'href' || type === 'url') {
+    // \href{url}{text} / \url{url} — external hyperlink (Overleaf-style), parsed from the raw token
+    let url = '';
+    let display = '';
+    if (type === 'href') {
+      const m = /^\s*\\href\{([^}]*)\}\{([\s\S]*)\}\s*$/.exec(raw || '');
+      url = m ? m[1].trim() : '';
+      display = (m && m[2]) ? m[2] : (contentHtml || url);
+    } else {
+      const m = /^\s*\\url\{([^}]*)\}\s*$/.exec(raw || '');
+      url = m ? m[1].trim() : (contentHtml || '').trim();
+      display = url;
+    }
+    // Scheme allow-list: bare domains get https:// prefixed, unknown schemes are neutralized
+    const safe = /^(https?:\/\/|mailto:|#|\/)/i.test(url)
+      ? url
+      : (/^[a-zA-Z][a-zA-Z0-9+.\-]*:/.test(url) ? '#' : 'https://' + url);
+    span.className = `live-widget live-href note-href-citation font-semibold text-sky-400 hover:text-sky-300 underline decoration-sky-500/60 decoration-dotted hover:decoration-solid transition-colors inline-flex items-center align-middle gap-0.5 cursor-pointer select-text${safe === '#' ? ' opacity-60' : ''}`;
+    span.setAttribute('data-href-url', safe);
+    span.title = safe === '#' ? 'Unsupported URL scheme' : safe;
+    if (safe === '#') {
+      span.innerHTML = `[${escapeHtml(display || 'link')}]`;
+    } else {
+      span.innerHTML = escapeHtml(display || safe);
+      span.addEventListener('click', (e) => {
+        e.stopPropagation();
+        window.open(safe, '_blank', 'noopener');
+      });
+    }
   } else if (type === 'cite') {
     // Bibliography citation \cite{key} — label per NotesState.citationStyle + numbering map
     const { parts, missing } = resolveCitationLabels(contentHtml || '');

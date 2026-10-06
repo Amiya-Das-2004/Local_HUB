@@ -37,11 +37,11 @@ export function GetHelpPanelHTML() {
         </li>
         <li>
           <span class="rd-help-step-n">2</span>
-          <div><b>Four linked views</b><span><span class="keycap">1</span>–<span class="keycap">4</span> switch List · Timeline · Map · Group. Every view shows the same library.</span></div>
+          <div><b>Three linked views</b><span><span class="keycap">1</span>–<span class="keycap">3</span> switch List · Timeline · Map. Every view shows the same library.</span></div>
         </li>
         <li>
           <span class="rd-help-step-n">3</span>
-          <div><b>Arrange &amp; connect</b><span>Drag cards anywhere on Timeline / Map / Group. <b>Shift-drag</b> selects many (bulk bar appears) — or <b>Ctrl-click</b> cards one by one; in List, tick the <b>checkboxes</b> or hit the <b>☑</b> on a section header to select that whole group. Drag a selected card to move them all. In Map, drag from a card's edge dot to link ideas. Click a year bob to filter. <b>F</b> fits everything in view; the <b>minimap</b> (bottom-right, <b>M</b>) is a drag-to-navigate overview — <b>click a dot</b> to jump straight to that card (Ctrl-click selects it), and drag past its edge to keep flying.</span></div>
+          <div><b>Arrange &amp; connect</b><span>Drag cards anywhere on Timeline / Map. <b>Shift-drag</b> selects many (bulk bar appears) — or <b>Ctrl-click</b> cards one by one; in List, tick the <b>checkboxes</b> or hit the <b>☑</b> on a section header to select that whole group. Drag a selected card to move them all. In Map, drag from a card's edge dot to link ideas. Click a year bob to filter. <b>F</b> fits everything in view; the <b>minimap</b> (bottom-right, <b>M</b>) is a drag-to-navigate overview — <b>click a dot</b> to jump straight to that card (Ctrl-click selects it), and drag past its edge to keep flying.</span></div>
         </li>
         <li>
           <span class="rd-help-step-n">4</span>
@@ -135,9 +135,9 @@ export function PaletteActions() {
       });
     }
   }
-  [['list', 'List'], ['timeline', 'Timeline'], ['map', 'Map'], ['group', 'Group']].forEach(([id, label], i) => {
+  [['list', 'List'], ['timeline', 'Timeline'], ['map', 'Map']].forEach(([id, label], i) => {
     acts.push({
-      icon: { list: 'list', timeline: 'clock', map: 'network', group: 'folder' }[id],
+      icon: { list: 'list', timeline: 'clock', map: 'network' }[id],
       label: 'Go to ' + label + ' tab',
       hint: String(i + 1),
       kbd: String(i + 1),
@@ -348,7 +348,7 @@ export function InitGlobalKeys() {
       OpenHealthModal('ALL');
       return;
     }
-    const tabIndex = { '1': 'list', '2': 'timeline', '3': 'map', '4': 'group' }[e.key];
+    const tabIndex = { '1': 'list', '2': 'timeline', '3': 'map' }[e.key]; /* group view was removed — key 4 intentionally unbound */
     if (tabIndex) {
       e.preventDefault();
       if (window.RDUI && typeof window.RDUI.SwitchTab === 'function') window.RDUI.SwitchTab(tabIndex);

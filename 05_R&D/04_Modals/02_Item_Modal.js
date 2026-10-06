@@ -137,6 +137,21 @@ export function GetItemModalHTML(mode, item) {
               <label>Tags <span style="opacity:.6">(comma separated)</span></label>
               <input type="text" class="form-control" id="rd-f-tags" placeholder="topology, SIMP, level-set" value="${esc((f.tags || []).join(', '))}" />
             </div>
+            <div class="form-group">
+              <label>Institution / University</label>
+              <input type="text" class="form-control" id="rd-f-institution" placeholder="For thesis or research labs" value="${esc(f.institution || '')}" />
+            </div>
+            <div class="form-group">
+              <label>Advisor / Supervisor</label>
+              <input type="text" class="form-control" id="rd-f-advisor" placeholder="Thesis supervisor" value="${esc(f.advisor || '')}" />
+            </div>
+            <div class="form-group span-2">
+              <label>Local Hard Drive Folder or File Path <span style="opacity:.6">(double click card to open/copy)</span></label>
+              <div class="rd-inline-row" style="display:flex;gap:6px;">
+                <input type="text" class="form-control" id="rd-f-localpath" placeholder="e.g. C:\\Books\\Optimization.pdf or /home/Amiya/Documents/Books/..." value="${esc(f.localPath || '')}" />
+                <button type="button" class="ghost-btn sm" id="rd-browse-local-btn" title="Pick local file/folder">${ICONS.folder} Browse</button>
+              </div>
+            </div>
             <div class="form-group span-2">
               <label>Group / Cluster</label>
               <select class="form-control" id="rd-f-group">${groupOptions}</select>
@@ -178,6 +193,28 @@ export function OpenItemModal(mode, itemId, prefill) {
   if (!item && prefill && prefill.doi) {
     FetchDoiIntoModal();
   }
+  const browseBtn = document.getElementById('rd-browse-local-btn');
+  if (browseBtn) {
+    browseBtn.addEventListener('click', async () => {
+      try {
+        if (typeof window.showOpenFilePicker === 'function') {
+          const [handle] = await window.showOpenFilePicker();
+          if (handle && handle.name) {
+            const pathInp = document.getElementById('rd-f-localpath');
+            if (pathInp) pathInp.value = handle.name;
+          }
+        } else if (typeof window.showDirectoryPicker === 'function') {
+          const dirHandle = await window.showDirectoryPicker();
+          if (dirHandle && dirHandle.name) {
+            const pathInp = document.getElementById('rd-f-localpath');
+            if (pathInp) pathInp.value = dirHandle.name;
+          }
+        } else {
+          ShowToast('info', 'Local Path', 'Paste the full path to your local folder/file into the input field.');
+        }
+      } catch (e) { /* cancelled */ }
+    });
+  }
 }
 
 export function CloseItemModal() {
@@ -207,6 +244,9 @@ export function FillModalFields(fields) {
   set('rd-f-publisher', fields.publisher || '');
   set('rd-f-doi', fields.doi || '');
   set('rd-f-tags', (fields.tags || []).join(', '));
+  set('rd-f-institution', fields.institution || '');
+  set('rd-f-advisor', fields.advisor || '');
+  set('rd-f-localpath', fields.localPath || '');
   set('rd-f-progress', (typeof fields.progress === 'number' ? fields.progress : 0));
   const pv = document.getElementById('rd-progress-val');
   if (pv) pv.textContent = (fields.progress || 0) + '%';
@@ -284,6 +324,9 @@ export function CollectModalFields() {
     year: val('rd-f-year') ? Number(val('rd-f-year')) : null,
     doi: val('rd-f-doi'),
     tags,
+    institution: val('rd-f-institution'),
+    advisor: val('rd-f-advisor'),
+    localPath: val('rd-f-localpath'),
     groupId: val('rd-f-group') || null
   };
 }

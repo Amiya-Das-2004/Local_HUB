@@ -50,7 +50,9 @@ const LOGO_VARIANTS = {
   notes: {
     title: 'Local <span style="color:#3db63f;">HUB</span>',
     subtitle: 'personal notes',
-    accent: '#3db63f',
+    accent: '#2b8a2d',
+    markColor: '#3db63f',
+    markHover: '#2b8a2d',
     // SWAP ARTWORK: placeholder open-book mark (matches the NOTES orb color)
     markSvg: `
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

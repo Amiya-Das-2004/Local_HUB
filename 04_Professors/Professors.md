@@ -25,6 +25,12 @@ Professors/
 │   ├── 03_Theme_Toggle.js
 │   └── 04_Footer.js
 │
+├── 06_Tab_Professors/                ← isolated tab shell (blueprint pattern, 2026-10-03)
+│   ├── Professor.html                ← tab shell moved here from the module root
+│   ├── Tab_Save_Handler.js           ← header Save → compiles this tab into one standalone HTML
+│   ├── Tab_Logo_Handler.js           ← brand click stays inside the isolated tab
+│   └── Tab_Import_Export_Handler.js  ← header Import/Export → Professors_DATA.json (envelope-resilient)
+│
 ├── 02_Dashboard/                     ← widgets above the list
 │   ├── 01_Stats_Bar.js
 │   ├── 02_Resume_Section.js
@@ -46,11 +52,40 @@ Professors/
 │   ├── 08_Paste_Import_Modal.js
 │   └── 09_Shortcuts_Modal.js
 │
-└── 05_Data_IO/
-    ├── 01_Save_Button.js             ← self-saving standalone Professor.html (embeds the
-    │                                    pristine proff.html as PROFF_TEMPLATE)
-    ├── 02_Export.js
-    └── 03_Import.js
+├── 05_Data_IO/
+│   ├── 01_Save_Button.js             ← core self-saving standalone (embeds the pristine
+│   │                                    proff.html as PROFF_TEMPLATE); still active in the
+│   │                                    master app — inside the tab shell the Tab_Save_Handler
+│   │                                    override wins
+│   ├── 02_Export.js
+│   └── 03_Import.js
+│
+└── 06_Tab_Professors/
+    ├── Professor.html                ← isolated tab shell (see Wiring above)
+    ├── Tab_Save_Handler.js           ← self-contained per-tab standalone builder (NOT in the
+    │                                    all-in-one bundler lists; same pattern as Bookmarks/Notes).
+    │                                    `SaveProfessorsStandalone()` clones the document, syncs the
+    │                                    #ProfessorsData (← window.ProfessorsState / 'profftrack:v1')
+    │                                    and #PapersData (← window.PapersState / 'PapersData_Local_Cache')
+    │                                    vaults into the clone, bundles sharedComponentFiles
+    │                                    (07_Blob_Store, 08_Research_Library, 09_Icon_Button) +
+    │                                    the three tab handlers + all 27 professor modules into the
+    │                                    boot script, and downloads `Professor.html`. Inside an
+    │                                    already-standalone (`__IS_STANDALONE__`) it re-emits itself
+    │                                    with fresh vault data. `InitTabSaveOverride()` clone-swaps
+    │                                    #saveBtn after init, so this wins over the core
+    │                                    PROFF_TEMPLATE saver inside the tab shell only.
+    ├── Tab_Logo_Handler.js           ← `InitTabLogoOverride()` clone-swaps `.site-header .brand`;
+    │                                    clicking it stays inside the tab (clears the hash).
+    └── Tab_Import_Export_Handler.js  ← `TriggerTabExport()` downloads `Professors_DATA.json`
+                                         (live state mirror → vault → localStorage fallback).
+                                         `TriggerTabImport()` is envelope-resilient (extracts the
+                                         `Professors` slice from a full `Local_HUB_DATA.json`, or
+                                         accepts a direct library JSON), replaces the library via
+                                         vault + `profftrack:v1` + mirror, then reloads.
+                                         `InitTabImportExportOverride()` clone-swaps #importBtn /
+                                         #exportBtn; the footer's core merge/CSV/paste flows are
+                                         left untouched.
 ```
 
 ## Wiring (connected 2026-09-30)
@@ -58,10 +93,10 @@ Professors/
 - **Data vault**: `00_State.loadState()` reads `<script type="application/json" id="ProfessorsData">` first, then falls back to the original `#app-data` id, then compares against `localStorage['profftrack:v1']` (same store key as proff.html) and keeps whichever is newer. `persist()` writes localStorage, mirrors the live library to `window.ProfessorsState` (the LocalHUB Save button's vault-sync candidate key), and syncs the vault tag when present.
 - **Entry**: `Professors.js → initProfessorsApp()` mounts `<div id="ProfessorsApp">` — inside the shell's `#root` when present, else on `<body>` — with the full page skeleton (header + 5 content sections + footer + 9 modals + toast + back-to-top), runs every `Init*` binder, then boots exactly like proff.html (loadState → sanitizeIds → theme → `ui.sort` from select → render).
 - **Index.html (DONE)**: three touch points —
-  1. `LandingPageData` orb: `{ "Name": "PROFESSORS", "Url": "#Professors", "PageUrl": "04_Professors/Professor.html", "Color": 1013358 }` (clicking the orb opens the standalone page directly, same as BOOKMARK/NOTES; `01_Landing_Page/03_Orbs.js` handles that via `PageUrl`)
+  1. `LandingPageData` orb: `{ "Name": "PROFESSORS", "Url": "#Professors", "PageUrl": "04_Professors/06_Tab_Professors/Professor.html", "Color": 1013358 }` (clicking the orb opens the tab shell directly, same as BOOKMARK/NOTES; `01_Landing_Page/03_Orbs.js` handles that via `PageUrl`)
   2. Vault tag `<script type="application/json" id="ProfessorsData">` in `<head>`
   3. Route in `handleRoute()`: `#professors` → `import('./04_Professors/Professors.js')` → `mod.initProfessorsApp()`
-- **Standalone `04_Professors/Professor.html` (DONE)**: LocalHUB tab-page shell (same pattern as Notes.html / Bookmarks.html) — LocalHUB favicon + title, `window.__LOCALHUB_PAGE__ = 'professors'`, `window.__LOCALHUB_HUB_URL__ = '../Index.html'`, the `#ProfessorsData` vault, `<div id="root">` and a module boot script that clears `#root` and calls `initProfessorsApp()`. Open it directly for tab-only access.
+- **Standalone `04_Professors/06_Tab_Professors/Professor.html` (DONE, blueprint-aligned 2026-10-03)**: LocalHUB tab-page shell following the exact `01_Tab_Bookmarks/` / `Tab_Notes/` pattern — LocalHUB favicon + title, `window.__LOCALHUB_PAGE__ = 'professors'` (no `__LOCALHUB_HUB_URL__`; the brand click is owned by `Tab_Logo_Handler.js`), the shared `#PapersData` vault + the `#ProfessorsData` vault, `<div id="root">` and a module boot script that clears `#root`, calls `initProfessorsApp()` (importing `../Professors.js`), then boots the three per-tab overrides (`InitTabSaveOverride` → `InitTabLogoOverride` → `InitTabImportExportOverride`). Re-runs on hashchange. Open it directly for tab-only access; `Index.html`'s `LandingPageData` orb points to this path.
 - **All-in-one bundle**: `00_Components/05_Save_Button.js` lists `professorFiles` (all 27 modules), bundles them in landing mode into `LoadProfessorsPage()`, and the bundled router handles `#professors`. `window.ProfessorsState` (set in `persist()`) is the vault-sync key `syncAllStatesToDOM()` picks up, so a saved `Local_HUB.html` carries the library.
 - **Self-save from anywhere**: the ProffTrack **Save & Download** button (and Ctrl/Cmd+S) regenerates the original self-contained `proff.html` (with current data) from the embedded `PROFF_TEMPLATE`, so the downloaded file re-saves itself anywhere, exactly like the original.
 
@@ -127,20 +162,20 @@ Professors/
 | :--- | :--- | :--- | :--- |
 | `03_Seed_Data.js` | `KNOWN_COLLEGES` | 1399 - 1435 | Approximate QS ranking table (36 colleges) used only for auto-fill suggestions. |
 | | `matchCollege(input)` | 1602 - 1632 | College auto-fill: existing library wins, then exact/alias/substring match against KNOWN_COLLEGES. Returns `{ name, rank, source }`. |
-| | `seedSamples()` | 1539 - 1584 | 4-professor / 6-paper sample library (Madry, Manning, Ré, Bengio) with statuses, journal entries and re-reads. |
+| `03_Seed_Data.js` | `seedSamples()` | 1539 - 1584 (adapted) | 4-professor / 6-paper sample library (Madry, Manning, Ré, Bengio) with statuses, journal entries and re-reads; carries `collegeLogo` URLs (logo.clearbit.com) for the proff.html-style card heads. |
 
 ## 01_HTML_Page/01_Header.js
 
 | File | Functions | Source (proff.html) | Description |
 | :--- | :--- | :--- | :--- |
-| `01_Header.js` | `GetHeaderHTML()` | 833 - 902 | Site header markup: brand, theme toggle, Save & Download, Add Professor, and the toolbar row (search, sort, status, favorites, expand-all, compare, journal). |
-| | `InitHeader()` | 3660, 3696 - 3703 | Binds Add-Professor button and back-to-top; window scroll listener (bound once, live queries) toggles `.scrolled` header shadow + scroll-top visibility. |
+| `01_Header.js` | `GetHeaderHTML()` | 833 - 902 (layout reformed 2026-10-03) | Site header markup, two rows only: Row 1 = bare 36px scholar-cap brand mark (no button box) + ProfessorTrack title + flat actions **Import → Export → Save → Theme**; Row 2 (`.pt-row2` command bar) = chart/dashboard toggle → sort select → search bar → Add Professor. The global-nav cluster, the io dropdown and the old row 3 (status filter, favorites, expand-all, compare, journal) were removed. |
+| | `InitHeader()` | 3660, 3696 - 3703 (adapted) | Binds Add-Professor, Import (`#importBtn` → clicks footer's `#importJsonBtn`), Export (`#exportBtn` → clicks footer's `#exportJsonBtn`), chart-toggle dashboard hide/show, brand link → hub; back-to-top + window scroll listener (bound once, live queries) toggling `.scrolled` header shadow + scroll-top visibility. |
 
 ## 01_HTML_Page/02_Toolbar.js
 
 | File | Functions | Source (proff.html) | Description |
 | :--- | :--- | :--- | :--- |
-| `02_Toolbar.js` | `InitToolbar()` | 3659 - 3694, 2526 - 2534 | Binds search input (live filter), sort select, status filter (full re-render), favorites toggle, expand/collapse-all, Compare button, Journal button, and the per-professor paper-sort `change` delegation on `#profList`. |
+| `02_Toolbar.js` | `InitToolbar()` | 3659 - 3694, 2526 - 2534 (adapted) | Binds search input (live filter), sort select (now in the command bar) and the per-professor paper-sort `change` delegation on `#profList`. The row-3 bindings (status filter, favorites, expand/collapse-all, Compare, Journal) are kept but **null-guarded** — those controls were removed from the header on 2026-10-03, so the guards prevent runtime errors and allow re-wiring later. |
 
 ## 01_HTML_Page/03_Theme_Toggle.js
 
@@ -211,7 +246,7 @@ Professors/
 | | `collegeGroupHTML(...)` | 1969 - 1998 | Collapsible college header: name, best QS pill, professor/paper counts, read/reading/wishlist mini status bar. |
 | | `paperRowHTML(paper, prof)` | 1999 - 2029 | Collapsed paper row: icon, title, meta (year, venue, stars, status pill, dates, re-read/journal counts). |
 | | `paperDetailHTML(paper, prof)` | 2030 - 2082 | Expanded paper detail: info cells, tags, summary/notes blocks, journal timeline with per-entry delete, and the action row (download paper/attachment/details, copy citation/BibTeX buttons, add journal entry, log re-read, edit, delete). |
-| | `profCardHTML(p)` | 2083 - 2145 | Professor card: grip (drag), avatar, name/dept/college, QS + count chips, and when open: contact links, area chips, bio, action row (add paper, bulk add, papers list, BibTeX, copy JSON, favorite, edit, delete) and the papers block with filter + sort. |
+| | `profCardHTML(p)` | 2083 - 2145 (reworked 2026-10-03) | Professor card: grip (drag), **big 64px portrait** (proff.html style — a blank dashed circle when no photo was dropped/pasted/linked, no initials fallback), name/dept/college, QS + count chips, and the **college logo on the far right** (`p.collegeLogo`, 76×54 contained box; self-removes on load error). When open: contact links, area chips, bio, action row, papers block. |
 | | `renderEmptyState()` | 2211 - 2227 | Empty-library state with Add-first-professor and Load-sample buttons. |
 | | `renderList()` | 2228 - 2257 | Main list render: college-grouped (QS mode) or flat; toggles `.grouped`; no-match state; updates keyboard focus. |
 
@@ -236,9 +271,10 @@ Professors/
 
 | File | Functions | Source (proff.html) | Description |
 | :--- | :--- | :--- | :--- |
-| `01_Modal_Core.js` | `openModal(id)` | 2322 - 2325 | Unhides a modal + locks body scroll. |
+| `01_Modal_Core.js` | `openModal(id)` | 2322 - 2325 (adapted) | Unhides a modal + locks body scroll; **resets any drag offset** so the dialog re-centers. |
 | | `closeModal(el)` | 2326 - 2329 | Hides a modal, unlocks scroll when none remain. |
 | | `closeAllModals()` | 2330 - 2338 | Hides + form-resets every modal, clears the college hint. |
+| | `bindModalDrag(m)` (private, added 2026-10-03) | — (new) | Makes every modal **draggable by its header bar** (pointer events + `setPointerCapture`, viewport-clamped transform stored on `.modal-card` dataset; button/input targets inside the header are excluded from the grab). |
 | | `isTyping(el)` (private) | 2346 - 2350 | True for focused input/textarea/select/contentEditable. |
 | | `modalOpen()` (private) | 2351 | Any modal visible? |
 | | `InitModalCore()` | 2339 - 2345, 2352 - 2371 | Binds backdrop/close/cancel on every modal (each mount); binds the global keydown once: Esc (close / clear kb selection), Ctrl/⌘+S (save website), `/` (search), `?` (help), `t` (theme), `c` (compare), `f` (favorite), `j/k` (+Shift reorder), `o` (open). |
@@ -248,9 +284,10 @@ Professors/
 
 | File | Functions | Source (proff.html) | Description |
 | :--- | :--- | :--- | :--- |
-| `02_Professor_Modal.js` | `GetProfessorModalHTML()` | 946 - 1010 | Add/Edit Professor form markup (name, title, department, college, QS rank, areas, email, website, photo, bio). |
-| | `openProfModal(prof)` | 2538 - 2560 | Prefills for edit or blanks for add; focuses name. (`editingProfId` kept module-private.) |
-| | `InitProfessorModal()` | 2561 - 2602 | College `change` → `matchCollege` auto-fill hint (name standardization + QS auto-fill); form submit → validation, college match, `upsertProf`, expand + re-render + toast. |
+| `02_Professor_Modal.js` | `GetProfessorModalHTML()` | 946 - 1010 (reworked 2026-10-03) | Add/Edit Professor form markup: **media capture row** (Photo + College logo tiles — click / drag-drop / paste, data URL ≤ 5 MB, with live preview + clear button), name, title, department, college, QS rank, areas, email, website, photo/logo URL inputs, bio, identity color. Example placeholders removed (2026-10-03). |
+| | `openProfModal(prof)` | 2538 - 2560 (adapted) | Prefills for edit (incl. photo/`collegeLogo` + media previews) or blanks for add; focuses name. (`editingProfId` kept module-private.) |
+| | `updateMediaUI(kind)` / `captureMediaFile(kind, file)` (private, added 2026-10-03) | — (new) | Tile ↔ URL-input sync and image file → data-URL capture (size/type guarded) for the photo and college-logo tiles. Paste is bound on the whole dialog (image items only; text pastes untouched). |
+| | `InitProfessorModal()` | 2561 - 2602 (adapted) | Color picker build; media tile wiring (click/drag/drop/paste/clear/URL-sync); college `change` → `matchCollege` auto-fill hint; form submit → validation, college match, `upsertProf` (now incl. `collegeLogo`), expand + re-render + toast. |
 
 ## 04_Modals/03_Paper_Modal.js
 
@@ -294,7 +331,7 @@ Professors/
 | | `openCompare()` | 3368 - 3373 | Empty-library guard (opens Add Professor instead), fills, opens, renders. |
 | | `starsText / padTxt / cmpPaperLines` (private) | 3384 - 3403 | Plain-text comparison builders. |
 | | `compareText()` (private) | 3404 - 3440 | Formatted .txt comparison document. |
-| | `InitCompareModal()` | 3374 - 3382, 3441 - 3447 | Binds Compare button, A/B change, swap, and .txt export. |
+| | `InitCompareModal()` | 3374 - 3382, 3441 - 3447 (adapted) | Binds the toolbar Compare button (**null-guarded** — control removed from the header 2026-10-03; the `c` keyboard shortcut still opens it), A/B change, swap, and .txt export. |
 
 ## 04_Modals/07_Bulk_Add_Modal.js
 
@@ -372,9 +409,11 @@ Professors/
 5. **`loadState()` reads `#ProfessorsData` first**, falling back to the original `#app-data` id.
 6. **`cmpAvatar()` moved from the compare section to 01_Utils.js** — identical implementation; the resume list uses it too.
 7. **Save button emits from the embedded pristine template** instead of serializing the live DOM (impossible from modules); the saved file is byte-for-byte the original standalone app with fresh data, and current sort/status selections are carried into the markup as before.
-8. **Journal button wired** — `#journalBtn → openJournalBrowser()` had **no listener in proff.html** (dead button; its own tooltip promises the feature). This binding is the one intentional behavior addition; remove it in `01_HTML_Page/02_Toolbar.js` for 1:1 parity.
-9. **Brand link navigates to the hub** (01_Header.js) — in proff.html it is inert (`onclick="return false"`). The modular header sends it to `window.__LOCALHUB_HUB_URL__` when the shell sets one (Professor.html sets `../Index.html`), or clears the hash inside the Index SPA (→ landing). Saved proff.html keeps the original inert behaviour (its inline code has no such handler).
+8. **Journal button wired, then removed with row 3** — `#journalBtn → openJournalBrowser()` had **no listener in proff.html** (dead button; its own tooltip promised the feature) and was wired here as the one intentional behavior addition. In the 2026-10-03 header reform the whole row-3 utilities strip (status filter, favorites, expand-all, compare, journal) was removed from the UI by design; the binding survives in `01_HTML_Page/02_Toolbar.js` behind a null guard, so re-adding a button anywhere restores the feature. The reading-journal browser is currently reachable only by re-adding such a control (the advertised `n` shortcut remains unimplemented, for parity).
+9. **Brand link navigation** (01_Header.js) — in proff.html it is inert (`onclick="return false"`). Inside the Index.html SPA the modular header clears the hash (→ landing). The tab shell `06_Tab_Professors/Professor.html` no longer sets `__LOCALHUB_HUB_URL__`; there `Tab_Logo_Handler.js` clone-swaps the brand click so it stays inside the isolated tab. Saved proff.html keeps the original inert behaviour (its inline code has no such handler).
 10. **Mounts into `#root` when the shell provides one** (Professor.html / bundled Local_HUB.html), else creates `#ProfessorsApp` on `<body>`.
+11. **Header reform (2026-10-03, user-annotated request)** — the header was redesigned beyond proff.html: the scholar cap is a bare enlarged 36px SVG brand mark (no button box), the cross-tab global-nav cluster is gone from this tab, the io dropdown became flat **Import** / **Export** icon buttons (delegating to the footer's wired `#importJsonBtn` / `#exportJsonBtn`, so JSON is the header's default format and CSV stays footer-only), actions ordered Import → Export → Save → Theme, and the sort select moved into the `.pt-row2` command bar (toggle → sort → search → add professor) as concentric pills. Row 3 was deleted; its controls are guarded in `InitToolbar`/`InitProfessorModal`-adjacent binders (see adaptations 8 and the `InitCompareModal` / hash-re-entry notes) so nothing crashes and any control can be re-wired later. Keyboard shortcuts (`c` compare, `f` favorite) still work.
+12. **Media + drag redesign (2026-10-03, user request referencing the proff.html design sample)** — professors gain a `collegeLogo` field (data URL or link) alongside `photo`; both are captured in the Add/Edit dialog via click / drag-drop / paste tiles (≤ 5 MB data URLs travel inside the saved HTML and the tab standalone). Card heads show a big 64px portrait — blank when no photo exists, by design (the initials fallback remains only in compare/resume via `cmpAvatar`) — with the college logo on the far right. All modals are draggable by their headers. The sample `proff.html` design file the user dropped into `04_Professors/` is a **reference only** — it is not part of the app or any bundler list.
 
 ## Known dead controls (present in proff.html, kept as-is)
 

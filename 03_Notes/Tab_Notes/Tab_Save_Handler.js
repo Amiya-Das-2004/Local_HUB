@@ -118,11 +118,11 @@ function clearAllTabLocalCaches() {
 }
 
 // Fetches one modular JS file and strips ES module syntax for flat embedding.
-// Resolves paths against the project root (this file sits one level deep).
+// Resolves paths against the project root (this file sits two levels deep).
 async function bundleTabFile(filePath) {
   try {
     const cleanPath = filePath.endsWith('.js') ? filePath : filePath + '.js';
-    const resolvedUrl = new URL('../' + cleanPath, import.meta.url).href;
+    const resolvedUrl = new URL('../../' + cleanPath, import.meta.url).href;
     const res = await fetch(resolvedUrl);
     if (!res.ok) {
       console.warn(`[TabBundler] Skipping unavailable file: ${cleanPath} (${res.status})`);
@@ -162,9 +162,9 @@ const sharedComponentFiles = [
 ];
 
 const tabHandlerFiles = [
-  '03_Notes/Tab_Save_Handler.js',
-  '03_Notes/Tab_Logo_Handler.js',
-  '03_Notes/Tab_Import_Export_Handler.js'
+  '03_Notes/Tab_Notes/Tab_Save_Handler.js',
+  '03_Notes/Tab_Notes/Tab_Logo_Handler.js',
+  '03_Notes/Tab_Notes/Tab_Import_Export_Handler.js'
 ];
 
 const tabModuleFiles = [
@@ -176,7 +176,7 @@ const tabModuleFiles = [
   '03_Notes/Writing_Engine/Block_Engine.js',
   '03_Notes/Writing_Engine/Numbering_Engine.js',
   '03_Notes/Writing_Engine/Math_Renderer.js',
-  '03_Notes/Writing_Engine/Tikz_Renderer.js',
+  '03_Notes/Writing_Engine/Tikz_Engine/Tikz_Renderer.js',
   '03_Notes/Writing_Engine/Code_Highlighter.js',
   '03_Notes/Writing_Engine/Link_Parser.js',
   '03_Notes/Writing_Engine/Highlight_Sync.js',
@@ -217,6 +217,7 @@ const tabModuleFiles = [
   '03_Notes/B_Editor_View/03_Floating_ToolBar/04_Macros_Modal.js',
   '03_Notes/B_Editor_View/03_Floating_ToolBar/05_Citation_Style.js',
   '03_Notes/B_Editor_View/03_Floating_ToolBar/06_Equation_Numbering.js',
+      '03_Notes/B_Editor_View/03_Floating_ToolBar/07_Figure_Numbering.js',
   '03_Notes/B_Editor_View/02_Floating_Toolbar.js',
   '03_Notes/B_Editor_View/03_Study_View.js',
   '03_Notes/B_Editor_View/04_LaTeX_Editor.js',

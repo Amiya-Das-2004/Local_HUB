@@ -60,6 +60,8 @@ export function initNotesApp() {
         --radius: 12px;
         --radius-lg: 16px;
         --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        --notes-header-height: 74px;
+        --notes-toolbar-height: 74px;
       }
 
       :root[data-theme="light"] {
@@ -118,14 +120,35 @@ export function initNotesApp() {
       }
 
       @media (max-width: 600px) {
+        :root {
+          --notes-header-height: 66px;
+          --notes-toolbar-height: 70px;
+        }
         .notes-main-content {
           padding: 82px 12px 40px;
         }
       }
 
       @media (max-width: 440px) {
+        :root {
+          --notes-header-height: 60px;
+          --notes-toolbar-height: 66px;
+        }
         .notes-main-content {
           padding: 72px 8px 40px;
+        }
+      }
+
+      @media (max-width: 380px) {
+        :root {
+          --notes-toolbar-height: 104px;
+        }
+      }
+
+      @media (max-width: 320px) {
+        :root {
+          --notes-header-height: 56px;
+          --notes-toolbar-height: 104px;
         }
       }
 

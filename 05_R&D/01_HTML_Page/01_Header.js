@@ -4,18 +4,32 @@
 // chip, and SVG-only action controls with tooltips (UI spec §16/25).
 // ============================================================
 
-import { esc, ICONS } from '../01_Utils.js';
+import { ICONS } from '../01_Utils.js';
 import { GetAllItems, VisibleItems, QueueItems } from '../00_State.js';
+import { CurrentTab } from './02_Navbar.js';
 import { GlobalNavHTML, EnsureIconButtonStyles } from '../../00_Components/09_Icon_Button.js';
 
 export function GetHeaderHTML() {
   EnsureIconButtonStyles();
+  const cur = CurrentTab();
   return `
     <header class="rd-header">
       <div class="rd-header-inner">
         ${GlobalNavHTML({ active: 'rd', accent: '#8b6dff', cls: 'rd-global-nav' })}
         <span class="rd-count-chip" id="rd-header-count"></span>
         <div class="rd-header-actions">
+          <div class="rd-view-switcher" role="tablist" aria-label="View mode">
+            <button type="button" class="rd-view-btn ${cur === 'list' ? 'active' : ''}" data-action="switch-tab" data-tab="list" id="btnViewList" title="List view (1)" aria-label="List view">
+              ${ICONS.list}
+            </button>
+            <button type="button" class="rd-view-btn ${cur === 'timeline' ? 'active' : ''}" data-action="switch-tab" data-tab="timeline" id="btnViewTimeline" title="Timeline view (2)" aria-label="Timeline view">
+              ${ICONS.clock}
+            </button>
+            <button type="button" class="rd-view-btn ${cur === 'map' ? 'active' : ''}" data-action="switch-tab" data-tab="map" id="btnViewMap" title="Mind map view (3)" aria-label="Mind map view">
+              ${ICONS.network}
+            </button>
+          </div>
+          <span class="rd-header-sep" style="width:1px;height:20px;background:var(--border);margin:0 4px;opacity:0.6;"></span>
           <button class="icb-btn" data-action="toggle-queue" id="rd-queue-btn" data-tip="Reading queue (Q) — what to read next" aria-label="Reading queue">
             ${ICONS.queue}<span class="rd-queue-badge" id="rd-queue-badge" hidden></span>
           </button>
@@ -49,6 +63,13 @@ export function RenderHeader() {
     queueBadge.textContent = String(qCount);
     queueBadge.hidden = qCount === 0;
   }
+  const cur = CurrentTab();
+  const listBtn = document.getElementById('btnViewList');
+  if (listBtn) listBtn.classList.toggle('active', cur === 'list');
+  const tlBtn = document.getElementById('btnViewTimeline');
+  if (tlBtn) tlBtn.classList.toggle('active', cur === 'timeline');
+  const mapBtn = document.getElementById('btnViewMap');
+  if (mapBtn) mapBtn.classList.toggle('active', cur === 'map');
 }
 
 export function InitHeader() {

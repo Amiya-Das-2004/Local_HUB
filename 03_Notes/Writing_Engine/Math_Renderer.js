@@ -478,13 +478,34 @@ export function renderKatex(tex, isDisplayMode = false, noteContext = null) {
 
     const macros = getActiveKatexMacros(noteContext);
     try {
-      let rendered = window.katex.renderToString(cleanTex, {
+      // In-math \fig{tag} / \eq{name} citations → real links via trusted \href + \htmlData + \htmlClass
+      // (the delegated document click handlers key off note-fig-citation / note-eq-citation + data attrs).
+      let pre = cleanTex
+        .replace(/\\fig\{([a-zA-Z0-9_\-\.\:]+)\}/g, (m, rawTag) => {
+          const norm = String(rawTag).trim().toLowerCase();
+          const num = activeFigureTagMap.get(norm) ?? activeFigureTagMap.get(rawTag) ?? null;
+          if (num === null || num === undefined) return `\\text{[Fig. ${rawTag}]}`;
+          return `\\href{#fig-${num}}{\\htmlData{fig-target=${norm},fig-num=${num}}{\\htmlClass{note-fig-citation}{\\text{[Fig. ${num}]}}}}`;
+        })
+        .replace(/\\eq\{([a-zA-Z0-9_\-\.\:]+)\}/g, (m, rawTag) => {
+          const norm = String(rawTag).trim().toLowerCase();
+          const entry = activeEquationTagMap.get(norm) || null;
+          if (!entry) return `\\text{(${rawTag})}`;
+          return `\\href{#eq-${entry.blockId}}{\\htmlData{eq-block=${entry.blockId}}{\\htmlClass{note-eq-citation}{\\text{(${entry.label})}}}}`;
+        });
+      let rendered = window.katex.renderToString(pre, {
         displayMode: isDisplayMode,
         throwOnError: false,
         output: 'htmlAndMathml',
         macros: macros,
-        // \href/\url only with safe protocols — blanket `trust: true` would allow javascript: URLs from imported notes
-        trust: (context) => ['\\href', '\\url'].includes(context.command) && /^https?:\/\//i.test(context.url || '')
+        // \href/\url: https (and #-anchors for citations) only — blanket `trust: true` would
+        // allow javascript: URLs from imported notes. \htmlClass/\htmlData power \cancelto + citations.
+        trust: (context) => {
+          if (context.command === '\\htmlClass' || context.command === '\\htmlData') return true;
+          if (context.command === '\\href') return /^https?:\/\//i.test(context.url || '') || (context.url || '').startsWith('#');
+          if (context.command === '\\url') return /^https?:\/\//i.test(context.url || '');
+          return false;
+        }
       });
       rendered = postProcessKatexHtml(rendered);
       if (katexCache.size >= MAX_KATEX_CACHE) {
@@ -741,22 +762,8 @@ export function formatRichTextWithMath(rawText = '', options = {}) {
 function parseInlineMarkdownAndLatex(str) {
   const resolved = resolveThemeColors(str);
   let s = escapeHtml(resolved);
-  // LaTeX \fig{tagOrNumber} citation
-  s = s.replace(/\\fig\{([a-zA-Z0-9_\-\.\:]+)\}/g, (match, rawTag) => {
-    const norm = rawTag.trim().toLowerCase();
-    const resolvedNum = activeFigureTagMap.get(norm) ?? (activeFigureTagMap.get(rawTag) ?? null);
-    const displayLabel = resolvedNum !== null && resolvedNum !== undefined ? `Fig. ${resolvedNum}` : `Fig. ${escapeHtml(rawTag)}`;
-    return `<a class="note-fig-citation font-semibold text-purple-400 hover:text-purple-300 bg-purple-500/10 hover:bg-purple-500/20 px-1.5 py-0.5 rounded border border-purple-500/30 transition-colors inline-flex items-center gap-0.5 cursor-pointer select-none no-underline" href="#fig-${escapeHtml(norm)}" data-fig-target="${escapeHtml(norm)}" data-fig-num="${resolvedNum || ''}" title="Jump to ${displayLabel}">[${displayLabel}]</a>`;
-  });
-
-  // LaTeX \eq{name} or \eq{name:2} equation reference — label from computeEquationNumbers tag map
-  s = s.replace(/\\eq\{([a-zA-Z0-9_\-\.\:]+)\}/g, (match, rawTag) => {
-    const norm = rawTag.trim().toLowerCase();
-    const entry = activeEquationTagMap.get(norm) || null;
-    const displayLabel = entry ? `(${entry.label})` : `(?)`;
-    return `<a class="note-eq-citation font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 px-1.5 py-0.5 rounded border border-emerald-500/30 transition-colors inline-flex items-center gap-0.5 cursor-pointer select-none no-underline" href="#eq-${escapeHtml(norm)}" data-eq-target="${escapeHtml(norm)}" data-eq-block="${entry ? escapeHtml(entry.blockId) : ''}" title="Jump to equation ${displayLabel}">${displayLabel}</a>`;
-  });
-
+  // NOTE: \fig / \eq / \href / \url are deliberately NOT converted here — they only function
+  // inside $...$ inline math (renderKatex preprocessing). Bare occurrences stay literal text.
   // LaTeX \cite{key1,key2} bibliography citation (label per NotesState.citationStyle)
   s = s.replace(/\\cite\{([^}]*)\}/g, (match, keysRaw) => {
     const { parts, missing } = resolveCitationLabels(keysRaw);

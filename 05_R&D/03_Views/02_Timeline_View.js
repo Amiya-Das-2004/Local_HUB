@@ -554,25 +554,41 @@ export function GetNodeCardHTML(item, view) {
   const pos = (item.positions && item.positions[view]) || { x: 0, y: 0 };
   const group = item.groupId ? GetGroup(item.groupId) : null;
   const stripe = ItemStripeColor(item);
-  const meta = [item.journal || item.publisher || '', item.year ? String(item.year) : ''].filter(Boolean).join(' · ');
   const q = (state.rd.ui && state.rd.ui.search) || '';
+  const isBook = item.type === 'book';
+  const isThesis = item.type === 'thesis';
+
+  let metaText = '';
+  if (isBook) {
+    metaText = [item.publisher || '', item.year || ''].filter(Boolean).join(' · ');
+  } else if (isThesis) {
+    metaText = [item.institution || item.publisher || '', item.advisor ? 'Adv: ' + item.advisor : '', item.year || ''].filter(Boolean).join(' · ');
+  } else {
+    metaText = [item.journal || '', item.year ? String(item.year) : ''].filter(Boolean).join(' · ');
+  }
+
   return `
-    <article class="rd-node-card ${item.type} ${group ? '' : 'unassigned'} ${item.color ? 'colored' : ''} ${SelectedIds.has(item.id) ? 'selected' : ''}"
-             data-item-id="${item.id}" data-dblclick="open-notes" tabindex="0"
+    <article class="rd-node-card is-${item.type} ${item.type} ${group ? '' : 'unassigned'} ${item.color ? 'colored' : ''} ${SelectedIds.has(item.id) ? 'selected' : ''}"
+             data-item-id="${item.id}" data-action="node-click" data-dblclick="locate-local-file" tabindex="0"
              aria-label="${esc(item.title)} — ${TYPE_LABEL[item.type] || 'Paper'}, ${STATUS_LABEL[item.status] || 'Unread'}"
              style="left:${pos.x}px; top:${pos.y}px; ${stripe ? '--card-stripe:' + stripe : ''}">
-      ${(item.type === 'paper' || item.color) && stripe ? `<span class="accent-stripe" style="background:${stripe}"></span>` : ''}
+      ${isBook ? `<div class="rd-node-spine" aria-hidden="true"></div>` : ''}
+      ${(!isBook || item.color) && stripe ? `<span class="accent-stripe" style="background:${stripe}"></span>` : ''}
       <div class="node-head">
-        <span class="rd-type-badge ${item.type}">${TYPE_LABEL[item.type] || 'Paper'}</span>
-        ${item.color ? `<span class="node-color-dot" style="background:${item.color}" title="Custom colour — set in the details drawer"></span>` : ''}
+        <span class="rd-type-badge ${item.type}">
+          ${ICONS[TYPE_ICON[item.type] || 'file']}${TYPE_LABEL[item.type] || 'Paper'}
+        </span>
+        ${item.color ? `<span class="node-color-dot" style="background:${item.color}" title="Custom colour"></span>` : ''}
         ${item.starred ? `<span style="color:var(--yellow);display:flex;width:11px;">${ICONS.star}</span>` : ''}
       </div>
       <div class="node-body">
         <div class="node-title">${Hl(esc(item.title), q)}</div>
-        <div class="node-meta">${Hl(esc((item.authors || []).slice(0, 2).join('; ')) + ((item.authors || []).length > 2 ? ' et al.' : ''), q)}</div>
+        <div class="node-authors">${Hl(esc((item.authors || []).slice(0, 2).join('; ')) + ((item.authors || []).length > 2 ? ' et al.' : ''), q)}</div>
+        ${metaText ? `<div class="node-meta">${esc(metaText)}</div>` : ''}
       </div>
       <div class="node-foot">
         ${item.year ? `<span class="rd-year-badge">${item.year}</span>` : ''}
+        ${item.localPath ? `<button type="button" class="node-local-chip" data-action="locate-local-file" data-id="${item.id}" title="Local storage: ${esc(item.localPath)} — Double-click card or click icon to reveal in File Explorer">${ICONS.folderOpen}</button>` : ''}
         <span class="rd-status-pill ${item.status}" data-action="cycle-status" data-id="${item.id}" title="Cycle read status">
           <span class="rd-status-dot"></span>
         </span>
@@ -587,11 +603,67 @@ export function GetNodeCardHTML(item, view) {
       <div class="node-actions">
         <button class="rd-action-btn" data-action="open-drawer" data-id="${item.id}" title="Details, tags &amp; BibTeX">${ICONS.info}</button>
         <button class="rd-action-btn" data-action="copy-bibtex" data-id="${item.id}" title="Copy BibTeX">${ICONS.copy}</button>
+        ${item.localPath ? `<button class="rd-action-btn" data-action="locate-local-file" data-id="${item.id}" title="Locate in File Explorer">${ICONS.folderOpen}</button>` : ''}
         <button class="rd-action-btn" data-action="edit-item" data-id="${item.id}" title="Edit">${ICONS.edit}</button>
         <button class="rd-action-btn del" data-action="delete-item" data-id="${item.id}" title="Delete">${ICONS.trash}</button>
       </div>
     </article>
   `;
+}
+
+/* Real rendered timeline card sizes (CSS-driven, measured against the v2.0
+   card design) — the repel pass and the initial stacking must use these or
+   cards collide. Books: 170×230; papers/theses: 224 wide, up to ~205 tall
+   with tags/notes rows. */
+const TL_CARD_SIZE = {
+  book: { w: 170, h: 232 },
+  card: { w: 224, h: 205 }
+};
+function TlCardSize(it) {
+  return (it && it.type === 'book') ? TL_CARD_SIZE.book : TL_CARD_SIZE.card;
+}
+
+export function RepelTimelineCards(items, L) {
+  const PAD = 18;
+  for (let pass = 0; pass < 4; pass++) {
+    for (let i = 0; i < items.length; i++) {
+      const a = items[i];
+      if (!a.positions.timeline) continue;
+      const sa = TlCardSize(a);
+      const pa = a.positions.timeline;
+      const wa = sa.w;
+      const ha = sa.h;
+      for (let j = i + 1; j < items.length; j++) {
+        const b = items[j];
+        if (!b.positions.timeline) continue;
+        const sb = TlCardSize(b);
+        const pb = b.positions.timeline;
+        const wb = sb.w;
+        const hb = sb.h;
+
+        const overlapX = (pa.x + wa + PAD) > pb.x && (pb.x + wb + PAD) > pa.x;
+        const overlapY = (pa.y + ha + PAD) > pb.y && (pb.y + hb + PAD) > pa.y;
+        if (overlapX && overlapY) {
+          // Push vertically away from the axis to avoid collision
+          if ((pa.y < L.LINE_Y) !== (pb.y < L.LINE_Y)) {
+            // opposite sides: each moves further from the axis
+            if (pa.y < L.LINE_Y) { pa.y -= 24; } else { pa.y += 24; }
+            if (pb.y < L.LINE_Y) { pb.y -= 24; } else { pb.y += 24; }
+          } else if (pa.y < L.LINE_Y) {
+            // both above: pushing both equally never separates them — move the
+            // card farther from the axis up by the full overlap so the pair
+            // separates in a single pass (it can never cross the axis this way)
+            const overlap = Math.min(pa.y + ha, pb.y + hb) - Math.max(pa.y, pb.y);
+            if (pa.y <= pb.y) { pa.y -= overlap + PAD; } else { pb.y -= overlap + PAD; }
+          } else {
+            // both below: mirror logic — the card farther from the axis moves down
+            const overlap = Math.min(pa.y + ha, pb.y + hb) - Math.max(pa.y, pb.y);
+            if (pa.y >= pb.y) { pa.y += overlap + PAD; } else { pb.y += overlap + PAD; }
+          }
+        }
+      }
+    }
+  }
 }
 
 export function RenderTimeline() {
@@ -603,11 +675,37 @@ export function RenderTimeline() {
   const L = RD_LAYOUT.TL;
   const totalW = Math.max(900, L.X0 + cols.length * L.GAP);
 
+  const visIds = new Set(visible.map((v) => v.id));
+  const activeItems = GetAllItems().filter((it) => visIds.has(it.id));
+
+  // Initialize alternating positions above / below axis if needed
+  cols.forEach((col, ci) => {
+    const colX = L.X0 + ci * L.GAP;
+    col.items.forEach((it, ri) => {
+      if (!it.positions) it.positions = {};
+      if (!it.positions.timeline) {
+        const isAbove = (ci + ri) % 2 === 0;
+        const sz = TlCardSize(it);
+        const cardH = sz.h;
+        const cardW = sz.w;
+        const cardX = colX - cardW / 2 + 15;
+        const cardY = isAbove
+          ? (L.LINE_Y - cardH - 45 - ri * (cardH + 20))
+          : (L.LINE_Y + 45 + ri * (cardH + 20));
+        it.positions.timeline = { x: cardX, y: cardY };
+      }
+    });
+  });
+
+  // Repel overlapping cards so no two cards collide
+  RepelTimelineCards(activeItems, L);
+
   const axis = `<div class="rd-tl-axis" style="left:-1000px; width:${totalW + 2000}px; top:${L.LINE_Y - 2}px;"></div>`;
   const bands = cols.map((c, i) => {
     const x = L.X0 + i * L.GAP;
     return `<div class="rd-tl-yearband" style="left:${x}px;"></div>`;
   }).join('');
+
   const bobs = cols.map((c, i) => {
     const x = L.X0 + i * L.GAP;
     const label = c.year === '????' ? 'Unknown' : c.year;
@@ -621,10 +719,42 @@ export function RenderTimeline() {
         <span class="bob-year">${label}</span>
       </button>`;
   }).join('');
-  const visIds = new Set(visible.map((v) => v.id));
-  const cards = GetAllItems()
-    .filter((it) => visIds.has(it.id))
-    .map((it) => GetNodeCardHTML(it, 'timeline')).join('');
+
+  // Render orthogonal stems connecting cards to axis milestone ticks
+  let stemsSvg = '';
+  activeItems.forEach((it) => {
+    const p = it.positions.timeline;
+    if (!p) return;
+    const w = it.type === 'book' ? 170 : 248;
+    const h = it.type === 'book' ? 220 : 136;
+    const cardCenterX = p.x + w / 2;
+    const cardBottomY = p.y + h;
+    const cardTopY = p.y;
+    const yearStr = it.year ? String(it.year) : '????';
+    const colIdx = cols.findIndex((c) => String(c.year) === yearStr);
+    const colX = colIdx !== -1 ? (L.X0 + colIdx * L.GAP) : cardCenterX;
+    const color = it.color || (it.groupId ? (GetGroup(it.groupId) || {}).color : null) || 'var(--accent)';
+
+    let pathD = '';
+    if (cardBottomY <= L.LINE_Y) {
+      // Card is above timeline axis
+      pathD = `M ${colX} ${L.LINE_Y} L ${colX} ${cardBottomY + 14} L ${cardCenterX} ${cardBottomY + 14} L ${cardCenterX} ${cardBottomY}`;
+    } else if (cardTopY >= L.LINE_Y) {
+      // Card is below timeline axis
+      pathD = `M ${colX} ${L.LINE_Y} L ${colX} ${cardTopY - 14} L ${cardCenterX} ${cardTopY - 14} L ${cardCenterX} ${cardTopY}`;
+    } else {
+      // Card crosses axis
+      pathD = `M ${colX} ${L.LINE_Y} L ${cardCenterX} ${L.LINE_Y}`;
+    }
+    stemsSvg += `
+      <g class="rd-tl-stem-group" style="stroke:${color}; fill:${color};">
+        <circle cx="${colX}" cy="${L.LINE_Y}" r="4" class="rd-tl-stem-dot rd-tl-milestone-dot" />
+        <path d="${pathD}" class="rd-tl-stem-line" fill="none" stroke-width="2" stroke-dasharray="none" />
+      </g>
+    `;
+  });
+
+  const cards = activeItems.map((it) => GetNodeCardHTML(it, 'timeline')).join('');
 
   let nowMarker = '';
   const nowYear = new Date().getFullYear();
@@ -655,10 +785,20 @@ export function RenderTimeline() {
       </div>`;
   }
 
-  world.innerHTML = axis + bands + nowMarker + bobs + (cards || `
-    <div class="rd-canvas-empty-hint" style="left:${totalW / 2}px;">
-      ${ICONS.clock}<span>Nothing on the timeline yet<br>Add papers with a publication year</span>
-    </div>`);
+  world.innerHTML = `
+    ${axis}
+    ${bands}
+    <svg class="rd-tl-stems-layer" style="position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:1;overflow:visible;">
+      ${stemsSvg}
+    </svg>
+    ${nowMarker}
+    ${bobs}
+    ${cards || `
+      <div class="rd-canvas-empty-hint" style="left:${totalW / 2}px;">
+        ${ICONS.clock}<span>Nothing on the timeline yet<br>Add papers with a publication year</span>
+      </div>
+    `}
+  `;
   ApplyView('timeline');
   EnsureMinimap('timeline');
 }

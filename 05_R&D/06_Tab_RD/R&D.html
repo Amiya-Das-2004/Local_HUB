@@ -13,11 +13,11 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" />
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 
-  <!-- LocalHUB tab-page flags: __LOCALHUB_HUB_URL__ is where the R&D
-       brand link navigates back to (this page is NOT the Index.html SPA router) -->
+  <!-- LocalHUB tab-page flags: isolated tab mode. The per-tab handlers
+       (save / logo click / import-export) in this folder own the header
+       and footer controls while the page runs standalone. -->
   <script>
     window.__LOCALHUB_PAGE__ = 'rd';
-    window.__LOCALHUB_HUB_URL__ = '../Index.html';
   </script>
 
   <!-- THE VAULT: R&D library data is stored here -->
@@ -47,19 +47,27 @@
   <div id="root"></div>
 
   <!-- Modular tab-page boot: runs the tab's vanilla JS modules directly
-       (same pattern as Index.html). R&D's own Save & Download button
-       re-emits the original self-saving standalone file, and the brand link
-       navigates back to __LOCALHUB_HUB_URL__. Re-runs on hashchange. -->
+       (same pattern as Index.html) and then swaps in the per-tab handlers
+       (save / logo click / import-export) that live inside this folder.
+       Re-runs on hashchange so in-tab deep links re-render like the hub SPA. -->
   <script type="module" id="localhub-router">
     async function bootRDPage() {
       const root = document.getElementById('root');
       if (root) root.innerHTML = '';
       try {
-        const mod = await import('./RD.js');
+        const mod = await import('../RD.js');
         if (mod && typeof mod.initRDApp === 'function') {
           mod.initRDApp();
         }
+        const h0 = await import('./Tab_Save_Handler.js');
+        if (typeof h0.InitTabSaveOverride === 'function') h0.InitTabSaveOverride();
+        const h1 = await import('./Tab_Logo_Handler.js');
+        if (typeof h1.InitTabLogoOverride === 'function') h1.InitTabLogoOverride();
+        const h2 = await import('./Tab_Import_Export_Handler.js');
+        if (typeof h2.InitTabImportExportOverride === 'function') h2.InitTabImportExportOverride();
       } catch (err) {
+        /* surface boot errors for debugging (also visible in the console) */
+        window.__bootError = String((err && err.message) || err);
         console.error('Local HUB R&D page boot error:', err);
       }
     }

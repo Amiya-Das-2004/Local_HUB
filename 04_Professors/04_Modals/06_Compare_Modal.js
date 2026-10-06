@@ -178,7 +178,8 @@ function compareText() {
   return L.join('\n');
 }
 export function InitCompareModal() {
-  $('#compareBtn').addEventListener('click', openCompare);
+  var toolbarBtn = $('#compareBtn'); /* row-3 Compare button was removed from the header */
+  if (toolbarBtn) toolbarBtn.addEventListener('click', openCompare);
   $('#cmpA').addEventListener('change', renderCompare);
   $('#cmpB').addEventListener('change', renderCompare);
   $('#cmpSwap').addEventListener('click', function () {

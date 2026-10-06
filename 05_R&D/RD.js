@@ -117,12 +117,22 @@ import {
   StartLinkDraw
 } from './03_Views/03_Map_View.js';
 import {
-  RenderGroup,
-  FitGroupBoxes,
-  StartGroupDrag,
-  HighlightGroupUnderCard,
-  ResolveGroupDrop
-} from './03_Views/04_Group_View.js';
+  GetStatsHTML,
+  GetGoalModalHTML,
+  InitStatsBar
+} from './02_Dashboard/01_Stats_Bar.js';
+import {
+  RenderResume,
+  InitResumeSection
+} from './02_Dashboard/02_Resume_Section.js';
+import {
+  RenderHeat,
+  InitHeatmap
+} from './02_Dashboard/03_Heatmap.js';
+import {
+  RenderTagBar,
+  InitTagBar
+} from './02_Dashboard/04_Tag_Bar.js';
 import {
   ShowToast,
   ConfirmAction,
@@ -176,13 +186,21 @@ import {
   OpenLinkFloatingPanel,
   CloseLinkFloatingPanel
 } from './04_Modals/08_Link_Modal.js';
+import { SetDashboardOpen } from './00_State.js';
 
 export function GetAppHTML() {
+  const isDashOpen = state.rd && state.rd.ui.showDashboard !== false;
   return `
     <div class="rd-app">
       ${GetHeaderHTML()}
       ${GetTabbarHTML()}
       ${GetToolbarHTML()}
+      <div class="rd-dashboard-wrap" id="rd-dashboard" ${isDashOpen ? '' : 'hidden'}>
+        <div class="rd-stats-grid" id="rd-stats-bar"></div>
+        <div id="rd-resume-section"></div>
+        <div id="rd-heatmap-section"></div>
+        <div id="rd-tag-bar"></div>
+      </div>
       <main class="rd-content">
         <section class="rd-tab-panel active" id="panel-list" aria-label="List view"></section>
         <section class="rd-tab-panel" id="panel-timeline" aria-label="Timeline view">
@@ -199,13 +217,6 @@ export function GetAppHTML() {
             <div class="rd-canvas-legend">${ICONS.network} Drag from a dot to link &middot; Shift-drag selects &middot; Click line or badge to edit note & settings</div>
           </div>
         </section>
-        <section class="rd-tab-panel" id="panel-group" aria-label="Groups view">
-          <div class="rd-canvas-wrap" id="wrap-group">
-            <div class="rd-canvas-world" id="world-group"></div>
-            ${GetCanvasControlsHTML('group')}
-            <div class="rd-canvas-legend">${ICONS.folder} Drag cards into a group box &middot; Shift-drag selects &middot; Drag headers to move groups</div>
-          </div>
-        </section>
       </main>
       ${GetFooterHTML()}
     </div>
@@ -218,6 +229,7 @@ export function GetAppHTML() {
     <div id="rd-palette-root"></div>
     <div id="rd-modal-root"></div>
     <div id="rd-confirm-root"></div>
+    ${GetGoalModalHTML()}
     ${GetLinkFloatingPanelHTML()}
   `;
 }
@@ -225,12 +237,34 @@ export function GetAppHTML() {
 export function RenderAll() {
   const tab = CurrentTab();
   RenderToolbarLabels();
+
+  // Activate matching tab panel
+  document.querySelectorAll('.rd-tab-panel').forEach((p) => {
+    p.classList.toggle('active', p.id === `panel-${tab}`);
+  });
+
   if (tab === 'list') RenderList();
   if (tab === 'timeline') RenderTimeline();
   if (tab === 'map') RenderMap();
-  if (tab === 'group') RenderGroup();
   RenderFooter();
   RenderHeader();
+
+  // Render reading dashboard if open
+  const isDashOpen = state.rd && state.rd.ui.showDashboard !== false;
+  const dash = document.getElementById('rd-dashboard');
+  if (dash) dash.hidden = !isDashOpen;
+  const chartBtn = document.getElementById('chartToggleBtn');
+  if (chartBtn) {
+    chartBtn.classList.toggle('active', isDashOpen);
+    chartBtn.setAttribute('aria-pressed', isDashOpen ? 'true' : 'false');
+  }
+  if (isDashOpen) {
+    const sb = document.getElementById('rd-stats-bar');
+    if (sb) sb.innerHTML = GetStatsHTML();
+    RenderResume();
+    RenderHeat();
+    RenderTagBar();
+  }
 
   document.querySelectorAll('.rd-node-card, .rd-item-card').forEach((el) => {
     el.classList.toggle('selected', SelectedIds.has(el.dataset.itemId));
@@ -248,9 +282,10 @@ export function RenderAll() {
 
 export function ApplyTheme() {
   const root = document.getElementById('rd-root') || document.getElementById('root');
-  if (!root) return;
   const theme = (state.rd.ui && state.rd.ui.theme === 'light') ? 'light' : 'dark';
-  root.setAttribute('data-theme', theme);
+  if (root) root.setAttribute('data-theme', theme);
+  const app = document.querySelector('.rd-app');
+  if (app) app.setAttribute('data-theme', theme);
   const btn = document.getElementById('rd-theme-btn');
   if (btn) btn.title = theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme';
 }
@@ -312,6 +347,39 @@ export function InitDelegatedEvents() {
       const id = actionEl.dataset.id;
       switch (action) {
         case 'switch-tab': SwitchTab(actionEl.dataset.tab); return;
+        case 'toggle-dashboard': {
+          const cur = state.rd && state.rd.ui.showDashboard !== false;
+          SetDashboardOpen(!cur);
+          const dash = document.getElementById('rd-dashboard');
+          if (dash) dash.hidden = cur;
+          const chartBtn = document.getElementById('chartToggleBtn');
+          if (chartBtn) {
+            chartBtn.classList.toggle('active', !cur);
+            chartBtn.setAttribute('aria-pressed', !cur ? 'true' : 'false');
+          }
+          if (!cur) {
+            const sb = document.getElementById('rd-stats-bar');
+            if (sb) sb.innerHTML = GetStatsHTML();
+            RenderResume();
+            RenderHeat();
+            RenderTagBar();
+          }
+          return;
+        }
+        case 'locate-local-file': {
+          const item = GetItem(id);
+          if (item && item.localPath) {
+            if (navigator.clipboard) {
+              navigator.clipboard.writeText(item.localPath);
+            }
+            const isWin = typeof navigator !== 'undefined' && navigator.platform && navigator.platform.includes('Win');
+            const cmd = isWin ? `explorer /select,"${item.localPath}"` : `xdg-open "${item.localPath}"`;
+            ShowToast('info', 'Local Path Copied', `${item.localPath}\nRun in terminal: ${cmd}`);
+          } else {
+            ShowToast('warn', 'No Local Path', 'Open card drawer to set a local directory or file path.');
+          }
+          return;
+        }
         case 'set-type':
           SetUI({ typeFilter: actionEl.dataset.type, activeTab: CurrentTab() });
           RenderAll(); return;
@@ -833,6 +901,21 @@ export function InitDelegatedEvents() {
       return;
     }
   });
+
+  document.addEventListener('dblclick', (e) => {
+    const target = e.target.closest && e.target.closest('[data-dblclick="locate-local-file"]');
+    if (target && target.dataset.itemId) {
+      const item = GetItem(target.dataset.itemId);
+      if (item && item.localPath) {
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(item.localPath);
+        }
+        const isWin = typeof navigator !== 'undefined' && navigator.platform && navigator.platform.includes('Win');
+        const cmd = isWin ? `explorer /select,"${item.localPath}"` : `xdg-open "${item.localPath}"`;
+        ShowToast('info', 'Local Path Copied', `${item.localPath}\nRun in terminal: ${cmd}`);
+      }
+    }
+  });
 }
 
 export function initRDApp(container) {
@@ -856,7 +939,10 @@ export function initRDApp(container) {
   InitQueueDnD();
   AttachCanvasEvents('timeline');
   AttachCanvasEvents('map');
-  AttachCanvasEvents('group');
+  InitStatsBar();
+  InitResumeSection();
+  InitHeatmap();
+  InitTagBar();
   InitGlobalKeys();
   InitLinkModal();
   ApplyTheme();

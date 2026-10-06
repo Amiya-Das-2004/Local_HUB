@@ -87,6 +87,7 @@ export function seedSamples() {
     {
       id: uid('p'), name: 'Dr. Aleksander Madry', title: 'Professor', department: 'EECS · CSAIL',
       college: 'Massachusetts Institute of Technology (MIT)', qsRank: 1,
+      collegeLogo: 'https://logo.clearbit.com/mit.edu',
       areas: ['Adversarial ML', 'Robust Optimization'], email: '', website: 'https://madry-lab.ml/', photo: '',
       bio: 'Known for foundational work on adversarial robustness and building reliable, understandable ML systems.',
       createdAt: t(40), papers: [
@@ -96,6 +97,7 @@ export function seedSamples() {
     {
       id: uid('p'), name: 'Dr. Christopher D. Manning', title: 'Professor', department: 'Linguistics & Computer Science',
       college: 'Stanford University', qsRank: 6,
+      collegeLogo: 'https://logo.clearbit.com/stanford.edu',
       areas: ['NLP', 'Computational Linguistics'], email: '', website: 'https://nlp.stanford.edu/~manning/', photo: '',
       bio: 'Author of classic NLP textbooks; focuses on representation learning for language and human language understanding.',
       createdAt: t(35), papers: [
@@ -106,6 +108,7 @@ export function seedSamples() {
     {
       id: uid('p'), name: 'Dr. Christopher Ré', title: 'Professor', department: 'Computer Science',
       college: 'Stanford University', qsRank: 6,
+      collegeLogo: 'https://logo.clearbit.com/stanford.edu',
       areas: ['Information Extraction', 'ML Systems'], email: '', website: '', photo: '',
       bio: 'Leads the Hazy Research group; works on data-centric AI and efficient foundation-model systems.',
       createdAt: t(28), papers: [
@@ -117,6 +120,7 @@ export function seedSamples() {
     {
       id: uid('p'), name: 'Dr. Yoshua Bengio', title: 'Professor', department: 'MILA · Computer Science',
       college: 'Université de Montréal', qsRank: 159,
+      collegeLogo: 'https://logo.clearbit.com/umontreal.ca',
       areas: ['Deep Learning', 'Machine Learning Theory'], email: '', website: '', photo: '',
       bio: 'Turing Award laureate; long-standing research on representation learning, generative models and the science of deep learning.',
       createdAt: t(50), papers: [

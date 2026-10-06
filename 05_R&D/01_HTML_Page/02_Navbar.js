@@ -1,6 +1,9 @@
 // ============================================================
 // R&D Library — 01_HTML_Page/02_Navbar.js
-// Tab navigation bar (List, Timeline, Map, Group) & tab switcher.
+// View-mode controller. The sub-navbar tab bar was removed in the
+// v2.0 redesign (view switchers live in the header action cluster);
+// this module remains the canonical home of CurrentTab() and the
+// SwitchTab() controller the header buttons delegate to.
 // Extracted from public/js/ui.js (lines 181-201, 897-905)
 // ============================================================
 
@@ -12,28 +15,8 @@ export function CurrentTab() {
 }
 
 export function GetTabbarHTML() {
-  const tabs = [
-    { id: 'list', label: 'List', icon: 'list', hint: 'Search, group, drag to reorder' },
-    { id: 'timeline', label: 'Timeline', icon: 'clock', hint: 'Papers arranged by publication year' },
-    { id: 'map', label: 'Map', icon: 'network', hint: 'Mind map of papers, books & theses' },
-    { id: 'group', label: 'Group', icon: 'folder', hint: 'Drag items into cluster boxes' }
-  ];
-  const cur = CurrentTab();
-  const currentHint = (tabs.find((t) => t.id === cur) || tabs[0]).hint;
-
-  return `
-    <nav class="rd-tabbar">
-      <div class="rd-tabbar-inner" role="tablist">
-        ${tabs.map((t) => `
-          <button class="rd-tab ${t.id === cur ? 'active' : ''}" role="tab"
-                  data-action="switch-tab" data-tab="${t.id}" id="tab-btn-${t.id}">
-            ${ICONS[t.icon] || ''}<span>${t.label}</span>
-          </button>
-        `).join('')}
-        <span class="rd-tab-hint" id="rd-tab-hint">${currentHint}</span>
-      </div>
-    </nav>
-  `;
+  // Redundant sub-navbar removed per UI redesign; view switchers are now located in the header actions.
+  return '';
 }
 
 export function SwitchTab(tab) {

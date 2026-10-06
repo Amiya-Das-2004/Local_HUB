@@ -192,7 +192,7 @@ export const parseTextToFragment = (text, options = {}) => {
   const fragment = document.createDocumentFragment();
   if (!text) return fragment;
 
-  const tokenRegex = /((?<!\\)\$(?!\s)([^\$\n\r]+?)(?<!\s)\$)|(`([^`\n\r]+?)`)|(\*\*([^*]+?)\*\*)|((?:^|[^*])\*([^*\n\r]+?)\*(?!\*))|(\\underline\{([^}]+)\})|(~~([^~]+)~~)|(\\textcolor\{([#a-zA-Z0-9|]+)\}\{((?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})+)\})|(\\fig\{([^}]+)\})|(\[\[([^\]\n\r]+)\]\])|(<u>([\s\S]*?)<\/u>)|(<b>([\s\S]*?)<\/b>|<strong>([\s\S]*?)<\/strong>)|(<i>([\s\S]*?)<\/i>|<em>([\s\S]*?)<\/em>)|(<mark>([\s\S]*?)<\/mark>)|(<code>([\s\S]*?)<\/code>)|(\\textbf\{((?:[^{}]|\{[^{}]*\})+)\})|(\\cite\{([^}]*)\})|(\\eq\{([^}]+)\})/g;
+  const tokenRegex = /((?<!\\)\$(?!\s)([^\$\n\r]+?)(?<!\s)\$)|(`([^`\n\r]+?)`)|(\*\*([^*]+?)\*\*)|((?:^|[^*])\*([^*\n\r]+?)\*(?!\*))|(\\underline\{([^}]+)\})|(~~([^~]+)~~)|(\\textcolor\{([#a-zA-Z0-9|]+)\}\{((?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})+)\})|(\\fig\{([^}]+)\})|(\[\[([^\]\n\r]+)\]\])|(<u>([\s\S]*?)<\/u>)|(<b>([\s\S]*?)<\/b>|<strong>([\s\S]*?)<\/strong>)|(<i>([\s\S]*?)<\/i>|<em>([\s\S]*?)<\/em>)|(<mark>([\s\S]*?)<\/mark>)|(<code>([\s\S]*?)<\/code>)|(\\textbf\{((?:[^{}]|\{[^{}]*\})+)\})|(\\cite\{([^}]*)\})|(\\eq\{([^}]+)\})|(\\href\{([^}]+)\}\{((?:[^{}]|\{[^{}]*\})*)\})|(\\url\{([^}]+)\})/g;
 
   let lastIndex = 0;
   let match;
@@ -234,11 +234,17 @@ export const parseTextToFragment = (text, options = {}) => {
         parseSubFragment: (subText) => parseTextToFragment(subText, options)
       }));
     } else if (match[16]) {
-      // Fig Citation: \fig{...}
-      fragment.appendChild(createLiveWidget('fig', match[16], match[17], options));
+      // Fig Citation OUTSIDE math — inert (only functions inside $...$)
+      fragment.appendChild(createLiveWidget('littex', match[16], match[17], options));
     } else if (match[36]) {
-      // Equation Reference: \eq{name} or \eq{name:2}
-      fragment.appendChild(createLiveWidget('eq', match[36], match[37], options));
+      // Equation Reference OUTSIDE math — inert (only functions inside $...$)
+      fragment.appendChild(createLiveWidget('littex', match[36], match[37], options));
+    } else if (match[38]) {
+      // Hyperlink OUTSIDE math — inert (only functions inside $...$)
+      fragment.appendChild(createLiveWidget('littex', match[38], match[40], options));
+    } else if (match[41]) {
+      // Bare URL OUTSIDE math — inert (only functions inside $...$)
+      fragment.appendChild(createLiveWidget('littex', match[41], match[42], options));
     } else if (match[18]) {
       // WikiLink: [[title]]
       fragment.appendChild(createLiveWidget('wikilink', match[18], match[19], options));

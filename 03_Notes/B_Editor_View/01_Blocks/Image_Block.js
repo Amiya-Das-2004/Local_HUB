@@ -120,6 +120,8 @@ export function renderImageBlock(
   const tag = block.tag || '';
   const hasBorder = Boolean(block.hasBorder); // Default: false (OFF)
   const figNumber = figureInfo ? figureInfo.figNumber : null;
+  const figLabel = figureInfo ? (figureInfo.label || (figureInfo.figNumber !== null && figureInfo.figNumber !== undefined ? String(figureInfo.figNumber) : null)) : null;
+  const showCaptions = figureInfo ? figureInfo.showCaptions !== false : true;
   const rawWidth = (block.width !== undefined && block.width !== null && block.width !== '') ? block.width : 100;
   const parsedWidth = parseInt(rawWidth, 10);
   const fitPercent = (!isNaN(parsedWidth) && parsedWidth >= 10 && parsedWidth <= 100) ? parsedWidth : 100;
@@ -131,7 +133,7 @@ export function renderImageBlock(
     const wrap = document.createElement('figure');
     wrap.className = 'w-full flex flex-col items-center my-2 select-text';
 
-    applyFigureAttributes(wrap, { tag, figNumber });
+    applyFigureAttributes(wrap, { tag, figNumber, label: figLabel });
 
     if (!url) {
       wrap.innerHTML = `
@@ -141,7 +143,7 @@ export function renderImageBlock(
         </div>
       `;
     } else {
-      const captionText = formatFigureCaptionText({ caption, allowNumbering, figNumber });
+      const captionText = showCaptions ? formatFigureCaptionText({ caption, allowNumbering, figNumber, label: figLabel }) : '';
       const frameClasses = `image-preview-fit-box overflow-hidden rounded-xl ${hasBorder ? 'border border-[var(--border)] bg-[var(--surface)] shadow-xs' : 'border border-transparent bg-transparent'} p-1.5 flex justify-center max-w-full transition-all`;
 
       if (block.grid && block.gridOn) {
@@ -531,9 +533,28 @@ export function renderImageBlock(
       const tagInput = editWrap.querySelector('.tag-input');
       const captionInput = editWrap.querySelector('.caption-input');
 
+      // Tag uniqueness among figure blocks (image/tikz namespace; equation tags are independent).
+      const isTagTaken = (value) => {
+        const v = String(value || '').trim().toLowerCase();
+        if (!v) return false;
+        return figureInfo && figureInfo.usedTags instanceof Set ? figureInfo.usedTags.has(v) : false;
+      };
+      const paintTagState = () => {
+        if (!tagInput) return false;
+        const dup = isTagTaken(tagInput.value);
+        tagInput.classList.toggle('border-red-500', dup);
+        tagInput.classList.toggle('text-red-400', dup);
+        tagInput.title = dup ? `Tag "${tagInput.value.trim()}" is already used by another figure — pick a different one` : '';
+        return !dup;
+      };
+      tagInput?.addEventListener('input', paintTagState);
+      paintTagState();
+
       const triggerFieldUpdate = () => {
         currentAllowNumbering = Boolean(allowNumberingCb?.checked);
-        currentTag = tagInput?.value.trim() || '';
+        if (!isTagTaken(tagInput?.value)) {
+          currentTag = tagInput?.value.trim() || '';
+        }
         currentCaption = captionInput?.value || '';
         commitFields();
       };

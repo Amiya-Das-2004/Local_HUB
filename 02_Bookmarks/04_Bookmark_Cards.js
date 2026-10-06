@@ -16,31 +16,68 @@ export function GetBookmarkCardsContainerHTML() {
         margin-bottom: 34px;
       }
 
+      .bookmark-section.is-collapsed {
+        margin-bottom: 12px;
+      }
+
       .section-title {
+        position: sticky;
+        top: calc(var(--header-height, 74px) + var(--navbar-height, 76px));
+        z-index: 40;
+        background: var(--bg, #0b0d14);
+        padding: 8px 12px 8px 16px;
+        margin-bottom: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        user-select: none;
+        cursor: pointer;
+        border-radius: 6px;
         font-size: 0.75rem;
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 1.4px;
         color: var(--text-secondary, #a0a4b8);
-        margin-bottom: 14px;
-        padding-left: 12px;
-        display: flex;
+        transition: background-color var(--transition, 0.2s), color var(--transition, 0.2s);
+      }
+
+      .section-title:hover {
+        background: var(--card, #181b28);
+        color: var(--text, #e8eaf2);
+      }
+
+      .section-title:focus-visible {
+        outline: 2px solid #ff1744;
+        outline-offset: 2px;
+      }
+
+      .section-title-label {
+        display: inline-flex;
         align-items: center;
-        gap: 8px;
-        position: relative;
-        user-select: none;
+        gap: 6px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
       .section-title::before {
         content: "";
         position: absolute;
-        left: 0;
+        left: 4px;
         top: 50%;
         transform: translateY(-50%);
         width: 3px;
         height: 14px;
         border-radius: 2px;
-        background: linear-gradient(180deg, var(--accent, #8b6dff), #a855f7);
+        background: linear-gradient(180deg, #ff1744, #9f1239);
+      }
+
+      [data-theme="light"] .section-title::before {
+        background: linear-gradient(180deg, #f43f5e, #be123c);
+      }
+
+      [data-theme="light"] .section-title:focus-visible {
+        outline-color: #f43f5e;
       }
 
       .section-title .count-pill {
@@ -52,6 +89,27 @@ export function GetBookmarkCardsContainerHTML() {
         padding: 1px 7px;
         border-radius: 8px;
         text-transform: none;
+      }
+
+      .bookmark-group-collapse-icon {
+        width: 14px;
+        height: 14px;
+        color: var(--text-dim, #6b7088);
+        margin-left: auto;
+        transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), color 0.2s;
+        flex-shrink: 0;
+      }
+
+      .section-title:hover .bookmark-group-collapse-icon {
+        color: var(--text, #e8eaf2);
+      }
+
+      .bookmark-section.is-collapsed .bookmark-group-collapse-icon {
+        transform: rotate(-90deg);
+      }
+
+      .bookmark-section.is-collapsed .group-grid {
+        display: none !important;
       }
 
       .group-grid {
@@ -371,6 +429,37 @@ export function GetBookmarkCardsContainerHTML() {
   `;
 }
 
+// Storage keys and helpers for collapsible bookmark group sections
+const BOOKMARKS_COLLAPSED_GROUPS_KEY = 'Bookmarks_Collapsed_Groups';
+
+function getBookmarksCollapsedGroups() {
+  try {
+    const raw = localStorage.getItem(BOOKMARKS_COLLAPSED_GROUPS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveBookmarksCollapsedGroups(list) {
+  try {
+    localStorage.setItem(BOOKMARKS_COLLAPSED_GROUPS_KEY, JSON.stringify(list));
+  } catch (e) {
+    console.warn('Failed to save collapsed bookmark groups:', e);
+  }
+}
+
+function toggleBookmarkGroupCollapsed(groupName, isCollapsed) {
+  const list = getBookmarksCollapsedGroups();
+  const set = new Set(list);
+  if (isCollapsed) {
+    set.add(groupName);
+  } else {
+    set.delete(groupName);
+  }
+  saveBookmarksCollapsedGroups(Array.from(set));
+}
+
 export function RenderBookmarksGrid(container, state, { onEdit, onDelete }) {
   if (!container) return;
   container.innerHTML = '';
@@ -381,6 +470,7 @@ export function RenderBookmarksGrid(container, state, { onEdit, onDelete }) {
     : [activeSection];
 
   const savedView = localStorage.getItem('lh_bookmark_view') || 'grid';
+  const collapsedGroups = getBookmarksCollapsedGroups();
 
   groups.forEach(groupName => {
     const groupBookmarks = (state.bookmarks || []).filter(b => b.group === groupName);
@@ -389,9 +479,41 @@ export function RenderBookmarksGrid(container, state, { onEdit, onDelete }) {
     const secEl = document.createElement('div');
     secEl.className = 'bookmark-section';
 
+    // In 'ALL' view respect collapsed state, but if a specific section is filtered, keep expanded
+    const isSavedCollapsed = collapsedGroups.includes(groupName);
+    const isCollapsed = (activeSection === 'ALL') && isSavedCollapsed;
+    if (isCollapsed) {
+      secEl.classList.add('is-collapsed');
+    }
+
     const titleEl = document.createElement('div');
     titleEl.className = 'section-title';
-    titleEl.innerHTML = `${groupName} <span class="count-pill">${groupBookmarks.length}</span>`;
+    titleEl.setAttribute('role', 'button');
+    titleEl.setAttribute('tabindex', '0');
+    titleEl.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+    titleEl.setAttribute('title', 'Click to toggle collapse');
+    titleEl.innerHTML = `
+      <span class="section-title-label">${groupName}</span>
+      <span class="count-pill">${groupBookmarks.length}</span>
+      <svg class="bookmark-group-collapse-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="6 9 12 15 18 9"></polyline>
+      </svg>
+    `;
+
+    const handleToggle = () => {
+      const nowCollapsed = secEl.classList.toggle('is-collapsed');
+      titleEl.setAttribute('aria-expanded', nowCollapsed ? 'false' : 'true');
+      toggleBookmarkGroupCollapsed(groupName, nowCollapsed);
+    };
+
+    titleEl.addEventListener('click', handleToggle);
+    titleEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handleToggle();
+      }
+    });
+
     secEl.appendChild(titleEl);
 
     const gridEl = document.createElement('div');

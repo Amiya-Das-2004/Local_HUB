@@ -235,4 +235,27 @@ export function InitHeader() {
   InitImportExport();
   InitSaveButtonLogic();
   InitThemeToggleLogic();
+
+  // Dynamically synchronize header height to CSS variable
+  const header = document.querySelector('.app-header');
+  if (header) {
+    const updateHeaderH = () => {
+      const h = header.offsetHeight;
+      if (h > 0) {
+        document.documentElement.style.setProperty('--notes-header-height', `${h}px`);
+      }
+    };
+    updateHeaderH();
+    if (window.ResizeObserver) {
+      const ro = new ResizeObserver(entries => {
+        for (const entry of entries) {
+          const h = entry.borderBoxSize ? entry.borderBoxSize[0].blockSize : header.offsetHeight;
+          if (h > 0) {
+            document.documentElement.style.setProperty('--notes-header-height', `${h}px`);
+          }
+        }
+      });
+      ro.observe(header);
+    }
+  }
 }

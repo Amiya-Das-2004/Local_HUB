@@ -84,6 +84,18 @@ function sanitizeNote(n, idx = 0) {
     folder: n.folder || 'General',
     tags: Array.isArray(n.tags) ? n.tags : [],
     description: n.description || '',
+    properties: (() => {
+      // Obsidian-style typed key-value properties; legacy notes migrate their description in
+      let props = Array.isArray(n.properties)
+        ? n.properties.filter(p => p && typeof p === 'object' && (String(p.key || '').trim() || (p.type === 'checkbox' && (String(p.text || '').trim() || p.value === true))))
+        : [];
+      if (!props.length && typeof n.description === 'string' && n.description.trim()) {
+        props = [{ key: 'Description', value: n.description.trim(), type: 'text' }];
+      }
+      return props.map(p => { const out = { key: String(p.key).trim(), value: (p.value !== undefined && p.value !== null) ? p.value : '', type: p.type || 'text' };
+        if (p.text !== undefined && p.text !== null && String(p.text).trim()) out.text = String(p.text);
+        return out; });
+    })(),
     meta: n.meta || { created: new Date().toISOString().slice(0, 10), author: 'User' },
     flashcard: n.flashcard || null,
     blocks: Array.isArray(n.blocks) ? n.blocks : [],

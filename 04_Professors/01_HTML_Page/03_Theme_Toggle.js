@@ -14,8 +14,15 @@ import { $ } from '../01_Utils.js';
 export function applyTheme(t) {
   const dark = t === 'dark';
   const app = document.getElementById('ProfessorsApp');
-  if (app) app.classList.toggle('prof-dark', dark);
+  if (app) {
+    app.classList.toggle('prof-dark', dark);
+    app.classList.toggle('prof-light', !dark);
+  }
   document.body.classList.toggle('prof-dark', dark);
+  document.body.classList.toggle('prof-light', !dark);
+  if (document.documentElement) {
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  }
 }
 export function toggleTheme() {
   state.theme = (state.theme === 'dark') ? 'light' : 'dark';

@@ -42,6 +42,9 @@ export function GetNotesCardViewHTML() {
 export function RenderNotesCardView(mainContainer, state) {
   if (!mainContainer) return;
 
+  // Replace (not stack) — repeated hash-nav renders previously duplicated the whole deck
+  mainContainer.innerHTML = '';
+
   const deckWrapper = document.createElement('div');
   deckWrapper.innerHTML = GetNotesCardViewHTML();
   mainContainer.appendChild(deckWrapper);

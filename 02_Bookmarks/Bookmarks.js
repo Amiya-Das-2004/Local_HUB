@@ -40,7 +40,7 @@ export function initBookmarksApp() {
         --accent-soft: rgba(139, 109, 255, 0.1);
         --accent-glow: rgba(139, 109, 255, 0.22);
         --header-height: 74px;
-        --navbar-height: 70px;
+        --navbar-height: 76px;
         --green: #4ade80;
         --orange: #fb923c;
         --red: #f87171;
@@ -60,22 +60,30 @@ export function initBookmarksApp() {
       @media (max-width: 600px) {
         :root {
           --header-height: 66px;
-          --navbar-height: 58px;
+          --navbar-height: 70px;
         }
       }
 
       @media (max-width: 440px) {
         :root {
           --header-height: 60px;
-          --navbar-height: 50px;
+          --navbar-height: 66px;
         }
       }
 
-      @media (max-height: 500px) {
+      @media (max-width: 340px) {
         :root {
-          --header-height: 52px;
-          --navbar-height: 44px;
+          --header-height: 56px;
+          --navbar-height: 62px;
         }
+      }
+
+      #header-mount {
+        width: 100%;
+      }
+
+      #navbar-mount {
+        width: 100%;
       }
 
       :root[data-theme="light"] {
@@ -132,19 +140,19 @@ export function initBookmarksApp() {
         width: 100%;
         max-width: 800px;
         margin: 0 auto;
-        padding: 24px 16px 40px;
+        padding: calc(var(--header-height, 74px) + var(--navbar-height, 76px) + 20px) 16px 40px;
         box-sizing: border-box;
       }
 
       @media (max-width: 600px) {
         .main-content {
-          padding: 18px 12px 40px;
+          padding: calc(var(--header-height, 66px) + var(--navbar-height, 70px) + 16px) 12px 40px;
         }
       }
 
       @media (max-width: 440px) {
         .main-content {
-          padding: 14px 8px 40px;
+          padding: calc(var(--header-height, 60px) + var(--navbar-height, 66px) + 12px) 8px 40px;
         }
       }
 
@@ -244,6 +252,41 @@ export function initBookmarksApp() {
 
   // 4. Initial Render of Bookmark Cards
   RefreshView();
+
+  // 5. Dynamically synchronize header and navbar heights for sticky stacking
+  const header = document.querySelector('.app-header');
+  if (header) {
+    const updateHeaderH = () => {
+      const h = header.offsetHeight;
+      if (h > 0) document.documentElement.style.setProperty('--header-height', `${h}px`);
+    };
+    updateHeaderH();
+    if (window.ResizeObserver) {
+      new ResizeObserver(entries => {
+        for (const entry of entries) {
+          const h = entry.borderBoxSize ? entry.borderBoxSize[0].blockSize : header.offsetHeight;
+          if (h > 0) document.documentElement.style.setProperty('--header-height', `${h}px`);
+        }
+      }).observe(header);
+    }
+  }
+
+  const navbar = document.querySelector('.app-navbar');
+  if (navbar) {
+    const updateNavbarH = () => {
+      const h = navbar.offsetHeight;
+      if (h > 0) document.documentElement.style.setProperty('--navbar-height', `${h}px`);
+    };
+    updateNavbarH();
+    if (window.ResizeObserver) {
+      new ResizeObserver(entries => {
+        for (const entry of entries) {
+          const h = entry.borderBoxSize ? entry.borderBoxSize[0].blockSize : navbar.offsetHeight;
+          if (h > 0) document.documentElement.style.setProperty('--navbar-height', `${h}px`);
+        }
+      }).observe(navbar);
+    }
+  }
 }
 
 // Clean Window Registration for standalone compatibility

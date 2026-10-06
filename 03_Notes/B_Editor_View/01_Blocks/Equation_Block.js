@@ -30,10 +30,19 @@ export function renderEquationBlock(block, isEditing = false, onUpdate = null, {
 
   const rawTex = block.tex || block.content || '';
   const hasBorder = block.hasBorder !== false; // ON by default
-  const currentAlign = (block.align === 'left' || block.align === 'right') ? block.align : 'center';
-  const alignCss = currentAlign === 'left' ? 'flex-start' : (currentAlign === 'right' ? 'flex-end' : 'center');
+  const currentAlign = block.align === 'left' ? 'left' : 'center'; // Left/Center alignment; the number is always right-aligned
+  const alignCss = currentAlign === 'left' ? 'flex-start' : 'center';
+
+  // Rendered row count: 2+ rows sharing one number get a right brace } before it.
+  const countRows = (tex) => (String(tex || '').match(/\\\\/g) || []).length + 1;
 
   const stripTags = (tex) => String(tex || '').replace(/\\tag\{[^}]*\}/g, '');
+
+  const dupWarningHtml = (info) => {
+    if (!info || !Array.isArray(info.dupTags) || !info.dupTags.length) return '';
+    const names = [...new Set(info.dupTags.map(t => String(t)))].map(t => escapeHtml(t)).join(', ');
+    return `<div class="w-full text-[11px] font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/40 rounded-lg px-2.5 py-1.5 mt-1.5 select-none" title="Tag names must be unique among equations — references resolve to the first equation claiming the tag">⚠ Tag${info.dupTags.length > 1 ? 's' : ''} ${names} already used by another equation — \\eq{} resolves to the first one</div>`;
+  };
 
   const getRenderedEquationHtml = (tex) => {
     const trimmed = stripTags(tex).trim();
@@ -43,18 +52,58 @@ export function renderEquationBlock(block, isEditing = false, onUpdate = null, {
     return renderKatex(trimmed, true);
   };
 
-  // Group-mode rendering: blank-line separated parts, each with its (base.sub) label
+  // Number badge — pinned FAR RIGHT, dark text, fixed column (never moves with equation alignment).
+  const badgeHtml = (label) => `
+    <span class="eq-number-badge flex-shrink-0 text-xs font-mono text-[var(--text)] select-none min-w-[3rem]">(${escapeHtml(label)})</span>`;
+
+  // Right brace } spanning a member of 2+ rows sharing one number.
+  // SVG with non-scaling stroke: always thin, and stretches to the member's exact height.
+  const braceHtml = () => `<svg class="eq-subbrace flex-shrink-0" style="align-self: stretch; width: 9px; margin: 0 0.4rem;" viewBox="0 0 8 100" preserveAspectRatio="none" aria-hidden="true"><path d="M2 0 C6.5 0 5 45 7 50 C5 55 6.5 100 2 100" fill="none" stroke="currentColor" stroke-width="1.4" vector-effect="non-scaling-stroke" stroke-linecap="round"/></svg>`;
+
+  // Universal member row: equation area (flex-1, indented left/center per block setting)
+  // + [} brace when 2+ rows] + [number] pinned at the far right.
+  const memberRow = (mathHtml, label, rows, memberIndex) => `
+    <div class="flex items-center w-full" data-eq-member="${memberIndex}">
+      <div class="min-w-0 flex-1 flex" style="justify-content: ${alignCss};">${mathHtml}</div>
+      ${rows >= 2 ? braceHtml() : ''}
+      ${label ? badgeHtml(label) : ''}
+    </div>`;
+
+  // In-aligned sub-equations (%sub markers): each member re-wrapped as its own aligned env.
+  const buildAlignedGroupHtml = (tex, info) => {
+    const lines = stripTags(tex).split('\n');
+    const starts = Array.isArray(info.subMemberLines) ? info.subMemberLines : [];
+    const envMatch = /\\begin\{([a-zA-Z*]+)\}/.exec(lines.join('\n'));
+    const env = envMatch ? envMatch[1] : 'aligned';
+    const bounds = [];
+    let prev = 0;
+    starts.forEach((li) => { bounds.push([prev, li]); prev = li; });
+    bounds.push([prev, lines.length]);
+    return bounds.map(([from, to], k) => {
+      const rows = lines.slice(from, to)
+        .map(l => l.replace(/%sub\s*$/, '').trim())
+        .filter(l => l && !/^\\begin\{/.test(l) && !/^\\end\{/.test(l) && !/^\\tag\{/.test(l));
+      if (rows.length) rows[rows.length - 1] = rows[rows.length - 1].replace(/\\\\\s*$/, '');
+      const label = info.members && info.members[k] ? info.members[k] : '';
+      const rowsTex = '\\begin{' + env + '}\n' + rows.join('\n') + '\n\\end{' + env + '}';
+      return memberRow(renderKatex(rowsTex, true), label, rows.length, k + 1);
+    }).join('') + dupWarningHtml(info);
+  };
+
+  // Group-mode rendering: blank-line separated parts, each with its (base.sub) label.
+  // Single equations get the same (label) badge so equation numbering is always visible.
   const getRenderedEquationPartsHtml = (tex, info) => {
     const parts = stripTags(tex).split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
-    if (parts.length <= 1 || !info || !Array.isArray(info.members) || info.members.length !== parts.length) {
-      return getRenderedEquationHtml(tex);
+    if (info && info.renderMode === 'alignedGroup') {
+      return buildAlignedGroupHtml(tex, info) + dupWarningHtml(info);
     }
-    return parts.map((p, i) => `
-      <div class="flex items-center gap-3 w-full" style="justify-content: ${alignCss};" data-eq-member="${i + 1}">
-        <div class="min-w-0 overflow-x-auto" style="scrollbar-width: thin;">${renderKatex(p, true)}</div>
-        <span class="flex-shrink-0 text-xs font-mono text-[var(--text-dim)] select-none px-1">(${escapeHtml(info.members[i])})</span>
-      </div>
-    `).join('');
+    if (parts.length <= 1 || !info || !Array.isArray(info.members) || info.members.length !== parts.length) {
+      const singleHtml = getRenderedEquationHtml(tex);
+      const label = info && info.baseLabel && info.allowNumbering !== false ? info.baseLabel : '';
+      if (!label) return singleHtml + dupWarningHtml(info);
+      return memberRow(singleHtml, label, countRows(stripTags(tex)), 1) + dupWarningHtml(info);
+    }
+    return parts.map((p, i) => memberRow(renderKatex(p, true), info.members[i], countRows(p), i + 1)).join('') + dupWarningHtml(info);
   };
 
   const isKatexError = (html) => {
@@ -106,8 +155,7 @@ export function renderEquationBlock(block, isEditing = false, onUpdate = null, {
         <!-- Alignment: Left | Center | Right -->
         <div class="flex items-center rounded-md border border-[var(--border)] overflow-hidden flex-shrink-0 select-none" title="Equation Alignment">
           <button type="button" data-align="left" class="btn-eq-align h-7 w-8 text-xs font-bold flex items-center justify-center cursor-pointer transition-colors ${currentAlignState === 'left' ? 'bg-purple-500/15 text-purple-400' : 'text-[var(--text-dim)] hover:bg-[var(--surface-hover)]'}" title="Align Left">⇤</button>
-          <button type="button" data-align="center" class="btn-eq-align h-7 w-8 text-xs font-bold flex items-center justify-center cursor-pointer transition-colors border-x border-[var(--border)] ${currentAlignState === 'center' ? 'bg-purple-500/15 text-purple-400' : 'text-[var(--text-dim)] hover:bg-[var(--surface-hover)]'}" title="Align Center">↔</button>
-          <button type="button" data-align="right" class="btn-eq-align h-7 w-8 text-xs font-bold flex items-center justify-center cursor-pointer transition-colors ${currentAlignState === 'right' ? 'bg-purple-500/15 text-purple-400' : 'text-[var(--text-dim)] hover:bg-[var(--surface-hover)]'}" title="Align Right">⇥</button>
+          <button type="button" data-align="center" class="btn-eq-align h-7 w-8 text-xs font-bold flex items-center justify-center cursor-pointer transition-colors border-l border-[var(--border)] ${currentAlignState === 'center' ? 'bg-purple-500/15 text-purple-400' : 'text-[var(--text-dim)] hover:bg-[var(--surface-hover)]'}" title="Align Center">↔</button>
         </div>
 
         <div class="eq-color-mount inline-flex items-center flex-shrink-0"></div>
@@ -234,11 +282,11 @@ export function renderEquationBlock(block, isEditing = false, onUpdate = null, {
     }
   });
 
-  // Equation Alignment Handling (Left | Center | Right)
+  // Equation Alignment Handling (Left | Center) — the number stays right-aligned regardless
   const syncAlignButtons = () => {
     editWrap.querySelectorAll('.btn-eq-align').forEach((b) => {
       const active = b.getAttribute('data-align') === currentAlignState;
-      b.className = `btn-eq-align h-7 w-8 text-xs font-bold flex items-center justify-center cursor-pointer transition-colors ${b.getAttribute('data-align') === 'center' ? 'border-x border-[var(--border)] ' : ''}${active ? 'bg-purple-500/15 text-purple-400' : 'text-[var(--text-dim)] hover:bg-[var(--surface-hover)]'}`;
+      b.className = `btn-eq-align h-7 w-8 text-xs font-bold flex items-center justify-center cursor-pointer transition-colors ${b.getAttribute('data-align') === 'center' ? 'border-l border-[var(--border)] ' : ''}${active ? 'bg-purple-500/15 text-purple-400' : 'text-[var(--text-dim)] hover:bg-[var(--surface-hover)]'}`;
     });
   };
 

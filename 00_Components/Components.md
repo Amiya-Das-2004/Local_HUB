@@ -146,7 +146,7 @@ IndexedDB binary vault for Local_HUB. Stores large payloads (PDF attachments, im
 
 ## 08_Research_Library.js
 
-Canonical cross-tab research registry — the "common ground" for papers, books, theses, preprints and misc items. Owns the shared `<script type="application/json" id="PapersData">` vault (present in `Index.html`, `03_Notes/Notes.html`, `04_Professors/Professor.html`, `05_R&D/R&D.html`) plus the `PapersData_Local_Cache` localStorage key, and mirrors live state onto `window.PapersState`. Every tab adds/reads items through this component so an item is stored exactly once no matter which tab it came from (`origin`: `rd | professors | notes`).
+Canonical cross-tab research registry — the "common ground" for papers, books, theses, preprints and misc items. Owns the shared `<script type="application/json" id="PapersData">` vault (present in `Index.html`, `03_Notes/Notes.html`, `04_Professors/06_Tab_Professors/Professor.html`, `05_R&D/06_Tab_RD/R&D.html`) plus the `PapersData_Local_Cache` localStorage key, and mirrors live state onto `window.PapersState`. Every tab adds/reads items through this component so an item is stored exactly once no matter which tab it came from (`origin`: `rd | professors | notes`).
 
 **Import safety (critical):** `RL_Upsert` / `RL_MergePapers` / `RL_ImportSlice` are strictly additive, identity-resolved merges (priority: `id` → normalized `doi` → `citeKey`; title match opt-in via `byTitle`). **No code path may blind-replace `PapersData`** — single-tab exports carry only a subset of the library, and wholesale replacement would erase the rest.
 
@@ -196,7 +196,7 @@ Canonical cross-tab research registry — the "common ground" for papers, books,
 | :--- | :--- | :--- | :--- |
 | `Index.html` | Master hash router: landing, `#bookmarks`, `#notes` | *(uses shared `00_Components`)* | `Local_HUB.html` (all-in-one, original behavior) |
 | `02_Bookmarks/01_Tab_Bookmarks/Bookmarks.html` | `../Bookmarks.js` + local handlers | `Tab_Save_Handler.js`, `Tab_Logo_Handler.js`, `Tab_Import_Export_Handler.js` | `Bookmarks.html` (single-tab standalone) |
-| `03_Notes/Notes.html` | `./Notes.js` + local handlers | `Tab_Save_Handler.js`, `Tab_Logo_Handler.js`, `Tab_Import_Export_Handler.js` | `Notes.html` (single-tab standalone) |
+| `03_Notes/Tab_Notes/Notes.html` | `../Notes.js` + local handlers | `Tab_Save_Handler.js`, `Tab_Logo_Handler.js`, `Tab_Import_Export_Handler.js` | `Notes.html` (single-tab standalone) |
 
 How the isolation works:
 
@@ -205,7 +205,7 @@ How the isolation works:
 - The handler files are **never referenced by `Index.html`** and are **not registered in the all-in-one bundler lists** — Index.html's Save button and routing stay byte-for-byte original. Adding a handler file requires no bundler registration.
 - The per-tab `Tab_Save_Handler.js` is self-contained (its own copy of the vault-sync, bundler, and cache-clear logic, resolving paths relative to the project root). Inside a compiled standalone it short-circuits: Save re-emits that single file with freshly synced vaults.
 - All three JSON vaults (`#LandingPageData`, `#Bookmarks`, `#NotesData`) exist in every page, so Import/Export produce and consume the same master JSON from anywhere. Live edits travel through the `<vaultId>_Local_Cache` localStorage keys (origin-global); two pages open at once are last-writer-wins.
-- The shared research registry vault `#PapersData` additionally exists in `Index.html`, `03_Notes/Notes.html`, `04_Professors/Professor.html` and `05_R&D/R&D.html`; it is owned by `08_Research_Library.js` (cache key `PapersData_Local_Cache`, mirror `window.PapersState`). It must only ever be written through its merge-safe APIs (`RL_Upsert` / `RL_MergePapers` / `RL_ImportSlice`) — never wholesale-replaced.
+- The shared research registry vault `#PapersData` additionally exists in `Index.html`, `03_Notes/Notes.html`, `04_Professors/06_Tab_Professors/Professor.html` and `05_R&D/06_Tab_RD/R&D.html`; it is owned by `08_Research_Library.js` (cache key `PapersData_Local_Cache`, mirror `window.PapersState`). It must only ever be written through its merge-safe APIs (`RL_Upsert` / `RL_MergePapers` / `RL_ImportSlice`) — never wholesale-replaced.
 - Landing orb tabs declare `"PageUrl"` (e.g. `"02_Bookmarks/01_Tab_Bookmarks/Bookmarks.html"`) next to their hash `"Url"`. In the dev workspace orbs open the `PageUrl`; inside the all-in-one standalone build (`__IS_STANDALONE__`) they fall back to the hash `Url`.
 - Per-tab standalone files are **not** self-sufficient hubs: keep them next to `Index.html` so the logo has somewhere to go. The all-in-one `Local_HUB.html` remains the portable everything-file.
 - Serve the folder over http(s) (e.g. a local dev server) when using multiple pages — cross-file localStorage on `file://` is browser-dependent.

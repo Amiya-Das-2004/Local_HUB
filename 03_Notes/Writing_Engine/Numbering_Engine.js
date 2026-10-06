@@ -138,11 +138,27 @@ export function computeHeadingPrefixes(blocks = [], autoNumberingConfig = null) 
 /**
  * Calculates sequential figure numbers across Image and TikZ blocks,
  * creating both a block-to-figure metadata map and a tag/label citation lookup map.
+ *
+ * @param {Array<Object>} blocks - note blocks
+ * @param {string} style - figure numbering style: 'numeric' (default), 'alphabetic' (A,B),
+ *   'alphabetic_small' (a,b), 'roman' (I,II), 'roman_small' (i,ii) — per-note note.figureNumbering
+ * @param {boolean} showCaptions - whether Image/TikZ blocks render their caption line
+ *   (per-note note.showFigureCaptions, default true)
+ * @returns {{ figureMap: Map<string, {figNumber, label, prefix, tag, allowNumbering, showCaptions}>, tagMap: Map<string, string|null> }}
  */
-export function computeFigureNumbers(blocks = []) {
-  const figureMap = new Map(); // (block.id || idx) -> { figNumber, prefix, tag, allowNumbering }
-  const tagMap = new Map();    // normalizedTag -> figNumber
+export function computeFigureNumbers(blocks = [], style = 'numeric', showCaptions = true) {
+  const figureMap = new Map(); // (block.id || idx) -> { figNumber, label, prefix, tag, allowNumbering, showCaptions, usedTags }
+  const tagMap = new Map();    // normalizedTag -> formatted label (e.g. '3', 'a', 'iv'); FIRST block wins
+  const tagOwners = new Map(); // normalizedTag -> Set(blockKey) — for duplicate detection
   let currentFig = 0;
+
+  const fmtFig = (n) => {
+    if (style === 'alphabetic' || style === 'alpha_upper' || style === 'upper_alphabetic') return toAlpha(n, true);
+    if (style === 'alphabetic_small' || style === 'alpha_lower' || style === 'lower_alphabetic') return toAlpha(n, false);
+    if (style === 'roman' || style === 'roman_upper') return toRoman(n, true);
+    if (style === 'roman_small' || style === 'roman_lower') return toRoman(n, false);
+    return String(n);
+  };
 
   const processBlock = (block, fallbackKey) => {
     if (!block || typeof block !== 'object') return;
@@ -154,34 +170,47 @@ export function computeFigureNumbers(blocks = []) {
     }
 
     if (block.type === 'image' || block.type === 'tikz') {
+      const blockKey = String(block.id || fallbackKey);
       const isNumberingAllowed = block.allowNumbering !== false;
       const rawTag = (block.tag || '').trim();
       const normalizedTag = rawTag.toLowerCase();
 
+      if (normalizedTag) {
+        const owners = tagOwners.get(normalizedTag) || new Set();
+        owners.add(blockKey);
+        tagOwners.set(normalizedTag, owners);
+      }
+
       if (isNumberingAllowed) {
         currentFig++;
         const figNumber = currentFig;
+        const label = fmtFig(figNumber);
         const tag = rawTag || `fig${figNumber}`;
 
-        figureMap.set(block.id || fallbackKey, {
+        figureMap.set(blockKey, {
           figNumber: figNumber,
-          prefix: `Fig: ${figNumber}: `,
+          label: label,
+          prefix: `Fig: ${label}: `,
           tag: tag,
-          allowNumbering: true
+          allowNumbering: true,
+          showCaptions: showCaptions !== false
         });
 
-        if (normalizedTag) {
-          tagMap.set(normalizedTag, figNumber);
+        // First block wins — later duplicates resolve to the earlier figure.
+        if (normalizedTag && !tagMap.has(normalizedTag)) {
+          tagMap.set(normalizedTag, label);
         }
-        tagMap.set(String(figNumber), figNumber);
+        tagMap.set(String(figNumber), label);
       } else {
-        figureMap.set(block.id || fallbackKey, {
+        figureMap.set(blockKey, {
           figNumber: null,
+          label: '',
           prefix: '',
           tag: rawTag,
-          allowNumbering: false
+          allowNumbering: false,
+          showCaptions: showCaptions !== false
         });
-        if (normalizedTag) {
+        if (normalizedTag && !tagMap.has(normalizedTag)) {
           tagMap.set(normalizedTag, null);
         }
       }
@@ -190,6 +219,15 @@ export function computeFigureNumbers(blocks = []) {
 
   blocks.forEach((block, idx) => {
     processBlock(block, idx);
+  });
+
+  // Per-block set of tags already used by OTHER figure blocks (for input validation).
+  figureMap.forEach((info, key) => {
+    const used = new Set();
+    tagOwners.forEach((owners, t) => {
+      if (!(owners.size === 1 && owners.has(key))) used.add(t);
+    });
+    info.usedTags = used;
   });
 
   return { figureMap, tagMap };
@@ -235,6 +273,7 @@ export function computeEquationNumbers(blocks = [], style = 'numeric') {
     if (block.type !== 'equation') return;
 
     const tex = block.tex || block.content || '';
+    const lines = tex.split('\n');
     const parts = splitParts(tex);
     const blockId = block.id || fallbackKey;
 
@@ -245,11 +284,46 @@ export function computeEquationNumbers(blocks = [], style = 'numeric') {
 
     const allTags = tagsIn(tex);
 
+    // A user tag resolves to the FIRST equation claiming it; later duplicates are
+    // reported back to the block via dupTags (namespaces: equations and figures are independent).
+    const dupTags = [];
+    const claimTag = (t, entry) => {
+      const k = String(t).toLowerCase();
+      if (tagMap.has(k)) { dupTags.push(t); return; }
+      tagMap.set(k, entry);
+    };
+
+    // In-aligned sub-equations: within a single part carrying exactly ONE \tag{name},
+    // any line ending with `\\ %sub` marks that the NEXT line starts a new sub-equation.
+    // Members are labeled base.i, base.ii ... and \eq{name:i} resolves to them.
+    const SUB_MARK = /\\\\\s*%sub\s*$/;
+    let alignedGroup = false;
+    const subMemberLines = [];
+    if (parts.length === 1 && allTags.length === 1) {
+      for (let li = 1; li < lines.length; li++) {
+        if (SUB_MARK.test(lines[li - 1])) { subMemberLines.push(li); alignedGroup = true; }
+      }
+    }
+
+    if (alignedGroup) {
+      counter++;
+      const base = fmtBase(counter);
+      const members = Array.from({ length: subMemberLines.length + 1 }, (_, i) => `${base}.${fmtSub(i + 1)}`);
+      eqMap.set(blockId, { eqNumber: counter, baseLabel: base, members, isGroup: true, allowNumbering: true, tag: allTags[0], dupTags, renderMode: 'alignedGroup', subMemberLines });
+      const baseName = allTags[0].toLowerCase();
+      claimTag(allTags[0], { label: base, blockId, subIndex: null });
+      members.forEach((label, i) => {
+        tagMap.set(`${baseName}:${i + 1}`, { label, blockId, subIndex: i + 1 });
+        tagMap.set(`${baseName}:${fmtSub(i + 1)}`, { label, blockId, subIndex: i + 1 });
+      });
+      return;
+    }
+
     if (parts.length === 1) {
       counter++;
       const label = fmtBase(counter);
-      eqMap.set(blockId, { eqNumber: counter, baseLabel: label, members: [label], isGroup: false, allowNumbering: true, tag: allTags[0] || '' });
-      tagsIn(parts[0]).forEach(t => tagMap.set(t.toLowerCase(), { label, blockId, subIndex: null }));
+      eqMap.set(blockId, { eqNumber: counter, baseLabel: label, members: [label], isGroup: false, allowNumbering: true, tag: allTags[0] || '', dupTags });
+      tagsIn(parts[0]).forEach(t => claimTag(t, { label, blockId, subIndex: null }));
       return;
     }
 
@@ -258,9 +332,9 @@ export function computeEquationNumbers(blocks = [], style = 'numeric') {
       counter++;
       const base = fmtBase(counter);
       const members = parts.map((_, i) => `${base}.${fmtSub(i + 1)}`);
-      eqMap.set(blockId, { eqNumber: counter, baseLabel: base, members, isGroup: true, allowNumbering: true, tag: allTags[0] });
+      eqMap.set(blockId, { eqNumber: counter, baseLabel: base, members, isGroup: true, allowNumbering: true, tag: allTags[0], dupTags });
       const baseName = allTags[0].toLowerCase();
-      tagMap.set(baseName, { label: base, blockId, subIndex: null });
+      claimTag(allTags[0], { label: base, blockId, subIndex: null });
       members.forEach((label, i) => {
         tagMap.set(`${baseName}:${i + 1}`, { label, blockId, subIndex: i + 1 });
         tagMap.set(`${baseName}:${fmtSub(i + 1)}`, { label, blockId, subIndex: i + 1 });
@@ -274,9 +348,9 @@ export function computeEquationNumbers(blocks = [], style = 'numeric') {
       counter++;
       const label = fmtBase(counter);
       members.push(label);
-      tagsIn(part).forEach(t => tagMap.set(t.toLowerCase(), { label, blockId, subIndex: members.length }));
+      tagsIn(part).forEach(t => claimTag(t, { label, blockId, subIndex: members.length }));
     });
-    eqMap.set(blockId, { eqNumber: counter, baseLabel: members[0], members, isGroup: false, allowNumbering: true, tag: '' });
+    eqMap.set(blockId, { eqNumber: counter, baseLabel: members[0], members, isGroup: false, allowNumbering: true, tag: '', dupTags });
   };
 
   blocks.forEach((block, idx) => processBlock(block, idx));

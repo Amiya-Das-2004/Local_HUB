@@ -156,9 +156,14 @@ export function profCardHTML(p) {
   var avg = rated.length ? (rated.reduce(function (s, x) { return s + x.rating; }, 0) / rated.length).toFixed(1) : null;
   var areaChips = (p.areas || []).map(function (a) { return '<span class="chip">' + esc(a) + '</span>'; }).join('');
   var pc = p.color || avatarColor(p.name);
+  /* big proff.html-style portrait — when no photo was dropped / pasted / linked,
+     the space stays blank (no initials fallback) */
   var photo = p.photo
-    ? '<img class="avatar" src="' + esc(p.photo) + '" style="--prof-c:' + pc + '" alt="Photo of ' + esc(p.name) + '" onerror="this.outerHTML=window.__avatarFallback(\'' + esc(p.id) + '\')"/>'
-    : '<span class="avatar" aria-hidden="true" style="background:' + pc + ';--prof-c:' + pc + '">' + esc(initials(p.name)) + '</span>';
+    ? '<span class="avatar avatar-lg" style="--prof-c:' + pc + '" aria-hidden="true"><img src="' + esc(p.photo) + '" alt="Photo of ' + esc(p.name) + '" onerror="this.remove()"/></span>'
+    : '<span class="avatar avatar-lg avatar-blank" style="--prof-c:' + pc + '" aria-hidden="true"></span>';
+  var clogo = p.collegeLogo
+    ? '<img class="college-logo" src="' + esc(p.collegeLogo) + '" alt="' + esc(p.college) + ' logo" onerror="this.remove()"/>'
+    : '';
   var contact = '';
   if (p.email) contact += '<a href="mailto:' + esc(p.email) + '">' + ICONS.mail + esc(p.email) + '</a>';
   if (p.website) contact += '<a href="' + esc(p.website) + '" target="_blank" rel="noopener noreferrer">' + ICONS.link + 'Website / Scholar</a>';
@@ -207,6 +212,7 @@ export function profCardHTML(p) {
         '<span class="prof-college">' + ICONS.landmark + '<span class="cname">' + esc(p.college) + '</span></span>' +
       '</span>' +
       '<span class="prof-right">' + qsPill(p.qsRank) + '<span class="count-chip' + (filtering ? ' filtered' : '') + '">' + (filtering ? shown.length + ' of ' + papers.length : papers.length + ' paper' + (papers.length === 1 ? '' : 's')) + '</span>' + ICONS.chev + '</span>' +
+      clogo +
     '</button>' +
     '<div class="acc' + (open ? ' open' : '') + '" role="region" aria-label="Professor details"><div class="acc-inner">' + detail + '</div></div>' +
   '</article>';

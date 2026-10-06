@@ -6,13 +6,16 @@ export function GetNavbarHTML() {
   return `
     <style>
       .app-navbar {
-        position: sticky;
+        position: fixed;
         top: var(--header-height, 74px);
+        left: 0;
+        right: 0;
         z-index: 60;
         width: 100%;
         backdrop-filter: blur(16px) saturate(160%);
         -webkit-backdrop-filter: blur(16px) saturate(160%);
         background: var(--header-bg, rgba(11, 13, 20, 0.85));
+        border: none;
         transition: background-color var(--transition, 0.2s);
       }
 
@@ -20,10 +23,11 @@ export function GetNavbarHTML() {
         max-width: 800px;
         width: 100%;
         margin: 0 auto;
-        padding: 22px 16px 12px;
+        padding: 12px 16px 12px;
         box-sizing: border-box;
       }
 
+      /* ===== NEON RED GRADIENT COMMAND BAR ===== */
       .toolbar {
         display: flex;
         align-items: center;
@@ -33,6 +37,15 @@ export function GetNavbarHTML() {
         flex-wrap: nowrap;
         width: 100%;
         box-sizing: border-box;
+        padding: 8px 14px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #ff1744 0%, #ff5252 28%, #e11d48 65%, #9f1239 100%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        box-shadow: 
+          0 10px 30px -4px rgba(255, 23, 68, 0.42),
+          0 4px 12px rgba(0, 0, 0, 0.25),
+          inset 0 1px 1px 0 rgba(255, 255, 255, 0.6);
+        transition: all var(--transition, 0.2s);
       }
 
       .toolbar-left {
@@ -51,76 +64,253 @@ export function GetNavbarHTML() {
         margin-left: auto;
       }
 
-      .primary-icon-btn {
+      /* Base Obsidian Glass Button Style for all Toolbar Buttons (Dark Mode) */
+      .toolbar .view-mode-toggle,
+      .toolbar .ghost-btn,
+      .toolbar .icon-toolbar-btn {
+        background: rgba(14, 18, 27, 0.88);
+        border: 1px solid rgba(0, 0, 0, 0.3);
+        border-radius: 9px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      /* 1. View Mode Toggle in Dark Mode */
+      .toolbar .view-mode-toggle {
+        padding: 3px;
+        gap: 2px;
+      }
+
+      .toolbar .view-btn {
+        color: #ff5252;
+        padding: 5px 8px;
+        border-radius: 6px;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .toolbar .view-btn:hover {
+        color: #ffffff;
+      }
+
+      .toolbar .view-btn.active {
+        background: #ffffff;
+        color: #9f1239;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+      }
+
+      /* 2. Group Filter Dropdown Button in Dark Mode */
+      .toolbar .ghost-btn {
+        color: #ffffff;
+        font-weight: 600;
+        letter-spacing: 0.2px;
+      }
+
+      .toolbar .ghost-btn svg {
+        color: #ff5252;
+        transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .toolbar .ghost-btn:hover {
+        background: #080b12;
+        color: #ff5252;
+        border-color: rgba(255, 255, 255, 0.35);
+        transform: translateY(-1.5px);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35), 0 0 12px rgba(255, 23, 68, 0.4);
+      }
+
+      .toolbar .ghost-btn:hover svg {
+        transform: scale(1.1);
+      }
+
+      .toolbar .ghost-btn:active {
+        transform: translateY(0);
+      }
+
+      /* 3. Check Links Button in Dark Mode */
+      .toolbar .icon-toolbar-btn {
+        color: #ff5252;
+      }
+
+      .toolbar .icon-toolbar-btn:hover {
+        background: #080b12;
+        color: #ffffff;
+        border-color: rgba(255, 255, 255, 0.35);
+        transform: translateY(-1.5px);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35), 0 0 12px rgba(255, 23, 68, 0.4);
+      }
+
+      .toolbar .icon-toolbar-btn:active {
+        transform: translateY(0);
+      }
+
+      /* 4. Add Bookmark Button in Dark Mode */
+      .toolbar .primary-icon-btn {
+        background: #0c1018;
+        color: #ff5252;
+        border: 1.5px solid rgba(255, 82, 82, 0.7);
+        border-radius: 9px;
+        box-shadow: 0 3px 12px rgba(0, 0, 0, 0.32), 0 0 12px rgba(255, 23, 68, 0.3);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         display: inline-flex;
         align-items: center;
         justify-content: center;
         width: 36px;
         height: 36px;
-        border-radius: 8px;
-        border: none;
-        background: var(--accent, #8b6dff);
-        color: #ffffff;
         cursor: pointer;
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         user-select: none;
         flex-shrink: 0;
+        padding: 0;
       }
 
-      .primary-icon-btn:hover {
-        background: var(--accent-hover, #7c5cff);
-        box-shadow: 0 0 14px var(--accent-glow, rgba(139, 109, 255, 0.35));
-        transform: translateY(-1px);
+      .toolbar .primary-icon-btn:hover {
+        background: #ff1744;
+        color: #ffffff;
+        border-color: #ff1744;
+        transform: translateY(-1.5px) scale(1.05);
+        box-shadow: 0 6px 22px rgba(0, 0, 0, 0.45), 0 0 22px rgba(255, 23, 68, 0.8);
       }
 
-      .primary-icon-btn:active {
-        transform: translateY(0);
+      .toolbar .primary-icon-btn:active {
+        transform: translateY(0) scale(1);
       }
 
-      .primary-icon-btn svg {
+      .toolbar .primary-icon-btn svg {
         width: 17px;
         height: 17px;
         flex-shrink: 0;
       }
 
-      .icon-toolbar-btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 36px;
-        height: 36px;
-        border-radius: 8px;
-        border: 1px solid var(--border, #262a3d);
-        background: var(--surface, #151824);
-        color: var(--text, #e8eaf2);
-        cursor: pointer;
+      /* 5. Dropdown Menu Window (Inherits Neon Red Accents) */
+      .toolbar .sections-dropdown-window {
+        border-color: rgba(255, 23, 68, 0.35);
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65), 0 0 20px rgba(255, 23, 68, 0.18);
+      }
+
+      .toolbar .section-item:hover {
+        background: rgba(255, 23, 68, 0.15);
+        color: #ff5252;
+      }
+
+      .toolbar .section-item.active {
+        background: rgba(255, 23, 68, 0.25);
+        color: #ff5252;
+        font-weight: 700;
+      }
+
+      /* ===== LIGHT MODE: LUMINOUS ROSE-CORAL COMMAND BAR ===== */
+      [data-theme="light"] .toolbar {
+        background: linear-gradient(135deg, #ffe4e6 0%, #fecdd3 35%, #fda4af 75%, #fb7185 100%);
+        border: 1px solid rgba(255, 255, 255, 0.85);
+        box-shadow: 
+          0 10px 28px -4px rgba(244, 63, 94, 0.28),
+          0 4px 12px rgba(0, 0, 0, 0.05),
+          inset 0 1px 2px rgba(255, 255, 255, 0.95);
+      }
+
+      [data-theme="light"] .toolbar .view-mode-toggle,
+      [data-theme="light"] .toolbar .ghost-btn,
+      [data-theme="light"] .toolbar .icon-toolbar-btn {
+        background: rgba(255, 255, 255, 0.92);
+        border: 1px solid rgba(225, 29, 72, 0.24);
+        border-radius: 9px;
+        box-shadow: 0 2px 6px rgba(159, 18, 57, 0.08), inset 0 1px 0 rgba(255, 255, 255, 1);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        color: #881337;
+      }
+
+      [data-theme="light"] .toolbar .view-btn {
+        color: #be123c;
+      }
+
+      [data-theme="light"] .toolbar .view-btn:hover {
+        color: #881337;
+      }
+
+      [data-theme="light"] .toolbar .view-btn.active {
+        background: #e11d48;
+        color: #ffffff;
+        box-shadow: 0 2px 8px rgba(225, 29, 72, 0.35);
+      }
+
+      [data-theme="light"] .toolbar .ghost-btn {
+        color: #881337;
+        font-weight: 600;
+      }
+
+      [data-theme="light"] .toolbar .ghost-btn svg {
+        color: #e11d48;
+      }
+
+      [data-theme="light"] .toolbar .ghost-btn:hover {
+        background: #ffffff;
+        color: #be123c;
+        border-color: #f43f5e;
+        transform: translateY(-1.5px);
+        box-shadow: 0 5px 14px rgba(244, 63, 94, 0.28), 0 0 10px rgba(251, 113, 133, 0.25);
+      }
+
+      [data-theme="light"] .toolbar .icon-toolbar-btn {
+        color: #be123c;
+      }
+
+      [data-theme="light"] .toolbar .icon-toolbar-btn:hover {
+        background: #ffffff;
+        color: #881337;
+        border-color: #f43f5e;
+        transform: translateY(-1.5px);
+        box-shadow: 0 5px 14px rgba(244, 63, 94, 0.28), 0 0 10px rgba(251, 113, 133, 0.25);
+      }
+
+      [data-theme="light"] .toolbar .primary-icon-btn {
+        background: linear-gradient(135deg, #e11d48 0%, #f43f5e 100%);
+        color: #ffffff;
+        border: 1px solid rgba(255, 255, 255, 0.45);
+        border-radius: 9px;
+        box-shadow: 0 3px 12px rgba(225, 29, 72, 0.4);
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        user-select: none;
-        flex-shrink: 0;
       }
 
-      .icon-toolbar-btn:hover {
-        border-color: var(--accent, #8b6dff);
-        color: var(--accent, #8b6dff);
-        transform: translateY(-1px);
+      [data-theme="light"] .toolbar .primary-icon-btn:hover {
+        background: linear-gradient(135deg, #be123c 0%, #e11d48 100%);
+        color: #ffffff;
+        border-color: rgba(255, 255, 255, 0.7);
+        transform: translateY(-1.5px) scale(1.05);
+        box-shadow: 0 6px 20px rgba(225, 29, 72, 0.55);
       }
 
-      .icon-toolbar-btn:active {
-        transform: translateY(0);
+      [data-theme="light"] .toolbar .sections-dropdown-window {
+        background: #ffffff;
+        border-color: rgba(225, 29, 72, 0.35);
+        box-shadow: 0 16px 36px rgba(225, 29, 72, 0.15), 0 4px 12px rgba(0, 0, 0, 0.08);
       }
 
-      .icon-toolbar-btn svg {
-        width: 16px;
-        height: 16px;
-        flex-shrink: 0;
+      [data-theme="light"] .toolbar .section-item:hover {
+        background: rgba(244, 63, 94, 0.12);
+        color: #be123c;
+      }
+
+      [data-theme="light"] .toolbar .section-item.active {
+        background: rgba(244, 63, 94, 0.2);
+        color: #be123c;
+        font-weight: 700;
       }
 
       @media (max-width: 600px) {
         .navbar-inner {
-          padding: 16px 12px 10px;
+          padding: 8px 12px 10px;
         }
         .toolbar {
           gap: 6px;
+          padding: 6px 10px;
+          border-radius: 12px;
         }
         .toolbar-left,
         .toolbar-right {
@@ -140,13 +330,10 @@ export function GetNavbarHTML() {
 
       @media (max-width: 440px) {
         .navbar-inner {
-          padding: 14px 8px 8px;
+          padding: 6px 8px 8px;
         }
-      }
-
-      @media (max-height: 500px) {
-        .navbar-inner {
-          padding: 6px 16px;
+        .toolbar {
+          padding: 6px 8px;
         }
       }
 
@@ -217,6 +404,23 @@ export function InitNavbar(state, { onSectionChange, onOrderChange, onAddClick, 
   const addBtn = document.getElementById('add-bookmark-btn');
   if (addBtn && onAddClick) {
     addBtn.addEventListener('click', onAddClick);
+  }
+
+  const navbar = document.querySelector('.app-navbar');
+  if (navbar) {
+    const updateNavbarH = () => {
+      const h = navbar.offsetHeight;
+      if (h > 0) document.documentElement.style.setProperty('--navbar-height', `${h}px`);
+    };
+    updateNavbarH();
+    if (window.ResizeObserver) {
+      new ResizeObserver(entries => {
+        for (const entry of entries) {
+          const h = entry.borderBoxSize ? entry.borderBoxSize[0].blockSize : navbar.offsetHeight;
+          if (h > 0) document.documentElement.style.setProperty('--navbar-height', `${h}px`);
+        }
+      }).observe(navbar);
+    }
   }
 }
 

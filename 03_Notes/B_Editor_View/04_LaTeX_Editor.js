@@ -6,6 +6,7 @@
 
 import { NotesState, SaveNotesState, flushNotesSave } from '../00_State.js';
 import { computeHeadingPrefixes, computeFigureNumbers, computeEquationNumbers, computeCitationNumbers } from '../Writing_Engine/Numbering_Engine.js';
+import { bumpKatexMacroVersion } from '../Writing_Engine/Math_Renderer.js';
 import {
   createNewBlock,
   insertBlockAt,
@@ -19,7 +20,7 @@ import { CreateFloatingToolbar } from './02_Floating_Toolbar.js';
 import { CreateBlockItem } from './01_Blocks/Block_Item.js';
 import { escapeHtml } from '../02_Utils.js';
 import { setActiveNoteContext, setActiveFigureTagMap, setActiveEquationTagMap, setActiveCitationMap } from '../Writing_Engine/Math_Renderer.js';
-import { setActiveTikzNoteContext } from '../Writing_Engine/Tikz_Renderer.js';
+import { setActiveTikzNoteContext } from '../Writing_Engine/Tikz_Engine/Tikz_Renderer.js';
 
 export function RenderLaTeXEditor(container, noteId, isEditMode = true) {
   if (!container) return;
@@ -50,7 +51,7 @@ export function RenderLaTeXEditor(container, noteId, isEditMode = true) {
   // Set active note context for KaTeX macros and TikZ preambles
   setActiveNoteContext(note);
   setActiveTikzNoteContext(note);
-  const initialFigures = computeFigureNumbers(note.blocks || []);
+  const initialFigures = computeFigureNumbers(note.blocks || [], note.figureNumbering || 'numeric', note.showFigureCaptions !== false);
   setActiveFigureTagMap(initialFigures.tagMap);
   const initialEquations = computeEquationNumbers(note.blocks || [], note.equationNumbering);
   setActiveEquationTagMap(initialEquations.tagMap);
@@ -374,7 +375,7 @@ export function RenderLaTeXEditor(container, noteId, isEditMode = true) {
     }
 
     const prefixMap = computeHeadingPrefixes(blocks, note.autoNumbering);
-    const { figureMap, tagMap } = computeFigureNumbers(blocks);
+    const { figureMap, tagMap } = computeFigureNumbers(blocks, note.figureNumbering || 'numeric', note.showFigureCaptions !== false);
     setActiveFigureTagMap(tagMap);
     const eqResult = computeEquationNumbers(blocks, note.equationNumbering);
     activeEqMap = eqResult.eqMap;
@@ -495,7 +496,7 @@ export function RenderLaTeXEditor(container, noteId, isEditMode = true) {
 
     const blocks = note.blocks || [];
     const prefixMap = computeHeadingPrefixes(blocks, note.autoNumbering);
-    const { figureMap, tagMap } = computeFigureNumbers(blocks);
+    const { figureMap, tagMap } = computeFigureNumbers(blocks, note.figureNumbering || 'numeric', note.showFigureCaptions !== false);
     setActiveFigureTagMap(tagMap);
     const eqResult = computeEquationNumbers(blocks, note.equationNumbering);
     activeEqMap = eqResult.eqMap;
@@ -668,7 +669,14 @@ export function RenderLaTeXEditor(container, noteId, isEditMode = true) {
       refreshSidebar();
     },
     onEqStyleChange: () => {
-      // Equation numbering style changed — re-render so \eq labels/numbers update everywhere
+      // Equation numbering style changed — in-math \eq labels are baked into KaTeX output, bust the cache
+      bumpKatexMacroVersion();
+      SaveNotesState();
+      renderBlocks();
+    },
+    onFigStyleChange: () => {
+      // Figure numbering style / caption visibility changed — in-math \fig labels are baked into KaTeX output
+      bumpKatexMacroVersion();
       SaveNotesState();
       renderBlocks();
     }

@@ -22,13 +22,16 @@ export function InitToolbar() {
     ui.sort = this.value;
     renderList();
   });
-  $('#statusSelect').addEventListener('change', function () {
+  /* ---------- secondary utilities (row 3) were removed from the header —
+     bindings survive guarded so the controls can be re-wired later ---------- */
+  var statusSel = $('#statusSelect');
+  if (statusSel) statusSel.addEventListener('change', function () {
     ui.statusFilter = this.value;
     ui.expandedPaper = null;
     render();
   });
-  /* ---------- favorites toolbar filter ---------- */
-  $('#favBtn').addEventListener('click', function () {
+  var favBtn = $('#favBtn');
+  if (favBtn) favBtn.addEventListener('click', function () {
     ui.favOnly = !ui.favOnly;
     this.classList.toggle('active', ui.favOnly);
     this.setAttribute('aria-pressed', String(ui.favOnly));
@@ -37,13 +40,16 @@ export function InitToolbar() {
       toast('No favorites yet — open a professor and press the ★ star (or focus it and hit F).', 'info');
     }
   });
-  $('#expandAllBtn').addEventListener('click', function () {
+  var expandAllBtn = $('#expandAllBtn');
+  if (expandAllBtn) expandAllBtn.addEventListener('click', function () {
     ui.expandedProf = ui.expandedProf === 'ALL' ? null : 'ALL';
     ui.expandedPaper = null;
     renderList();
   });
-  $('#compareBtn').addEventListener('click', openCompare);
-  $('#journalBtn').addEventListener('click', openJournalBrowser);
+  var compareBtn = $('#compareBtn');
+  if (compareBtn) compareBtn.addEventListener('click', openCompare);
+  var journalBtn = $('#journalBtn');
+  if (journalBtn) journalBtn.addEventListener('click', openJournalBrowser);
   $('#profList').addEventListener('change', function (e) {
     var sel = e.target.closest('[data-paper-sort]');
     if (sel) {

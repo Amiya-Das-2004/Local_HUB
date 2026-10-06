@@ -122,7 +122,8 @@ export function initProfessorsApp() {
   } else {
     /* hash re-entry: restore the select values the fresh markup forgot */
     $('#sortSelect').value = ui.sort;
-    $('#statusSelect').value = ui.statusFilter;
+    var statusSel = $('#statusSelect'); /* row-3 status filter was removed from the header */
+    if (statusSel) statusSel.value = ui.statusFilter;
   }
   applyTheme(state.theme);
   ui.sort = $('#sortSelect').value || 'qs';

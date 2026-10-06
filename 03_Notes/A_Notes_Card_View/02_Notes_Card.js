@@ -1,5 +1,5 @@
 import { SaveNotesState } from '../00_State.js';
-import { escapeHtml, toggleTaskInRawText, formatNoteDescription, getNoteRawDescription } from '../02_Utils.js';
+import { escapeHtml, toggleTaskInRawText, getNoteRawDescription, formatNoteProperties } from '../02_Utils.js';
 import { GetCurrentView } from './01_Navbar/01_Card_View_Toggle.js';
 import { GetActiveGroup } from './01_Navbar/02_Group_Filter.js';
 import { GetSearchQuery, FilterNotesByQuery } from './01_Navbar/03_Search_Bar.js';
@@ -12,37 +12,79 @@ export function GetNotesCardsContainerStyles() {
     <style>
       .notes-cards-container {
         width: 100%;
+        padding-top: calc(var(--notes-toolbar-height, 74px) + 8px);
       }
 
       .notes-group-section {
         margin-bottom: 32px;
       }
 
+      .notes-group-section.is-collapsed {
+        margin-bottom: 12px;
+      }
+
       .notes-group-section-title {
+        position: sticky;
+        top: calc(var(--notes-header-height, 74px) + var(--notes-toolbar-height, 74px));
+        z-index: 40;
+        background: var(--bg, #0e1018);
+        padding: 8px 12px 8px 16px;
+        margin-bottom: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        user-select: none;
+        cursor: pointer;
+        border-radius: 6px;
         font-size: 0.75rem;
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 1.4px;
         color: var(--text-secondary, #a0a4b8);
-        margin-bottom: 14px;
-        padding-left: 12px;
-        display: flex;
+        transition: background-color var(--transition, 0.2s), color var(--transition, 0.2s);
+      }
+
+      .notes-group-section-title:hover {
+        background: var(--card, #1c1f2e);
+        color: var(--text, #e8eaf2);
+      }
+
+      .notes-group-section-title:focus-visible {
+        outline: 2px solid #00ff87;
+        outline-offset: 2px;
+      }
+
+      .notes-group-title-label {
+        display: inline-flex;
         align-items: center;
-        gap: 8px;
-        position: relative;
-        user-select: none;
+        gap: 6px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
       .notes-group-section-title::before {
         content: "";
         position: absolute;
-        left: 0;
+        left: 4px;
         top: 50%;
         transform: translateY(-50%);
         width: 3px;
         height: 14px;
         border-radius: 2px;
-        background: linear-gradient(180deg, var(--accent, #8b6dff), #a855f7);
+        background: linear-gradient(180deg, #00ff87, #059669);
+      }
+
+      [data-theme="light"] .notes-group-section-title {
+        background: var(--bg, #f3f4f8);
+      }
+
+      [data-theme="light"] .notes-group-section-title::before {
+        background: linear-gradient(180deg, #10b981, #047857);
+      }
+
+      [data-theme="light"] .notes-group-section-title:focus-visible {
+        outline-color: #10b981;
       }
 
       .notes-group-section-title .count-pill {
@@ -54,6 +96,27 @@ export function GetNotesCardsContainerStyles() {
         padding: 1px 7px;
         border-radius: 8px;
         text-transform: none;
+      }
+
+      .notes-group-collapse-icon {
+        width: 14px;
+        height: 14px;
+        color: var(--text-dim, #6b7088);
+        margin-left: auto;
+        transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), color 0.2s;
+        flex-shrink: 0;
+      }
+
+      .notes-group-section-title:hover .notes-group-collapse-icon {
+        color: var(--text, #e8eaf2);
+      }
+
+      .notes-group-section.is-collapsed .notes-group-collapse-icon {
+        transform: rotate(-90deg);
+      }
+
+      .notes-group-section.is-collapsed .notes-grid {
+        display: none !important;
       }
 
       .notes-grid {
@@ -482,8 +545,7 @@ export function CreateCardElement(note, { isSelected = false, onRefresh = null }
   // Extract raw text for description using shared helper (lightweight preview)
   const rawDescription = getNoteRawDescription(note, { forPreview: true });
 
-  const descHtml = formatNoteDescription(rawDescription);
-  const hasDesc = Boolean(descHtml);
+  const hasDesc = Boolean(rawDescription);
 
   // Tags rendered in UPPERCASE; footer omitted if no tags exist
   const validTags = (note.tags || []).filter(t => typeof t === 'string' && t.trim().length > 0);
@@ -491,10 +553,8 @@ export function CreateCardElement(note, { isSelected = false, onRefresh = null }
 
   card.className = `note-card ${isSelected ? 'is-selected' : ''} ${hasDesc ? 'has-desc' : ''} ${hasFooter ? 'has-footer' : ''}`;
 
-  let descMarkup = '';
-  if (hasDesc) {
-    descMarkup = `<div class="note-card-description">${descHtml}</div>`;
-  }
+  // Obsidian-style typed properties (replaces the old description block)
+  let descMarkup = formatNoteProperties(note);
 
   let footerMarkup = '';
   if (hasFooter) {
@@ -604,6 +664,37 @@ export function CreateCardElement(note, { isSelected = false, onRefresh = null }
   return card;
 }
 
+// Storage keys and helpers for collapsible group sections
+const NOTES_COLLAPSED_GROUPS_KEY = 'Notes_Collapsed_Groups';
+
+function getNotesCollapsedGroups() {
+  try {
+    const raw = localStorage.getItem(NOTES_COLLAPSED_GROUPS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveNotesCollapsedGroups(list) {
+  try {
+    localStorage.setItem(NOTES_COLLAPSED_GROUPS_KEY, JSON.stringify(list));
+  } catch (e) {
+    console.warn('Failed to save collapsed groups:', e);
+  }
+}
+
+function toggleGroupCollapsed(groupName, isCollapsed) {
+  const list = getNotesCollapsedGroups();
+  const set = new Set(list);
+  if (isCollapsed) {
+    set.add(groupName);
+  } else {
+    set.delete(groupName);
+  }
+  saveNotesCollapsedGroups(Array.from(set));
+}
+
 // Groups, searches, filters, and renders note cards into grid or list sections with empty state handling
 export function RenderNotesGrid(container, state) {
   if (!container) {
@@ -642,6 +733,8 @@ export function RenderNotesGrid(container, state) {
     : [activeGroup];
 
   let totalRenderedNotes = 0;
+  const isSearchActive = !!(searchQuery && searchQuery.trim().length > 0);
+  const collapsedGroups = getNotesCollapsedGroups();
 
   groupsToRender.forEach(groupName => {
     const groupNotes = searchFilteredNotes.filter(n => (n.folder || 'General') === groupName);
@@ -652,10 +745,41 @@ export function RenderNotesGrid(container, state) {
     const sectionEl = document.createElement('div');
     sectionEl.className = 'notes-group-section';
 
-    // Section Title with Count Pill
+    const isSavedCollapsed = collapsedGroups.includes(groupName);
+    const isCollapsed = !isSearchActive && isSavedCollapsed;
+    if (isCollapsed) {
+      sectionEl.classList.add('is-collapsed');
+    }
+
+    // Section Title with Count Pill and Collapse Chevron
     const titleEl = document.createElement('div');
     titleEl.className = 'notes-group-section-title';
-    titleEl.innerHTML = `📁 ${escapeHtml(groupName)} <span class="count-pill">${groupNotes.length}</span>`;
+    titleEl.setAttribute('role', 'button');
+    titleEl.setAttribute('tabindex', '0');
+    titleEl.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+    titleEl.setAttribute('title', 'Click to toggle collapse');
+    titleEl.innerHTML = `
+      <span class="notes-group-title-label">📁 ${escapeHtml(groupName)}</span>
+      <span class="count-pill">${groupNotes.length}</span>
+      <svg class="notes-group-collapse-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="6 9 12 15 18 9"></polyline>
+      </svg>
+    `;
+
+    const handleToggle = () => {
+      const nowCollapsed = sectionEl.classList.toggle('is-collapsed');
+      titleEl.setAttribute('aria-expanded', nowCollapsed ? 'false' : 'true');
+      toggleGroupCollapsed(groupName, nowCollapsed);
+    };
+
+    titleEl.addEventListener('click', handleToggle);
+    titleEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handleToggle();
+      }
+    });
+
     sectionEl.appendChild(titleEl);
 
     // Cards Grid / List wrapper

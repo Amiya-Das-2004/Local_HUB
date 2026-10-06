@@ -1,10 +1,22 @@
 import { NotesState, SaveNotesState } from '../../00_State.js';
-import { escapeHtml, getNoteRawDescription, getAvailableFolders } from '../../02_Utils.js';
-import { renderTextBlock, serializeElement } from '../../B_Editor_View/01_Blocks/Text_Block.js';
+import { escapeHtml, getAvailableFolders } from '../../02_Utils.js';
 
 let EditingNoteId = null;
 let OnModalUpdate = null;
-let CurrentModalDescription = '';
+let ModalProperties = [];
+
+// Property types (Obsidian-style). 'automatic' infers number/checkbox/date on save.
+const PROPERTY_TYPES = [
+  { id: 'automatic', label: 'Automatic (Text)', icon: '✨' },
+  { id: 'text', label: 'Text', icon: '≡' },
+  { id: 'number', label: 'Number', icon: '#' },
+  { id: 'checkbox', label: 'Checkbox', icon: '☑' },
+  { id: 'date', label: 'Date', icon: '📅' },
+  { id: 'datetime', label: 'Date & time', icon: '🕐' },
+  { id: 'list', label: 'List', icon: '≣' }
+];
+
+const propTypeMeta = (id) => PROPERTY_TYPES.find(t => t.id === id) || PROPERTY_TYPES[0];
 
 // Returns modal dialog HTML markup for adding or editing a note card with live Obsidian in-place editor
 export function GetNoteModalHTML() {
@@ -286,6 +298,68 @@ export function GetNoteModalHTML() {
         background: var(--accent-hover, #7c5cff);
         box-shadow: 0 0 12px var(--accent-glow, rgba(139, 109, 255, 0.35));
       }
+
+      /* Properties (Obsidian-style typed key-value rows) */
+      .notes-add-prop-btn {
+        height: 24px; padding: 0 10px; border-radius: 6px; font-size: 11px; font-weight: 600;
+        border: 1px solid var(--accent, #8b6dff); background: transparent; color: var(--accent, #8b6dff);
+        cursor: pointer; font-family: inherit; transition: all 0.15s; user-select: none;
+      }
+      .notes-add-prop-btn:hover { background: var(--accent, #8b6dff); color: #fff; }
+
+      .notes-props-list { display: flex; flex-direction: column; gap: 6px; }
+      .note-props-empty {
+        font-size: 11.5px; color: var(--text-dim, #7a7e92); padding: 8px 10px;
+        border: 1px dashed var(--border, #2a2e40); border-radius: 8px; text-align: center;
+      }
+      .note-prop-edit-row {
+        display: grid; grid-template-columns: 30px minmax(70px, 34%) 1fr 22px;
+        gap: 6px; align-items: center;
+        padding: 4px 6px; border: 1px solid var(--border, #2a2e40); border-radius: 8px;
+        background: var(--card, #1c1f2e);
+      }
+      .note-prop-edit-row:focus-within { border-color: var(--accent, #8b6dff); }
+      .note-prop-edit-row.is-check { grid-template-columns: 30px 22px 1fr 22px; }
+      .note-prop-edit-row.is-check .note-prop-value-cb { width: 16px; height: 16px; margin: 0 4px; }
+      .note-prop-type-chip {
+        height: 26px; border: none; background: transparent; color: var(--text-secondary, #a0a4b8);
+        font-size: 13px; cursor: pointer; border-radius: 6px; display: flex; align-items: center;
+        justify-content: center; gap: 1px; padding: 0;
+      }
+      .note-prop-type-chip:hover { background: var(--surface-hover, rgba(255,255,255,0.06)); color: var(--accent, #8b6dff); }
+      .note-prop-type-caret { font-size: 8px; opacity: 0.7; }
+      .note-prop-key-input {
+        height: 28px; padding: 0 8px; border-radius: 6px; border: 1px solid transparent;
+        background: transparent; color: var(--text-secondary, #a0a4b8); font-size: 12px; font-weight: 600;
+        outline: none; font-family: inherit; min-width: 0; box-sizing: border-box;
+      }
+      .note-prop-key-input:focus { border-color: var(--border, #2a2e40); background: var(--surface, #181b27); color: var(--text, #e8eaf2); }
+      .note-prop-value-input {
+        width: 100%; height: 28px; padding: 0 8px; border-radius: 6px; border: 1px solid transparent;
+        background: transparent; color: var(--text, #e8eaf2); font-size: 12px; outline: none;
+        font-family: inherit; min-width: 0; box-sizing: border-box;
+      }
+      .note-prop-value-input:focus { border-color: var(--border, #2a2e40); background: var(--surface, #181b27); }
+      .note-prop-value-cb { accent-color: var(--accent, #8b6dff); width: 15px; height: 15px; cursor: pointer; }
+      .note-prop-remove-btn {
+        height: 22px; width: 22px; border: none; background: transparent; color: var(--text-dim, #7a7e92);
+        font-size: 12px; cursor: pointer; border-radius: 6px; line-height: 1; padding: 0;
+      }
+      .note-prop-remove-btn:hover { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+
+      .note-prop-type-menu {
+        position: fixed; z-index: 1300; min-width: 170px; padding: 4px;
+        background: var(--surface, #181b27); border: 1px solid var(--border, #2a2e40); border-radius: 10px;
+        box-shadow: 0 14px 36px rgba(0, 0, 0, 0.55); display: flex; flex-direction: column; gap: 1px;
+      }
+      .note-prop-type-option {
+        display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 9px;
+        border: none; background: transparent; color: var(--text, #e8eaf2); font-size: 12px;
+        cursor: pointer; border-radius: 6px; text-align: left; font-family: inherit;
+      }
+      .note-prop-type-option:hover { background: var(--surface-hover, rgba(255,255,255,0.06)); }
+      .note-prop-type-option.active { background: rgba(139, 109, 255, 0.14); color: var(--accent, #8b6dff); }
+      .note-prop-type-ico { width: 16px; text-align: center; flex-shrink: 0; }
     </style>
 
     <div class="notes-modal-overlay hidden" id="notes-add-edit-modal">
@@ -318,10 +392,13 @@ export function GetNoteModalHTML() {
             </div>
           </div>
 
-          <!-- 3. Detail / Description Block (In-Place Obsidian Live Surface) -->
+          <!-- 3. Properties (Obsidian-style typed key-value rows) -->
           <div class="notes-form-group">
-            <label>Description</label>
-            <div id="notes-modal-desc-mount" class="w-full"></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
+              <label style="margin:0;">Properties</label>
+              <button type="button" id="notes-modal-add-prop-btn" class="notes-add-prop-btn" title="Add Property">+ Add Property</button>
+            </div>
+            <div id="notes-modal-props-list" class="notes-props-list"></div>
           </div>
         </div>
 
@@ -367,6 +444,120 @@ function renderFolderComboDropdown(filterText = '') {
   });
 }
 
+// ---------- Properties (Obsidian-style typed key-value rows) ----------
+
+function renderModalProperties() {
+  const list = document.getElementById('notes-modal-props-list');
+  if (!list) return;
+  list.innerHTML = '';
+  if (!ModalProperties.length) {
+    const empty = document.createElement('div');
+    empty.className = 'note-props-empty';
+    empty.textContent = 'No properties yet — values support inline math ($x^2$) and links ($\\href{url}{text}$)';
+    list.appendChild(empty);
+    return;
+  }
+  ModalProperties.forEach((p, idx) => {
+    const meta = propTypeMeta(p.type);
+    const isCheck = p.type === 'checkbox';
+    const row = document.createElement('div');
+    row.className = 'note-prop-edit-row' + (isCheck ? ' is-check' : '');
+    row.innerHTML = isCheck ? `
+      <button type="button" class="note-prop-type-chip" title="Property type (${meta.label})">${meta.icon}<span class="note-prop-type-caret">▾</span></button>
+      <input type="checkbox" class="note-prop-value-cb" ${(p.value === true || p.value === 'true') ? 'checked' : ''} title="Task done?" />
+      <input type="text" class="note-prop-text-input note-prop-value-input" placeholder="task — $math$, links…" value="${escapeHtml(p.text || '')}" autocomplete="off" />
+      <button type="button" class="note-prop-remove-btn" title="Remove task">✕</button>
+    ` : `
+      <button type="button" class="note-prop-type-chip" title="Property type (${meta.label})">${meta.icon}<span class="note-prop-type-caret">▾</span></button>
+      <input type="text" class="note-prop-key-input" placeholder="Name" value="${escapeHtml(p.key)}" autocomplete="off" />
+      <div class="note-prop-value-host"></div>
+      <button type="button" class="note-prop-remove-btn" title="Remove property">✕</button>
+    `;
+    if (!isCheck) row.querySelector('.note-prop-value-host').appendChild(buildPropertyValueControl(p));
+    list.appendChild(row);
+  });
+}
+
+// Builds the value control matching the property type. Checkbox rows: toggle LEFT,
+// writing block RIGHT (stored as p.text; rendered beside the tick with math/link support).
+// Input/change events are handled by document-level delegation (rows are re-created freely).
+function buildPropertyValueControl(p) {
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'min-width:0;display:flex;align-items:center;gap:8px;';
+  if (p.type === 'checkbox') {
+    if (p.value === undefined) p.value = false;
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.className = 'note-prop-value-cb';
+    cb.checked = p.value === true || p.value === 'true';
+    wrap.appendChild(cb);
+    const txt = document.createElement('input');
+    txt.type = 'text';
+    txt.className = 'note-prop-text-input note-prop-value-input';
+    txt.placeholder = 'note — $math$, links…';
+    txt.value = (p.text === undefined || p.text === null) ? '' : p.text;
+    wrap.appendChild(txt);
+    return wrap;
+  }
+  const inp = document.createElement('input');
+  inp.type = p.type === 'number' ? 'number' : (p.type === 'date' ? 'date' : (p.type === 'datetime' ? 'datetime-local' : 'text'));
+  inp.className = 'note-prop-value-input';
+  inp.autocomplete = 'off';
+  if (p.type === 'automatic') inp.placeholder = 'value — $math$, links…';
+  if (p.type === 'list') inp.placeholder = 'comma, separated, values';
+  inp.value = (p.value === undefined || p.value === null) ? '' : p.value;
+  wrap.appendChild(inp);
+  return wrap;
+}
+
+function closePropTypeMenu() {
+  document.querySelectorAll('.note-prop-type-menu').forEach(mn => mn.remove());
+}
+
+function openPropTypeMenu(anchorEl, idx) {
+  closePropTypeMenu();
+  const menu = document.createElement('div');
+  menu.className = 'note-prop-type-menu';
+  menu.innerHTML = PROPERTY_TYPES.map(t => `
+    <button type="button" class="note-prop-type-option ${ModalProperties[idx].type === t.id ? 'active' : ''}" data-type="${t.id}">
+      <span class="note-prop-type-ico">${t.icon}</span><span>${t.label}</span>
+    </button>`).join('');
+  document.body.appendChild(menu);
+  const r = anchorEl.getBoundingClientRect();
+  const mw = menu.offsetWidth, mh = menu.offsetHeight;
+  menu.style.top = Math.max(8, Math.min(r.bottom + 6, window.innerHeight - mh - 8)) + 'px';
+  menu.style.left = Math.max(8, Math.min(r.left, window.innerWidth - mw - 8)) + 'px';
+  menu.querySelectorAll('.note-prop-type-option').forEach(opt => {
+    opt.addEventListener('click', (e) => {
+      e.stopPropagation();
+      ModalProperties[idx].type = opt.getAttribute('data-type');
+      closePropTypeMenu();
+      renderModalProperties();
+    });
+  });
+  setTimeout(() => document.addEventListener('click', closePropTypeMenu, { once: true }), 0);
+}
+
+// Normalizes ModalProperties for storage: 'automatic' infers number/checkbox/date, empties dropped
+function collectModalProperties() {
+  return ModalProperties
+    .map(p => {
+      let value = p.value;
+      let type = p.type || 'automatic';
+      const s = String(value ?? '').trim();
+      if (type === 'automatic') {
+        if (s === 'true' || s === 'false') { type = 'checkbox'; value = (s === 'true'); }
+        else if (s !== '' && !isNaN(Number(s))) { type = 'number'; value = Number(s); }
+        else if (/^\d{4}-\d{2}-\d{2}$/.test(s)) { type = 'date'; }
+      }
+      if (type === 'number') value = (value === '' || value === null || isNaN(Number(value))) ? '' : Number(value);
+      const out = { key: String(p.key || '').trim(), value, type: type === 'automatic' ? 'text' : type };
+      if (type === 'checkbox' && String(p.text || '').trim()) out.text = String(p.text).trim();
+      return out;
+    })
+    .filter(p => p.key || (p.type === 'checkbox' && (String(p.text || '').trim() || p.value === true)));
+}
+
 // Opens the note modal prefilled with existing note data for editing or empty for creating a new note
 export function OpenNoteModal(note = null) {
   EditingNoteId = note ? note.id : null;
@@ -375,15 +566,13 @@ export function OpenNoteModal(note = null) {
   const titleInput = document.getElementById('notes-modal-title-input');
   const folderInput = document.getElementById('notes-modal-folder-input');
   const tagsInput = document.getElementById('notes-modal-tags-input');
-  const descMount = document.getElementById('notes-modal-desc-mount');
 
   if (!modal) return;
 
-  // Extract description using shared helper
-  const rawDesc = note ? getNoteRawDescription(note) : '';
-  CurrentModalDescription = rawDesc;
+  ModalProperties = (note && Array.isArray(note.properties))
+    ? JSON.parse(JSON.stringify(note.properties))
+    : [];
 
-  // Set values
   if (titleText) titleText.textContent = note ? 'Edit Note Card' : 'Add Note Card';
   if (titleInput) {
     titleInput.value = note ? (note.title || '') : '';
@@ -394,21 +583,7 @@ export function OpenNoteModal(note = null) {
     renderFolderComboDropdown(folderInput.value);
   }
   if (tagsInput) tagsInput.value = note ? (note.tags || []).join(', ') : '';
-
-  // Mount in-place Obsidian live editor
-  if (descMount) {
-    descMount.innerHTML = '';
-    const tempBlock = { type: 'text', content: rawDesc, bulletStyle: 'disc' };
-    const textBlockEl = renderTextBlock(
-      tempBlock,
-      true,
-      (updated) => {
-        CurrentModalDescription = updated.content;
-      },
-      NotesState.notes || []
-    );
-    descMount.appendChild(textBlockEl);
-  }
+  renderModalProperties();
 
   modal.classList.remove('hidden');
   if (titleInput) {
@@ -430,139 +605,173 @@ export function CloseNoteModal() {
   EditingNoteId = null;
 }
 
-// Binds event listeners for modal controls, live in-place Obsidian surface, and note save.
-// The modal DOM is static, so listeners are bound once — InitNoteModal runs on every deck
-// render and must not stack duplicate document/keydown handlers each time.
-let NoteModalListenersBound = false;
+// Binds ALL modal interactions via document-level delegation — the deck re-render replaces
+// the modal DOM on every render, so once-bound per-element listeners would go stale.
+let NoteModalDelegated = false;
+
+function saveNoteFromModal() {
+  const modal = document.getElementById('notes-add-edit-modal');
+  if (!modal || modal.classList.contains('hidden')) return;
+
+  const titleIn = document.getElementById('notes-modal-title-input');
+  const folderIn = document.getElementById('notes-modal-folder-input');
+  const tagsIn = document.getElementById('notes-modal-tags-input');
+
+  const title = titleIn ? titleIn.value.trim() : '';
+  const folder = (folderIn && folderIn.value.trim()) ? folderIn.value.trim() : 'General';
+  const tags = tagsIn ? tagsIn.value.split(',').map(t => t.trim()).filter(Boolean) : [];
+  const properties = collectModalProperties();
+
+  if (!title) {
+    if (titleIn) {
+      titleIn.style.borderColor = '#ef4444';
+      titleIn.focus();
+    }
+    alert('Please enter a note title.');
+    return;
+  }
+
+  if (!NotesState.folders) NotesState.folders = [];
+  if (!NotesState.folders.includes(folder)) {
+    NotesState.folders.push(folder);
+  }
+
+  if (!NotesState.notes) NotesState.notes = [];
+
+  if (EditingNoteId) {
+    // Update existing note (description is left untouched — edit properties instead)
+    const existing = NotesState.notes.find(n => n.id === EditingNoteId);
+    if (existing) {
+      existing.title = title;
+      existing.folder = folder;
+      existing.tags = tags;
+      existing.properties = properties;
+      if (!existing.flashcard) {
+        existing.flashcard = { isFlashcard: true, front: title.slice(0, 120), back: '' };
+      }
+      if (!existing.macros) existing.macros = { equation: '', tikz: '' };
+      if (!existing.blocks) existing.blocks = [];
+    }
+  } else {
+    const newId = 'note_' + Date.now();
+    const newNote = {
+      id: newId,
+      slug: title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+      title: title,
+      folder: folder,
+      tags: tags,
+      description: '',
+      properties: properties,
+      meta: { created: new Date().toISOString().slice(0, 10), author: 'User' },
+      flashcard: { isFlashcard: true, front: title.slice(0, 120), back: '' },
+      blocks: [],
+      autoNumbering: { h1: 'numeric', h2: 'numeric', h3: 'numeric' },
+      logo: null,
+      macros: { equation: '', tikz: '' }
+    };
+    NotesState.notes.unshift(newNote);
+  }
+
+  SaveNotesState();
+  CloseNoteModal();
+  if (OnModalUpdate) OnModalUpdate();
+}
 
 export function InitNoteModal(onUpdate) {
   OnModalUpdate = onUpdate;
+  if (NoteModalDelegated) return;
+  NoteModalDelegated = true;
 
-  const modal = document.getElementById('notes-add-edit-modal');
-  const closeBtn = document.getElementById('notes-modal-close-btn');
-  const saveBtn = document.getElementById('notes-modal-save-btn');
-  const folderInput = document.getElementById('notes-modal-folder-input');
-  const folderDropdown = document.getElementById('notes-modal-folder-dropdown');
-
-  if (NoteModalListenersBound) return;
-  NoteModalListenersBound = true;
-
-  if (closeBtn) closeBtn.addEventListener('click', CloseNoteModal);
-
-  // Group dropdown open/filter listeners
-  if (folderInput && folderDropdown) {
-    folderInput.addEventListener('focus', () => {
-      renderFolderComboDropdown(folderInput.value);
-      folderDropdown.classList.remove('hidden');
-    });
-    folderInput.addEventListener('click', (e) => {
-      e.stopPropagation();
-      renderFolderComboDropdown(folderInput.value);
-      folderDropdown.classList.remove('hidden');
-    });
-    folderInput.addEventListener('input', () => {
-      renderFolderComboDropdown(folderInput.value);
-      folderDropdown.classList.remove('hidden');
-    });
-    document.addEventListener('click', (e) => {
-      if (!folderDropdown.contains(e.target) && e.target !== folderInput) {
-        folderDropdown.classList.add('hidden');
-      }
-    });
-  }
-
-  // Keyboard shortcut: Ctrl+Enter / Cmd+Enter to save (closing is strictly restricted to clicking the cross button)
-  document.addEventListener('keydown', (e) => {
-    if (modal && !modal.classList.contains('hidden')) {
-      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-        e.preventDefault();
-        saveBtn?.click();
-      }
+  document.addEventListener('click', (e) => {
+    // Folder dropdown dismissal
+    const folderDropdown = document.getElementById('notes-modal-folder-dropdown');
+    const folderInput = document.getElementById('notes-modal-folder-input');
+    if (folderDropdown && folderInput && !folderDropdown.contains(e.target) && e.target !== folderInput) {
+      folderDropdown.classList.add('hidden');
     }
+
+    if (e.target.closest('#notes-modal-close-btn')) { CloseNoteModal(); return; }
+
+    if (e.target.closest('#notes-modal-folder-input')) {
+      if (folderInput) {
+        renderFolderComboDropdown(folderInput.value);
+        if (folderDropdown) folderDropdown.classList.remove('hidden');
+      }
+      return;
+    }
+
+    const folderItem = e.target.closest('.notes-folder-dropdown-item');
+    if (folderItem && folderInput) {
+      e.stopPropagation();
+      folderInput.value = folderItem.textContent.replace('📁', '').trim();
+      if (folderDropdown) folderDropdown.classList.add('hidden');
+      return;
+    }
+
+    if (e.target.closest('#notes-modal-add-prop-btn')) {
+      e.stopPropagation();
+      ModalProperties.push({ key: '', value: '', type: 'automatic' });
+      renderModalProperties();
+      const rows = document.querySelectorAll('#notes-modal-props-list .note-prop-key-input');
+      if (rows.length) rows[rows.length - 1].focus();
+      return;
+    }
+
+    const typeChip = e.target.closest('.note-prop-type-chip');
+    if (typeChip) {
+      e.stopPropagation();
+      const rows = [...document.querySelectorAll('#notes-modal-props-list .note-prop-edit-row')];
+      const idx = rows.indexOf(typeChip.closest('.note-prop-edit-row'));
+      if (idx >= 0) openPropTypeMenu(typeChip, idx);
+      return;
+    }
+
+    const removeBtn = e.target.closest('.note-prop-remove-btn');
+    if (removeBtn) {
+      const rows = [...document.querySelectorAll('#notes-modal-props-list .note-prop-edit-row')];
+      const idx = rows.indexOf(removeBtn.closest('.note-prop-edit-row'));
+      if (idx >= 0) { ModalProperties.splice(idx, 1); renderModalProperties(); }
+      return;
+    }
+
+    if (e.target.closest('#notes-modal-save-btn')) { saveNoteFromModal(); }
   });
 
-  // Save Note logic
-  if (saveBtn) {
-    saveBtn.addEventListener('click', () => {
-      const titleIn = document.getElementById('notes-modal-title-input');
-      const folderIn = document.getElementById('notes-modal-folder-input');
-      const tagsIn = document.getElementById('notes-modal-tags-input');
+  // Live-bind property row inputs (rows are recreated freely by renderModalProperties)
+  document.addEventListener('input', (e) => {
+    if (e.target.id === 'notes-modal-folder-input') {
+      renderFolderComboDropdown(e.target.value);
+      const dd = document.getElementById('notes-modal-folder-dropdown');
+      if (dd) dd.classList.remove('hidden');
+      return;
+    }
+    const row = e.target.closest('.note-prop-edit-row');
+    if (!row) return;
+    const rows = [...document.querySelectorAll('#notes-modal-props-list .note-prop-edit-row')];
+    const idx = rows.indexOf(row);
+    if (idx < 0 || !ModalProperties[idx]) return;
+    if (e.target.classList.contains('note-prop-key-input')) ModalProperties[idx].key = e.target.value;
+    if (e.target.classList.contains('note-prop-text-input')) ModalProperties[idx].text = e.target.value;
+    if (e.target.classList.contains('note-prop-value-input') && !e.target.classList.contains('note-prop-text-input')) ModalProperties[idx].value = e.target.value;
+  });
 
-      const title = titleIn ? titleIn.value.trim() : '';
-      const folder = (folderIn && folderIn.value.trim()) ? folderIn.value.trim() : 'General';
-      const tags = tagsIn ? tagsIn.value.split(',').map(t => t.trim()).filter(Boolean) : [];
+  document.addEventListener('change', (e) => {
+    if (!e.target.classList.contains('note-prop-value-cb')) return;
+    const row = e.target.closest('.note-prop-edit-row');
+    if (!row) return;
+    const rows = [...document.querySelectorAll('#notes-modal-props-list .note-prop-edit-row')];
+    const idx = rows.indexOf(row);
+    if (idx >= 0 && ModalProperties[idx]) ModalProperties[idx].value = e.target.checked;
+  });
 
-      // Extract description directly from in-place Obsidian surface
-      const liveSurface = document.querySelector('#notes-modal-desc-mount .obsidian-live-surface');
-      const description = liveSurface ? serializeElement(liveSurface).trim() : (CurrentModalDescription || '').trim();
-
-      if (!title) {
-        if (titleIn) {
-          titleIn.style.borderColor = '#ef4444';
-          titleIn.focus();
-        }
-        alert('Please enter a note title.');
-        return;
-      }
-
-      // Add folder to folders list if new
-      if (!NotesState.folders) NotesState.folders = [];
-      if (!NotesState.folders.includes(folder)) {
-        NotesState.folders.push(folder);
-      }
-
-      if (!NotesState.notes) NotesState.notes = [];
-
-      if (EditingNoteId) {
-        // Update existing note (preserves blocks and any authored flashcard content untouched)
-        const existing = NotesState.notes.find(n => n.id === EditingNoteId);
-        if (existing) {
-          existing.title = title;
-          existing.folder = folder;
-          existing.tags = tags;
-          existing.description = description;
-          if (!existing.flashcard) {
-            existing.flashcard = {
-              isFlashcard: true,
-              front: description.slice(0, 120),
-              back: description
-            };
-          }
-          if (!existing.macros) existing.macros = { equation: '', tikz: '' };
-          if (!existing.blocks) existing.blocks = [];
-        }
-      } else {
-        // Create new note with complete schema matching 00_State.js
-        const newId = 'note_' + Date.now();
-        const newNote = {
-          id: newId,
-          slug: title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-          title: title,
-          folder: folder,
-          tags: tags,
-          description: description,
-          meta: {
-            created: new Date().toISOString().slice(0, 10),
-            author: 'User'
-          },
-          flashcard: {
-            isFlashcard: true,
-            front: description.slice(0, 120),
-            back: description
-          },
-          blocks: [],
-          autoNumbering: { h1: 'numeric', h2: 'numeric', h3: 'numeric' },
-          logo: null,
-          macros: { equation: '', tikz: '' }
-        };
-        NotesState.notes.unshift(newNote);
-      }
-
-      SaveNotesState();
-      CloseNoteModal();
-      if (OnModalUpdate) OnModalUpdate();
-    });
-  }
+  // Keyboard shortcut: Ctrl+Enter / Cmd+Enter to save
+  document.addEventListener('keydown', (e) => {
+    const modal = document.getElementById('notes-add-edit-modal');
+    if (modal && !modal.classList.contains('hidden') && e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      saveNoteFromModal();
+    }
+  });
 }
 
 // Returns HTML button for adding a new note card and includes the modal markup

@@ -8,8 +8,10 @@ export function GetHeaderHTML() {
   return `
     <style>
       .app-header {
-        position: sticky;
+        position: fixed;
         top: 0;
+        left: 0;
+        right: 0;
         z-index: 70;
         backdrop-filter: blur(16px) saturate(160%);
         -webkit-backdrop-filter: blur(16px) saturate(160%);
@@ -100,6 +102,23 @@ export function InitHeader(container) {
   InitLogoLogic();
   InitImportExport();
   InitThemeToggleLogic();
+
+  const header = document.querySelector('.app-header');
+  if (header) {
+    const updateHeaderH = () => {
+      const h = header.offsetHeight;
+      if (h > 0) document.documentElement.style.setProperty('--header-height', `${h}px`);
+    };
+    updateHeaderH();
+    if (window.ResizeObserver) {
+      new ResizeObserver(entries => {
+        for (const entry of entries) {
+          const h = entry.borderBoxSize ? entry.borderBoxSize[0].blockSize : header.offsetHeight;
+          if (h > 0) document.documentElement.style.setProperty('--header-height', `${h}px`);
+        }
+      }).observe(header);
+    }
+  }
 }
 
 export { InitSaveButtonLogic, InitImportExport }

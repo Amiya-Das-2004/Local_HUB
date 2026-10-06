@@ -1,7 +1,31 @@
 /**
- * 03_Notes/Writing_Engine/Tikz_Renderer.js
+ * 03_Notes/Writing_Engine/Tikz_Engine/Tikz_Renderer.js
  * Isolated on-demand TikZJax SVG processor for Single Page Applications.
+ *
+ * Engine assets are fully local: Tikz_Engine/v1/tikzjax.js embeds the TeX WASM
+ * module and the 160MB core dump as base64 (no network fetches), and
+ * Tikz_Engine/v1/fonts.css embeds all BaKoMa fonts as data: URIs. The loader
+ * probes page-relative candidate locations and only falls back to the original
+ * tikzjax.com CDN when the local engine folder cannot be found (e.g. a
+ * standalone HTML carried away without its Tikz_Engine/ folder).
  */
+
+// Resolved against the PAGE URL, in order: dev master shell (repo root),
+// dev tab shell (03_Notes/Tab_Notes/), exported standalones (Standalone/),
+// and the "Tikz_Engine/ folder sits next to the HTML" portable case.
+const TIKZ_ENGINE_BASES = [
+  '03_Notes/Writing_Engine/Tikz_Engine/v1/',
+  '../Writing_Engine/Tikz_Engine/v1/',
+  '../03_Notes/Writing_Engine/Tikz_Engine/v1/',
+  'Tikz_Engine/v1/',
+  'https://tikzjax.com/v1/'
+];
+
+// Bumped whenever v1/tikzjax.js is re-patched (wasm/core re-embed, FS exposure, packages)
+// so browsers re-fetch the engine instead of serving a stale heuristic-cached copy.
+const TIKZ_ENGINE_VERSION = 'v2';
+
+let tikzEngineLoading = false;
 
 export function ensureTikzJaxLoaded(callback) {
   if (typeof window.__tikzjax_runner === 'function') {
@@ -9,34 +33,8 @@ export function ensureTikzJaxLoaded(callback) {
     return;
   }
 
-  if (!document.getElementById('tikzjax-css')) {
-    const link = document.createElement('link');
-    link.id = 'tikzjax-css';
-    link.rel = 'stylesheet';
-    link.href = 'https://tikzjax.com/v1/fonts.css';
-    document.head.appendChild(link);
-  }
-
-  if (!document.getElementById('tikzjax-js')) {
-    const script = document.createElement('script');
-    script.id = 'tikzjax-js';
-    script.src = 'https://tikzjax.com/v1/tikzjax.js';
-
-    script.onload = () => {
-      // tikzjax sets window.onload = async function() { ... }
-      if (typeof window.onload === 'function') {
-        window.__tikzjax_runner = window.onload;
-      }
-      if (callback) callback();
-    };
-
-    script.onerror = (e) => {
-      console.error('Failed to load TikZJax script from CDN:', e);
-    };
-
-    document.head.appendChild(script);
-  } else {
-    // Script tag already injected; poll until runner is defined
+  if (tikzEngineLoading || document.getElementById('tikzjax-js')) {
+    // Script tag already injected (or cascade in progress); poll until runner is defined
     let attempts = 0;
     const checkInterval = setInterval(() => {
       attempts++;
@@ -52,11 +50,57 @@ export function ensureTikzJaxLoaded(callback) {
         if (callback) callback();
       }
     }, 80);
+    return;
   }
+
+  tikzEngineLoading = true;
+  let baseIndex = 0;
+  const tryNextBase = () => {
+    if (baseIndex >= TIKZ_ENGINE_BASES.length) {
+      tikzEngineLoading = false;
+      console.error('TikZ engine unavailable: local Tikz_Engine/ folder not found and the tikzjax.com CDN fallback failed.');
+      return; // caller surfaces its own timeout + ↻ Retry UI
+    }
+    const base = TIKZ_ENGINE_BASES[baseIndex++];
+
+    if (!document.getElementById('tikzjax-css')) {
+      const link = document.createElement('link');
+      link.id = 'tikzjax-css';
+      link.rel = 'stylesheet';
+      link.href = base + 'fonts.css';
+      document.head.appendChild(link);
+    }
+
+    const script = document.createElement('script');
+    script.src = base + 'tikzjax.js?v=' + TIKZ_ENGINE_VERSION;
+
+    script.onload = () => {
+      script.id = 'tikzjax-js';
+      tikzEngineLoading = false;
+      // tikzjax sets window.onload = async function() { ... }
+      if (typeof window.onload === 'function') {
+        window.__tikzjax_runner = window.onload;
+      }
+      if (callback) callback();
+    };
+
+    script.onerror = () => {
+      // This candidate does not resolve (unexpected shell depth, or standalone
+      // moved without its engine folder) — clean up and try the next base.
+      script.remove();
+      const cssLink = document.getElementById('tikzjax-css');
+      if (cssLink) cssLink.remove();
+      tryNextBase();
+    };
+
+    document.head.appendChild(script);
+  };
+
+  tryNextBase();
 }
 
-import { resolveThemeColors } from '../../00_Components/06_Color_Selector.js';
-import { NotesState } from '../00_State.js';
+import { resolveThemeColors } from '../../../00_Components/06_Color_Selector.js';
+import { NotesState } from '../../00_State.js';
 
 let activeTikzNoteContext = null;
 
@@ -199,9 +243,9 @@ export function getActiveTikzPreamble(note = null) {
   const parts = [];
 
   // 0. Core math punctuation fixes for TikZJax BaKoMa font engine:
-  // Remaps math comma and decimal point to use operators font (cmr10) instead of cmmi10 slot 59
-  parts.push('\\DeclareMathSymbol{,}{\\mathpunct}{operators}{"2C}');
-  parts.push('\\DeclareMathSymbol{.}{\\mathord}{operators}{"2E}');
+  // Remaps math comma and decimal point to use operators font (cmr10) instead of cmmi10 slot 59.
+  // \mathcode primitives only: \DeclareMathSymbol is preamble-only LaTeX, but the TikZJax engine
+  // injects \begin{document} ahead of this text — any preamble-only command here fatals the WASM core.
   parts.push('\\mathcode`,="602C');
   parts.push('\\mathcode`.="002E');
 
@@ -210,7 +254,7 @@ export function getActiveTikzPreamble(note = null) {
     parts.push(NotesState.globalMacros.tikz);
   } else {
     // Default fallback libraries
-    parts.push('\\usetikzlibrary{patterns, angles, calc, quotes, shapes, arrows, arrows.meta, positioning, intersections, fadings}');
+    parts.push('\\usetikzlibrary{patterns, angles, calc, quotes, shapes, shapes.geometric, shapes.misc, arrows, arrows.meta, positioning, intersections, fadings, decorations.pathmorphing, decorations.markings, fit, matrix, 3d, automata, trees, mindmap}');
   }
 
   // 2. Note-level local TikZ macros
@@ -320,7 +364,7 @@ function waitForTikzSvg(targetContainer, renderId, timeoutMs = 25000) {
 
       if (Date.now() - startTime > timeoutMs && !isSettled) {
         cleanup();
-        reject(new Error('TikZ compilation timed out. Please check your internet connection to tikzjax.com CDN.'));
+        reject(new Error('TikZ compilation timed out. The local TeX engine did not respond in time — press ↻ Retry, or simplify the diagram.'));
       }
     }, 100);
   });
@@ -653,7 +697,7 @@ export function renderTikzToElement(tikzCode, targetContainer, onComplete = null
         targetContainer.innerHTML = `
           <div class="p-3 text-xs text-red-400 bg-red-950/20 border border-red-800/40 rounded-lg select-text text-center flex flex-col items-center gap-2">
             <div><strong>TikZ Compilation Failed:</strong> ${err.message || 'Check syntax and semicolons.'}</div>
-            <button type="button" class="tikz-retry-btn px-2.5 py-1 rounded-md border border-red-700/60 bg-red-900/30 hover:bg-red-900/60 text-red-200 text-[11px] font-semibold cursor-pointer transition-colors" title="Try compiling again (the tikzjax.com engine can be busy or briefly unreachable)">↻ Retry Compile</button>
+            <button type="button" class="tikz-retry-btn px-2.5 py-1 rounded-md border border-red-700/60 bg-red-900/30 hover:bg-red-900/60 text-red-200 text-[11px] font-semibold cursor-pointer transition-colors" title="Try compiling again (large diagrams can take a while on the local TeX engine)">↻ Retry Compile</button>
           </div>
         `;
         const retryBtn = targetContainer.querySelector('.tikz-retry-btn');

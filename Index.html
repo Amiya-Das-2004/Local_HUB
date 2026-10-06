@@ -72,9 +72,9 @@
     {
       "tabs": [
         { "Name": "BOOKMARK", "Url": "#Bookmarks", "PageUrl": "02_Bookmarks/01_Tab_Bookmarks/Bookmarks.html", "Color": 14037359 },
-        { "Name": "NOTES", "Url": "#Notes", "PageUrl": "03_Notes/Notes.html", "Color": 4048447 },
-        { "Name": "PROFESSORS", "Url": "#Professors", "PageUrl": "04_Professors/Professor.html", "Color": 1013358 },
-        { "Name": "R&D", "Url": "#RD", "PageUrl": "05_R&D/R&D.html", "Color": 9137663 }
+        { "Name": "NOTES", "Url": "#Notes", "PageUrl": "03_Notes/Tab_Notes/Notes.html", "Color": 4048447 },
+        { "Name": "PROFESSORS", "Url": "#Professors", "PageUrl": "04_Professors/06_Tab_Professors/Professor.html", "Color": 1013358 },
+        { "Name": "R&D", "Url": "#RD", "PageUrl": "05_R&D/06_Tab_RD/R&D.html", "Color": 9137663 }
       ]
     }
   </script>
@@ -87,300 +87,595 @@
     }
   </script>
   <script type="application/json" id="NotesData">
-  {
-    "vaultMeta": {
-      "title": "Notes Vault",
-      "version": "1.0.0",
-      "lastSaved": 1790267751307
-    },
-    "globalMacros": {
-      "equation": "\\newcommand{\\mb}[1]{\\mathbf{#1}}\n\\newcommand{\\cancelto}[2]{\\htmlClass{lh-cancelto}{\\htmlClass{lh-cancelto-base}{#2}\\htmlClass{lh-cancelto-val}{\\scriptstyle #1}}}\n\\newcommand{\\comment}[1]{\\textcolor{#dc2626|#f87171}{[#1]}}\n\\newcommand{\\R}{\\mathbb{R}}\n\\newcommand{\\C}{\\mathbb{C}}\n\\newcommand{\\N}{\\mathbb{N}}\n\\newcommand{\\Z}{\\mathbb{Z}}",
-      "tikz": "\\usetikzlibrary{patterns, angles, calc, quotes, shapes, arrows, arrows.meta, positioning, intersections, fadings}\n\\tikzset{\n  blockv/.style={\n    rectangle,\n    draw,\n    fill=blue!20,\n    text centered,\n    minimum height=2em,\n    minimum width=7cm,\n    rounded corners\n  },\n  blockh/.style={\n    rectangle,\n    draw,\n    fill=blue!20,\n    text width=3cm,\n    text centered,\n    rounded corners,\n    minimum height=2cm\n  },\n  timeline/.style={\n    draw=blue,\n    thick,\n    rounded rectangle,\n    fill=white,\n    text width=3.6cm,\n    align=left,\n    font=\\small\n  },\n  arrow/.style={\n    ->,\n    thick\n  }\n}"
-    },
-    "tableTemplates": [],
-    "tikzTemplates": [],
-    "bibliography": [],
-    "citationStyle": "numeric",
-    "folders": [
-      "LaTex"
-    ],
-    "tags": [
-      "latex",
-      "reference",
-      "cheatsheet",
-      "symbols",
-      "katex"
-    ],
-    "notes": [
-      {
-        "id": "note_latex_complete_reference_01",
-        "slug": "latex-mathematical-environments-and-symbols-reference",
-        "title": "LaTeX Math Block",
-        "folder": "LaTex",
-        "tags": [
-          "latex",
-          "reference",
-          "cheatsheet",
-          "symbols",
-          "katex"
-        ],
-        "description": "LaTeX Support in LocalHUB",
-        "meta": {
-          "created": "2026-08-31",
-          "author": "Amiya"
+{
+  "vaultMeta": {
+    "title": "Notes Vault",
+    "version": "1.0.0",
+    "lastSaved": 1791047174862
+  },
+  "globalMacros": {
+    "equation": "\\newcommand{\\mb}[1]{\\mathbf{#1}}\n\\newcommand{\\cancelto}[2]{\\htmlClass{lh-cancelto}{\\htmlClass{lh-cancelto-base}{#2}\\htmlClass{lh-cancelto-val}{\\scriptstyle #1}}}\n\\newcommand{\\comment}[1]{\\textcolor{#dc2626|#f87171}{[#1]}}\n\\newcommand{\\R}{\\mathbb{R}}\n\\newcommand{\\C}{\\mathbb{C}}\n\\newcommand{\\N}{\\mathbb{N}}\n\\newcommand{\\Z}{\\mathbb{Z}}",
+    "tikz": "\\usetikzlibrary{patterns, angles, calc, quotes, shapes, arrows, arrows.meta, positioning, intersections, fadings}\n\\tikzset{\n  blockv/.style={\n    rectangle,\n    draw,\n    fill=blue!20,\n    text centered,\n    minimum height=2em,\n    minimum width=7cm,\n    rounded corners\n  },\n  blockh/.style={\n    rectangle,\n    draw,\n    fill=blue!20,\n    text width=3cm,\n    text centered,\n    rounded corners,\n    minimum height=2cm\n  },\n  timeline/.style={\n    draw=blue,\n    thick,\n    rounded rectangle,\n    fill=white,\n    text width=3.6cm,\n    align=left,\n    font=\\small\n  },\n  arrow/.style={\n    ->,\n    thick\n  }\n}"
+  },
+  "tableTemplates": [],
+  "tikzTemplates": [],
+  "bibliography": [],
+  "citationStyle": "numeric",
+  "folders": [
+    "LaTex"
+  ],
+  "tags": [
+    "latex",
+    "reference",
+    "cheatsheet",
+    "symbols",
+    "katex"
+  ],
+  "notes": [
+    {
+      "id": "note_latex_complete_reference_01",
+      "slug": "latex-mathematical-environments-and-symbols-reference",
+      "title": "LaTeX Math Block",
+      "folder": "LaTex",
+      "tags": [
+        "latex",
+        "reference",
+        "cheatsheet",
+        "symbols",
+        "katex"
+      ],
+      "description": "LaTeX Support in LocalHUB",
+      "meta": {
+        "created": "2026-08-31",
+        "author": "Amiya"
+      },
+      "flashcard": {
+        "isFlashcard": true,
+        "front": "LaTeX Support in LocalHUB",
+        "back": "LaTeX Support in LocalHUB"
+      },
+      "blocks": [
+        {
+          "id": "b_lat_h2",
+          "type": "heading",
+          "level": "h1",
+          "title": "Math Modes & Display Style Specifiers"
         },
-        "flashcard": {
-          "isFlashcard": true,
-          "front": "LaTeX Support in LocalHUB",
-          "back": "LaTeX Support in LocalHUB"
+        {
+          "id": "b_lat_t2",
+          "type": "text",
+          "content": "- **Inline Math**: `$f(x) = \\frac{1}{x}$` renders inline with surrounding text: $f(x) = \\frac{1}{x}$.\n- **Display Math**: `$$\\int_a^b f(x) \\, \\mathrm{d}x$$` renders on its own centered line:\n$$\\int_a^b f(x) \\, \\mathrm{d}x$$\n- **Style Specifiers**:\n  - `\\displaystyle \\sum_{k=1}^n k`: Forces full display height $\\displaystyle \\sum_{k=1}^n k$.\n  - `\\textstyle \\frac{a}{b}`: Forces inline size $\\textstyle \\frac{a}{b}$.\n  - `\\scriptstyle x`: First-level index size $\\scriptstyle x$.\n  - `\\scriptscriptstyle x`: Nested script size $\\scriptscriptstyle x$.\n\n$$\n\\int_{-\\infty}^{\\infty} e^{-x^2} \\, \\mathrm{d}x = \\sqrt{\\pi}, \\quad \\nabla \\times \\mathbf{E} = -\\frac{\\partial \\mathbf{B}}{\\partial t}, \\quad \\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}^{-1} = \\frac{1}{ad-bc}\\begin{pmatrix} d & -b \\\\ -c & a \\end{pmatrix}\n$$",
+          "lineSpacing": "normal"
         },
-        "blocks": [
-          {
-            "id": "b_lat_h2",
-            "type": "heading",
-            "level": "h1",
-            "title": "Math Modes & Display Style Specifiers"
-          },
-          {
-            "id": "b_lat_t2",
-            "type": "text",
-            "content": "- **Inline Math**: `$f(x) = \\frac{1}{x}$` renders inline with surrounding text: $f(x) = \\frac{1}{x}$.\n- **Display Math**: `$$\\int_a^b f(x) \\, \\mathrm{d}x$$` renders on its own centered line:\n$$\\int_a^b f(x) \\, \\mathrm{d}x$$\n- **Style Specifiers**:\n  - `\\displaystyle \\sum_{k=1}^n k`: Forces full display height $\\displaystyle \\sum_{k=1}^n k$.\n  - `\\textstyle \\frac{a}{b}`: Forces inline size $\\textstyle \\frac{a}{b}$.\n  - `\\scriptstyle x`: First-level index size $\\scriptstyle x$.\n  - `\\scriptscriptstyle x`: Nested script size $\\scriptscriptstyle x$.\n\n$$\n\\int_{-\\infty}^{\\infty} e^{-x^2} \\, \\mathrm{d}x = \\sqrt{\\pi}, \\quad \\nabla \\times \\mathbf{E} = -\\frac{\\partial \\mathbf{B}}{\\partial t}, \\quad \\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}^{-1} = \\frac{1}{ad-bc}\\begin{pmatrix} d & -b \\\\ -c & a \\end{pmatrix}\n$$",
-            "lineSpacing": "normal"
-          },
-          {
-            "id": "b_lat_h3",
-            "type": "heading",
-            "level": "h1",
-            "title": "Equation Alignment & Multi-Line Environments"
-          },
-          {
-            "id": "b_lat_h3_1",
-            "type": "heading",
-            "level": "h2",
-            "title": "Align and Gather Environments"
-          },
-          {
-            "id": "b_lat_eq1",
-            "type": "equation",
-            "tex": "\\begin{aligned}\n\\nabla \\cdot \\mathbf{E} &= \\frac{\\rho}{\\varepsilon_0} \\\\\n\\nabla \\cdot \\mathbf{B} &= 0 \\\\\n\\nabla \\times \\mathbf{E} &= -\\frac{\\partial \\mathbf{B}}{\\partial t} \\\\\n\\nabla \\times \\mathbf{B} &= \\mu_0 \\mathbf{J} + \\mu_0 \\varepsilon_0 \\frac{\\partial \\mathbf{E}}{\\partial t}\n\\end{aligned}"
-          },
-          {
-            "id": "b_lat_t3_1",
-            "type": "text",
-            "content": "- `aligned`: Aligns at the `&` symbol on each line.\n- `gathered`: Centers each line independently without horizontal alignment anchors."
-          },
-          {
-            "id": "b_lat_h3_2",
-            "type": "heading",
-            "level": "h2",
-            "title": "Piecewise Functions (cases & dcases)"
-          },
-          {
-            "id": "b_lat_eq2",
-            "type": "equation",
-            "tex": "f(x) = \\begin{dcases}\n\\frac{\\sin(x)}{x} & \\text{if } x \\neq 0 \\\\\n1 & \\text{if } x = 0\n\\end{dcases}, \\quad\ng(n) = \\begin{cases}\nn/2 & \\text{if } n \\equiv 0 \\pmod 2 \\\\\n3n+1 & \\text{if } n \\equiv 1 \\pmod 2\n\\end{cases}"
-          },
-          {
-            "id": "b_lat_h3_3",
-            "type": "heading",
-            "level": "h2",
-            "title": "Matrices & Tabular Arrays"
-          },
-          {
-            "id": "b_lat_eq3",
-            "type": "equation",
-            "tex": "\\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}, \\quad\n\\begin{bmatrix} 1 & 0 & 0 \\\\ 0 & 1 & 0 \\\\ 0 & 0 & 1 \\end{bmatrix}, \\quad\n\\begin{vmatrix} x_1 & y_1 \\\\ x_2 & y_2 \\end{vmatrix}, \\quad\n\\begin{Bmatrix} \\alpha & \\beta \\\\ \\gamma & \\delta \\end{Bmatrix}, \\quad\n\\begin{Vmatrix} A_{11} & A_{12} \\\\ A_{21} & A_{22} \\end{Vmatrix}"
-          },
-          {
-            "id": "b_lat_h3_4",
-            "type": "heading",
-            "level": "h2",
-            "title": "Nested Sub-Derivations (Array inside Aligned)"
-          },
-          {
-            "id": "b_lat_eq3_4",
-            "type": "equation",
-            "tex": "\\begin{aligned}\n\\int x^2 e^{-x^2} \\, \\mathrm{d}x &= \\int x \\cdot \\left( x e^{-x^2} \\right) \\mathrm{d}x \\\\\n  &\\quad \\left[\n    \\begin{array}{ll}\n      \\text{Integration by Parts:} & \\\\\n      u = x & \\implies \\mathrm{d}u = \\mathrm{d}x \\\\\n      \\mathrm{d}v = x e^{-x^2} \\mathrm{d}x & \\implies v = -\\frac{1}{2} e^{-x^2}\n    \\end{array}\n  \\right] \\\\\n  &= u v - \\int v \\, \\mathrm{d}u \\\\\n  &= -\\frac{1}{2} x e^{-x^2} - \\int \\left( -\\frac{1}{2} e^{-x^2} \\right) \\mathrm{d}x \\\\\n  &= -\\frac{1}{2} x e^{-x^2} + \\frac{1}{2} \\int e^{-x^2} \\, \\mathrm{d}x + C\n\\end{aligned}"
-          },
-          {
-            "id": "b_lat_t3_4",
-            "type": "text",
-            "content": "- **Outer `aligned`**: Aligns the primary mathematical derivation sequence at `&=`.\n- **Inner `array`**: Nests side calculations, substitution tables, or coordinate transforms (`\\begin{array}{ll} ... \\end{array}`) with their own internal `&` and `\\\\` delimiters without breaking outer derivation alignment."
-          },
-          {
-            "id": "b_lat_h4",
-            "type": "heading",
-            "level": "h1",
-            "title": "Delimiters, Braces & Scaled Enclosures"
-          },
-          {
-            "id": "b_lat_eq4",
-            "type": "equation",
-            "tex": "\\left( \\frac{\\sum_{i=1}^n x_i^2}{\\sqrt[3]{1 + \\frac{a}{b}}} \\right) = \\underbrace{a_1 + a_2 + \\cdots + a_k}_{\\text{Sum of } k \\text{ terms}} + \\overbrace{b_1 + b_2 + \\cdots + b_m}^{\\text{Sum of } m \\text{ terms}}"
-          },
-          {
-            "id": "b_lat_t4",
-            "type": "text",
-            "content": "- **Auto-sizing Delimiters**: `\\left( ... \\right)`, `\\left[ ... \\right]`, `\\left\\{ ... \\right\\}`, `\\left| ... \\right|`, `\\left\\| ... \\right\\|`, `\\left\\langle ... \\right\\rangle`, `\\left\\lfloor ... \\right\\rfloor`, `\\left\\lceil ... \\right\\rceil`.\n- **Evaluated-at Bar**: `\\left. \\frac{\\mathrm{d}f}{\\mathrm{d}x} \\right|_{x=0}` produces $\\left. \\frac{\\mathrm{d}f}{\\mathrm{d}x} \\right|_{x=0}$.\n- **Manual Sizing Scale**: `\\bigl( \\dots \\bigr) < \\Bigl( \\dots \\Bigr) < \\biggl( \\dots \\biggr) < \\Biggl( \\dots \\Biggr)`."
-          },
-          {
-            "id": "b_lat_h5",
-            "type": "heading",
-            "level": "h1",
-            "title": "Fractions, Binomials, Roots & Polynomials"
-          },
-          {
-            "id": "b_lat_eq5_1",
-            "type": "equation",
-            "tex": "P_n(x) = a_n x^n + a_{n-1} x^{n-1} + \\cdots + a_1 x + a_0 = \\sum_{k=0}^n \\binom{n}{k} x^k y^{n-k}"
-          },
-          {
-            "id": "b_lat_eq5_2",
-            "type": "equation",
-            "tex": "\\cfrac{1}{1 + \\cfrac{1}{2 + \\cfrac{1}{3 + \\cfrac{1}{4 + \\cdots}}}} = \\frac{\\sqrt{5}-1}{2}"
-          },
-          {
-            "id": "b_lat_t5",
-            "type": "text",
-            "content": "- `\\frac{a}{b}` (standard fraction), `\\dfrac{a}{b}` (display fraction), `\\cfrac{a}{b}` (continued fraction).\n- `\\binom{n}{k}` (binomial coefficient $\\binom{n}{k}$), `\\dbinom{n}{k}` (display binomial).\n- `\\sqrt{x}` ($\\sqrt{x}$), `\\sqrt[n]{x}` ($\\sqrt[n]{x}$)."
-          },
-          {
-            "id": "b_lat_h6",
-            "type": "heading",
-            "level": "h1",
-            "title": "Large Operators, Limits & Calculus"
-          },
-          {
-            "id": "b_lat_eq6",
-            "type": "equation",
-            "tex": "\\int_{0}^{\\infty} x^{s-1} e^{-x} \\, \\mathrm{d}x = \\Gamma(s), \\quad \\lim_{x \\to 0} \\frac{\\sin x}{x} = 1, \\quad \\oint_C \\mathbf{F} \\cdot \\mathrm{d}\\mathbf{r} = \\iint_S (\\nabla \\times \\mathbf{F}) \\cdot \\mathrm{d}\\mathbf{S}"
-          },
-          {
-            "id": "b_lat_t6",
-            "type": "text",
-            "content": "- **Sum & Product**: `\\sum_{i=1}^\\infty a_i`, `\\prod_{i=1}^n x_i`, `\\coprod_{j=1}^m Y_j`.\n- **Integrals**: `\\int`, `\\iint`, `\\iiint`, `\\idotsint`, `\\oint`.\n- **Limits & Extrema**: `\\lim_{x \\to a}`, `\\max_{x \\in S}`, `\\min_{x \\in S}`, `\\sup`, `\\inf`, `\\argmax`, `\\argmin`.\n- **Custom Operator**: `\\operatorname{tr}(A)`, `\\operatorname{diag}(v)`, `\\operatorname{sinc}(t)`."
-          },
-          {
-            "id": "b_lat_h7",
-            "type": "heading",
-            "level": "h1",
-            "title": "Mathematical Font Families"
-          },
-          {
-            "id": "b_lat_t7",
-            "type": "text",
-            "content": "- `\\mathbb{R}, \\mathbb{C}, \\mathbb{Z}, \\mathbb{N}, \\mathbb{Q}, \\mathbb{F}` $\\to \\mathbb{R}, \\mathbb{C}, \\mathbb{Z}, \\mathbb{N}, \\mathbb{Q}, \\mathbb{F}$ (Blackboard Bold)\n- `\\mathbf{A}, \\mathbf{x}, \\mathbf{v}` $\\to \\mathbf{A}, \\mathbf{x}, \\mathbf{v}$ (Bold Roman)\n- `\\boldsymbol{\\alpha}, \\boldsymbol{\\beta}, \\boldsymbol{\\nabla}` $\\to \\boldsymbol{\\alpha}, \\boldsymbol{\\beta}, \\boldsymbol{\\nabla}$ (Bold Greek / Math)\n- `\\mathrm{d}x, \\mathrm{e}^{i\\pi}` $\\to \\mathrm{d}x, \\mathrm{e}^{i\\pi}$ (Upright Roman)\n- `\\mathit{TotalCost}` $\\to \\mathit{TotalCost}$ (Math Italic)\n- `\\mathcal{L}, \\mathcal{H}, \\mathcal{F}, \\mathcal{N}` $\\to \\mathcal{L}, \\mathcal{H}, \\mathcal{F}, \\mathcal{N}$ (Calligraphic)\n- `\\mathscr{E}, \\mathscr{F}, \\mathscr{P}` $\\to \\mathscr{E}, \\mathscr{F}, \\mathscr{P}$ (Script)\n- `\\mathfrak{g}, \\mathfrak{p}, \\mathfrak{S}` $\\to \\mathfrak{g}, \\mathfrak{p}, \\mathfrak{S}$ (Fraktur / Gothic)\n- `\\mathsf{T}, \\mathsf{H}, \\mathsf{E}` $\\to \\mathsf{T}, \\mathsf{H}, \\mathsf{E}$ (Sans-Serif)\n- `\\mathtt{0x1F}, \\mathtt{ptr}` $\\to \\mathtt{0x1F}, \\mathtt{ptr}$ (Monospace)\n- `\\text{Hello World}` $\\to \\text{Hello World}$ (Plain Text)"
-          },
-          {
-            "id": "b_lat_h8",
-            "type": "heading",
-            "level": "h1",
-            "title": "Math Spacing, Accents, Vectors & Annotations"
-          },
-          {
-            "id": "b_lat_t8",
-            "type": "text",
-            "content": "- **Spacing**:\n  - `\\,` (thin: $3/18\\text{em}$), `\\:` (med: $4/18\\text{em}$), `\\;` (thick: $5/18\\text{em}$), `\\quad` ($1\\text{em}$), `\\qquad` ($2\\text{em}$), `\\!` (negative: $-3/18\\text{em}$).\n- **Accents & Vectors**:\n  - `\\vec{v}` ($\\vec{v}$), `\\overrightarrow{AB}` ($\\overrightarrow{AB}$), `\\hat{x}` ($\\hat{x}$), `\\widehat{xyz}` ($\\widehat{xyz}$), `\\bar{x}` ($\\bar{x}$), `\\overline{z}` ($\\overline{z}$), `\\tilde{x}` ($\\tilde{x}$), `\\dot{x}` ($\\dot{x}$), `\\ddot{x}` ($\\ddot{x}$), `\\dddot{x}` ($\\dddot{x}$), `\\ddddot{x}` ($\\ddddot{x}$).\n- **Boxes & Color**:\n  - `\\boxed{E = mc^2}` $\\to \\boxed{E = mc^2}$\n  - `\\textcolor{#8b5cf6}{\\text{Purple Text}}` $\\to \\textcolor{#8b5cf6}{\\text{Purple Text}}$\n- `\\cancel{x+1}` $\\to \\cancel{x+1}$, `\\bcancel{x}` $\\to \\bcancel{x}$, `\\xcancel{x}` $\\to \\xcancel{x}$, `\\cancelto{0}{x}` $\\to \\cancelto{0}{x}$ . ",
-            "lineSpacing": "normal"
-          },
-          {
-            "id": "b_lat_h9",
-            "type": "heading",
-            "level": "h1",
-            "title": "Complete LaTeX Symbol Classification"
-          },
-          {
-            "id": "b_lat_h9_1",
-            "type": "heading",
-            "level": "h2",
-            "title": "Greek Alphabet (Lowercase & Uppercase)"
-          },
-          {
-            "id": "b_lat_t9_1",
-            "type": "text",
-            "content": "- **Lowercase Greek**:\n  - `\\alpha` ($\\alpha$), `\\beta` ($\\beta$), `\\gamma` ($\\gamma$), `\\delta` ($\\delta$), `\\epsilon` ($\\epsilon$), `\\varepsilon` ($\\varepsilon$), `\\zeta` ($\\zeta$), `\\eta` ($\\eta$), `\\theta` ($\\theta$), `\\vartheta` ($\\vartheta$), `\\iota` ($\\iota$), `\\kappa` ($\\kappa$), `\\varkappa` ($\\varkappa$), `\\lambda` ($\\lambda$), `\\mu` ($\\mu$), `\\nu` ($\\nu$), `\\xi` ($\\xi$), `\\pi` ($\\pi$), `\\varpi` ($\\varpi$), `\\rho` ($\\rho$), `\\varrho` ($\\varrho$), `\\sigma` ($\\sigma$), `\\varsigma` ($\\varsigma$), `\\tau` ($\\tau$), `\\upsilon` ($\\upsilon$), `\\phi` ($\\phi$), `\\varphi` ($\\varphi$), `\\chi` ($\\chi$), `\\psi` ($\\psi$), `\\omega` ($\\omega$).\n- **Uppercase Greek**:\n  - `\\Gamma` ($\\Gamma$), `\\Delta` ($\\Delta$), `\\Theta` ($\\Theta$), `\\Lambda` ($\\Lambda$), `\\Xi` ($\\Xi$), `\\Pi` ($\\Pi$), `\\Sigma` ($\\Sigma$), `\\Upsilon` ($\\Upsilon$), `\\Phi` ($\\Phi$), `\\Psi` ($\\Psi$), `\\Omega` ($\\Omega$)."
-          },
-          {
-            "id": "b_lat_h9_2",
-            "type": "heading",
-            "level": "h2",
-            "title": "Arrow Symbols"
-          },
-          {
-            "id": "b_lat_t9_2",
-            "type": "text",
-            "content": "- **Horizontal Arrows**:\n  - `\\to` or `\\rightarrow` ($\\to$), `\\leftarrow` ($\\leftarrow$), `\\leftrightarrow` ($\\leftrightarrow$), `\\Rightarrow` ($\\Rightarrow$), `\\Leftarrow` ($\\Leftarrow$), `\\Leftrightarrow` or `\\iff` ($\\Leftrightarrow$).\n  - `\\longrightarrow` ($\\longrightarrow$), `\\longleftarrow` ($\\longleftarrow`), `\\Longrightarrow` ($\\Longrightarrow$), `\\Longleftarrow` ($\\Longleftarrow`), `\\Longleftrightarrow` ($\\Longleftrightarrow$).\n  - `\\mapsto` ($\\mapsto$), `\\longmapsto` ($\\longmapsto$), `\\hookrightarrow` ($\\hookrightarrow$), `\\hookleftarrow` ($\\hookleftarrow`), `\\rightharpoonup` ($\\rightharpoonup$), `\\leftharpoondown` ($\\leftharpoondown$).\n- **Vertical & Diagonal Arrows**:\n  - `\\uparrow` ($\\uparrow$), `\\downarrow` ($\\downarrow$), `\\updownarrow` ($\\updownarrow`), `\\Uparrow` ($\\Uparrow$), `\\Downarrow` ($\\Downarrow`), `\\Updownarrow` ($\\Updownarrow$).\n  - `\\nearrow` ($\\nearrow$), `\\searrow` ($\\searrow$), `\\swarrow` ($\\swarrow$), `\\nwarrow` ($\\nwarrow$)."
-          },
-          {
-            "id": "b_lat_h9_3",
-            "type": "heading",
-            "level": "h2",
-            "title": "Relational & Comparison Symbols"
-          },
-          {
-            "id": "b_lat_t9_3",
-            "type": "text",
-            "content": "- **Equality & Equivalence**:\n  - `=` ($=$), `\\neq` ($\\neq$), `\\equiv` ($\\equiv$), `\\sim` ($\\sim$), `\\approx` ($\\approx`), `\\simeq` ($\\simeq`), `\\cong` ($\\cong`), `\\propto` ($\\propto`), `\\doteq` ($\\doteq$), `\\asymp` ($\\asymp$).\n- **Ordering**:\n  - `<` ($<$), `>` ($>$), `\\le` or `\\leq` ($\\le$), `\\ge` or `\\geq` ($\\ge`), `\\ll` ($\\ll`), `\\gg` ($\\gg$), `\\prec` ($\\prec$), `\\succ` ($\\succ$), `\\preceq` ($\\preceq$), `\\succeq` ($\\succeq$).\n- **Geometry & Alignment**:\n  - `\\parallel` ($\\parallel$), `\\nparallel` ($\\nparallel$), `\\perp` ($\\perp$), `\\mid` ($\\mid$), `\\nmid` ($\\nmid$)."
-          },
-          {
-            "id": "b_lat_h9_4",
-            "type": "heading",
-            "level": "h2",
-            "title": "Set Theory & Logic Symbols"
-          },
-          {
-            "id": "b_lat_t9_4",
-            "type": "text",
-            "content": "- **Set Operations**:\n  - `\\in` ($\\in$), `\\notin` ($\\notin$), `\\ni` or `\\owns` ($\\ni$), `\\subset` ($\\subset$), `\\supset` ($\\supset$), `\\subseteq` ($\\subseteq$), `\\supseteq` ($\\supseteq`), `\\subsetneq` ($\\subsetneq$), `\\supsetneq` ($\\supsetneq$).\n  - `\\cap` ($\\cap$), `\\cup` ($\\cup$), `\\setminus` ($\\setminus`), `\\emptyset` ($\\emptyset$), `\\varnothing` ($\\varnothing$), `\\complement` ($\\complement$).\n- **Logic & Proofs**:\n  - `\\forall` ($\\forall$), `\\exists` ($\\exists$), `\\nexists` ($\\nexists$), `\\neg` or `\\lnot` ($\\neg$), `\\land` ($\\land$), `\\lor` ($\\lor$), `\\implies` ($\\implies$), `\\impliedby` ($\\impliedby$), `\\iff` ($\\iff$).\n  - `\\vdash` ($\\vdash`), `\\vDash` ($\\vDash$), `\\top` ($\\top$), `\\bot` ($\\bot$), `\\therefore` ($\\therefore$), `\\because` ($\\because$), `\\blacksquare` ($\\blacksquare$)."
-          },
-          {
-            "id": "b_lat_h9_5",
-            "type": "heading",
-            "level": "h2",
-            "title": "Binary Operations & Arithmetic"
-          },
-          {
-            "id": "b_lat_t9_5",
-            "type": "text",
-            "content": "- **Arithmetic**:\n  - `+` ($+$), `-` ($-$), `\\pm` ($\\pm$), `\\mp` ($\\mp`), `\\times` ($\\times`), `\\div` ($\\div$), `\\cdot` ($\\cdot`), `\\ast` ($\\ast$), `\\star` ($\\star$).\n- **Advanced Operations**:\n  - `\\circ` ($\\circ$), `\\bullet` ($\\bullet$), `\\otimes` ($\\otimes$), `\\oplus` ($\\oplus$), `\\odot` ($\\odot$), `\\ominus` ($\\ominus$), `\\oslash` ($\\oslash$), `\\boxtimes` ($\\boxtimes$), `\\boxplus` ($\\boxplus$).\n  - `\\wedge` ($\\wedge$), `\\vee` ($\\vee$), `\\cap` ($\\cap$), `\\cup` ($\\cup$), `\\sqcap` ($\\sqcap$), `\\sqcup` ($\\sqcup$)."
-          },
-          {
-            "id": "b_lat_h9_6",
-            "type": "heading",
-            "level": "h2",
-            "title": "Calculus, Geometry & Physics Symbols"
-          },
-          {
-            "id": "b_lat_t9_6",
-            "type": "text",
-            "content": "- **Calculus & Vector Calculus**:\n  - `\\partial` ($\\partial$), `\\nabla` ($\\nabla$), `\\nabla^2` ($\\nabla^2$), `\\infty` ($\\infty$), `\\int` ($\\int$), `\\oint` ($\\oint$), `\\mathrm{d}` ($\\mathrm{d}$).\n- **Physics Constants & Units**:\n  - `\\hbar` ($\\hbar$), `\\ell` ($\\ell$), `\\Re` ($\\Re`), `\\Im` ($\\Im$), `\\wp` ($\\wp$), `\\aleph` ($\\aleph$).\n  - `\\triangle` ($\\triangle$), `\\angle` ($\\angle`), `\\measuredangle` ($\\measuredangle$), `\\sphericalangle` ($\\sphericalangle$)."
-          },
-          {
-            "id": "b_lat_h9_7",
-            "type": "heading",
-            "level": "h2",
-            "title": "Miscellaneous & Punctuation Symbols"
-          },
-          {
-            "id": "b_lat_t9_7",
-            "type": "text",
-            "content": "- **Ellipses**:\n  - `\\dots` or `\\ldots` ($\\dots$), `\\cdots` ($\\cdots$), `\\vdots` ($\\vdots$), `\\ddots` ($\\ddots$).\n- **Markers & Suits**:\n  - `\\prime` ($\\prime$), `\\backprime` ($\\backprime`), `\\checkmark` ($\\checkmark$), `\\dagger` ($\\dagger$), `\\ddagger` ($\\ddagger$).\n  - `\\spadesuit` ($\\spadesuit$), `\\heartsuit` ($\\heartsuit$), `\\diamondsuit` ($\\diamondsuit$), `\\clubsuit` ($\\clubsuit$).\n  - `\\flat` ($\\flat$), `\\natural` ($\\natural$), `\\sharp` ($\\sharp$)."
-          }
-        ],
-        "autoNumbering": {
-          "h1": "numeric",
-          "h2": "numeric",
-          "h3": "numeric"
+        {
+          "id": "b_lat_h3",
+          "type": "heading",
+          "level": "h1",
+          "title": "Equation Alignment & Multi-Line Environments"
         },
-        "logo": null,
-        "macros": {
-          "equation": "",
-          "tikz": ""
+        {
+          "id": "b_lat_h3_1",
+          "type": "heading",
+          "level": "h2",
+          "title": "Align and Gather Environments"
+        },
+        {
+          "id": "b_lat_eq1",
+          "type": "equation",
+          "tex": "\\begin{aligned}\n\\nabla \\cdot \\mathbf{E} &= \\frac{\\rho}{\\varepsilon_0} \\\\\n\\nabla \\cdot \\mathbf{B} &= 0 \\\\\n\\nabla \\times \\mathbf{E} &= -\\frac{\\partial \\mathbf{B}}{\\partial t} \\\\\n\\nabla \\times \\mathbf{B} &= \\mu_0 \\mathbf{J} + \\mu_0 \\varepsilon_0 \\frac{\\partial \\mathbf{E}}{\\partial t}\n\\end{aligned}\n\\tag{maxwell}"
+        },
+        {
+          "id": "b_lat_t3_1",
+          "type": "text",
+          "content": "- `aligned`: Aligns at the `&` symbol on each line.\n- `gathered`: Centers each line independently without horizontal alignment anchors."
+        },
+        {
+          "id": "b_lat_h3_2",
+          "type": "heading",
+          "level": "h2",
+          "title": "Piecewise Functions (cases & dcases)"
+        },
+        {
+          "id": "b_lat_eq2",
+          "type": "equation",
+          "tex": "f(x) = \\begin{dcases}\n\\frac{\\sin(x)}{x} & \\text{if } x \\neq 0 \\\\\n1 & \\text{if } x = 0\n\\end{dcases}, \\quad\ng(n) = \\begin{cases}\nn/2 & \\text{if } n \\equiv 0 \\pmod 2 \\\\\n3n+1 & \\text{if } n \\equiv 1 \\pmod 2\n\\end{cases}\n\\tag{piecewise}"
+        },
+        {
+          "id": "b_lat_h3_3",
+          "type": "heading",
+          "level": "h2",
+          "title": "Matrices & Tabular Arrays"
+        },
+        {
+          "id": "b_lat_eq3",
+          "type": "equation",
+          "tex": "\\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}, \\quad\n\\begin{bmatrix} 1 & 0 & 0 \\\\ 0 & 1 & 0 \\\\ 0 & 0 & 1 \\end{bmatrix}, \\quad\n\\begin{vmatrix} x_1 & y_1 \\\\ x_2 & y_2 \\end{vmatrix}, \\quad\n\\begin{Bmatrix} \\alpha & \\beta \\\\ \\gamma & \\delta \\end{Bmatrix}, \\quad\n\\begin{Vmatrix} A_{11} & A_{12} \\\\ A_{21} & A_{22} \\end{Vmatrix}\n\\tag{matrices}"
+        },
+        {
+          "id": "b_lat_h3_4",
+          "type": "heading",
+          "level": "h2",
+          "title": "Nested Sub-Derivations (Array inside Aligned)"
+        },
+        {
+          "id": "b_lat_eq3_4",
+          "type": "equation",
+          "tex": "\\begin{aligned}\n\\int x^2 e^{-x^2} \\, \\mathrm{d}x &= \\int x \\cdot \\left( x e^{-x^2} \\right) \\mathrm{d}x \\\\\n  &\\quad \\left[\n    \\begin{array}{ll}\n      \\text{Integration by Parts:} & \\\\\n      u = x & \\implies \\mathrm{d}u = \\mathrm{d}x \\\\\n      \\mathrm{d}v = x e^{-x^2} \\mathrm{d}x & \\implies v = -\\frac{1}{2} e^{-x^2}\n    \\end{array}\n  \\right] \\\\\n  &= u v - \\int v \\, \\mathrm{d}u \\\\\n  &= -\\frac{1}{2} x e^{-x^2} - \\int \\left( -\\frac{1}{2} e^{-x^2} \\right) \\mathrm{d}x \\\\\n  &= -\\frac{1}{2} x e^{-x^2} + \\frac{1}{2} \\int e^{-x^2} \\, \\mathrm{d}x + C\n\\end{aligned}\n\\tag{nested}"
+        },
+        {
+          "id": "b_lat_t3_4",
+          "type": "text",
+          "content": "- **Outer `aligned`**: Aligns the primary mathematical derivation sequence at `&=`.\n- **Inner `array`**: Nests side calculations, substitution tables, or coordinate transforms (`\\begin{array}{ll} ... \\end{array}`) with their own internal `&` and `\\\\` delimiters without breaking outer derivation alignment."
+        },
+        {
+          "id": "b_lat_h4",
+          "type": "heading",
+          "level": "h1",
+          "title": "Delimiters, Braces & Scaled Enclosures"
+        },
+        {
+          "id": "b_lat_eq4",
+          "type": "equation",
+          "tex": "\\left( \\frac{\\sum_{i=1}^n x_i^2}{\\sqrt[3]{1 + \\frac{a}{b}}} \\right) = \\underbrace{a_1 + a_2 + \\cdots + a_k}_{\\text{Sum of } k \\text{ terms}} + \\overbrace{b_1 + b_2 + \\cdots + b_m}^{\\text{Sum of } m \\text{ terms}}\n\\tag{underbrace}"
+        },
+        {
+          "id": "b_lat_t4",
+          "type": "text",
+          "content": "- **Auto-sizing Delimiters**: `\\left( ... \\right)`, `\\left[ ... \\right]`, `\\left\\{ ... \\right\\}`, `\\left| ... \\right|`, `\\left\\| ... \\right\\|`, `\\left\\langle ... \\right\\rangle`, `\\left\\lfloor ... \\right\\rfloor`, `\\left\\lceil ... \\right\\rceil`.\n- **Evaluated-at Bar**: `\\left. \\frac{\\mathrm{d}f}{\\mathrm{d}x} \\right|_{x=0}` produces $\\left. \\frac{\\mathrm{d}f}{\\mathrm{d}x} \\right|_{x=0}$.\n- **Manual Sizing Scale**: `\\bigl( \\dots \\bigr) < \\Bigl( \\dots \\Bigr) < \\biggl( \\dots \\biggr) < \\Biggl( \\dots \\Biggr)`."
+        },
+        {
+          "id": "b_lat_h5",
+          "type": "heading",
+          "level": "h1",
+          "title": "Fractions, Binomials, Roots & Polynomials"
+        },
+        {
+          "id": "b_lat_eq5_1",
+          "type": "equation",
+          "tex": "P_n(x) = a_n x^n + a_{n-1} x^{n-1} + \\cdots + a_1 x + a_0 = \\sum_{k=0}^n \\binom{n}{k} x^k y^{n-k}\n\\tag{poly}"
+        },
+        {
+          "id": "b_lat_eq5_2",
+          "type": "equation",
+          "tex": "\\cfrac{1}{1 + \\cfrac{1}{2 + \\cfrac{1}{3 + \\cfrac{1}{4 + \\cdots}}}} = \\frac{\\sqrt{5}-1}{2}\n\\tag{continued}"
+        },
+        {
+          "id": "b_lat_t5",
+          "type": "text",
+          "content": "- `\\frac{a}{b}` (standard fraction), `\\dfrac{a}{b}` (display fraction), `\\cfrac{a}{b}` (continued fraction).\n- `\\binom{n}{k}` (binomial coefficient $\\binom{n}{k}$), `\\dbinom{n}{k}` (display binomial).\n- `\\sqrt{x}` ($\\sqrt{x}$), `\\sqrt[n]{x}` ($\\sqrt[n]{x}$)."
+        },
+        {
+          "id": "b_lat_h6",
+          "type": "heading",
+          "level": "h1",
+          "title": "Large Operators, Limits & Calculus"
+        },
+        {
+          "id": "b_lat_eq6",
+          "type": "equation",
+          "tex": "\\int_{0}^{\\infty} x^{s-1} e^{-x} \\, \\mathrm{d}x = \\Gamma(s), \\quad \\lim_{x \\to 0} \\frac{\\sin x}{x} = 1, \\quad \\oint_C \\mathbf{F} \\cdot \\mathrm{d}\\mathbf{r} = \\iint_S (\\nabla \\times \\mathbf{F}) \\cdot \\mathrm{d}\\mathbf{S}\n\\tag{gamma}"
+        },
+        {
+          "id": "b_lat_t6",
+          "type": "text",
+          "content": "- **Sum & Product**: `\\sum_{i=1}^\\infty a_i`, `\\prod_{i=1}^n x_i`, `\\coprod_{j=1}^m Y_j`.\n- **Integrals**: `\\int`, `\\iint`, `\\iiint`, `\\idotsint`, `\\oint`.\n- **Limits & Extrema**: `\\lim_{x \\to a}`, `\\max_{x \\in S}`, `\\min_{x \\in S}`, `\\sup`, `\\inf`, `\\argmax`, `\\argmin`.\n- **Custom Operator**: `\\operatorname{tr}(A)`, `\\operatorname{diag}(v)`, `\\operatorname{sinc}(t)`."
+        },
+        {
+          "id": "b_lat_h7",
+          "type": "heading",
+          "level": "h1",
+          "title": "Mathematical Font Families"
+        },
+        {
+          "id": "b_lat_t7",
+          "type": "text",
+          "content": "- `\\mathbb{R}, \\mathbb{C}, \\mathbb{Z}, \\mathbb{N}, \\mathbb{Q}, \\mathbb{F}` $\\to \\mathbb{R}, \\mathbb{C}, \\mathbb{Z}, \\mathbb{N}, \\mathbb{Q}, \\mathbb{F}$ (Blackboard Bold)\n- `\\mathbf{A}, \\mathbf{x}, \\mathbf{v}` $\\to \\mathbf{A}, \\mathbf{x}, \\mathbf{v}$ (Bold Roman)\n- `\\boldsymbol{\\alpha}, \\boldsymbol{\\beta}, \\boldsymbol{\\nabla}` $\\to \\boldsymbol{\\alpha}, \\boldsymbol{\\beta}, \\boldsymbol{\\nabla}$ (Bold Greek / Math)\n- `\\mathrm{d}x, \\mathrm{e}^{i\\pi}` $\\to \\mathrm{d}x, \\mathrm{e}^{i\\pi}$ (Upright Roman)\n- `\\mathit{TotalCost}` $\\to \\mathit{TotalCost}$ (Math Italic)\n- `\\mathcal{L}, \\mathcal{H}, \\mathcal{F}, \\mathcal{N}` $\\to \\mathcal{L}, \\mathcal{H}, \\mathcal{F}, \\mathcal{N}$ (Calligraphic)\n- `\\mathscr{E}, \\mathscr{F}, \\mathscr{P}` $\\to \\mathscr{E}, \\mathscr{F}, \\mathscr{P}$ (Script)\n- `\\mathfrak{g}, \\mathfrak{p}, \\mathfrak{S}` $\\to \\mathfrak{g}, \\mathfrak{p}, \\mathfrak{S}$ (Fraktur / Gothic)\n- `\\mathsf{T}, \\mathsf{H}, \\mathsf{E}` $\\to \\mathsf{T}, \\mathsf{H}, \\mathsf{E}$ (Sans-Serif)\n- `\\mathtt{0x1F}, \\mathtt{ptr}` $\\to \\mathtt{0x1F}, \\mathtt{ptr}$ (Monospace)\n- `\\text{Hello World}` $\\to \\text{Hello World}$ (Plain Text)"
+        },
+        {
+          "id": "b_lat_h8",
+          "type": "heading",
+          "level": "h1",
+          "title": "Math Spacing, Accents, Vectors & Annotations"
+        },
+        {
+          "id": "b_lat_t8",
+          "type": "text",
+          "content": "- **Spacing**:\n  - `\\,` (thin: $3/18\\text{em}$), `\\:` (med: $4/18\\text{em}$), `\\;` (thick: $5/18\\text{em}$), `\\quad` ($1\\text{em}$), `\\qquad` ($2\\text{em}$), `\\!` (negative: $-3/18\\text{em}$).\n- **Accents & Vectors**:\n  - `\\vec{v}` ($\\vec{v}$), `\\overrightarrow{AB}` ($\\overrightarrow{AB}$), `\\hat{x}` ($\\hat{x}$), `\\widehat{xyz}` ($\\widehat{xyz}$), `\\bar{x}` ($\\bar{x}$), `\\overline{z}` ($\\overline{z}$), `\\tilde{x}` ($\\tilde{x}$), `\\dot{x}` ($\\dot{x}$), `\\ddot{x}` ($\\ddot{x}$), `\\dddot{x}` ($\\dddot{x}$), `\\ddddot{x}` ($\\ddddot{x}$).\n- **Boxes & Color**:\n  - `\\boxed{E = mc^2}` $\\to \\boxed{E = mc^2}$\n  - `\\textcolor{#8b5cf6}{\\text{Purple Text}}` $\\to \\textcolor{#8b5cf6}{\\text{Purple Text}}$\n- `\\cancel{x+1}` $\\to \\cancel{x+1}$, `\\bcancel{x}` $\\to \\bcancel{x}$, `\\xcancel{x}` $\\to \\xcancel{x}$, `\\cancelto{0}{x}` $\\to \\cancelto{0}{x}$ . ",
+          "lineSpacing": "normal"
+        },
+        {
+          "id": "b_lat_h9",
+          "type": "heading",
+          "level": "h1",
+          "title": "Complete LaTeX Symbol Classification"
+        },
+        {
+          "id": "b_lat_h9_1",
+          "type": "heading",
+          "level": "h2",
+          "title": "Greek Alphabet (Lowercase & Uppercase)"
+        },
+        {
+          "id": "b_lat_t9_1",
+          "type": "text",
+          "content": "- **Lowercase Greek**:\n  - `\\alpha` ($\\alpha$), `\\beta` ($\\beta$), `\\gamma` ($\\gamma$), `\\delta` ($\\delta$), `\\epsilon` ($\\epsilon$), `\\varepsilon` ($\\varepsilon$), `\\zeta` ($\\zeta$), `\\eta` ($\\eta$), `\\theta` ($\\theta$), `\\vartheta` ($\\vartheta$), `\\iota` ($\\iota$), `\\kappa` ($\\kappa$), `\\varkappa` ($\\varkappa$), `\\lambda` ($\\lambda$), `\\mu` ($\\mu$), `\\nu` ($\\nu$), `\\xi` ($\\xi$), `\\pi` ($\\pi$), `\\varpi` ($\\varpi$), `\\rho` ($\\rho$), `\\varrho` ($\\varrho$), `\\sigma` ($\\sigma$), `\\varsigma` ($\\varsigma$), `\\tau` ($\\tau$), `\\upsilon` ($\\upsilon$), `\\phi` ($\\phi$), `\\varphi` ($\\varphi$), `\\chi` ($\\chi$), `\\psi` ($\\psi$), `\\omega` ($\\omega$).\n- **Uppercase Greek**:\n  - `\\Gamma` ($\\Gamma$), `\\Delta` ($\\Delta$), `\\Theta` ($\\Theta$), `\\Lambda` ($\\Lambda$), `\\Xi` ($\\Xi$), `\\Pi` ($\\Pi$), `\\Sigma` ($\\Sigma$), `\\Upsilon` ($\\Upsilon$), `\\Phi` ($\\Phi$), `\\Psi` ($\\Psi$), `\\Omega` ($\\Omega$)."
+        },
+        {
+          "id": "b_lat_h9_2",
+          "type": "heading",
+          "level": "h2",
+          "title": "Arrow Symbols"
+        },
+        {
+          "id": "b_lat_t9_2",
+          "type": "text",
+          "content": "- **Horizontal Arrows**:\n  - `\\to` or `\\rightarrow` ($\\to$), `\\leftarrow` ($\\leftarrow$), `\\leftrightarrow` ($\\leftrightarrow$), `\\Rightarrow` ($\\Rightarrow$), `\\Leftarrow` ($\\Leftarrow$), `\\Leftrightarrow` or `\\iff` ($\\Leftrightarrow$).\n  - `\\longrightarrow` ($\\longrightarrow$), `\\longleftarrow` ($\\longleftarrow`), `\\Longrightarrow` ($\\Longrightarrow$), `\\Longleftarrow` ($\\Longleftarrow`), `\\Longleftrightarrow` ($\\Longleftrightarrow$).\n  - `\\mapsto` ($\\mapsto$), `\\longmapsto` ($\\longmapsto$), `\\hookrightarrow` ($\\hookrightarrow$), `\\hookleftarrow` ($\\hookleftarrow`), `\\rightharpoonup` ($\\rightharpoonup$), `\\leftharpoondown` ($\\leftharpoondown$).\n- **Vertical & Diagonal Arrows**:\n  - `\\uparrow` ($\\uparrow$), `\\downarrow` ($\\downarrow$), `\\updownarrow` ($\\updownarrow`), `\\Uparrow` ($\\Uparrow$), `\\Downarrow` ($\\Downarrow`), `\\Updownarrow` ($\\Updownarrow$).\n  - `\\nearrow` ($\\nearrow$), `\\searrow` ($\\searrow$), `\\swarrow` ($\\swarrow$), `\\nwarrow` ($\\nwarrow$)."
+        },
+        {
+          "id": "b_lat_h9_3",
+          "type": "heading",
+          "level": "h2",
+          "title": "Relational & Comparison Symbols"
+        },
+        {
+          "id": "b_lat_t9_3",
+          "type": "text",
+          "content": "- **Equality & Equivalence**:\n  - `=` ($=$), `\\neq` ($\\neq$), `\\equiv` ($\\equiv$), `\\sim` ($\\sim$), `\\approx` ($\\approx`), `\\simeq` ($\\simeq`), `\\cong` ($\\cong`), `\\propto` ($\\propto`), `\\doteq` ($\\doteq$), `\\asymp` ($\\asymp$).\n- **Ordering**:\n  - `<` ($<$), `>` ($>$), `\\le` or `\\leq` ($\\le$), `\\ge` or `\\geq` ($\\ge`), `\\ll` ($\\ll`), `\\gg` ($\\gg$), `\\prec` ($\\prec$), `\\succ` ($\\succ$), `\\preceq` ($\\preceq$), `\\succeq` ($\\succeq$).\n- **Geometry & Alignment**:\n  - `\\parallel` ($\\parallel$), `\\nparallel` ($\\nparallel$), `\\perp` ($\\perp$), `\\mid` ($\\mid$), `\\nmid` ($\\nmid$)."
+        },
+        {
+          "id": "b_lat_h9_4",
+          "type": "heading",
+          "level": "h2",
+          "title": "Set Theory & Logic Symbols"
+        },
+        {
+          "id": "b_lat_t9_4",
+          "type": "text",
+          "content": "- **Set Operations**:\n  - `\\in` ($\\in$), `\\notin` ($\\notin$), `\\ni` or `\\owns` ($\\ni$), `\\subset` ($\\subset$), `\\supset` ($\\supset$), `\\subseteq` ($\\subseteq$), `\\supseteq` ($\\supseteq`), `\\subsetneq` ($\\subsetneq$), `\\supsetneq` ($\\supsetneq$).\n  - `\\cap` ($\\cap$), `\\cup` ($\\cup$), `\\setminus` ($\\setminus`), `\\emptyset` ($\\emptyset$), `\\varnothing` ($\\varnothing$), `\\complement` ($\\complement$).\n- **Logic & Proofs**:\n  - `\\forall` ($\\forall$), `\\exists` ($\\exists$), `\\nexists` ($\\nexists$), `\\neg` or `\\lnot` ($\\neg$), `\\land` ($\\land$), `\\lor` ($\\lor$), `\\implies` ($\\implies$), `\\impliedby` ($\\impliedby$), `\\iff` ($\\iff$).\n  - `\\vdash` ($\\vdash`), `\\vDash` ($\\vDash$), `\\top` ($\\top$), `\\bot` ($\\bot$), `\\therefore` ($\\therefore$), `\\because` ($\\because$), `\\blacksquare` ($\\blacksquare$)."
+        },
+        {
+          "id": "b_lat_h9_5",
+          "type": "heading",
+          "level": "h2",
+          "title": "Binary Operations & Arithmetic"
+        },
+        {
+          "id": "b_lat_t9_5",
+          "type": "text",
+          "content": "- **Arithmetic**:\n  - `+` ($+$), `-` ($-$), `\\pm` ($\\pm$), `\\mp` ($\\mp`), `\\times` ($\\times`), `\\div` ($\\div$), `\\cdot` ($\\cdot`), `\\ast` ($\\ast$), `\\star` ($\\star$).\n- **Advanced Operations**:\n  - `\\circ` ($\\circ$), `\\bullet` ($\\bullet$), `\\otimes` ($\\otimes$), `\\oplus` ($\\oplus$), `\\odot` ($\\odot$), `\\ominus` ($\\ominus$), `\\oslash` ($\\oslash$), `\\boxtimes` ($\\boxtimes$), `\\boxplus` ($\\boxplus$).\n  - `\\wedge` ($\\wedge$), `\\vee` ($\\vee$), `\\cap` ($\\cap$), `\\cup` ($\\cup$), `\\sqcap` ($\\sqcap$), `\\sqcup` ($\\sqcup$)."
+        },
+        {
+          "id": "b_lat_h9_6",
+          "type": "heading",
+          "level": "h2",
+          "title": "Calculus, Geometry & Physics Symbols"
+        },
+        {
+          "id": "b_lat_t9_6",
+          "type": "text",
+          "content": "- **Calculus & Vector Calculus**:\n  - `\\partial` ($\\partial$), `\\nabla` ($\\nabla$), `\\nabla^2` ($\\nabla^2$), `\\infty` ($\\infty$), `\\int` ($\\int$), `\\oint` ($\\oint$), `\\mathrm{d}` ($\\mathrm{d}$).\n- **Physics Constants & Units**:\n  - `\\hbar` ($\\hbar$), `\\ell` ($\\ell$), `\\Re` ($\\Re`), `\\Im` ($\\Im$), `\\wp` ($\\wp$), `\\aleph` ($\\aleph$).\n  - `\\triangle` ($\\triangle$), `\\angle` ($\\angle`), `\\measuredangle` ($\\measuredangle$), `\\sphericalangle` ($\\sphericalangle$)."
+        },
+        {
+          "id": "b_lat_h9_7",
+          "type": "heading",
+          "level": "h2",
+          "title": "Miscellaneous & Punctuation Symbols"
+        },
+        {
+          "id": "b_lat_t9_7",
+          "type": "text",
+          "content": "- **Ellipses**:\n  - `\\dots` or `\\ldots` ($\\dots$), `\\cdots` ($\\cdots$), `\\vdots` ($\\vdots$), `\\ddots` ($\\ddots$).\n- **Markers & Suits**:\n  - `\\prime` ($\\prime$), `\\backprime` ($\\backprime`), `\\checkmark` ($\\checkmark$), `\\dagger` ($\\dagger$), `\\ddagger` ($\\ddagger$).\n  - `\\spadesuit` ($\\spadesuit$), `\\heartsuit` ($\\heartsuit$), `\\diamondsuit` ($\\diamondsuit$), `\\clubsuit` ($\\clubsuit$).\n  - `\\flat` ($\\flat$), `\\natural` ($\\natural$), `\\sharp` ($\\sharp$)."
+        },
+        {
+          "id": "b_lat_tag_h",
+          "type": "heading",
+          "level": "h1",
+          "title": "Tagged Equations & Cross-References"
+        },
+        {
+          "id": "b_lat_tag_tx",
+          "type": "text",
+          "content": "Every equation block above carries a **name** via `\\tag{name}`. Write `$\\eq{name}$` in any text block — **inside `$...$` math** — and it becomes a jump link. Try them: $\\eq{maxwell}$, $\\eq{piecewise}$, $\\eq{matrices}$, $\\eq{nested}$, $\\eq{underbrace}$, $\\eq{poly}$, $\\eq{continued}$, $\\eq{gamma}$."
+        },
+        {
+          "id": "b_lat_tag_group",
+          "type": "equation",
+          "tex": "\\begin{aligned} x + y &= 3 \\\\ x - y &= 1 \\end{aligned}\n\n\\begin{aligned} 2x &= 4 \\end{aligned}\n\\tag{sys}",
+          "hasBorder": true,
+          "align": "center",
+          "allowNumbering": true
+        },
+        {
+          "id": "b_lat_tag_tx2",
+          "type": "text",
+          "content": "**Grouping action:** the block above has *two* equations but only **one** `\\tag{sys}` — so the engine groups them under a single shared number with roman sub-members. Reference the whole group as $\\eq{sys}$ or pick a member: $\\eq{sys:1}$ and $\\eq{sys:2}$ (also works as $\\eq{sys:i}$, $\\eq{sys:ii}$)."
+        },
+        {
+          "id": "b_lat_tag_group2",
+          "type": "equation",
+          "tex": "\\begin{aligned}\nu + v &= 5 \\\\\nu - v &= 1 \\\\ %sub\n2u &= 6 \\\\\n3v &= 9\n\\end{aligned}\n\\tag{mix}",
+          "hasBorder": true,
+          "align": "center",
+          "allowNumbering": true
+        },
+        {
+          "id": "b_lat_tag_tx3",
+          "type": "text",
+          "content": "**Sub-equations inside one block:** within a single `aligned` environment, end any row with `\\\\ %sub` and the **next row starts a new sub-equation** — numbered `mix.i`, `mix.ii` … with no blank line needed. Reference them as $\\eq{mix}$ (the shared base), $\\eq{mix:1}$ and $\\eq{mix:2}$. Rows *without* the marker stay ordinary aligned rows."
+        },
+        {
+          "id": "b_lat_link_h",
+          "type": "heading",
+          "level": "h1",
+          "title": "Links: \\href & \\url"
+        },
+        {
+          "id": "b_lat_link_tx",
+          "type": "text",
+          "content": "Paste any link — a YouTube video, a paper, a repo — **inside `$...$` math** and it becomes a clickable link. Bare URL: $\\url{https://www.youtube.com/watch?v=aircAruvnKk}$ — or name it: $\\href{https://www.youtube.com/watch?v=aircAruvnKk}{\\text{▶ 3Blue1Brown: But what is a neural network?}}$ — keep link text inside `\\text{}` so spaces survive. (Outside `$...$` these commands stay inert text.)"
         }
+      ],
+      "autoNumbering": {
+        "h1": "numeric",
+        "h2": "numeric",
+        "h3": "numeric"
+      },
+      "logo": null,
+      "macros": {
+        "equation": "",
+        "tikz": ""
       }
-    ]
-  }
-  </script>
+    },
+    {
+      "id": "note_tikzipicture_examples_01",
+      "slug": "tikzipicture-examples",
+      "title": "Tikzipicture Examples",
+      "folder": "LaTex",
+      "tags": [
+        "tikz",
+        "figures",
+        "diagrams",
+        "reference",
+        "packages"
+      ],
+      "description": "TikZ engine packages showcase — tagged figures with \\fig cross-references",
+      "meta": {
+        "created": "2026-10-03",
+        "author": "Amiya"
+      },
+      "flashcard": {
+        "isFlashcard": false,
+        "front": "Tikzipicture Examples",
+        "back": "Tikzipicture Examples"
+      },
+      "blocks": [
+        {
+          "id": "b_tikzp_h0",
+          "type": "heading",
+          "level": "h1",
+          "title": "Local TikZ Engine Showcase"
+        },
+        {
+          "id": "b_tikzp_tx0",
+          "type": "text",
+          "content": "Every diagram in this note is compiled **100% locally** by the embedded TeX engine (`03_Notes/Writing_Engine/Tikz_Engine/v1/`) — no CDN, no internet. The packages used here are loaded for **this note only** through its *local TikZ macros* (`\\usetikzlibrary{patterns, angles, calc, quotes, shapes, shapes.geometric, shapes.misc, shapes.arrows, arrows.meta, positioning, intersections, fadings, decorations.markings, decorations.text, fit, matrix, trees, shadows, 3d}`) — open the ∑ **Macros** button in the bottom toolbar to view or edit them."
+        },
+        {
+          "id": "b_tikzp_tx1",
+          "type": "text",
+          "content": "Every figure below has a **tag** and a caption. Writing `$\\fig{sine-plot}$` in a text block — always **inside `$...$` math** — produces a live hyperlink to the figure. Try it now: $\\fig{sine-plot}$. The **🖼 Fig** button in the bottom toolbar switches the numbering style (1, A, a, I, i) note-wide and toggles captions — every caption and every $\\fig{}$ label re-renders instantly. External links work Overleaf-style too: $\\href{https://github.com/pgf-tikz/pgf}{PGF manual}$ and $\\url{tikzjax.com}$ — always inside `$...$`."
+        },
+        {
+          "id": "b_tikzp_f1",
+          "type": "tikz",
+          "code": "\\begin{tikzpicture}[x=0.85cm, y=1.1cm]\n  \\draw[very thin, color=gray!30] (-6.8,-1.4) grid[xstep=0.5, ystep=0.5] (6.8,1.4);\n  \\draw[->] (-7,0) -- (7,0) node[right] {$x$};\n  \\draw[->] (0,-1.6) -- (0,1.6) node[above] {$y$};\n  \\draw[thick, themeColor, domain=-6.5:6.5, smooth, samples=80] plot (\\x, {sin(\\x r)});\n  \\draw[thick, blue!70, dashed, domain=-6.5:6.5, smooth, samples=80] plot (\\x, {cos(\\x r)});\n  \\node[below] at (3.1416,0) {$\\pi$};\n  \\node[below] at (6.2832,0) {$2\\pi$};\n  \\node[themeColor] at (5.4,1.25) {$\\sin x$};\n  \\node[blue!70] at (1.6,1.25) {$\\cos x$};\n\\end{tikzpicture}",
+          "tag": "sine-plot",
+          "caption": "Sine and cosine plotted with domain / smooth / samples",
+          "allowNumbering": true,
+          "hasBorder": true,
+          "width": 100
+        },
+        {
+          "id": "b_tikzp_h1",
+          "type": "heading",
+          "level": "h2",
+          "title": "Geometry, Angles & Intersections"
+        },
+        {
+          "id": "b_tikzp_tx2",
+          "type": "text",
+          "content": "Coordinate arithmetic with `calc` (`$(A)!0.5!(B)$`), angle arcs via `\\pic {angle}`, and automatic path crossings via `name intersections`. The medians below meet at the centroid: $\\fig{geometry}$"
+        },
+        {
+          "id": "b_tikzp_f2",
+          "type": "tikz",
+          "code": "\\begin{tikzpicture}[scale=1.15]\n  \\coordinate (A) at (0,0);\n  \\coordinate (B) at (4,0);\n  \\coordinate (C) at (3.2,2.2);\n  \\draw[thick] (A) -- (B) -- (C) -- cycle;\n  \\draw[gray, dashed] (C) -- ($(A)!0.5!(B)$);\n  \\draw[gray, dashed] (A) -- ($(B)!0.5!(C)$);\n  \\path[name path=segM] (C) -- ($(A)!0.5!(B)$);\n  \\path[name path=segN] (A) -- ($(B)!0.5!(C)$);\n  \\path[name intersections={of=segM and segN}];\n  \\fill[red] (intersection-1) circle (2.2pt) node[below right] {$G$};\n  \\pic[draw=themeColor, angle radius=8mm] {angle = B--A--C};\n  \\foreach \\p/\\loc in {A/below left, B/below right, C/above} {\n    \\fill (\\p) circle (1.8pt) node[\\loc] {$\\p$};\n  }\n\\end{tikzpicture}",
+          "tag": "geometry",
+          "caption": "Medians meeting at the centroid — calc, intersections and an angle pic",
+          "allowNumbering": true,
+          "hasBorder": true,
+          "width": 100
+        },
+        {
+          "id": "b_tikzp_h2",
+          "type": "heading",
+          "level": "h2",
+          "title": "Nodes, Structure & Graphs"
+        },
+        {
+          "id": "b_tikzp_tx3",
+          "type": "text",
+          "content": "Relative placement (`positioning`), modern arrowheads (`arrows.meta`), automatic bounding boxes (`fit`) and shape libraries. A full flowchart: $\\fig{flowchart}$"
+        },
+        {
+          "id": "b_tikzp_f3",
+          "type": "tikz",
+          "code": "\\begin{tikzpicture}[node distance=1.05cm and 1.5cm,\n  box/.style={draw, rounded rectangle, minimum width=2.3cm, minimum height=0.85cm, fill=blue!12, font=\\small\\bfseries},\n  dec/.style={draw, diamond, aspect=2.2, fill=orange!20, font=\\small\\bfseries, inner sep=1pt},\n  arr/.style={-{Stealth[length=2.5mm]}, thick}]\n  \\node[box] (start) {Start};\n  \\node[box, below=of start] (fit) {Fit model};\n  \\node[dec, below=of fit] (ok) {Converged?};\n  \\node[box, below=of ok] (done) {Report};\n  \\node[box, right=1.7cm of ok, fill=red!15] (tune) {Tune prior};\n  \\draw[arr] (start) -- (fit);\n  \\draw[arr] (fit) -- (ok);\n  \\draw[arr] (ok) -- node[left, font=\\small] {yes} (done);\n  \\draw[arr] (ok) -- node[above, font=\\small] {no} (tune);\n  \\draw[arr] (tune) |- (fit);\n  \\node[draw, dashed, rounded corners, fit=(start) (tune) (done), inner sep=6pt] {};\n  \\node[font=\\scriptsize\\bfseries, anchor=south] at ($(start.north) + (0,0.25)$) {Pipeline};\n\\end{tikzpicture}",
+          "tag": "flowchart",
+          "caption": "Flowchart — positioning, Stealth arrows, diamond decision and a fit boundary",
+          "allowNumbering": true,
+          "hasBorder": true,
+          "width": 100
+        },
+        {
+          "id": "b_tikzp_tx4",
+          "type": "text",
+          "content": "Grid alignment with `matrix of nodes`, and recursive `child` trees for parse trees and taxonomies: $\\fig{matrix-grid}$ and $\\fig{parse-tree}$"
+        },
+        {
+          "id": "b_tikzp_f4",
+          "type": "tikz",
+          "code": "\\begin{tikzpicture}\n  \\matrix (m) [matrix of nodes, nodes={draw, circle, minimum size=7.5mm, font=\\small},\n    row sep=4mm, column sep=6mm, draw, rounded corners, inner sep=4mm, fill=gray!8]\n  {\n    1 & 2 & 3 \\\\\n    4 & 5 & 6 \\\\\n  };\n  \\draw[-{Stealth}, thick, red] (m-1-1) to[bend left] (m-2-3);\n  \\draw[-{Stealth}, thick, blue] (m-2-2) to[bend right] (m-1-3);\n\\end{tikzpicture}",
+          "tag": "matrix-grid",
+          "caption": "Matrix of nodes with bent arrows between cells",
+          "allowNumbering": true,
+          "hasBorder": true,
+          "width": 100
+        },
+        {
+          "id": "b_tikzp_f5",
+          "type": "tikz",
+          "code": "\\begin{tikzpicture}[level distance=11mm,\n  level 1/.style={sibling distance=27mm},\n  level 2/.style={sibling distance=13mm},\n  every node/.style={circle, draw, font=\\small, minimum size=6.5mm, inner sep=0.5pt}]\n  \\node {S}\n    child { node {NP} child { node {D} } child { node {N} } }\n    child { node {VP} child { node {V} } child { node {NP} child { node {D} } child { node {N} } } };\n\\end{tikzpicture}",
+          "tag": "parse-tree",
+          "caption": "Phrase-structure tree via the child syntax",
+          "allowNumbering": true,
+          "hasBorder": true,
+          "width": 100
+        },
+        {
+          "id": "b_tikzp_h3",
+          "type": "heading",
+          "level": "h2",
+          "title": "Fills, Textures & Depth"
+        },
+        {
+          "id": "b_tikzp_tx5",
+          "type": "text",
+          "content": "Hatch and dot `patterns`, gradient shadings, and `drop shadow` for depth: $\\fig{textures}$"
+        },
+        {
+          "id": "b_tikzp_f6",
+          "type": "tikz",
+          "code": "\\begin{tikzpicture}\n  \\fill[pattern=north east lines, pattern color=blue!60] (0,0) rectangle (1.6,1.2);\n  \\fill[pattern=dots, pattern color=red!60] (1.8,0) rectangle (3.4,1.2);\n  \\fill[left color=green!30, right color=yellow!60] (0,-1.5) rectangle (3.4,-0.3);\n  \\draw[thick, gray] (0,0) rectangle (3.4,1.2);\n  \\draw[thick, gray] (0,-1.5) rectangle (3.4,-0.3);\n  \\node[draw, drop shadow, fill=white, rounded corners, font=\\small] at (5.3,0.4) {shadow box};\n\\end{tikzpicture}",
+          "tag": "textures",
+          "caption": "Patterns, gradient shading and a drop-shadowed box",
+          "allowNumbering": true,
+          "hasBorder": true,
+          "width": 100
+        },
+        {
+          "id": "b_tikzp_tx6",
+          "type": "text",
+          "content": "The shape libraries cover stars, ellipses, rounded rectangles and arrows: $\\fig{shapes}$"
+        },
+        {
+          "id": "b_tikzp_f7",
+          "type": "tikz",
+          "code": "\\begin{tikzpicture}\n  \\node[draw, star, star points=6, star point ratio=2.2, minimum size=1.1cm, fill=yellow!40] at (0,0) {};\n  \\node[draw, ellipse, minimum width=2cm, minimum height=1cm, fill=blue!15] at (2.7,0) {ellipse};\n  \\node[draw, rounded rectangle, minimum height=0.85cm, fill=green!15] at (5.6,0) {rounded};\n  \\node[draw, single arrow, minimum height=1.8cm, minimum width=0.8cm, fill=orange!30] at (2.7,-1.7) {flow};\n\\end{tikzpicture}",
+          "tag": "shapes",
+          "caption": "Shape showcase — star, ellipse, rounded rectangle, single arrow",
+          "allowNumbering": true,
+          "hasBorder": true,
+          "width": 100
+        },
+        {
+          "id": "b_tikzp_h4",
+          "type": "heading",
+          "level": "h2",
+          "title": "Decorations & Labels"
+        },
+        {
+          "id": "b_tikzp_tx7",
+          "type": "text",
+          "content": "`decorations.markings` places arrows/labels *along* a path at any position; `decorations.text` typesets text following the curve: $\\fig{decorations}$"
+        },
+        {
+          "id": "b_tikzp_f8",
+          "type": "tikz",
+          "code": "\\begin{tikzpicture}\n  \\draw[thick, postaction={decorate, decoration={markings,\n    mark=at position 0.25 with {\\node[font=\\tiny, below] {0.25};},\n    mark=at position 0.5 with {\\arrow{Stealth}},\n    mark=at position 0.75 with {\\node[font=\\tiny, above] {0.75};}}}]\n    (0,0) to[bend left=20] (4.5,0);\n  \\draw[thick, themeColor, decorate, decoration={text along path, text={TikZ writes along any path}, text align=center}]\n    (0,-1.6) to[bend right=25] (4.5,-1.6);\n\\end{tikzpicture}",
+          "tag": "decorations",
+          "caption": "Marks at 0.25/0.5/0.75 along a curve, and text written along a path",
+          "allowNumbering": true,
+          "hasBorder": true,
+          "width": 100
+        },
+        {
+          "id": "b_tikzp_h5",
+          "type": "heading",
+          "level": "h2",
+          "title": "Charts, Plots & 3D"
+        },
+        {
+          "id": "b_tikzp_tx8",
+          "type": "text",
+          "content": "Data-driven charts straight from `\\foreach [count=\\i] \\name/\\pct` lists plus `\\pgfmathsetmacro`: $\\fig{bars}$"
+        },
+        {
+          "id": "b_tikzp_f9",
+          "type": "tikz",
+          "code": "\\begin{tikzpicture}[x=1cm, y=1cm]\n  \\def\\barStartX{0.8}\\def\\barEndX{5.2}\\def\\barHeight{0.3}\\def\\barGap{0.7}\n  \\pgfmathsetmacro{\\barWidth}{\\barEndX - \\barStartX}\n  \\node[font=\\bfseries] at (3, 2.75) {Reading Progress};\n  \\foreach [count=\\i] \\name/\\pct in {{Math}/72, {Physics}/45, {Chemistry}/88, {Biology}/61} {\n    \\pgfmathsetmacro{\\yPos}{2.1 - \\i * \\barGap}\n    \\pgfmathsetmacro{\\fillEnd}{\\barStartX + (\\barWidth * \\pct / 100)}\n    \\node[anchor=east, font=\\small\\bfseries] at (\\barStartX - 0.15, \\yPos) {\\name};\n    \\fill[gray!25, rounded corners=1.5pt] (\\barStartX, \\yPos - 0.15) rectangle (\\barEndX, \\yPos + 0.15);\n    \\fill[themeColor!80, rounded corners=1.5pt] (\\barStartX, \\yPos - 0.15) rectangle (\\fillEnd, \\yPos + 0.15);\n    \\node[anchor=west, font=\\scriptsize] at (\\barEndX + 0.15, \\yPos) {\\pct\\%};\n  }\n\\end{tikzpicture}",
+          "tag": "bars",
+          "caption": "Progress bars generated from a foreach list",
+          "allowNumbering": true,
+          "hasBorder": true,
+          "width": 100
+        },
+        {
+          "id": "b_tikzp_tx9",
+          "type": "text",
+          "content": "True 3D: draw on named planes (`canvas is xy plane at z=...`) with custom unit vectors: $\\fig{cube}$"
+        },
+        {
+          "id": "b_tikzp_f10",
+          "type": "tikz",
+          "code": "\\begin{tikzpicture}[x={(0.86cm,0.5cm)}, y={(-0.86cm,0.5cm)}, z={(0cm,1cm)}, scale=1.15]\n  \\draw[canvas is xy plane at z=0, fill=blue!12] (0,0) rectangle (1.4,1.4);\n  \\draw[canvas is xy plane at z=1.4, fill=blue!25] (0,0) rectangle (1.4,1.4);\n  \\draw[canvas is xz plane at y=0, fill=cyan!15] (0,0) rectangle (1.4,1.4);\n  \\draw[canvas is yz plane at x=1.4, fill=green!18] (0,0) rectangle (1.4,1.4);\n  \\draw[thick] (0,0,0) -- (1.4,0,0) -- (1.4,1.4,0) -- (0,1.4,0) -- cycle;\n  \\draw[thick] (0,0,1.4) -- (0,1.4,1.4);\n\\end{tikzpicture}",
+          "tag": "cube",
+          "caption": "A unit cube assembled from four canvas planes",
+          "allowNumbering": true,
+          "hasBorder": true,
+          "width": 100
+        },
+        {
+          "id": "b_tikzp_tx10",
+          "type": "text",
+          "content": "Function plotting with `plot (\\x, {...})` over a `domain`, with grid, axes and styled colors: $\\fig{parabola}$"
+        },
+        {
+          "id": "b_tikzp_f11",
+          "type": "tikz",
+          "code": "\\begin{tikzpicture}[x=0.8cm, y=0.8cm]\n  \\draw[very thin, gray!25] (-3.6,-2.6) grid (3.6,4.6);\n  \\draw[->] (-3.8,0) -- (3.8,0) node[below] {$x$};\n  \\draw[->] (0,-2.8) -- (0,4.8) node[left] {$y$};\n  \\draw[thick, themeColor, domain=-2.2:2.2, smooth, samples=60] plot (\\x, {\\x*\\x - 2});\n  \\draw[thick, blue!70, dashed, domain=-2.6:2.6, smooth, samples=60] plot (\\x, {0.5*\\x + 1});\n  \\fill[red] (-2,2) circle (2pt) node[above left] {$(-2,\\,2)$};\n  \\node[font=\\small] at (2.65,3.95) {$y = x^2 - 2$};\n  \\node[font=\\small, blue!70] at (-2.5,0.35) {$y = \\tfrac{x}{2} + 1$};\n\\end{tikzpicture}",
+          "tag": "parabola",
+          "caption": "Grid, axes, a parabola and a line — pure function plotting",
+          "allowNumbering": true,
+          "hasBorder": true,
+          "width": 100
+        },
+        {
+          "id": "b_tikzp_h6",
+          "type": "heading",
+          "level": "h2",
+          "title": "Engine Limits"
+        },
+        {
+          "id": "b_tikzp_tx11",
+          "type": "text",
+          "content": "The embedded core does **not** carry every pgf library: `automata`, `mindmap`, `decorations.pathmorphing` (coil/zigzag), `backgrounds` layers, `perspective`, `spy` and `shapes.symbols` are unavailable, and external packages (`pgfplots`, `tcolorbox`, `circuitikz`, …) cannot be loaded — all verified and documented in `03_Notes/Writing_Engine/Tikz_Engine/packages/README.md`. Everything shown above, however, compiles fully offline."
+        }
+      ],
+      "autoNumbering": {
+        "h1": "numeric",
+        "h2": "numeric",
+        "h3": "numeric"
+      },
+      "logo": null,
+      "macros": {
+        "equation": "",
+        "tikz": "\\usetikzlibrary{patterns, angles, calc, quotes, shapes, shapes.geometric, shapes.misc, shapes.arrows, arrows, arrows.meta, positioning, intersections, fadings, decorations.markings, decorations.text, fit, matrix, trees, shadows, 3d}"
+      }
+    }
+  ]
+}
+</script>
   <script type="application/json" id="ProfessorsData">
   {
     "version": 1,
