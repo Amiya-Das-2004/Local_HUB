@@ -71,7 +71,7 @@ if (typeof document !== 'undefined' && !document.getElementById('tikz-block-anim
 
 export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onDone = null, onMoveUp = null, onMoveDown = null, onDelete = null, index = 0, totalBlocks = 1, figureInfo = null } = {}) {
   const container = document.createElement('div');
-  container.className = 'w-full my-1.5';
+  container.className = 'w-full my-1';
   const caption = block.caption || '';
   const allowNumbering = block.allowNumbering !== false;
   const tag = block.tag || '';
@@ -134,7 +134,7 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
 
   // 2. Edit Mode
   const editWrap = document.createElement('div');
-  editWrap.className = 'tikz-edit-workspace flex flex-col gap-2 my-0.5 w-full relative';
+  editWrap.className = 'tikz-edit-workspace flex flex-col gap-1.5 my-0.5 w-full relative';
 
   let currentBorderState = hasBorder;
   let currentFitPercent = fitPercent;

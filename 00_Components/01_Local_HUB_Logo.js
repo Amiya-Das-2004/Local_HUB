@@ -48,7 +48,8 @@ const LOGO_VARIANTS = {
 `
   },
   notes: {
-    title: 'Local <span style="color:#3db63f;">HUB</span>',
+    // HyperLeaf brand: "Hyper" inherits --text (black in light theme), "Leaf" in green
+    title: 'Hyper<span style="color:#3db63f;">Leaf</span>',
     subtitle: 'personal notes',
     accent: '#2b8a2d',
     markColor: '#3db63f',

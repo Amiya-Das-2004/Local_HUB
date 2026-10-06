@@ -139,7 +139,7 @@ export function renderCodeBlock(
   ensureHighlightJsLoaded();
 
   const container = document.createElement('div');
-  container.className = 'w-full my-1.5';
+  container.className = 'w-full my-1';
 
   const card = document.createElement('div');
   card.className = 'notes-code-card w-full shadow-xs';

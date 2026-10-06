@@ -1,81 +1,93 @@
 /**
  * 03_Notes/B_Editor_View/03_Floating_ToolBar/06_Equation_Numbering.js
- * Global equation numbering style selector for the editor floating toolbar.
- * Controls how computeEquationNumbers() labels equation blocks:
- *   numeric          -> (1), (2), (3)
- *   alphabetic_small -> (a), (b), (c)
- *   roman_small      -> (i), (ii), (iii)
- * Persisted per note in note.equationNumbering.
+ * \eqref{} equation numbering options, hosted inside the toolbar's Numbering popup.
+ * Three hierarchical levels — group (N), part/row (N.x), row-in-part (N.x.y) — each with
+ * its own style. The composite preview shows the resulting number shape:
+ *   numeric + numeric                    -> 1.1
+ *   numeric + alphabetic_small + roman_small -> 1.a.i
+ * Equations are numbered only when they carry a \label{} (see Numbering_Engine).
+ * Persisted per note as note.equationNumbering = { level1, level2, level3 }
+ * (legacy plain strings normalize to level1).
  */
 
-const EQ_STYLE_LABELS = {
-  numeric: '(1)',
-  alphabetic_small: '(a)',
-  roman_small: '(i)'
-};
+import { normalizeEquationNumbering } from '../../Writing_Engine/Numbering_Engine.js';
 
-export function GetEquationNumberingHTML(note = null) {
-  const current = (note && note.equationNumbering) || 'numeric';
-  return `
-    <div class="relative flex items-center flex-shrink-0" id="eq-numbering-wrap">
-      <button type="button" class="btn-eq-numbering notes-ghost-btn h-8 px-2.5 sm:px-3 text-xs font-semibold rounded-full flex items-center gap-1.5 transition-all text-[var(--text)] hover:text-emerald-400 hover:border-emerald-500/50 hover:bg-emerald-500/10 cursor-pointer shadow-xs" title="Equation numbering style (used by \\tag{name} and \\eq{name} references)">
-        <span class="text-emerald-400 font-mono font-bold text-sm leading-none">#</span>
-        <span class="hidden xs:inline">Eq</span>
-        <span class="eq-numbering-badge font-mono text-[11px] text-emerald-400" id="eq-numbering-current">${EQ_STYLE_LABELS[current] || EQ_STYLE_LABELS.numeric}</span>
-      </button>
-      <div class="eq-numbering-menu hidden absolute bottom-full left-1/2 -translate-x-1/2 mb-2 min-w-[170px] p-1 rounded-xl border border-[var(--border)] bg-[var(--card)] shadow-2xl z-[70]">
-        <button type="button" class="eq-numbering-option ${current === 'numeric' ? 'active' : ''}" data-style="numeric"><span>Numbered</span><span class="font-mono text-emerald-400">(1)</span></button>
-        <button type="button" class="eq-numbering-option ${current === 'alphabetic_small' ? 'active' : ''}" data-style="alphabetic_small"><span>Alphabetic</span><span class="font-mono text-emerald-400">(a)</span></button>
-        <button type="button" class="eq-numbering-option ${current === 'roman_small' ? 'active' : ''}" data-style="roman_small"><span>Roman</span><span class="font-mono text-emerald-400">(i)</span></button>
+const LEVEL_STYLE_SAMPLES = { numeric: '1', alphabetic: 'A', alphabetic_small: 'a', roman: 'I', roman_small: 'i' };
+
+function ensureEqOptionStyles() {
+  if (typeof document === 'undefined' || document.getElementById('eq-numbering-opts-styles')) return;
+  const styleEl = document.createElement('style');
+  styleEl.id = 'eq-numbering-opts-styles';
+  styleEl.textContent = `
+    .eq-level-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      width: 100%; padding: 4px 2px;
+    }
+    .eq-level-name { font-size: 11px; color: var(--text-secondary, #a0a4b8); flex-shrink: 0; }
+    .eq-level-choices { display: flex; gap: 3px; }
+    .eq-numbering-option {
+      width: 26px; height: 24px; display: inline-flex; align-items: center; justify-content: center;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px;
+      border-radius: 6px; border: 1px solid transparent; background: transparent;
+      color: var(--text-secondary, #a0a4b8); cursor: pointer; transition: all 0.15s; padding: 0;
+    }
+    .eq-numbering-option:hover { background: var(--surface-hover, rgba(255,255,255,0.06)); color: var(--text, #e8eaf2); }
+    .eq-numbering-option.active { background: rgba(16, 185, 129, 0.14); border-color: rgba(16, 185, 129, 0.5); color: #34d399; }
+    .eq-level-preview {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      width: 100%; padding: 6px 8px; margin-bottom: 4px; font-size: 11px;
+      border-radius: 8px; background: rgba(16, 185, 129, 0.07); color: var(--text-secondary, #a0a4b8);
+    }
+    .eq-format-sample { color: #34d399; font-weight: 700; letter-spacing: 0.04em; }
+  `;
+  document.head.appendChild(styleEl);
+}
+
+const compositeSample = (cfg) => [cfg.level1, cfg.level2, cfg.level3]
+  .map(s => LEVEL_STYLE_SAMPLES[s] || '1').join('.');
+
+// Level pickers + composite format preview — mounted inside the Numbering popup panel
+export function GetEqNumberingOptionsHTML(note = null) {
+  ensureEqOptionStyles();
+  const cfg = normalizeEquationNumbering(note ? note.equationNumbering : null);
+
+  const levelRow = (label, key) => `
+    <div class="eq-level-row">
+      <span class="eq-level-name">${label}</span>
+      <div class="eq-level-choices">
+        ${Object.entries(LEVEL_STYLE_SAMPLES).map(([s, sample]) => `
+          <button type="button" class="eq-numbering-option ${cfg[key] === s ? 'active' : ''}" data-level="${key}" data-style="${s}" title="${label}: ${s}">${sample}</button>
+        `).join('')}
       </div>
-    </div>
+    </div>`;
+
+  return `
+    <div class="eq-level-preview"><span>Number format</span><span class="eq-format-sample font-mono">${compositeSample(cfg)}</span></div>
+    ${levelRow('Level 1', 'level1')}
+    ${levelRow('Level 2', 'level2')}
+    ${levelRow('Level 3', 'level3')}
   `;
 }
 
-export function InitEquationNumberingLogic(note = null, onStyleChange = null) {
-  const wrap = document.getElementById('eq-numbering-wrap');
-  if (!wrap) return;
-  const btn = wrap.querySelector('.btn-eq-numbering');
-  const menu = wrap.querySelector('.eq-numbering-menu');
-  const badge = wrap.querySelector('#eq-numbering-current');
+// Binds the equation options rendered inside the given popup section container
+export function InitEqNumberingOptions(note, sectionEl, onChange = null) {
+  if (!note || !sectionEl) return;
 
-  if (!document.getElementById('eq-numbering-styles')) {
-    const styleEl = document.createElement('style');
-    styleEl.id = 'eq-numbering-styles';
-    styleEl.textContent = `
-      .eq-numbering-option {
-        display: flex; align-items: center; justify-content: space-between; gap: 10px;
-        width: 100%; padding: 7px 10px; font-size: 11px; border-radius: 8px;
-        border: none; background: transparent; color: var(--text, #e8eaf2);
-        cursor: pointer; text-align: left; transition: background 0.15s;
-      }
-      .eq-numbering-option:hover { background: var(--surface-hover, rgba(255,255,255,0.06)); }
-      .eq-numbering-option.active { background: rgba(16, 185, 129, 0.12); }
-    `;
-    document.head.appendChild(styleEl);
-  }
-
-  btn.addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    menu.classList.toggle('hidden');
-  });
-
-  menu.addEventListener('click', (e) => e.stopPropagation());
-
-  document.addEventListener('click', (e) => {
-    if (!wrap.contains(e.target)) menu.classList.add('hidden');
-  });
-
-  menu.querySelectorAll('.eq-numbering-option').forEach((opt) => {
+  sectionEl.querySelectorAll('.eq-numbering-option').forEach((opt) => {
     opt.addEventListener('click', () => {
+      const level = opt.getAttribute('data-level');
       const style = opt.getAttribute('data-style');
-      if (note) note.equationNumbering = style;
-      badge.textContent = EQ_STYLE_LABELS[style] || EQ_STYLE_LABELS.numeric;
-      menu.querySelectorAll('.eq-numbering-option').forEach((o) =>
-        o.classList.toggle('active', o.getAttribute('data-style') === style));
-      menu.classList.add('hidden');
-      if (typeof onStyleChange === 'function') onStyleChange(style);
+      const cfg = normalizeEquationNumbering(note.equationNumbering);
+      cfg[level] = style;
+      note.equationNumbering = cfg;
+
+      sectionEl.querySelectorAll(`.eq-numbering-option[data-level="${level}"]`).forEach((o) =>
+        o.classList.toggle('active', o === opt));
+
+      const sample = sectionEl.querySelector('.eq-format-sample');
+      if (sample) sample.textContent = compositeSample(normalizeEquationNumbering(note.equationNumbering));
+
+      if (typeof onChange === 'function') onChange(style);
     });
   });
 }

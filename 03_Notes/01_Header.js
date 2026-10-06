@@ -3,7 +3,8 @@ import { GetThemeToggleHTML, InitThemeToggleLogic } from '../00_Components/02_Th
 import { GetImportButtonHTML, GetExportButtonHTML, InitImportExport } from '../00_Components/04_Import_Export.js';
 import { GetSaveButtonHTML, InitSaveButtonLogic } from '../00_Components/05_Save_Button.js';
 
-// Returns HTML for the center "NOTES" title and journal SVG icon
+// RESERVED: center "texidian" title component (not rendered — the header center is
+// intentionally empty; the floating toolbar's Back button handles deck navigation)
 export function GetCenterTitleHTML() {
   return `
     <style>
@@ -39,10 +40,9 @@ export function GetCenterTitleHTML() {
       .notes-center-text {
         font-size: 18px;
         font-weight: 800;
-        letter-spacing: 0.12em;
+        letter-spacing: 0.02em;
         color: var(--text, #e8eaf2);
         font-family: inherit;
-        text-transform: uppercase;
         white-space: nowrap;
         transition: color var(--transition, 0.2s);
       }
@@ -89,7 +89,7 @@ export function GetCenterTitleHTML() {
         <path d="M8.5 16c1.5-1.8 3 1.8 4.5 0" stroke-width="1.8"/>
         <line x1="8.5" y1="12" x2="15" y2="12" stroke-width="1.8"/>
       </svg>
-      <span class="notes-center-text">NOTES</span>
+      <span class="notes-center-text">texidian</span>
     </a>
   `;
 }
@@ -211,10 +211,8 @@ export function GetHeaderHTML() {
           ${GetLogoHTML({ variant: 'notes' })}
         </div>
 
-        <!-- 2. MIDDLE: Refined SVG Logo + "NOTES" -->
-        <div class="header-center flex items-center">
-          ${GetCenterTitleHTML()}
-        </div>
+        <!-- 2. CENTER: intentionally empty — the floating toolbar's Back button navigates to the deck.
+             GetCenterTitleHTML() is kept below as a reserved component. -->
 
         <!-- 3. RIGHT SIDE CONTROLS -->
         <div class="header-right">
@@ -231,7 +229,6 @@ export function GetHeaderHTML() {
 // Initializes click logic for all header buttons and utilities
 export function InitHeader() {
   InitLogoLogic();
-  InitCenterTitleLogic();
   InitImportExport();
   InitSaveButtonLogic();
   InitThemeToggleLogic();

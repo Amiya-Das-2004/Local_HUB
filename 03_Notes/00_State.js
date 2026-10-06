@@ -100,6 +100,10 @@ function sanitizeNote(n, idx = 0) {
     flashcard: n.flashcard || null,
     blocks: Array.isArray(n.blocks) ? n.blocks : [],
     autoNumbering: n.autoNumbering || { h1: 'numeric', h2: 'numeric', h3: 'numeric' },
+    // Per-note numbering configs pass through untouched (objects or legacy strings):
+    ...(n.equationNumbering !== undefined ? { equationNumbering: n.equationNumbering } : {}),
+    ...(n.figureNumbering !== undefined ? { figureNumbering: n.figureNumbering } : {}),
+    ...(n.showFigureCaptions !== undefined ? { showFigureCaptions: n.showFigureCaptions } : {}),
     logo: n.logo || null,
     macros: (n.macros && typeof n.macros === 'object') ? {
       equation: n.macros.equation || '',

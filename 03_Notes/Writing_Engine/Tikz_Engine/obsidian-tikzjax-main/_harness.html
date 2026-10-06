@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Obsidian core test v3</title>
+<link rel="stylesheet" href="styles.css">
+<style>body{background:#fff;margin:16px;font-family:sans-serif}</style>
+</head>
+<body>
+<h3>Obsidian core (plugin-style boot)</h3>
+<div id="out1"></div>
+<div id="out2"></div>
+<div id="out3"></div>
+<div id="out4"></div>
+<pre id="status">booting...</pre>
+<script>
+window.__ERR__ = []; window.__LOG__ = []; window.__EVENTS__ = 0;
+window.onerror = function(m){ window.__ERR__.push(String(m).slice(0,150)); };
+["log","warn","error"].forEach(function(k){ var o = console[k]; console[k] = function(){ try { window.__LOG__.push(k + ": " + [...arguments].map(function(a){ return String(a).slice(0,100); }).join(" ")); } catch(e){} o.apply(console, arguments); }; });
+window.addEventListener('tikzjax-load-finished', function(e){ window.__EVENTS__++; });
+</script>
+<script>
+(async function(){
+  var t0 = Date.now();
+  try {
+    var res = await fetch('tikzjax.js');
+    var src = await res.text();
+    var s = document.createElement('script');
+    s.id = 'tikzjax';
+    s.innerText = src;
+    document.head.appendChild(s);
+    document.getElementById('status').textContent = 'engine inlined at ' + Math.round((Date.now()-t0)/1000) + 's; waiting for boot...';
+  } catch (e) {
+    document.getElementById('status').textContent = 'INLINE FAILED: ' + e;
+    return;
+  }
+  // inject test diagrams after boot delay
+  var tests = [{"id":"out1","code":"\\begin{document}\n\\begin{tikzpicture}[>={Stealth[]}]\n\\node[state, initial] (q0) at (0,0) {$q_0$};\n\\node[state] (q1) at (2.5,0) {$q_1$};\n\\draw[->] (q0) -- (q1) node[midway, above] {a};\n\\end{tikzpicture}\n\\end{document}"},{"id":"out2","code":"\\begin{document}\n\\begin{tikzpicture}[mindmap, concept color=blue!40]\n\\node[concept, minimum size=1.2cm] at (0,0) {M};\n\\end{tikzpicture}\n\\end{document}"},{"id":"out3","code":"\\begin{document}\n\\begin{tikzpicture}\n\\node (a) at (1,0.5) {X};\n\\begin{pgfonlayer}{background layer}\n\\fill[red!20] (-0.5,-0.5) rectangle (2.5,1.5);\n\\end{pgfonlayer}\n\\end{tikzpicture}\n\\end{document}"},{"id":"out4","code":"\\begin{document}\n\\begin{tikzpicture}[spy using outlines={circle, magnification=2, size=1.5cm, connect spies}]\n\\draw (0,0) circle (0.3);\n\\spy[red] on (0,0) in node at (3,0);\n\\end{tikzpicture}\n\\end{document}"}];
+  setTimeout(function(){
+    var t0c = Date.now();
+    tests.forEach(function(t){
+      var s = document.createElement('script');
+      s.type = 'text/tikz';
+      s.textContent = t.code;
+      document.getElementById(t.id).appendChild(s);
+    });
+    var poll = setInterval(function(){
+      var done = tests.filter(function(t){ return document.querySelector('#' + t.id + ' svg'); }).length;
+      document.getElementById('status').textContent = 'compiling ' + (Date.now()-t0c)/1000 + 's — ' + done + '/' + tests.length + ' rendered — events:' + window.__EVENTS__ + ' errs:' + window.__ERR__.length + ' log:' + window.__LOG__.length;
+      if (done >= tests.length || Date.now() - t0c > 90000) {
+        clearInterval(poll);
+        document.getElementById('status').textContent = 'FINAL — ' + done + '/' + tests.length + ' rendered — events:' + window.__EVENTS__ + ' errs:' + window.__ERR__.length;
+      }
+    }, 500);
+  }, 10000);
+})();
+</script>
+</body>
+</html>

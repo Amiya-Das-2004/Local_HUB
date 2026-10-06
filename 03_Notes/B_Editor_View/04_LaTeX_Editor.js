@@ -18,6 +18,7 @@ import { CreateSidebarTOC } from './02_Sidebar/02_Sidebar_TOC.js';
 import { CreateDocHeader } from './01_Doc_Header.js';
 import { CreateFloatingToolbar } from './02_Floating_Toolbar.js';
 import { CreateBlockItem } from './01_Blocks/Block_Item.js';
+import { getRawOffsetFromPoint, placeCaretAtRawOffset } from './01_Blocks/Text_Block/Text_Parser.js';
 import { escapeHtml } from '../02_Utils.js';
 import { setActiveNoteContext, setActiveFigureTagMap, setActiveEquationTagMap, setActiveCitationMap } from '../Writing_Engine/Math_Renderer.js';
 import { setActiveTikzNoteContext } from '../Writing_Engine/Tikz_Engine/Tikz_Renderer.js';
@@ -303,8 +304,25 @@ export function RenderLaTeXEditor(container, noteId, isEditMode = true) {
           refreshSidebar();
         }
       },
-      onSelect: () => {
+      onSelect: (clickInfo) => {
+        // Capture the click position BEFORE re-rendering, then restore the caret and
+        // viewport anchoring after the block switches into edit mode — editing continues
+        // exactly where the user clicked instead of jumping to the block top.
+        const oldEl = blocksContainer.querySelector(`[data-block-index="${idx}"]`);
+        const prevTop = oldEl ? oldEl.getBoundingClientRect().top : null;
+        const wantsCaret = clickInfo && (block.type === 'text' || block.type === undefined);
+        const caretOffset = wantsCaret ? getRawOffsetFromPoint(clickInfo.clientX, clickInfo.clientY) : null;
         setActiveBlock(idx);
+        const newEl = blocksContainer.querySelector(`[data-block-index="${idx}"]`);
+        if (!newEl) return;
+        if (prevTop != null) {
+          const dy = newEl.getBoundingClientRect().top - prevTop;
+          if (Math.abs(dy) > 2) window.scrollBy({ top: dy, behavior: 'auto' });
+        }
+        if (caretOffset != null) {
+          const surface = newEl.querySelector('.obsidian-live-surface');
+          if (surface) placeCaretAtRawOffset(surface, caretOffset, clickInfo.clientY);
+        }
       },
       onDone: () => {
         setActiveBlock(-1);
@@ -664,7 +682,9 @@ export function RenderLaTeXEditor(container, noteId, isEditMode = true) {
       refreshSidebar();
     },
     onCiteStyleChange: () => {
-      // Library or citation-style changed — re-render so \cite labels/numbers update everywhere
+      // Library or citation-style changed — in-math \cite labels are baked into KaTeX output,
+      // bust the cache so badges re-resolve, then re-render everything
+      bumpKatexMacroVersion();
       renderBlocks();
       refreshSidebar();
     },

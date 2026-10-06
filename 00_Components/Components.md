@@ -31,7 +31,7 @@ Universal, dependency-free UI modules shared across all Local_HUB workspace tabs
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
 | `HUB_MARK_SVG` | 11 - 19 | Dual-circle and hub glyph vector SVG markup. |
-| `LOGO_VARIANTS` | 24 - 61 | Predefined tab-specific styling identities (`hub`, `bookmarks`, `notes`). |
+| `LOGO_VARIANTS` | 24 - 62 | Predefined tab-specific styling identities (`hub`, `bookmarks`, `notes` — the notes variant is the HyperLeaf brand: "Hyper" in the theme text color (black in light theme), "Leaf" in green `#3db63f`). |
 | `GetLogoHTML(options = {})` | 64 - 171 | Returns responsive HTML and CSS markup for the logo button supporting custom marks, tab titles, subtitles, and accents. |
 | `InitLogoLogic()` | 177 - 205 | Attaches click listener navigating back to landing page (clearing hash) or tab-defined `window.__LOCALHUB_HUB_URL__`. |
 

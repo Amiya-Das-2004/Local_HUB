@@ -36,7 +36,7 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 │
 ├── B_Editor_View/                          ← Block-based LaTeX & Markdown document editor
 │   ├── 01_Doc_Header.js                    ← Note title and metadata bar in editor
-│   ├── 02_Floating_Toolbar.js              ← Floating action pill above active editor block
+│   ├── 02_Floating_Toolbar.js              ← Bottom floating dock toolbar: Back/Sidebar/Reading/Macros/Fonts/Library + Numbering popup (\cite{}, \Fig{}, \eqref{})
 │   ├── 03_Study_View.js                    ← Read-only distraction-free study layout
 │   ├── 04_LaTeX_Editor.js                  ← Document editor core: block list, reordering, shortcuts
 │   │
@@ -96,7 +96,7 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
     ├── Highlight_Sync.js                   ← Bi-directional textarea overlay highlight synchronizer
     ├── Link_Parser.js                      ← Internal [[wiki-links]] and external link resolver
     ├── Math_Renderer.js                    ← KaTeX compiler with LaTeX macro expansion support
-    ├── Numbering_Engine.js                 ← Automatic equation, theorem, and figure numbering
+    ├── Numbering_Engine.js                 ← Heading prefixes, figures, label-gated 3-tier equation numbers (1.a.i), citation order
     ├── Table_Parser.js                     ← Markdown table string parser and serializer
     └── Tikz_Engine/                        ← Dedicated OFFLINE TikZ compilation engine (no CDN dependency)
         ├── Tikz_Renderer.js                ← TikZ standalone SVG compiler; local-first base-cascade loader (v1/ → tikzjax.com CDN fallback)
@@ -116,7 +116,7 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 | :--- | :--- | :--- |
 | `DEFAULT_GLOBAL_MACROS` | 3 - 45 | Default LaTeX macros dictionary containing predefined equation shortcuts (`\mb`, `\cancelto`, `\comment`, `\R`, `\C`, `\N`, `\Z`) and TikZ styles/libraries. |
 | `NotesState` | 48 - 58 | Central in-memory reactive state object holding vault metadata, global macros, table templates, tikz templates, bibliography entries, citation style, folders, tags, and notes. |
-| `sanitizeNote(n, idx = 0)` | 68 - 102 | Validates note object schema, fills missing fallback properties (id, slug, title, folder, tags, blocks, macros, autoNumbering), prevents data corruption, and runs the orientation-container migration. |
+| `sanitizeNote(n, idx = 0)` | 68 - 102 | Validates note object schema, fills missing fallback properties (id, slug, title, folder, tags, blocks, macros, autoNumbering), passes through per-note numbering configs (`equationNumbering`, `figureNumbering`, `showFigureCaptions` — objects or legacy strings), prevents data corruption, and runs the orientation-container migration. |
 | `migrateOrientationContainers(note)` | 105 - 139 | One-time legacy migration: hoists Multi-Column `cols[]` embedded children to top-level blocks (inserted right after the container) and rewrites them as non-destructive `members`/`rows` references. |
 | `LoadNotesState(forceReload = false)` | 100 - 202 | Reads and parses notes from DOM script vault (#NotesData), recovers newer uncommitted edits from localStorage, and reuses in-memory state when not stale to eliminate multi-MB JSON re-parsing on route changes. |
 | `flushNotesSave()` | 234 - 238 | Immediately flushes any pending debounced state writes to DOM #NotesData and localStorage. |
@@ -134,10 +134,10 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `GetCenterTitleHTML()` | 7 - 95 | Generates HTML markup and responsive styles for the center "NOTES" title button with custom journal SVG icon. |
-| `InitCenterTitleLogic()` | 98 - 110 | Attaches click event listener to center title button to clean up floating text docks and navigate back to main #Notes card deck. |
-| `GetHeaderHTML()` | 113 - 229 | Returns complete sticky app header HTML markup, responsive styles, and slots for logo, center title, and right-side utility buttons. |
-| `InitHeader()` | 232 - 238 | Initializes click handlers and logic for all header controls (Logo, Center Title, Import/Export, Save App, and Theme Toggle). |
+| `GetCenterTitleHTML()` | 8 - 95 | RESERVED (not rendered): center title component (journal SVG icon + "texidian"). The header center is intentionally empty; deck navigation lives on the floating toolbar's Back button. |
+| `InitCenterTitleLogic()` | 98 - 110 | RESERVED (unused): legacy click-binding for the center title (floating-dock cleanup + `#Notes` route). |
+| `GetHeaderHTML()` | 113 - 229 | Returns complete sticky app header HTML markup, responsive styles, and slots for the logo (HyperLeaf `notes` variant — "Hyper" in text color/black, "Leaf" in green) and right-side utility buttons; header center intentionally empty. |
+| `InitHeader()` | 230 - 261 | Initializes click handlers and logic for all header controls (Logo, Import/Export, Save App, Theme Toggle) and dynamically syncs the header height to the `--notes-header-height` CSS variable. |
 
 **02_Utils.js**
 
@@ -359,13 +359,15 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 | `ensureCanceltoStyles()` | 311 - 363 | Injects CSS rules for `.lh-cancelto`, `.lh-cancelto-base`, `.lh-cancelto-svg`, `.lh-cancelto-val`, optical `.katex` font size normalization, and boots observers. |
 | `postProcessKatexHtml(html)` | 365 - 367 | Passes through clean KaTeX HTML without regex manipulation. |
 | `clearKatexCache()` | 372 - 374 | Clears the in-memory KaTeX compilation cache (`katexCache`). |
-| `renderKatex(tex, isDisplayMode = false, noteContext = null)` | 376 - 416 | Synchronously compiles a LaTeX formula to HTML/MathML using KaTeX, utilizing a bounded LRU cache `katexCache` for 0ms re-rendering. |
+| `renderKatex(tex, isDisplayMode = false, noteContext = null)` | 495 - 557 | Synchronously compiles a LaTeX formula to HTML/MathML using KaTeX, utilizing a bounded LRU cache `katexCache` for 0ms re-rendering. Preprocessing converts in-math `\fig{tag}` / `\eqref{name}` / `\eq{name}` / `\ref{name}` / `\cite{keys}` into real badges via trusted `\href` + `\htmlData` + `\htmlClass` (`\eqref`/`\eq` render parenthesized, `\ref` bare; `\htmlData{eq-badge=…}` anchors member-level jumps; `\cite` badges carry space-separated `data-cite-keys` since KaTeX `\htmlData` values cannot contain commas). `\label{}` is always stripped before KaTeX; in DISPLAY math the first label resolves a far-right number badge wrapper (`data-eq-block-id` + `data-eq-badge`) — this is what numbers `$$...$$` equations written inside text blocks. |
 | `parseAndRenderMathInText(rawText = '')` | 418 - 420 | Convenience wrapper calling formatRichTextWithMath to parse and render inline math within text. |
-| `resolveCitationLabels(keysRaw)` | 473 - 508 | Resolves comma-separated citation keys against the library vault and formats badges per `NotesState.citationStyle`. |
+| `resolveCitationLabels(keysRaw)` | 62 - 74 | Resolves comma-separated citation keys against the library vault + active numbering map and formats badge labels per `NotesState.citationStyle`; consumed by the in-math `\cite` preprocessing in `renderKatex`. |
+| `latexTextEscape(s)` | 77 - 81 | LaTeX-escapes plain-text citation labels (`\`, `{`, `}`, `$`, `%`, `_`, `&`, `#`) so they are safe inside `\text{...}`. |
+| `ensureCiteMathStyles()` | 85 - 97 | Injects (id-guarded) the `.note-cite-math` / `.note-cite-missing` badge styles used by in-math `\cite` badges. |
 | `setActiveEquationTagMap(map)` | 117 - 119 | Sets the active equation tag map (normalized tag → `{ label, blockId, subIndex }`) computed by `computeEquationNumbers()`. |
 | `getActiveEquationTagMap()` | 121 - 123 | Returns the active equation tag map. Both `\eq{}` render paths (view + live widget) read it. |
 | `formatRichTextWithMath(rawText = '', options = {})` | 511 - 699 | Full-featured text compiler handling display math ($$...$$), inline math ($...$), task checkboxes ([ ], [x]), bullet lists, and markdown formatting. |
-| `parseInlineMarkdownAndLatex(str)` | 749 - 785 | Parses inline formatting tokens (bold, italic, strikethrough, code), `\fig` figure citations, `\eq{name}` / `\eq{name:2}` equation reference badges (emerald, click-to-jump), `\cite` bibliography citations, and LaTeX text styling (`\textcolor`, `\underline`, `\textbf`, `\textit`, `\cancel`). Document-level click handlers (fig: lines 76-111; eq: ~133-160) drive scroll-to-target + highlight pulse for both badge types. |
+| `parseInlineMarkdownAndLatex(str)` | 796 - 825 | Parses inline formatting tokens (bold, italic, strikethrough, code) and LaTeX text styling (`\textcolor`, `\underline`, `\textbf`, `\textit`, `\cancel`). `\fig` / `\eq` / `\eqref` / `\ref` / `\cite` / `\href` / `\url` are deliberately NOT converted here — they only function inside $...$ math (renderKatex preprocessing); bare occurrences stay literal text. Document-level click handlers (fig: lines 76-111; eq: ~151-183) drive scroll-to-target + highlight pulse for both badge types. |
 
 **Numbering_Engine.js**
 
@@ -380,7 +382,8 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 | `formatSingleNumber(num, style)` | 40 - 47 | Formats an integer using the chosen numbering style (numeric, roman-upper, roman-lower, alpha-upper, alpha-lower). |
 | `computeHeadingPrefixes(blocks, autoNumberingConfig)` | 65 - 136 | Calculates hierarchical section numbering prefixes (e.g. 1., 1.1., 1.1.1.) across all heading blocks based on configuration. |
 | `computeFigureNumbers(blocks, style = 'numeric', showCaptions = true)` | 149 - 224 | Calculates sequential figure numbers across Image and TikZ blocks (recursing into columns), returning a block-to-figure metadata map (numeric `figNumber`, styled `label`, caption `prefix`, `tag`, `showCaptions`) and a tag citation lookup map of formatted labels consumed by `\fig{tag}` chips (first-wins). Each entry carries `usedTags` — tags held by OTHER figure blocks — consumed by the Tag input validation in Image/TikZ blocks. Style per-note `note.figureNumbering` (numeric/alphabetic/alphabetic_small/roman/roman_small), caption visibility per-note `note.showFigureCaptions`. |
-| `computeEquationNumbers(blocks, style)` | 253 - 339 | Computes equation numbers across equation blocks in document order per the global style (numeric / alphabetic_small / roman_small). Semantics: single equation gets its own number; blank-line separated parts with distinct per-part `\tag{}`s get independent numbers; a block with exactly ONE `\tag{name}` becomes a group sharing one base number with roman sub-members (3.i, 3.ii). Tag namespaces: equation tags and figure tags are independent; user tags are FIRST-WINS — later duplicates are reported to the block via `eqMap.dupTags` (⚠ warning chip). Sub-equations: within a single part carrying one `\tag{}`, any row ending `\\ %sub` starts a new sub-equation member (`renderMode: alignedGroup`, `subMemberLines`) — members get `base.i, base.ii` labels rendered at the FAR RIGHT after a thin scalable SVG right brace `}` spanning the member rows (brace auto-sizes to any line count; number column fixed regardless of equation alignment — Left/Center alignment only). Returns `{ eqMap, tagMap }` — tagMap also indexes `name:2` / `name:ii` member refs. |
+| `normalizeEquationNumbering(style)` | 266 - 277 | Normalizes `note.equationNumbering` into `{ level1, level2, level3 }` (legacy plain strings become level1; defaults numeric / alphabetic_small / roman_small). |
+| `computeEquationNumbers(blocks, style)` | 285 - 545 | Overleaf-style, pure-`\label` equation numbering (no `\tag`/`%sub` support). An equation is numbered ONLY when it carries `\label{name}`; unlabeled equations consume no counter. Scans `equation` blocks AND text blocks' display math (each labeled `$$...$$` segment becomes a numbered equation with synthetic anchor `${blockId}__m${i}`). 3-tier hierarchy: group N → labeled part/row N.x → labeled row-in-part N.x.y, per-tier styles via `{ level1, level2, level3 }` (numeric/alphabetic/alphabetic_small/roman/roman_small — e.g. `1.1.1` or `1.a.i`). Conventions: blank lines split parts, a `\label{}` alone on its line = BLOCK/GROUP label (referenceable, badge-less), inline labels name their part — or the row when a part carries 2+ inline labels. Returns `{ eqMap, tagMap }` feeding `\ref{}`/`\eqref{}`/`\eq{}` badges. |alignedGroup|parts/parts[]/memberSegments/dupTags), tagMap (label → {label, blockId}) }` — tagMap feeds `\ref{}`/`\eqref{}`/`\eq{}` badges. |
 | `computeCitationNumbers(blocks)` | 294 - 327 | Traverses note text blocks in document order to assign sequential first-appearance numbers to `\cite{...}` keys for numeric citation formatting. |
 
 **Table_Parser.js**
@@ -596,7 +599,9 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `CreateFloatingToolbar(options)` | 21 - 145 | Creates bottom floating dock toolbar integrating sidebar drawer toggle, study view switch, font family selector, font size selector, LaTeX macros modal, BibTeX library vault dialog, citation style selector, equation numbering style selector (per-note `note.equationNumbering`), and figure numbering style + caption toggle (per-note `note.figureNumbering` / `note.showFigureCaptions`), each triggering a full re-render on change. |
+| `ensureToolbarStyles()` | 25 - 97 | Injects (id-guarded) the toolbar's shared stylesheet: `.nft-icon-btn` icon buttons with per-accent hovers, dividers, font/size popup menus, the Numbering popup panel + `\cite{}`/`\Fig{}` chips + option sections, and display-specific media queries (tablet ≤768px: 30px buttons, tighter gaps; phone ≤520px: 28px buttons, dividers hidden). |
+| `CreateFloatingToolbar(options)` | 103 - 336 | Creates the bottom floating dock toolbar as pure SVG icon buttons (no text labels) in fixed order: Back to Notes (dock cleanup + `#Notes` route) → Sidebar toggle → Reading Mode → Macros → Font Family → Font Size → BibTeX Library → Numbering. The Numbering button opens a popup panel ABOVE the bar with three chips — `\cite{}` (citation style options), `\Fig{}` (figure style + captions options) and `\eqref{}` (3-level equation numbering format pickers + composite preview) — each expanding its own option section (mutually exclusive). `onEqStyleChange` drives the equation format (bumps the KaTeX cache + full re-render). All change callbacks trigger the editor's re-render. |
+| `CreateInsertToolbar` | 298 | Backward-compatibility alias of `CreateFloatingToolbar`. |
 
 **03_Study_View.js**
 
@@ -625,7 +630,7 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `RenderLaTeXEditor(container, noteId, isEditMode = true)` | 24 - 744 | Master LaTeX editor module connecting sidebar outline, document header, reactive block deck, zero-lag in-place block activation/closing, isolated divider insertion, font customizer, and study mode rendering. Computes and distributes figure + equation numbering maps (`computeEquationNumbers` per `note.equationNumbering`), implements the Wrap-Beside pairing pass (a `wrap: true` figure with Fit ≤ 60% consumes the next text/tikz/image block into a side-by-side `.notes-wrap-row`; wrap notes re-render fully on activation), uses parent-based single-block replacement for nested rows, and drives orientation containers — docked member blocks are skipped from the reading/study flow (`collectDockedIds()`), badged "⧉ docked" in edit view, and undocked automatically when deleted. |
+| `RenderLaTeXEditor(container, noteId, isEditMode = true)` | 24 - 744 | Master LaTeX editor module connecting sidebar outline, document header, reactive block deck, zero-lag in-place block activation/closing, isolated divider insertion, font customizer, and study mode rendering. Computes and distributes figure + equation numbering maps (`computeEquationNumbers` per `note.equationNumbering`), implements the Wrap-Beside pairing pass (a `wrap: true` figure with Fit ≤ 60% consumes the next text/tikz/image block into a side-by-side `.notes-wrap-row`; wrap notes re-render fully on activation), uses parent-based single-block replacement for nested rows, and drives orientation containers — docked member blocks are skipped from the reading/study flow (`collectDockedIds()`), badged "⧉ docked" in edit view, and undocked automatically when deleted. The floating toolbar's citation-style/library callback (`onCiteStyleChange`) bumps the KaTeX macro version before re-rendering so in-math badges re-resolve. Click-to-edit captures the click point, computes the raw-text caret offset (`getRawOffsetFromPoint`), and after the in-place edit re-render restores the caret + scroll (`placeCaretAtRawOffset`) so editing continues exactly where clicked. |
 
 ## B_Editor_View/01_Blocks
 **Block_Actions.js**
@@ -682,7 +687,7 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `CreateBlockItem(options)` | 8 - 113 | Wraps an individual block in an interactive wrapper element handling selection focus, hover borders, multi-column block picker states, and rendering content via renderBlockContent. Forwards `figureInfo`/`eqInfo` plus the full `figureMap`/`eqMap`/`prefixMap` (for container member rendering) and renders a "⧉ docked" badge when `isDocked` is set. |
+| `CreateBlockItem(options)` | 8 - 113 | Wraps an individual block in an interactive wrapper element handling selection focus, hover borders, multi-column block picker states, and rendering content via renderBlockContent. The click-to-edit handler forwards the click point (`clientX/clientY`) through `onSelect` so the editor can restore the caret at the clicked position. Forwards `figureInfo`/`eqInfo` plus the full `figureMap`/`eqMap`/`prefixMap` (for container member rendering) and renders a "⧉ docked" badge when `isDocked` is set. |
 
 **Orientation_Modal.js**
 
@@ -736,7 +741,7 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `renderEquationBlock(block, isEditing = false, onUpdate = null, options = {})` | 20 - 305 | Renders standalone centered display LaTeX equation block with live KaTeX preview, alignment selector (left/center/right, `block.align`), `\tag{name}` stripping before KaTeX, group-mode member rendering with (base.sub) labels from `eqInfo.members`, click-to-jump anchor (`id="eq-<blockId>"` + `data-eq-block-id`), error preview freeze during editing, border toggle, color selector (insertions recorded as immediate undo snapshots), integrated monospace code editor with line numbering, line spacing, AST highlight synchronization, and clipboard copy. |
+| `renderEquationBlock(block, isEditing = false, onUpdate = null, options = {})` | 21 - 385 | Renders standalone centered display LaTeX equation block with live KaTeX preview, alignment selector (left/center/right, `block.align`), `\label{name}` stripping before KaTeX (`\tag` passes through to KaTeX's native renderer for legacy files), label-gated numbering render (unlabeled → plain; single → (N); alignedGroup/memberSegments → (N.x) rows; parts → per-part (N.x) or grouped (N.x.y) rows, each badge carrying a `data-eq-badge` anchor for `\eqref{}` jumps), click-to-jump anchor (`id="eq-<blockId>"` + `data-eq-block-id`), error preview freeze during editing, border toggle, color selector (insertions recorded as immediate undo snapshots), integrated monospace code editor with line numbering, line spacing, AST highlight synchronization, and clipboard copy. |
 
 **Figure_Utils.js**
 
@@ -954,6 +959,9 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 | `getLineCaretSplit(lineEl, anchorNode, anchorOffset)` | 479 - 549 | Splits a line's raw markdown text into beforeCaret and afterCaret strings at the anchor point. |
 | `serializeSelection(range, rootEl)` | 555 - 585 | Extracts clean, pure markdown from any selection range across single or multiple lines, eliminating KaTeX DOM/MathML leakage. |
 | `deleteSelectionAndHeal(range, rootEl, editModeOptions, triggerUpdate)` | 591 - 633 | Deletes a selection range cleanly across single or multiple lines, merging line boundaries and re-rendering to heal formatting. |
+| `getRawCaretOffsetInSurface(surface, node, offset)` | 692 - 713 | Computes the raw-text caret offset inside a live/view surface for a DOM caret point — descends container wrappers, resolves live lines via `getLineCaretSplit`, snaps block-level raw elements to their raw end. |
+| `getRawOffsetFromPoint(x, y)` | 715 - 730 | Resolves a viewport point to the raw-text caret offset of the live/view surface under it (`caretRangeFromPoint`/`caretPositionFromPoint`); returns null when no caret/surface. |
+| `placeCaretAtRawOffset(surface, rawOffset, viewportY = null)` | 739 - 772 | Inverse mapping: places the editable caret at a raw offset (focusing with `preventScroll`) and scrolls the caret line to the original click's viewport Y so editing continues exactly where clicked. |
 
 **Text_Widgets.js**
 
@@ -966,7 +974,7 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
 | `renderBulletIcon(prefix)` | 110 - 120 | Compiles and renders bullet icon markup for unordered, ordered, or custom LaTeX list markers. |
-| `createLiveWidget(type, raw, contentHtml, options)` | 122 - 262 | Creates live interactive inline DOM widgets with seamless text selection (select-text) for math ($...$), formatting (**bold**, *italic*, <u>underline</u>), code (`code`), or inert literal tokens (`littex`). \fig, \eq, \href, \url function ONLY inside $...$ math (rendered by renderKatex preprocessing as real links with data attrs for the delegated navigation handlers); bare occurrences render as dim literal `littex` tokens. |
+| `createLiveWidget(type, raw, contentHtml, options)` | 122 - 262 | Creates live interactive inline DOM widgets with seamless text selection (select-text) for math ($...$), formatting (**bold**, *italic*, <u>underline</u>), code (`code`), or inert literal tokens (`littex`). \fig, \eq, \cite, \href, \url function ONLY inside $...$ math (rendered by renderKatex preprocessing as real links/badges with data attrs for the delegated navigation/preview handlers); bare occurrences render as dim literal `littex` tokens. |
 
 **Cite_Autocomplete.js**
 
@@ -996,10 +1004,10 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 | :--- | :--- | :--- |
 | `ensureDock()` | 19 - 48 | Lazily creates the shared floating preview dock element. |
 | `buildEntryHtml(entry, keysRaw)` | 50 - 96 | Renders an entry's metadata card: title, styled citation badge, authors, journal, volume/pages, year, URL/DOI link, and abstract. |
-| `showDockFor(citationEl, pin)` | 98 - 122 | Positions the dock adjacent to a hovered or pinned `.note-bib-citation` chip and fills it from the referenced Library entry. |
+| `showDockFor(citationEl, pin)` | 98 - 127 | Positions the dock adjacent to a hovered or pinned `.note-bib-citation` chip and fills it from the referenced Library entry. Keys resolve from the chip's `data-cite-keys` or the nearest `[data-cite-keys]` ancestor (in-math KaTeX badges nest class and data spans), split on whitespace/commas. |
 | `hideCitePreview()` | 124 - 126 | Hides the floating citation details dock. |
 
-Delegated document-level `mouseover`/`click` listeners (registered once, marker-guarded, lines 128 - 170) drive hover previews and click-to-pin behavior across edit and view/study modes.
+Delegated document-level `mouseover`/`click` listeners (registered once, marker-guarded, lines 133 - 175) drive hover previews and click-to-pin behavior across edit and view/study modes.
 
 ## B_Editor_View/02_Sidebar
 **01_Sidebar_Logo.js**
@@ -1060,8 +1068,9 @@ Delegated document-level `mouseover`/`click` listeners (registered once, marker-
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `GetNoteFontsHTML(currentFont = 'serif')` | 8 - 29 | Returns HTML markup for the font family selector dropdown in the floating toolbar. |
-| `InitNoteFontsLogic(onFontChange)` | 31 - 38 | Binds change listener to font family selector to update note typography in real time. |
+| `ensureFontMenuStyles()` | 9 - 25 | Injects (id-guarded) CSS for the font family popup menu options. |
+| `GetNoteFontsHTML(currentFont = 'serif')` | 27 - 54 | Renders a pure SVG icon trigger button (typography glyph) with a hidden popup menu listing the visible `GLOBAL_FONT_FAMILIES`, each with label + live "Aa" preview in its own font stack; active font pre-highlighted. |
+| `InitNoteFontsLogic(onFontChange)` | 56 - 79 | Binds the icon trigger toggle, outside-click dismissal, and option clicks (active highlight + `onFontChange(key)`). |
 
 **03_Font_Size.js**
 
@@ -1071,8 +1080,9 @@ Delegated document-level `mouseover`/`click` listeners (registered once, marker-
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `GetFontSizeHTML(currentSize = 'medium')` | 8 - 31 | Returns HTML markup for the font size selector dropdown in the floating toolbar. |
-| `InitFontSizeLogic(onSizeChange)` | 33 - 40 | Binds change listener to font size selector to adjust document font sizing dynamically. |
+| `ensureSizeMenuStyles()` | 9 - 25 | Injects (id-guarded) CSS for the font size popup menu options. |
+| `GetFontSizeHTML(currentSize = 'medium')` | 27 - 56 | Renders a pure SVG icon trigger button (Aa glyph) with a hidden popup menu listing the visible `GLOBAL_FONT_SIZES`, each with label + live "A" preview at its own size; active size pre-highlighted. |
+| `InitFontSizeLogic(onSizeChange)` | 58 - 83 | Binds the icon trigger toggle, outside-click dismissal, and option clicks (active highlight + `onSizeChange(key)`). |
 
 **04_Macros_Modal.js**
 
@@ -1094,19 +1104,21 @@ Delegated document-level `mouseover`/`click` listeners (registered once, marker-
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `GetCitationStyleHTML()` | 19 - 110 | Returns HTML markup and styling for the citation style dropdown button in the floating editor toolbar. |
-| `InitCitationStyleLogic(onStyleChange = null)` | 112 - 142 | Initializes citation style dropdown menu interactions, style switching (`numeric`, `authoryear`, `authortitle`), persistence, and re-render callbacks. |
+| `ensureCiteOptionStyles()` | 13 - 33 | Injects (id-guarded) CSS for the citation style option buttons. |
+| `GetCiteStyleOptionsHTML()` | 35 - 50 | Renders the three citation style option buttons (`numeric` / `authoryear` / `authortitle`) with active highlighting — mounted inside the toolbar Numbering popup's `\cite{}` section. |
+| `InitCiteStyleOptions(sectionEl, onStyleChange = null)` | 52 - 64 | Binds option clicks: persists via `SetCitationStyle()`, updates active state, and fires the re-render callback. |
 
 **06_Equation_Numbering.js**
 
 | Import Location | Functions Imported | used in Functions |
 | :--- | :--- | :--- |
-| - | - | - |
+| `../../Writing_Engine/Numbering_Engine.js` | `normalizeEquationNumbering` | `GetEqNumberingOptionsHTML()`, `InitEqNumberingOptions()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `GetEquationNumberingHTML(note = null)` | 12 - 32 | Returns HTML markup for the equation numbering style dropdown (`#eq-numbering-wrap`) in the floating editor toolbar, showing the active style badge. |
-| `InitEquationNumberingLogic(note = null, onStyleChange = null)` | 34 - 90 | Binds dropdown open/close, outside-click dismissal, and style switching (`numeric`, `alphabetic_small`, `roman_small`) persisting to `note.equationNumbering` with a re-render callback. |
+| `ensureEqOptionStyles()` | 17 - 48 | Injects (id-guarded) CSS for the level pickers, style chips, and the composite format preview. |
+| `GetEqNumberingOptionsHTML(note = null)` | 50 - 71 | Renders the `\eqref{}` options inside the toolbar Numbering popup: a live composite format preview (`1.1`, `1.a.i`, …) plus three level rows (Level 1/2/3), each with numeric / alphabetic / alphabetic_small / roman / roman_small chips, active style pre-highlighted from `note.equationNumbering`. |
+| `InitEqNumberingOptions(note, sectionEl, onChange = null)` | 73 - 101 | Binds style chips: writes `note.equationNumbering = { level1, level2, level3 }`, updates active states + preview, fires the re-render callback (editor bumps the KaTeX macro version so in-math badges re-bake). |
 
 **07_Figure_Numbering.js**
 
@@ -1116,8 +1128,9 @@ Delegated document-level `mouseover`/`click` listeners (registered once, marker-
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `GetFigureNumberingHTML(note = null)` | 16 - 41 | Returns HTML markup for the figure numbering dropdown (`#fig-numbering-wrap`) in the floating editor toolbar: five styles (numeric/alphabetic/alphabetic_small/roman/roman_small) plus a "Show captions" checkbox. |
-| `InitFigureNumberingLogic(note = null, onChange = null)` | 43 - 100 | Binds dropdown open/close, style switching persisting to `note.figureNumbering`, caption visibility persisting to `note.showFigureCaptions`, and fires the re-render callback. |
+| `ensureFigOptionStyles()` | 22 - 42 | Injects (id-guarded) CSS for the figure numbering option buttons. |
+| `GetFigureNumberingOptionsHTML(note = null)` | 44 - 60 | Renders the five figure numbering style options + "Show captions" checkbox row — mounted inside the toolbar Numbering popup's `\Fig{}` section. |
+| `InitFigureNumberingOptions(note, sectionEl, onChange = null)` | 62 - 85 | Binds option clicks (persisting `note.figureNumbering`) and the captions checkbox (persisting `note.showFigureCaptions`), firing the re-render callback. |
 
 ## C_Graph_View
 

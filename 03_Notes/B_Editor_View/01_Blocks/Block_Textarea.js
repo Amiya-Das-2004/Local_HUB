@@ -57,7 +57,7 @@ export function createBlockTextarea({
 } = {}) {
   const textarea = document.createElement('textarea');
 
-  textarea.className = `w-full p-2.5 text-sm leading-snug rounded-lg border border-[var(--border)] bg-[var(--surface)] focus:border-purple-500 outline-none box-border text-[var(--text)] select-text ${className}`.trim();
+  textarea.className = `w-full p-2 text-sm leading-snug rounded-lg border border-[var(--border)] bg-[var(--surface)] focus:border-purple-500 outline-none box-border text-[var(--text)] select-text ${className}`.trim();
   
   textarea.spellcheck = false;
   textarea.autocapitalize = 'off';
@@ -500,7 +500,7 @@ export function createCodeEditor({
   // 1. Header Toolbar: Badge, Line Count & Drawer Collapse Toggle (No Fold All)
   // ---------------------------------------------------------------------------
   const header = document.createElement('div');
-  header.className = 'code-editor-header flex items-center justify-between px-3 py-1.5 text-xs select-none gap-2 flex-wrap';
+  header.className = 'code-editor-header flex items-center justify-between px-2.5 py-1 text-xs select-none gap-2 flex-wrap';
 
   header.innerHTML = `
     <div class="flex items-center gap-2 min-w-0">
@@ -537,14 +537,14 @@ export function createCodeEditor({
 
   // Left Line Numbering Gutter
   const gutter = document.createElement('div');
-  gutter.className = 'code-editor-gutter flex-shrink-0 select-none py-2.5 px-1 text-right font-mono text-xs flex flex-col overflow-hidden box-border';
+  gutter.className = 'code-editor-gutter flex-shrink-0 select-none py-2 px-1 text-right font-mono text-xs flex flex-col overflow-hidden box-border';
   gutter.style.width = enableFolding ? '48px' : '38px';
   gutter.style.lineHeight = '24px';
   gutter.style.fontSize = '12px';
 
   // Textarea Editor Surface
   const textarea = document.createElement('textarea');
-  textarea.className = 'code-editor-textarea flex-1 p-2.5 font-mono text-xs outline-none resize-none border-none box-border whitespace-pre-wrap break-words select-text';
+  textarea.className = 'code-editor-textarea flex-1 p-2 font-mono text-xs outline-none resize-none border-none box-border whitespace-pre-wrap break-words select-text';
   textarea.spellcheck = false;
   textarea.autocapitalize = 'off';
   textarea.autocomplete = 'off';

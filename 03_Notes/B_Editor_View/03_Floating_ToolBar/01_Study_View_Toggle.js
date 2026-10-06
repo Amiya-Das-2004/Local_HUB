@@ -5,7 +5,7 @@
 
 export function GetStudyViewToggleHTML(isStudyMode = false) {
   return `
-    <button id="btn-study-view-toggle" class="notes-study-toggle-btn rounded-full flex items-center justify-center border border-[var(--border)] ${isStudyMode ? 'bg-purple-600 text-white border-purple-500 shadow-md' : 'bg-[var(--surface)] text-[var(--text)] hover:border-purple-500 hover:text-purple-400'} transition-all flex-shrink-0 cursor-pointer shadow-xs" style="width: 32px; height: 32px; min-width: 32px; min-height: 32px; padding: 0;" type="button" title="${isStudyMode ? 'Study View Active (Click to Edit Note)' : 'Study View (Read-Only Note)'}">
+    <button id="btn-study-view-toggle" class="notes-study-toggle-btn rounded-full flex items-center justify-center border border-[var(--border)] ${isStudyMode ? 'bg-purple-600 text-white border-purple-500 shadow-md' : 'bg-[var(--surface)] text-[var(--text)] hover:border-purple-500 hover:text-purple-400'} transition-all flex-shrink-0 cursor-pointer shadow-xs" style="width: 32px; height: 32px; min-width: 32px; min-height: 32px; padding: 0;" type="button" title="${isStudyMode ? 'Reading Mode Active (Click to Edit Note)' : 'Reading Mode (Read-Only Note)'}">
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
         <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
         <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>

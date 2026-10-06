@@ -54,7 +54,7 @@ export function renderTableBlock(
   { onDone = null, onMoveUp = null, onMoveDown = null, onDelete = null, index = 0, totalBlocks = 1 } = {}
 ) {
   const container = document.createElement('div');
-  container.className = 'w-full my-1.5';
+  container.className = 'w-full my-1';
 
   const defaultLatex = String.raw`\begin{tabular}{lcr}
 \toprule
@@ -77,7 +77,7 @@ Ampere-Maxwell & Magnetism & $\nabla \times \mathbf{B} = \mu_0 \mathbf{J} + \mu_
     const borderClasses = hasBorder
       ? 'border border-[var(--border)] bg-[var(--surface)] shadow-xs'
       : 'border border-transparent bg-transparent';
-    wrap.className = `my-1.5 p-2.5 rounded-xl overflow-x-auto select-text transition-all ${borderClasses}`;
+    wrap.className = `my-1 p-2 rounded-xl overflow-x-auto select-text transition-all ${borderClasses}`;
     wrap.style.scrollbarWidth = 'thin';
     wrap.innerHTML = renderTableHtml(rawTable);
     container.appendChild(wrap);
@@ -90,7 +90,7 @@ Ampere-Maxwell & Magnetism & $\nabla \times \mathbf{B} = \mu_0 \mathbf{J} + \mu_
   let currentBorderState = hasBorder;
 
   const editWrap = document.createElement('div');
-  editWrap.className = 'flex flex-col gap-2 my-0.5 w-full relative';
+  editWrap.className = 'flex flex-col gap-1.5 my-0.5 w-full relative';
 
   editWrap.innerHTML = `
     <!-- Top Row: Title, Border, Templates | Actions -->

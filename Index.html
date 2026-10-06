@@ -86,8 +86,7 @@
       "sectionOrder": ["ALL", "Writing"]
     }
   </script>
-  <script type="application/json" id="NotesData">
-{
+  <script type="application/json" id="NotesData">{
   "vaultMeta": {
     "title": "Notes Vault",
     "version": "1.0.0",
@@ -162,7 +161,7 @@
         {
           "id": "b_lat_eq1",
           "type": "equation",
-          "tex": "\\begin{aligned}\n\\nabla \\cdot \\mathbf{E} &= \\frac{\\rho}{\\varepsilon_0} \\\\\n\\nabla \\cdot \\mathbf{B} &= 0 \\\\\n\\nabla \\times \\mathbf{E} &= -\\frac{\\partial \\mathbf{B}}{\\partial t} \\\\\n\\nabla \\times \\mathbf{B} &= \\mu_0 \\mathbf{J} + \\mu_0 \\varepsilon_0 \\frac{\\partial \\mathbf{E}}{\\partial t}\n\\end{aligned}\n\\tag{maxwell}"
+          "tex": "\\begin{aligned}\n\\nabla \\cdot \\mathbf{E} &= \\frac{\\rho}{\\varepsilon_0} \\\\\n\\nabla \\cdot \\mathbf{B} &= 0 \\\\\n\\nabla \\times \\mathbf{E} &= -\\frac{\\partial \\mathbf{B}}{\\partial t} \\\\\n\\nabla \\times \\mathbf{B} &= \\mu_0 \\mathbf{J} + \\mu_0 \\varepsilon_0 \\frac{\\partial \\mathbf{E}}{\\partial t}\n\\end{aligned}\n\\label{maxwell}"
         },
         {
           "id": "b_lat_t3_1",
@@ -178,7 +177,7 @@
         {
           "id": "b_lat_eq2",
           "type": "equation",
-          "tex": "f(x) = \\begin{dcases}\n\\frac{\\sin(x)}{x} & \\text{if } x \\neq 0 \\\\\n1 & \\text{if } x = 0\n\\end{dcases}, \\quad\ng(n) = \\begin{cases}\nn/2 & \\text{if } n \\equiv 0 \\pmod 2 \\\\\n3n+1 & \\text{if } n \\equiv 1 \\pmod 2\n\\end{cases}\n\\tag{piecewise}"
+          "tex": "f(x) = \\begin{dcases}\n\\frac{\\sin(x)}{x} & \\text{if } x \\neq 0 \\\\\n1 & \\text{if } x = 0\n\\end{dcases}, \\quad\ng(n) = \\begin{cases}\nn/2 & \\text{if } n \\equiv 0 \\pmod 2 \\\\\n3n+1 & \\text{if } n \\equiv 1 \\pmod 2\n\\end{cases}\n\\label{piecewise}"
         },
         {
           "id": "b_lat_h3_3",
@@ -189,7 +188,7 @@
         {
           "id": "b_lat_eq3",
           "type": "equation",
-          "tex": "\\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}, \\quad\n\\begin{bmatrix} 1 & 0 & 0 \\\\ 0 & 1 & 0 \\\\ 0 & 0 & 1 \\end{bmatrix}, \\quad\n\\begin{vmatrix} x_1 & y_1 \\\\ x_2 & y_2 \\end{vmatrix}, \\quad\n\\begin{Bmatrix} \\alpha & \\beta \\\\ \\gamma & \\delta \\end{Bmatrix}, \\quad\n\\begin{Vmatrix} A_{11} & A_{12} \\\\ A_{21} & A_{22} \\end{Vmatrix}\n\\tag{matrices}"
+          "tex": "\\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}, \\quad\n\\begin{bmatrix} 1 & 0 & 0 \\\\ 0 & 1 & 0 \\\\ 0 & 0 & 1 \\end{bmatrix}, \\quad\n\\begin{vmatrix} x_1 & y_1 \\\\ x_2 & y_2 \\end{vmatrix}, \\quad\n\\begin{Bmatrix} \\alpha & \\beta \\\\ \\gamma & \\delta \\end{Bmatrix}, \\quad\n\\begin{Vmatrix} A_{11} & A_{12} \\\\ A_{21} & A_{22} \\end{Vmatrix}\n\\label{matrices}"
         },
         {
           "id": "b_lat_h3_4",
@@ -200,7 +199,7 @@
         {
           "id": "b_lat_eq3_4",
           "type": "equation",
-          "tex": "\\begin{aligned}\n\\int x^2 e^{-x^2} \\, \\mathrm{d}x &= \\int x \\cdot \\left( x e^{-x^2} \\right) \\mathrm{d}x \\\\\n  &\\quad \\left[\n    \\begin{array}{ll}\n      \\text{Integration by Parts:} & \\\\\n      u = x & \\implies \\mathrm{d}u = \\mathrm{d}x \\\\\n      \\mathrm{d}v = x e^{-x^2} \\mathrm{d}x & \\implies v = -\\frac{1}{2} e^{-x^2}\n    \\end{array}\n  \\right] \\\\\n  &= u v - \\int v \\, \\mathrm{d}u \\\\\n  &= -\\frac{1}{2} x e^{-x^2} - \\int \\left( -\\frac{1}{2} e^{-x^2} \\right) \\mathrm{d}x \\\\\n  &= -\\frac{1}{2} x e^{-x^2} + \\frac{1}{2} \\int e^{-x^2} \\, \\mathrm{d}x + C\n\\end{aligned}\n\\tag{nested}"
+          "tex": "\\begin{aligned}\n\\int x^2 e^{-x^2} \\, \\mathrm{d}x &= \\int x \\cdot \\left( x e^{-x^2} \\right) \\mathrm{d}x \\\\\n  &\\quad \\left[\n    \\begin{array}{ll}\n      \\text{Integration by Parts:} & \\\\\n      u = x & \\implies \\mathrm{d}u = \\mathrm{d}x \\\\\n      \\mathrm{d}v = x e^{-x^2} \\mathrm{d}x & \\implies v = -\\frac{1}{2} e^{-x^2}\n    \\end{array}\n  \\right] \\\\\n  &= u v - \\int v \\, \\mathrm{d}u \\\\\n  &= -\\frac{1}{2} x e^{-x^2} - \\int \\left( -\\frac{1}{2} e^{-x^2} \\right) \\mathrm{d}x \\\\\n  &= -\\frac{1}{2} x e^{-x^2} + \\frac{1}{2} \\int e^{-x^2} \\, \\mathrm{d}x + C\n\\end{aligned}\n\\label{nested}"
         },
         {
           "id": "b_lat_t3_4",
@@ -216,7 +215,7 @@
         {
           "id": "b_lat_eq4",
           "type": "equation",
-          "tex": "\\left( \\frac{\\sum_{i=1}^n x_i^2}{\\sqrt[3]{1 + \\frac{a}{b}}} \\right) = \\underbrace{a_1 + a_2 + \\cdots + a_k}_{\\text{Sum of } k \\text{ terms}} + \\overbrace{b_1 + b_2 + \\cdots + b_m}^{\\text{Sum of } m \\text{ terms}}\n\\tag{underbrace}"
+          "tex": "\\left( \\frac{\\sum_{i=1}^n x_i^2}{\\sqrt[3]{1 + \\frac{a}{b}}} \\right) = \\underbrace{a_1 + a_2 + \\cdots + a_k}_{\\text{Sum of } k \\text{ terms}} + \\overbrace{b_1 + b_2 + \\cdots + b_m}^{\\text{Sum of } m \\text{ terms}}\n\\label{underbrace}"
         },
         {
           "id": "b_lat_t4",
@@ -232,12 +231,12 @@
         {
           "id": "b_lat_eq5_1",
           "type": "equation",
-          "tex": "P_n(x) = a_n x^n + a_{n-1} x^{n-1} + \\cdots + a_1 x + a_0 = \\sum_{k=0}^n \\binom{n}{k} x^k y^{n-k}\n\\tag{poly}"
+          "tex": "P_n(x) = a_n x^n + a_{n-1} x^{n-1} + \\cdots + a_1 x + a_0 = \\sum_{k=0}^n \\binom{n}{k} x^k y^{n-k}\n\\label{poly}"
         },
         {
           "id": "b_lat_eq5_2",
           "type": "equation",
-          "tex": "\\cfrac{1}{1 + \\cfrac{1}{2 + \\cfrac{1}{3 + \\cfrac{1}{4 + \\cdots}}}} = \\frac{\\sqrt{5}-1}{2}\n\\tag{continued}"
+          "tex": "\\cfrac{1}{1 + \\cfrac{1}{2 + \\cfrac{1}{3 + \\cfrac{1}{4 + \\cdots}}}} = \\frac{\\sqrt{5}-1}{2}\n\\label{continued}"
         },
         {
           "id": "b_lat_t5",
@@ -253,7 +252,7 @@
         {
           "id": "b_lat_eq6",
           "type": "equation",
-          "tex": "\\int_{0}^{\\infty} x^{s-1} e^{-x} \\, \\mathrm{d}x = \\Gamma(s), \\quad \\lim_{x \\to 0} \\frac{\\sin x}{x} = 1, \\quad \\oint_C \\mathbf{F} \\cdot \\mathrm{d}\\mathbf{r} = \\iint_S (\\nabla \\times \\mathbf{F}) \\cdot \\mathrm{d}\\mathbf{S}\n\\tag{gamma}"
+          "tex": "\\int_{0}^{\\infty} x^{s-1} e^{-x} \\, \\mathrm{d}x = \\Gamma(s), \\quad \\lim_{x \\to 0} \\frac{\\sin x}{x} = 1, \\quad \\oint_C \\mathbf{F} \\cdot \\mathrm{d}\\mathbf{r} = \\iint_S (\\nabla \\times \\mathbf{F}) \\cdot \\mathrm{d}\\mathbf{S}\n\\label{gamma}"
         },
         {
           "id": "b_lat_t6",
@@ -375,12 +374,12 @@
         {
           "id": "b_lat_tag_tx",
           "type": "text",
-          "content": "Every equation block above carries a **name** via `\\tag{name}`. Write `$\\eq{name}$` in any text block — **inside `$...$` math** — and it becomes a jump link. Try them: $\\eq{maxwell}$, $\\eq{piecewise}$, $\\eq{matrices}$, $\\eq{nested}$, $\\eq{underbrace}$, $\\eq{poly}$, $\\eq{continued}$, $\\eq{gamma}$."
+          "content": "Every equation block above carries a **name** via `\\label{name}`. Write `$\\eq{name}$` in any text block — **inside `$...$` math** — and it becomes a jump link. Try them: $\\eq{maxwell}$, $\\eq{piecewise}$, $\\eq{matrices}$, $\\eq{nested}$, $\\eq{underbrace}$, $\\eq{poly}$, $\\eq{continued}$, $\\eq{gamma}$."
         },
         {
           "id": "b_lat_tag_group",
           "type": "equation",
-          "tex": "\\begin{aligned} x + y &= 3 \\\\ x - y &= 1 \\end{aligned}\n\n\\begin{aligned} 2x &= 4 \\end{aligned}\n\\tag{sys}",
+          "tex": "\\begin{aligned} x + y &= 3 \\\\ x - y &= 1 \\end{aligned}\n\n\\begin{aligned} 2x &= 4 \\end{aligned}\n\\label{sys}",
           "hasBorder": true,
           "align": "center",
           "allowNumbering": true
@@ -388,12 +387,12 @@
         {
           "id": "b_lat_tag_tx2",
           "type": "text",
-          "content": "**Grouping action:** the block above has *two* equations but only **one** `\\tag{sys}` — so the engine groups them under a single shared number with roman sub-members. Reference the whole group as $\\eq{sys}$ or pick a member: $\\eq{sys:1}$ and $\\eq{sys:2}$ (also works as $\\eq{sys:i}$, $\\eq{sys:ii}$)."
+          "content": "**Grouping action:** the block above has *two* equations but only **one** `\\label{sys}` — so the engine groups them under a single shared number with roman sub-members. Reference the whole group as $\\eq{sys}$ or pick a member: $\\eq{sys:1}$ and $\\eq{sys:2}$ (also works as $\\eq{sys:i}$, $\\eq{sys:ii}$)."
         },
         {
           "id": "b_lat_tag_group2",
           "type": "equation",
-          "tex": "\\begin{aligned}\nu + v &= 5 \\\\\nu - v &= 1 \\\\ %sub\n2u &= 6 \\\\\n3v &= 9\n\\end{aligned}\n\\tag{mix}",
+          "tex": "\\begin{aligned}\nu + v &= 5 \\\\\nu - v &= 1 \\\\ %sub\n2u &= 6 \\\\\n3v &= 9\n\\end{aligned}\n\\label{mix}",
           "hasBorder": true,
           "align": "center",
           "allowNumbering": true
@@ -413,6 +412,68 @@
           "id": "b_lat_link_tx",
           "type": "text",
           "content": "Paste any link — a YouTube video, a paper, a repo — **inside `$...$` math** and it becomes a clickable link. Bare URL: $\\url{https://www.youtube.com/watch?v=aircAruvnKk}$ — or name it: $\\href{https://www.youtube.com/watch?v=aircAruvnKk}{\\text{▶ 3Blue1Brown: But what is a neural network?}}$ — keep link text inside `\\text{}` so spaces survive. (Outside `$...$` these commands stay inert text.)"
+        },
+        {
+          "id": "b_lat_eqref_h",
+          "type": "heading",
+          "level": "h1",
+          "title": "Labeled Equations \\label{}, \\ref{} & \\eqref{}"
+        },
+        {
+          "id": "b_lat_eqref_t1",
+          "type": "text",
+          "content": "Equations are **numbered only when they carry a `\\label{}`** (Overleaf-style). Inside math, `$\\ref{a}$` renders the bare number and `$\\eqref{b2}$` the parenthesized one — both are click-to-jump badges. The number format (e.g. `1.1` or `1.a.i`) is set in the floating toolbar → **Numbering** popup → `\\eqref{}`: pick a style per level and the composite preview updates live."
+        },
+        {
+          "id": "b_lat_eqref_ea",
+          "type": "equation",
+          "tex": "\\label{a}\na^2 + b^2 = c^2"
+        },
+        {
+          "id": "b_lat_eqref_eb",
+          "type": "equation",
+          "tex": "\\label{b}\nd^2 + e^2 = f^2 \\label{b1}\n\ng^2 + h^2 = i^2 \\label{b2}"
+        },
+        {
+          "id": "b_lat_eqref_ec",
+          "type": "equation",
+          "tex": "\\label{c}\nx &= y + z \\label{c1} \\\\\nu &= v + w \\label{c2}"
+        },
+        {
+          "id": "b_lat_eqref_ed",
+          "type": "equation",
+          "tex": "\\label{d}\nE = mc^2 \\label{d1} \\\\\nF = ma \\label{d2}\n\nP = \\rho g h \\label{d3}"
+        },
+        {
+          "id": "b_lat_eqref_t2",
+          "type": "text",
+          "content": "We can refer to equation~$\\ref{a}$, $\\ref{b}$ and~$\\ref{b1}$.\nThis was equation $\\eqref{b2}$.\nThis was expression $\\eqref{c}$, consisting of parts $\\eqref{c1}$ and $\\eqref{c2}$."
+        },
+        {
+          "id": "b_lat_eq3lvl_h",
+          "type": "heading",
+          "level": "h1",
+          "title": "Three-Level Numbers — 1.1.1 Across All Environments"
+        },
+        {
+          "id": "b_lat_eq3lvl_t1",
+          "type": "text",
+          "content": "This note's equation format is set to **all numeric** (`1.1.1`) via the toolbar **Numbering → \\eqref{}** popup — switch any level to `a`/`i` there and every number re-renders. The block below uses **all the environments**: a group label on its own line (the `subequations` wrapper), labeled **rows** inside the first part (the `eqnarray` style), and a labeled **part** after a blank line (the `equation` style)."
+        },
+        {
+          "id": "b_lat_eq3lvl_e1",
+          "type": "equation",
+          "tex": "\\label{env}\na^2 + b^2 = c^2 \\label{env1} \\\\\n\\sin^2\\theta + \\cos^2\\theta = 1 \\label{env2}\n\n\\int_a^b f(x)\\,dx = F(b) - F(a) \\label{env3}"
+        },
+        {
+          "id": "b_lat_eq3lvl_e2",
+          "type": "equation",
+          "tex": "\\nabla \\cdot \\mathbf{D} = \\rho_v \\label{envg}"
+        },
+        {
+          "id": "b_lat_eq3lvl_t2",
+          "type": "text",
+          "content": "Referring across environments: the group is $\\eqref{env}$, its rows are $\\eqref{env1}$ and $\\eqref{env2}$, the standalone part is $\\eqref{env3}$, and the single labeled equation is $\\ref{envg}$ — every badge is click-to-jump.\n\nAnd a numbered equation written straight inside this text block's display-math environment (referenced as $\\eqref{envt}$ like any equation block):\n$$\n\\int_0^{\\infty} e^{-x^2}\\,dx = \\frac{\\sqrt{\\pi}}{2} \\label{envt}\n$$"
         }
       ],
       "autoNumbering": {
@@ -424,6 +485,11 @@
       "macros": {
         "equation": "",
         "tikz": ""
+      },
+      "equationNumbering": {
+        "level1": "numeric",
+        "level2": "numeric",
+        "level3": "numeric"
       }
     },
     {
@@ -674,8 +740,7 @@
       }
     }
   ]
-}
-</script>
+}</script>
   <script type="application/json" id="ProfessorsData">
   {
     "version": 1,

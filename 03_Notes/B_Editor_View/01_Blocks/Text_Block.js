@@ -135,7 +135,7 @@ export function renderTextBlock(
   let activeBulletPrefix = '• ';
 
   const editWrap = document.createElement('div');
-  editWrap.className = 'flex flex-col gap-1.5 my-0.5 w-full relative';
+  editWrap.className = 'flex flex-col gap-1 my-0.5 w-full relative';
 
   editWrap.innerHTML = `
     <!-- Top Row: Block Title (Left) | Block Actions (Right) -->

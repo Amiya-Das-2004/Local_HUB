@@ -97,8 +97,12 @@ function buildEntryHtml(entry, keysRaw) {
 
 function showDockFor(citationEl, pin) {
   const dock = ensureDock();
-  const keysRaw = citationEl.getAttribute('data-cite-keys') || citationEl.getAttribute('data-cite-key') || '';
-  const firstKey = keysRaw.split(',')[0].trim();
+  // In-math badges render the class and the data attr on nested KaTeX spans —
+  // walk up to the nearest ancestor carrying the keys when the chip itself has none.
+  const keysRaw = citationEl.getAttribute('data-cite-keys')
+    || citationEl.closest?.('[data-cite-keys]')?.getAttribute('data-cite-keys')
+    || citationEl.getAttribute('data-cite-key') || '';
+  const firstKey = keysRaw.split(/[\s,]+/)[0].trim();
   const entry = firstKey ? FindLibraryEntryByKey(firstKey) : null;
 
   dock.innerHTML = buildEntryHtml(entry, keysRaw || '(empty key)');
@@ -158,8 +162,9 @@ if (typeof document !== 'undefined' && !document.getElementById('note-cite-previ
     if (isEditSurface) return;
     e.preventDefault();
     e.stopPropagation();
-    const keysRaw = citation.getAttribute('data-cite-keys') || '';
-    const firstKey = keysRaw.split(',')[0].trim();
+    const keysRaw = citation.getAttribute('data-cite-keys')
+      || citation.closest?.('[data-cite-keys]')?.getAttribute('data-cite-keys') || '';
+    const firstKey = keysRaw.split(/[\s,]+/)[0].trim();
     if (pinnedKey === firstKey) {
       pinnedKey = null;
       hideCitePreview();

@@ -673,3 +673,103 @@ export const deleteSelectionAndHeal = (range, rootEl, editModeOptions = {}, trig
   setCaretAtOffsetInLine(mergedLineEl, splitStart.beforeText.length);
   triggerUpdate?.();
 };
+
+// --- Click-position caret mapping -------------------------------------------------
+// Raw text length of a top-level surface child (live line, display math, code block...).
+const childRawLength = (childEl) => {
+  const raw = childEl.getAttribute && childEl.getAttribute('data-raw')
+    ? childEl.getAttribute('data-raw')
+    : getLineRawText(childEl);
+  return String(raw || '').length;
+};
+
+/**
+ * Computes the raw-text caret offset inside a live/view surface for a DOM caret point.
+ * Walks the surface tree, summing child raw lengths (+1 newline); plain container
+ * wrappers are descended into, live lines resolve via getLineCaretSplit, and block-level
+ * raw elements (display math, code fences) snap to their raw end.
+ */
+export const getRawCaretOffsetInSurface = (surface, node, offset) => {
+  const walk = (parentEl, base) => {
+    for (const child of parentEl.children) {
+      if (child.contains(node)) {
+        if (child.classList && child.classList.contains('live-line')) {
+          return base + getLineCaretSplit(child, node, offset).beforeText.length;
+        }
+        if (child.hasAttribute && child.hasAttribute('data-raw')) {
+          return base + childRawLength(child);
+        }
+        return walk(child, base);
+      }
+      base += childRawLength(child) + 1;
+    }
+    return base;
+  };
+  return walk(surface, 0);
+};
+
+/**
+ * Resolves a viewport point to the raw-text caret offset of the live surface under it.
+ * Returns null when the point carries no caret or no live surface can be found.
+ */
+export const getRawOffsetFromPoint = (x, y) => {
+  if (typeof document === 'undefined') return null;
+  let node = null, offset = 0;
+  if (document.caretRangeFromPoint) {
+    const range = document.caretRangeFromPoint(x, y);
+    if (range) { node = range.startContainer; offset = range.startOffset; }
+  } else if (document.caretPositionFromPoint) {
+    const pos = document.caretPositionFromPoint(x, y);
+    if (pos) { node = pos.offsetNode; offset = pos.offset; }
+  }
+  if (!node) return null;
+  const el = node.nodeType === Node.ELEMENT_NODE ? node : node.parentNode;
+  // The click may land in the view-mode surface (.obsidian-view-surface) or the live
+  // edit surface — both share the same line/raw structure.
+  const surface = el && el.closest ? el.closest('.obsidian-live-surface, .obsidian-view-surface') : null;
+  if (!surface) return null;
+  return getRawCaretOffsetInSurface(surface, node, offset);
+};
+
+/**
+ * Places the editable caret at a raw-text offset inside a live surface (inverse of
+ * getRawCaretOffsetInSurface), focuses it, and scrolls the caret line to the given
+ * viewport Y (the original click position) so editing continues exactly where clicked.
+ */
+export const placeCaretAtRawOffset = (surface, rawOffset, viewportY = null) => {
+  if (!surface) return;
+  const find = (parentEl, base) => {
+    for (const child of parentEl.children) {
+      const len = childRawLength(child);
+      if (child.classList && child.classList.contains('live-line')) {
+        if (rawOffset <= base + len) {
+          return { lineEl: child, offsetInLine: Math.max(0, rawOffset - base) };
+        }
+      } else if (!(child.hasAttribute && child.hasAttribute('data-raw'))) {
+        // Plain container (markdown root wrapper etc.): descend
+        const found = find(child, base);
+        if (found) return found;
+      }
+      base += len + 1;
+    }
+    return null;
+  };
+  const target = find(surface, 0);
+  surface.focus({ preventScroll: true });
+  if (target) {
+    setCaretAtOffsetInLine(target.lineEl, target.offsetInLine);
+    if (viewportY != null) {
+      const rect = target.lineEl.getBoundingClientRect();
+      window.scrollBy({ top: rect.top - viewportY, behavior: 'auto' });
+    } else {
+      target.lineEl.scrollIntoView({ block: 'nearest' });
+    }
+  } else if (viewportY != null) {
+    // Caret inside a block-level element (or past the end): keep the click in view only.
+    const last = surface.lastElementChild;
+    if (last) {
+      const rect = last.getBoundingClientRect();
+      window.scrollBy({ top: rect.top - viewportY, behavior: 'auto' });
+    }
+  }
+};

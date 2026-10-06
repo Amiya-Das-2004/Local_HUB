@@ -73,6 +73,29 @@ export function resolveCitationLabels(keysRaw) {
   return { parts, missing };
 }
 
+// LaTeX-escapes plain-text citation labels so they are safe inside \text{...}
+function latexTextEscape(s) {
+  return String(s || '')
+    .replace(/\\/g, '\\textbackslash{}')
+    .replace(/([{}$%_&#])/g, '\\$1');
+}
+
+// Badge styles for \cite{...} rendered INSIDE math (KaTeX \htmlClass target)
+let citeMathStylesInjected = false;
+function ensureCiteMathStyles() {
+  if (citeMathStylesInjected || typeof document === 'undefined') return;
+  citeMathStylesInjected = true;
+  const styleEl = document.createElement('style');
+  styleEl.id = 'note-cite-math-styles';
+  styleEl.textContent = `
+    .note-cite-math { color: #38bdf8; cursor: pointer; border-radius: 4px; padding: 0 2px; font-weight: 600; transition: color 0.15s, background 0.15s; }
+    .note-cite-math:hover { color: #7dd3fc; background: rgba(56, 189, 248, 0.12); }
+    .note-cite-math.note-cite-missing { color: #fbbf24; }
+    .note-cite-math.note-cite-missing:hover { background: rgba(251, 191, 36, 0.12); }
+  `;
+  document.head.appendChild(styleEl);
+}
+
 // Global click handler for figure citation links [Fig. X]
 if (typeof document !== 'undefined' && !document.getElementById('note-fig-citation-handler')) {
   const marker = document.createElement('div');
@@ -122,8 +145,9 @@ export function getActiveEquationTagMap() {
   return activeEquationTagMap;
 }
 
-// Global click handler for equation reference badges (3) — scrolls to the equation
-// block and pulses a highlight ring, mirroring the figure citation behavior.
+// Global click handler for equation reference badges (2.a.i) — scrolls to the equation
+// block (or the exact member row via its data-eq-badge anchor) and pulses a highlight
+// ring, mirroring the figure citation behavior.
 if (typeof document !== 'undefined' && !document.getElementById('note-eq-citation-handler')) {
   const marker = document.createElement('div');
   marker.id = 'note-eq-citation-handler';
@@ -136,10 +160,19 @@ if (typeof document !== 'undefined' && !document.getElementById('note-eq-citatio
     e.preventDefault();
     e.stopPropagation();
 
-    const blockId = citation.getAttribute('data-eq-block');
+    const blockId = citation.getAttribute('data-eq-block')
+      || citation.closest?.('[data-eq-block]')?.getAttribute('data-eq-block');
     if (!blockId) return;
 
-    const targetEl = document.querySelector(`[data-eq-block-id="${CSS.escape(blockId)}"]`);
+    const badgeLabel = citation.getAttribute('data-eq-badge')
+      || citation.closest?.('[data-eq-badge]')?.getAttribute('data-eq-badge') || '';
+
+    let targetEl = document.querySelector(`[data-eq-block-id="${CSS.escape(blockId)}"]`);
+    if (targetEl && badgeLabel) {
+      targetEl = targetEl.querySelector(`[data-eq-badge="${CSS.escape(badgeLabel)}"]`)?.closest('[data-eq-member]')
+        || targetEl;
+    }
+
     if (targetEl) {
       targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
       targetEl.classList.add('ring-2', 'ring-purple-500', 'ring-offset-2', 'ring-offset-[var(--card)]', 'transition-all', 'duration-300');
@@ -462,6 +495,7 @@ export function clearKatexCache() {
 export function renderKatex(tex, isDisplayMode = false, noteContext = null) {
   ensureKatexLoaded();
   ensureCanceltoStyles();
+  ensureCiteMathStyles();
   const rawClean = (tex || '').trim();
   if (!rawClean) return '';
   const cleanTex = resolveThemeColors(rawClean);
@@ -478,20 +512,44 @@ export function renderKatex(tex, isDisplayMode = false, noteContext = null) {
 
     const macros = getActiveKatexMacros(noteContext);
     try {
-      // In-math \fig{tag} / \eq{name} citations → real links via trusted \href + \htmlData + \htmlClass
-      // (the delegated document click handlers key off note-fig-citation / note-eq-citation + data attrs).
+      // \label{} never renders as math — it gates numbering. In DISPLAY math the first
+      // \label resolves the equation's number badge (numbered $$...$$ inside text
+      // blocks); equation blocks strip labels before calling renderKatex, so no double
+      // badges. Stray \label in inline math is silently stripped.
+      const labelMatch = isDisplayMode ? /\\label\{([^}]*)\}/.exec(cleanTex) : null;
+      const textEqEntry = labelMatch
+        ? (activeEquationTagMap.get(String(labelMatch[1] || '').trim().toLowerCase()) || null)
+        : null;
+      // In-math \fig{tag} / \eq{name} / \eqref{name} / \ref{name} / \cite{keys} citations →
+      // real links/badges via trusted \href + \htmlData + \htmlClass (the delegated document
+      // click/preview handlers key off note-fig-citation / note-eq-citation / note-bib-citation
+      // + data attrs). \ref renders the bare number, \eqref/\eq the parenthesized one.
+      const eqRefBadge = (rawTag, parens) => {
+        const norm = String(rawTag).trim().toLowerCase();
+        const entry = activeEquationTagMap.get(norm) || null;
+        if (!entry) return parens ? '\\text{(??)}' : '\\text{??}';
+        const text = parens ? `(${entry.label})` : entry.label;
+        return `\\href{#eq-${entry.blockId}}{\\htmlData{eq-block=${entry.blockId},eq-badge=${entry.label}}{\\htmlClass{note-eq-citation}{\\text{${text}}}}}`;
+      };
       let pre = cleanTex
+        .replace(/\\label\{[^}]*\}/g, ' ')
         .replace(/\\fig\{([a-zA-Z0-9_\-\.\:]+)\}/g, (m, rawTag) => {
           const norm = String(rawTag).trim().toLowerCase();
           const num = activeFigureTagMap.get(norm) ?? activeFigureTagMap.get(rawTag) ?? null;
           if (num === null || num === undefined) return `\\text{[Fig. ${rawTag}]}`;
           return `\\href{#fig-${num}}{\\htmlData{fig-target=${norm},fig-num=${num}}{\\htmlClass{note-fig-citation}{\\text{[Fig. ${num}]}}}}`;
         })
-        .replace(/\\eq\{([a-zA-Z0-9_\-\.\:]+)\}/g, (m, rawTag) => {
-          const norm = String(rawTag).trim().toLowerCase();
-          const entry = activeEquationTagMap.get(norm) || null;
-          if (!entry) return `\\text{(${rawTag})}`;
-          return `\\href{#eq-${entry.blockId}}{\\htmlData{eq-block=${entry.blockId}}{\\htmlClass{note-eq-citation}{\\text{(${entry.label})}}}}`;
+        .replace(/\\eqref\{([a-zA-Z0-9_\-\.\:]+)\}/g, (m, rawTag) => eqRefBadge(rawTag, true))
+        .replace(/\\eq\{([a-zA-Z0-9_\-\.\:]+)\}/g, (m, rawTag) => eqRefBadge(rawTag, true))
+        .replace(/\\ref\{([a-zA-Z0-9_\-\.\:]+)\}/g, (m, rawTag) => eqRefBadge(rawTag, false))
+        .replace(/\\cite\{([^}]*)\}/g, (m, keysRaw) => {
+          const { parts, missing } = resolveCitationLabels(keysRaw);
+          const missClass = missing ? ' note-cite-missing' : '';
+          const badge = `\\htmlClass{note-bib-citation note-cite-math${missClass}}{\\text{[${latexTextEscape(parts.join(', '))}]}}`;
+          // data-cite-keys uses space separation (KaTeX \htmlData values cannot contain commas);
+          // Cite_Preview splits on whitespace/commas. BibTeX keys never contain spaces.
+          const keysAttr = String(keysRaw || '').split(',').map(k => k.trim()).filter(Boolean).join(' ');
+          return keysAttr ? `\\htmlData{cite-keys=${keysAttr}}{${badge}}` : badge;
         });
       let rendered = window.katex.renderToString(pre, {
         displayMode: isDisplayMode,
@@ -508,6 +566,11 @@ export function renderKatex(tex, isDisplayMode = false, noteContext = null) {
         }
       });
       rendered = postProcessKatexHtml(rendered);
+      // Numbered $$...$$ inside text blocks: wrap the compiled math with its far-right
+      // number badge + anchor so \eqref{}/\ref{} jumps land on this exact equation.
+      if (textEqEntry) {
+        rendered = `<div class="flex items-center w-full my-1" data-eq-block-id="${escapeHtml(textEqEntry.blockId)}"><div class="min-w-0 flex-1 flex justify-center overflow-x-auto" style="scrollbar-width: thin;">${rendered}</div><span class="eq-number-badge flex-shrink-0 text-xs font-mono text-[var(--text)] select-none min-w-[3rem] text-right" data-eq-badge="${escapeHtml(textEqEntry.label)}">(${escapeHtml(textEqEntry.label)})</span></div>`;
+      }
       if (katexCache.size >= MAX_KATEX_CACHE) {
         const firstKey = katexCache.keys().next().value;
         katexCache.delete(firstKey);
@@ -762,14 +825,8 @@ export function formatRichTextWithMath(rawText = '', options = {}) {
 function parseInlineMarkdownAndLatex(str) {
   const resolved = resolveThemeColors(str);
   let s = escapeHtml(resolved);
-  // NOTE: \fig / \eq / \href / \url are deliberately NOT converted here — they only function
-  // inside $...$ inline math (renderKatex preprocessing). Bare occurrences stay literal text.
-  // LaTeX \cite{key1,key2} bibliography citation (label per NotesState.citationStyle)
-  s = s.replace(/\\cite\{([^}]*)\}/g, (match, keysRaw) => {
-    const { parts, missing } = resolveCitationLabels(keysRaw);
-    const missingClass = missing ? ' note-bib-citation-missing border-amber-500/50 text-amber-400' : '';
-    return `<span class="note-bib-citation font-semibold text-sky-400 hover:text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 px-1.5 py-0.5 rounded border border-sky-500/30 transition-colors inline-flex items-center cursor-pointer select-none${missingClass}" data-cite-keys="${keysRaw.trim()}" title="Citation">[${escapeHtml(parts.join(', '))}]</span>`;
-  });
+  // NOTE: \fig / \eq / \cite / \href / \url are deliberately NOT converted here — they only
+  // function inside $...$ math (renderKatex preprocessing). Bare occurrences stay literal text.
   // LaTeX \textcolor{#hex}{content} or \textcolor{colorName}{content}
   s = s.replace(/\\textcolor\{([#a-zA-Z0-9]+)\}\{([^\}]+)\}/g, '<span style="color:$1;">$2</span>');
   // LaTeX \underline{content}
