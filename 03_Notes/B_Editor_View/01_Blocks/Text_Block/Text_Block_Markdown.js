@@ -470,10 +470,16 @@ export function createLiveBlockElement(blk, options = {}) {
     // -------------------------------------------------------------------------
     case 'table': {
       el = document.createElement('div');
-      el.className = `obsidian-table-block my-1 w-full select-text rounded transition-all ${isViewMode ? '' : 'cursor-pointer hover:ring-1 hover:ring-purple-500/40'}`;
+      el.className = `obsidian-table-block my-0.5 w-full select-text rounded transition-all whitespace-normal ${isViewMode ? '' : 'cursor-pointer hover:ring-1 hover:ring-purple-500/40'}`;
       el.setAttribute('data-raw', blk.raw);
       el.setAttribute('data-block-type', 'table');
       el.setAttribute('contenteditable', 'false');
+      // The live surface renders with pre-wrap + break-word — both must be reset here or
+      // headers break per-character ("SEV/ERIT/Y") and stray markup whitespace inflates
+      // the box with phantom empty lines while editing.
+      el.style.whiteSpace = 'normal';
+      el.style.wordBreak = 'normal';
+      el.style.overflowWrap = 'break-word';
 
       try {
         el.innerHTML = parseMarkdownTable(blk.content);

@@ -138,9 +138,9 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
 
   let currentBorderState = hasBorder;
   let currentFitPercent = fitPercent;
-  let currentWrap = Boolean(block.wrap);
-  let currentWrapSide = block.wrapSide === 'right' ? 'right' : 'left';
-
+  // NOTE: Wrap-Beside UI removed — side-by-side layout is owned by the Multi-Column
+  // orientation container. Legacy notes with block.wrap=true still render via the
+  // editor's wrap-row pairing pass.
   editWrap.innerHTML = `
     <!-- Top Row: Title & Tools (Left) | Actions (Right) -->
     <div class="tikz-edit-header flex items-center justify-between gap-1.5 w-full pb-1.5 border-b border-[var(--border)] select-none flex-wrap">
@@ -163,12 +163,7 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
           <span class="text-[11px] font-mono font-bold text-[var(--text-dim)] select-none">%</span>
         </div>
 
-        <!-- Wrap-Beside Controls: pair this figure with the next block side-by-side -->
-        <button type="button" class="btn-wrap-toggle h-7 px-2 py-0 text-xs font-semibold rounded-md border flex items-center justify-center gap-1 transition-all flex-shrink-0 cursor-pointer ${currentWrap ? 'border-purple-500 bg-purple-500/15 text-purple-400 shadow-xs' : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-dim)] opacity-70'}" title="Wrap Beside: pair this figure with the next block (active when Fit ≤ 60%)">
-          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="flex-shrink-0"><rect x="3" y="4" width="7" height="16" rx="1.5"></rect><line x1="13" y1="7" x2="21" y2="7"></line><line x1="13" y1="12" x2="21" y2="12"></line><line x1="13" y1="17" x2="18" y2="17"></line></svg>
-          <span>Wrap</span>
-        </button>
-        <button type="button" class="btn-wrap-side h-7 w-7 py-0 text-[11px] font-mono font-bold rounded-md border flex items-center justify-center flex-shrink-0 cursor-pointer ${currentWrap ? 'border-purple-500 bg-purple-500/15 text-purple-400' : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-dim)] opacity-50'}" title="Figure side within the wrap row: ${currentWrapSide === 'left' ? 'Left' : 'Right'} (click to flip)">${currentWrapSide === 'left' ? 'L' : 'R'}</button>
+        <!-- Wrap-Beside UI removed: layout is owned by the Multi-Column orientation container -->
 
         <!-- Templates Dropdown Toggle -->
         <button type="button" class="btn-templates-toggle notes-ghost-btn h-7 px-2.5 py-0 text-[11px] font-medium flex items-center gap-1.5" title="Browse and insert TikZ templates">
@@ -411,22 +406,20 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
     currentFitPercent = newVal;
     block.width = currentFitPercent;
     if (previewInner) previewInner.style.width = `${currentFitPercent}%`;
-    if (onUpdate) {
-      onUpdate({
-        code: textarea.value,
-        content: textarea.value,
-        allowNumbering: block.allowNumbering,
-        tag: block.tag,
-        caption: block.caption,
-        hasBorder: currentBorderState,
-        width: currentFitPercent,
-        wrap: currentWrap,
-        wrapSide: currentWrapSide
-      });
-    }
-  };
+      if (onUpdate) {
+        onUpdate({
+          code: textarea.value,
+          content: textarea.value,
+          allowNumbering: block.allowNumbering,
+          tag: block.tag,
+          caption: block.caption,
+          hasBorder: currentBorderState,
+          width: currentFitPercent
+        });
+      }
+    };
 
-  fitInput?.addEventListener('input', () => {
+    fitInput?.addEventListener('input', () => {
     const val = parseInt(fitInput.value, 10);
     if (!isNaN(val) && val >= 10 && val <= 100) {
       updateFitWidth(val);
@@ -447,42 +440,6 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
     if (val > 100) val = 100;
     fitInput.value = val;
     updateFitWidth(val);
-  });
-
-  // Wrap-Beside Handling: toggles pair-with-next-block layout (applied on next re-render)
-  const wrapToggleBtn = editWrap.querySelector('.btn-wrap-toggle');
-  const wrapSideBtn = editWrap.querySelector('.btn-wrap-side');
-
-  const syncWrapButtons = () => {
-    if (wrapToggleBtn) {
-      wrapToggleBtn.className = `btn-wrap-toggle h-7 px-2 py-0 text-xs font-semibold rounded-md border flex items-center justify-center gap-1 transition-all flex-shrink-0 cursor-pointer ${currentWrap ? 'border-purple-500 bg-purple-500/15 text-purple-400 shadow-xs' : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-dim)] opacity-70'}`;
-      wrapToggleBtn.title = `Wrap Beside: pair this figure with the next block (active when Fit ≤ 60%) — currently ${currentWrap ? 'ON' : 'OFF'}`;
-    }
-    if (wrapSideBtn) {
-      wrapSideBtn.className = `btn-wrap-side h-7 w-7 py-0 text-[11px] font-mono font-bold rounded-md border flex items-center justify-center flex-shrink-0 cursor-pointer ${currentWrap ? 'border-purple-500 bg-purple-500/15 text-purple-400' : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-dim)] opacity-50'}`;
-      wrapSideBtn.textContent = currentWrapSide === 'left' ? 'L' : 'R';
-      wrapSideBtn.title = `Figure side within the wrap row: ${currentWrapSide === 'left' ? 'Left' : 'Right'} (click to flip)`;
-    }
-  };
-
-  wrapToggleBtn?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    currentWrap = !currentWrap;
-    block.wrap = currentWrap;
-    syncWrapButtons();
-    if (onUpdate) {
-      onUpdate({ code: textarea.value, content: textarea.value, width: currentFitPercent, wrap: currentWrap, wrapSide: currentWrapSide });
-    }
-  });
-
-  wrapSideBtn?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    currentWrapSide = currentWrapSide === 'left' ? 'right' : 'left';
-    block.wrapSide = currentWrapSide;
-    syncWrapButtons();
-    if (onUpdate) {
-      onUpdate({ code: textarea.value, content: textarea.value, width: currentFitPercent, wrap: currentWrap, wrapSide: currentWrapSide });
-    }
   });
 
   // Border Toggle Action
@@ -530,9 +487,7 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
         tag: block.tag,
         caption: block.caption,
         hasBorder: currentBorderState,
-        width: currentFitPercent,
-        wrap: currentWrap,
-        wrapSide: currentWrapSide
+        width: currentFitPercent
       });
     }
   };

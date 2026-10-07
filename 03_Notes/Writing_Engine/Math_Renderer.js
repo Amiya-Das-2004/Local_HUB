@@ -466,6 +466,13 @@ function ensureCanceltoStyles() {
       .notes-text-content .katex-display {
         margin: 0.25em 0 !important;
       }
+      /* Labeled equation member rows: KaTeX display margins would stack 2em between
+         members (flex never collapses them). 0.3em keeps rows clearly separated while
+         staying far tighter than the 1em default — intermediate between labeled groups
+         and plain aligned environments. */
+      [data-eq-member] .katex-display {
+        margin: 0.3em 0 !important;
+      }
     `;
     document.head.appendChild(style);
   }

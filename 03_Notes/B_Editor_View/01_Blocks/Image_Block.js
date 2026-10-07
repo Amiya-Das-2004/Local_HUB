@@ -180,8 +180,9 @@ export function renderImageBlock(
   let currentTag = tag;
   let currentBorderState = hasBorder;
   let currentFitPercent = fitPercent;
-  let currentWrap = Boolean(block.wrap);
-  let currentWrapSide = block.wrapSide === 'right' ? 'right' : 'left';
+  // NOTE: Wrap-Beside UI removed — side-by-side layout is owned by the Multi-Column
+  // orientation container. Legacy notes with block.wrap=true still render via the
+  // editor's wrap-row pairing pass.
   let gridOn = Boolean(block.grid && block.gridOn);
   let currentGrid = gridOn ? normalizeGrid(block.grid) : null;
   let selA = -1; // first selected grid cell
@@ -301,12 +302,7 @@ export function renderImageBlock(
             <span class="text-[11px] font-mono font-bold text-[var(--text-dim)] select-none">%</span>
           </div>
 
-          <!-- Wrap-Beside Controls: pair this figure with the next block side-by-side -->
-          <button type="button" class="btn-wrap-toggle h-7 px-2 py-0 text-xs font-semibold rounded-md border flex items-center justify-center gap-1 transition-all flex-shrink-0 cursor-pointer ${currentWrap ? 'border-purple-500 bg-purple-500/15 text-purple-400 shadow-xs' : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-dim)] opacity-70'}" title="Wrap Beside: pair this figure with the next block (active when Fit ≤ 60%)">
-            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="flex-shrink-0"><rect x="3" y="4" width="7" height="16" rx="1.5"></rect><line x1="13" y1="7" x2="21" y2="7"></line><line x1="13" y1="12" x2="21" y2="12"></line><line x1="13" y1="17" x2="18" y2="17"></line></svg>
-            <span>Wrap</span>
-          </button>
-          <button type="button" class="btn-wrap-side h-7 w-7 py-0 text-[11px] font-mono font-bold rounded-md border flex items-center justify-center flex-shrink-0 cursor-pointer ${currentWrap ? 'border-purple-500 bg-purple-500/15 text-purple-400' : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-dim)] opacity-50'}" title="Figure side within the wrap row: ${currentWrapSide === 'left' ? 'Left' : 'Right'} (click to flip)">${currentWrapSide === 'left' ? 'L' : 'R'}</button>
+          <!-- Wrap-Beside UI removed: layout is owned by the Multi-Column orientation container -->
 
           <!-- Grid Collage Toggle -->
           <button type="button" class="btn-grid-toggle h-7 px-2 py-0 text-xs font-semibold rounded-md border flex items-center justify-center gap-1 transition-all flex-shrink-0 cursor-pointer ${gridOn ? 'border-purple-500 bg-purple-500/15 text-purple-400 shadow-xs' : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-dim)] opacity-70'}" title="Grid Collage: turn this image block into an N×M cell collage (kept as a single figure)">
@@ -408,6 +404,7 @@ export function renderImageBlock(
     `;
 
     // Canonical field persistence for every edit-mode mutation
+    // (wrap/wrapSide are legacy-only — no longer written by this block)
     const commitFields = () => {
       block.url = currentUrl;
       block.content = currentUrl;
@@ -416,8 +413,6 @@ export function renderImageBlock(
       block.tag = currentTag;
       block.hasBorder = currentBorderState;
       block.width = currentFitPercent;
-      block.wrap = currentWrap;
-      block.wrapSide = currentWrapSide;
       block.grid = currentGrid;
       block.gridOn = gridOn && Boolean(currentGrid);
       if (onUpdate) {
@@ -429,8 +424,6 @@ export function renderImageBlock(
           tag: currentTag,
           hasBorder: currentBorderState,
           width: currentFitPercent,
-          wrap: currentWrap,
-          wrapSide: currentWrapSide,
           grid: currentGrid,
           gridOn: gridOn && Boolean(currentGrid)
         });
@@ -765,36 +758,6 @@ export function renderImageBlock(
       if (val > 100) val = 100;
       fitInput.value = val;
       updateFitWidth(val);
-    });
-
-    // Wrap-Beside Handling: toggles pair-with-next-block layout (applied on next re-render)
-    const wrapToggleBtn = editWrap.querySelector('.btn-wrap-toggle');
-    const wrapSideBtn = editWrap.querySelector('.btn-wrap-side');
-
-    const syncWrapButtons = () => {
-      if (wrapToggleBtn) {
-        wrapToggleBtn.className = `btn-wrap-toggle h-7 px-2 py-0 text-xs font-semibold rounded-md border flex items-center justify-center gap-1 transition-all flex-shrink-0 cursor-pointer ${currentWrap ? 'border-purple-500 bg-purple-500/15 text-purple-400 shadow-xs' : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-dim)] opacity-70'}`;
-        wrapToggleBtn.title = `Wrap Beside: pair this figure with the next block (active when Fit ≤ 60%) — currently ${currentWrap ? 'ON' : 'OFF'}`;
-      }
-      if (wrapSideBtn) {
-        wrapSideBtn.className = `btn-wrap-side h-7 w-7 py-0 text-[11px] font-mono font-bold rounded-md border flex items-center justify-center flex-shrink-0 cursor-pointer ${currentWrap ? 'border-purple-500 bg-purple-500/15 text-purple-400' : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-dim)] opacity-50'}`;
-        wrapSideBtn.textContent = currentWrapSide === 'left' ? 'L' : 'R';
-        wrapSideBtn.title = `Figure side within the wrap row: ${currentWrapSide === 'left' ? 'Left' : 'Right'} (click to flip)`;
-      }
-    };
-
-    wrapToggleBtn?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      currentWrap = !currentWrap;
-      syncWrapButtons();
-      commitFields();
-    });
-
-    wrapSideBtn?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      currentWrapSide = currentWrapSide === 'left' ? 'right' : 'left';
-      syncWrapButtons();
-      commitFields();
     });
 
     // Grid Collage Toggle

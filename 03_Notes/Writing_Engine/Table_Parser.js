@@ -539,7 +539,7 @@ export function parseLatexTabular(input) {
     : '';
 
   return `
-    <div class="notes-table-scroll-container w-full overflow-x-auto my-1" style="scrollbar-width: thin;">
+    <div class="notes-table-scroll-container w-full overflow-x-auto my-0.5" style="scrollbar-width: thin;">
       <table class="notes-latex-table w-full border-collapse select-text my-0.5" style="border-spacing: 0;">
         ${captionHtml}
         <tbody>
@@ -576,40 +576,22 @@ export function parseMarkdownTable(markdown) {
     return 'text-left';
   });
 
-  const theadHtml = `
-    <thead class="bg-[var(--surface-hover)] font-semibold text-[var(--text)]">
-      <tr>
-        ${headers.map((h, i) => {
-          let c = formatRichTextWithMath(h).replace(/^<p[^>]*>/, '').replace(/<\/p>$/, '');
-          return `<th class="px-2.5 py-1.5 text-xs uppercase tracking-wider border-b border-[var(--border)] ${aligns[i] || 'text-left'}">${c}</th>`;
-        }).join('')}
-      </tr>
-    </thead>
-  `;
+  const theadHtml = `<thead class="bg-[var(--surface-hover)] font-semibold text-[var(--text)]"><tr>${headers.map((h, i) => {
+    let c = formatRichTextWithMath(h).replace(/^<p[^>]*>/, '').replace(/<\/p>$/, '');
+    return `<th class="px-2.5 py-1 text-xs uppercase tracking-wider border-b border-[var(--border)] ${aligns[i] || 'text-left'}">${c}</th>`;
+  }).join('')}</tr></thead>`;
 
   const rows = lines.slice(2);
-  const tbodyHtml = `
-    <tbody>
-      ${rows.map(rowLine => {
-        const cells = parseRow(rowLine);
-        return `
-          <tr class="hover:bg-[var(--surface-hover)]/40 border-b border-[var(--border)] transition-colors">
-            ${cells.map((cell, i) => {
-              let c = formatRichTextWithMath(cell).replace(/^<p[^>]*>/, '').replace(/<\/p>$/, '');
-              return `<td class="px-2.5 py-1.5 text-sm text-[var(--text)] ${aligns[i] || 'text-left'}">${c}</td>`;
-            }).join('')}
-          </tr>
-        `;
-      }).join('')}
-    </tbody>
-  `;
+  // NOTE: rows are joined compactly on purpose — the text live-surface inherits
+  // white-space: pre-wrap, so any inter-tag newlines here would render as real
+  // phantom empty lines inside the table while editing.
+  const tbodyHtml = `<tbody>${rows.map(rowLine => {
+    const cells = parseRow(rowLine);
+    return `<tr class="hover:bg-[var(--surface-hover)]/40 border-b border-[var(--border)] transition-colors">${cells.map((cell, i) => {
+      let c = formatRichTextWithMath(cell).replace(/^<p[^>]*>/, '').replace(/<\/p>$/, '');
+      return `<td class="px-2.5 py-1 text-sm text-[var(--text)] ${aligns[i] || 'text-left'}">${c}</td>`;
+    }).join('')}</tr>`;
+  }).join('')}</tbody>`;
 
-  return `
-    <div class="notes-table-scroll-container w-full overflow-x-auto my-0.5" style="scrollbar-width: thin;">
-      <table class="notes-markdown-table w-full border-collapse select-text m-0" style="border-spacing: 0;">
-        ${theadHtml}
-        ${tbodyHtml}
-      </table>
-    </div>
-  `;
+  return `<div class="notes-table-scroll-container w-full overflow-x-auto m-0" style="scrollbar-width: thin;"><table class="notes-markdown-table w-full border-collapse select-text m-0" style="border-spacing: 0;">${theadHtml}${tbodyHtml}</table></div>`;
 }
