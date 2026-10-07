@@ -81,6 +81,11 @@ export const checkAutoCollapseTokensNearCaret = ({ editModeOptions, hideKatexPil
 
   if (!node || node.nodeType !== Node.TEXT_NODE) return;
 
+  // Inside an expanded raw block editor (code fence / display math) the content is
+  // plain raw text — token hydration here would corrupt the editor's structure.
+  const rawHost = node.parentElement ? node.parentElement.closest('[data-is-raw-block="true"]') : null;
+  if (rawHost) return;
+
   const text = node.nodeValue;
   const textBeforeCaret = text.substring(0, offset);
 
@@ -155,6 +160,12 @@ export const checkAutoBulletConversion = ({ liveSurface, editModeOptions, trigge
   if (!sel || sel.rangeCount === 0) return;
   const node = sel.anchorNode;
   if (!node) return;
+
+  // Raw block editors own their content — no bullet/heading auto conversion inside them.
+  const rawHost = node.nodeType === Node.ELEMENT_NODE
+    ? (node.getAttribute('data-is-raw-block') === 'true' ? node : node.closest?.('[data-is-raw-block="true"]'))
+    : (node.parentElement ? node.parentElement.closest('[data-is-raw-block="true"]') : null);
+  if (rawHost) return;
 
   const curLine = getContainingLine(node, liveSurface);
   if (!curLine) return;
@@ -1153,7 +1164,22 @@ export const handleTextBlockKeyDown = (e, ctx) => {
       : (node.parentElement ? node.parentElement.closest('[data-is-raw-block="true"]') : null);
     if (rawBlockEl) {
       e.preventDefault();
-      document.execCommand('insertText', false, '\n');
+      // execCommand('insertText', '\n') paragraph-splits OUT of the nested raw editing
+      // host (cloning data-is-raw-block into an empty sibling) — insert a literal
+      // newline text node instead.
+      const selNow = window.getSelection();
+      if (selNow && selNow.rangeCount > 0) {
+        const range = selNow.getRangeAt(0);
+        range.deleteContents();
+        const nl = document.createTextNode('\n');
+        range.insertNode(nl);
+        range.setStartAfter(nl);
+        range.collapse(true);
+        selNow.removeAllRanges();
+        selNow.addRange(range);
+      } else {
+        document.execCommand('insertText', false, '\n');
+      }
       triggerUpdate?.();
       return;
     }

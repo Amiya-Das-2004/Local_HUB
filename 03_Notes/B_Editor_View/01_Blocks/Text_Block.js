@@ -206,30 +206,6 @@ export function renderTextBlock(
       <div class="bullet-dropdown-menu hidden absolute top-full left-0 mt-2 min-w-[220px] rounded-xl border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-2xl z-[100] flex flex-col gap-0.5 text-xs text-[var(--text)] max-h-72 overflow-y-auto" style="scrollbar-width: thin;">
       </div>
     </div>
-
-    <!-- Divider -->
-    <div class="w-[1px] h-5 bg-[var(--border)]/70 flex-shrink-0"></div>
-
-    <!-- 4. Line Spacing Toggle Button + Dropdown (Capsule shape) -->
-    <div class="relative inline-flex items-center rounded-full border border-[var(--border)]/60 bg-[var(--card)] h-7 sm:h-8 overflow-visible flex-shrink-0 spacing-dropdown-group shadow-xs">
-      <button type="button" class="btn-toggle-spacing pl-2.5 pr-1.5 h-full text-xs font-semibold hover:bg-[var(--surface-hover)] rounded-l-full transition-colors flex items-center justify-center gap-1.5 text-[var(--text)] cursor-pointer" title="Cycle Line Spacing (Compact / Normal / Spacious)">
-        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" class="text-purple-400 flex-shrink-0">
-          <line x1="3" y1="5" x2="21" y2="5"></line>
-          <line x1="3" y1="12" x2="21" y2="12"></line>
-          <line x1="3" y1="19" x2="21" y2="19"></line>
-          <polyline points="19 8 22 12 19 16"></polyline>
-        </svg>
-        <span class="active-spacing-display text-[11px] font-semibold">${getSpacingLabel(currentLineSpacing)}</span>
-      </button>
-      <div class="w-[1px] h-4 bg-[var(--border)]"></div>
-      <button type="button" class="btn-open-spacing-dropdown pl-1.5 pr-2.5 h-full flex items-center justify-center hover:bg-[var(--surface-hover)] rounded-r-full transition-colors cursor-pointer text-[var(--text-secondary)]" title="Choose Line Spacing">
-        <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="6 9 12 15 18 9"></polyline></svg>
-      </button>
-
-      <!-- Spacing Dropdown Popover Menu -->
-      <div class="spacing-dropdown-menu hidden absolute top-full left-0 mt-2 min-w-[170px] rounded-xl border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-2xl z-[100] flex flex-col gap-0.5 text-xs text-[var(--text)]">
-      </div>
-    </div>
   `;
 
   // Remove any previously orphaned floating docks before mounting
@@ -260,10 +236,6 @@ export function renderTextBlock(
   const btnOpenBulletDropdown = floatingDock.querySelector('.btn-open-bullet-dropdown');
   const bulletMenu = floatingDock.querySelector('.bullet-dropdown-menu');
   const activeBulletDisplay = floatingDock.querySelector('.active-bullet-display');
-  const btnToggleSpacing = floatingDock.querySelector('.btn-toggle-spacing');
-  const btnOpenSpacingDropdown = floatingDock.querySelector('.btn-open-spacing-dropdown');
-  const spacingMenu = floatingDock.querySelector('.spacing-dropdown-menu');
-  const activeSpacingDisplay = floatingDock.querySelector('.active-spacing-display');
 
   const showNotice = () => {}; // Safe no-op
 
@@ -317,7 +289,22 @@ export function renderTextBlock(
       if (e.key === 'Enter') {
         e.preventDefault();
         e.stopPropagation();
-        document.execCommand('insertText', false, '\n');
+        // execCommand('insertText', '\n') makes Chrome paragraph-split OUT of this
+        // nested editing host, cloning data-is-raw-block into an empty sibling —
+        // insert a literal newline text node instead.
+        const selNow = window.getSelection();
+        if (selNow && selNow.rangeCount > 0) {
+          const range = selNow.getRangeAt(0);
+          range.deleteContents();
+          const nl = document.createTextNode('\n');
+          range.insertNode(nl);
+          range.setStartAfter(nl);
+          range.collapse(true);
+          selNow.removeAllRanges();
+          selNow.addRange(range);
+        } else {
+          document.execCommand('insertText', false, '\n');
+        }
         triggerUpdate();
         return;
       }
@@ -337,7 +324,28 @@ export function renderTextBlock(
       e.stopPropagation();
       const text = (e.clipboardData || window.clipboardData).getData('text/plain');
       if (text) {
-        document.execCommand('insertText', false, text);
+        // execCommand('insertText', multiLine) paragraph-splits OUT of this nested
+        // editing host (cloning data-is-raw-block siblings) — insert literal newline
+        // text nodes instead so the raw content stays inside this container.
+        const selNow = window.getSelection();
+        if (selNow && selNow.rangeCount > 0) {
+          const range = selNow.getRangeAt(0);
+          range.deleteContents();
+          const frag = document.createDocumentFragment();
+          text.split('\n').forEach((line, i) => {
+            if (i > 0) frag.appendChild(document.createTextNode('\n'));
+            if (line) frag.appendChild(document.createTextNode(line));
+          });
+          range.insertNode(frag);
+          if (frag.lastChild) {
+            range.setStartAfter(frag.lastChild);
+          }
+          range.collapse(true);
+          selNow.removeAllRanges();
+          selNow.addRange(range);
+        } else {
+          document.execCommand('insertText', false, text);
+        }
         triggerUpdate();
       }
     });
@@ -573,19 +581,28 @@ export function renderTextBlock(
   };
 
   liveSurface.addEventListener('input', () => {
-    ensureSurfaceDomIntegrity();
-    updateKatexPill();
-    checkAutoCollapseTokensNearCaret({
-      editModeOptions,
-      hideKatexPill,
-      triggerUpdate
-    });
-    checkAutoBulletConversion({
-      liveSurface,
-      editModeOptions,
-      triggerUpdate
-    });
-    maybeShowCiteAutocomplete(liveSurface, editModeOptions, hideKatexPill, triggerUpdate);
+    // Edits inside an expanded raw block editor (code fence / display math) are owned
+    // by that editor — the caret-driven surface logic must never touch its content.
+    const selNow = window.getSelection();
+    const inRawBlock = !!(selNow && selNow.anchorNode && (selNow.anchorNode.nodeType === Node.ELEMENT_NODE
+      ? selNow.anchorNode
+      : selNow.anchorNode.parentElement)?.closest?.('[data-is-raw-block="true"]'));
+
+    if (!inRawBlock) {
+      ensureSurfaceDomIntegrity();
+      updateKatexPill();
+      checkAutoCollapseTokensNearCaret({
+        editModeOptions,
+        hideKatexPill,
+        triggerUpdate
+      });
+      checkAutoBulletConversion({
+        liveSurface,
+        editModeOptions,
+        triggerUpdate
+      });
+      maybeShowCiteAutocomplete(liveSurface, editModeOptions, hideKatexPill, triggerUpdate);
+    }
     triggerUpdate();
   });
 
@@ -920,16 +937,16 @@ export function renderTextBlock(
     `;
 
     const bulletOptions = [
-      { label: '• Disc (Default)', prefix: '• ' },
-      { label: '○ Circle', prefix: '○ ' },
-      { label: '■ Square', prefix: '■ ' },
-      { label: '▸ Triangle', prefix: '▸ ' },
-      { label: '– Dash', prefix: '– ' },
-      { label: '➔ Arrow', prefix: '➔ ' },
-      { label: '✦ Star', prefix: '✦ ' },
-      { label: '◆ Diamond', prefix: '◆ ' },
-      { label: '1. Numbered', prefix: '1. ' },
-      { label: '☐ Checkbox', prefix: '- [ ] ' }
+      { label: 'Disc (Default)', prefix: '• ' },
+      { label: 'Circle', prefix: '○ ' },
+      { label: 'Square', prefix: '■ ' },
+      { label: 'Triangle', prefix: '▸ ' },
+      { label: 'Dash', prefix: '– ' },
+      { label: 'Arrow', prefix: '➔ ' },
+      { label: 'Star', prefix: '✦ ' },
+      { label: 'Diamond', prefix: '◆ ' },
+      { label: 'Numbered', prefix: '1. ' },
+      { label: 'Checkbox', prefix: '- [ ] ' }
     ];
 
     bulletOptions.forEach((opt) => {
@@ -958,7 +975,6 @@ export function renderTextBlock(
 
   const toggleBulletMenu = () => {
     if (bulletMenu.classList.contains('hidden')) {
-      closeSpacingMenu();
       renderBulletMenu();
       bulletMenu.classList.remove('hidden');
     } else {
@@ -979,84 +995,6 @@ export function renderTextBlock(
     insertBulletAtCurrentLine(activeBulletPrefix);
   });
 
-  // Line Spacing Management
-  const applyLineSpacing = (spacingKey) => {
-    if (!LINE_SPACING_OPTIONS[spacingKey]) spacingKey = 'normal';
-    currentLineSpacing = spacingKey;
-    currentLineHeight = getSpacingValue(spacingKey);
-    block.lineSpacing = spacingKey;
-    container.style.setProperty('--note-line-height', String(currentLineHeight));
-    liveSurface.style.lineHeight = `var(--note-line-height, ${currentLineHeight})`;
-    if (activeSpacingDisplay) {
-      activeSpacingDisplay.textContent = getSpacingLabel(spacingKey);
-    }
-    triggerUpdate();
-  };
-
-  const renderSpacingMenu = () => {
-    if (!spacingMenu) return;
-    const spacingList = [
-      { id: 'compact', label: 'Compact', desc: '1.4x line height' },
-      { id: 'normal', label: 'Normal', desc: '1.7x line height (Default)' },
-      { id: 'spacious', label: 'Spacious', desc: '2.0x line height' }
-    ];
-
-    let itemsHtml = `
-      <div class="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--text-dim)]">Line Spacing</div>
-    `;
-
-    spacingList.forEach((opt) => {
-      const isSelected = currentLineSpacing === opt.id;
-      itemsHtml += `
-        <button type="button" class="spacing-preset-item w-full flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-[var(--surface-hover)] text-left transition-colors cursor-pointer ${isSelected ? 'bg-purple-500/15 text-purple-400 font-bold' : 'text-[var(--text)]'}" data-spacing="${opt.id}">
-          <div class="flex flex-col">
-            <span class="text-xs ${isSelected ? 'text-purple-400 font-bold' : ''}">${opt.label}</span>
-            <span class="text-[10px] text-[var(--text-dim)] font-normal">${opt.desc}</span>
-          </div>
-          ${isSelected ? '<span class="text-xs text-purple-400 font-bold">✓</span>' : ''}
-        </button>
-      `;
-    });
-
-    spacingMenu.innerHTML = itemsHtml;
-
-    spacingMenu.querySelectorAll('.spacing-preset-item').forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const key = btn.getAttribute('data-spacing');
-        applyLineSpacing(key);
-        closeSpacingMenu();
-      });
-    });
-  };
-
-  const toggleSpacingMenu = () => {
-    if (!spacingMenu) return;
-    if (spacingMenu.classList.contains('hidden')) {
-      closeBulletMenu();
-      renderSpacingMenu();
-      spacingMenu.classList.remove('hidden');
-    } else {
-      spacingMenu.classList.add('hidden');
-    }
-  };
-
-  const closeSpacingMenu = () => {
-    spacingMenu?.classList.add('hidden');
-  };
-
-  btnOpenSpacingDropdown?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    toggleSpacingMenu();
-  });
-
-  btnToggleSpacing?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const order = ['compact', 'normal', 'spacious'];
-    const nextIdx = (order.indexOf(currentLineSpacing) + 1) % order.length;
-    applyLineSpacing(order[nextIdx]);
-  });
-
   const showFloatingDock = () => {
     if (!floatingDock.parentNode) {
       document.body.appendChild(floatingDock);
@@ -1065,7 +1003,6 @@ export function renderTextBlock(
 
   const hideFloatingDock = () => {
     closeBulletMenu();
-    closeSpacingMenu();
     if (floatingDock.parentNode) {
       floatingDock.remove();
     }

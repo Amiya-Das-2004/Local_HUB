@@ -158,6 +158,15 @@ function acceptActive(liveSurface, editModeOptions, hideKatexPill, triggerUpdate
  * Safe to call on every input — it no-ops when no \cite context exists at the caret.
  */
 export function maybeShowCiteAutocomplete(liveSurface, editModeOptions, hideKatexPill, triggerUpdate) {
+  // No autocomplete inside expanded raw block editors — they own their plain content.
+  const selNow = window.getSelection();
+  const inRaw = !!(selNow && selNow.anchorNode && (selNow.anchorNode.nodeType === Node.ELEMENT_NODE
+    ? selNow.anchorNode
+    : selNow.anchorNode.parentElement)?.closest?.('[data-is-raw-block="true"]'));
+  if (inRaw) {
+    hideCiteAutocomplete();
+    return;
+  }
   const context = readCiteContext(liveSurface);
   if (!context) {
     hideCiteAutocomplete();
