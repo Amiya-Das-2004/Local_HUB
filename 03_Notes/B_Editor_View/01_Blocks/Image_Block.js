@@ -6,7 +6,7 @@
  */
 
 import { escapeHtml } from '../../02_Utils.js';
-import { applyFigureAttributes, formatFigureCaptionText, appendFigureCaption } from './Figure_Utils.js';
+import { applyFigureAttributes, formatFigureCaptionText, appendFigureCaption, renderInlineMathCaption } from './Figure_Utils.js';
 import { getBlockActionsHTML, initBlockActions } from './Block_Actions.js';
 
 /**
@@ -135,7 +135,18 @@ export function renderImageBlock(
 
     applyFigureAttributes(wrap, { tag, figNumber, label: figLabel });
 
-    if (!url) {
+    const captionText = showCaptions ? formatFigureCaptionText({ caption, allowNumbering, figNumber, label: figLabel }) : '';
+    const frameClasses = `image-preview-fit-box overflow-hidden rounded-xl ${hasBorder ? 'border border-[var(--border)] bg-[var(--surface)] shadow-xs' : 'border border-transparent bg-transparent'} p-1.5 flex justify-center max-w-full transition-all`;
+
+    // Grid collage first — a grid-only block has no single url, so it must be checked
+    // before the empty-placeholder gate.
+    if (block.grid && block.gridOn) {
+      wrap.innerHTML = `
+        <div class="${frameClasses}" style="width: ${fitPercent}%;">
+          ${buildImageGridMarkup(normalizeGrid(block.grid), false)}
+        </div>
+      `;
+    } else if (!url) {
       wrap.innerHTML = `
         <div class="w-full p-8 rounded-xl border border-dashed border-[var(--border)] bg-[var(--surface)] text-center text-xs text-[var(--text-dim)] flex flex-col items-center justify-center gap-2 select-none">
           <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--text-dim)]"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
@@ -143,25 +154,14 @@ export function renderImageBlock(
         </div>
       `;
     } else {
-      const captionText = showCaptions ? formatFigureCaptionText({ caption, allowNumbering, figNumber, label: figLabel }) : '';
-      const frameClasses = `image-preview-fit-box overflow-hidden rounded-xl ${hasBorder ? 'border border-[var(--border)] bg-[var(--surface)] shadow-xs' : 'border border-transparent bg-transparent'} p-1.5 flex justify-center max-w-full transition-all`;
-
-      if (block.grid && block.gridOn) {
-        wrap.innerHTML = `
-          <div class="${frameClasses}" style="width: ${fitPercent}%;">
-            ${buildImageGridMarkup(normalizeGrid(block.grid), false)}
-          </div>
-        `;
-      } else {
-        wrap.innerHTML = `
-          <div class="${frameClasses}" style="width: ${fitPercent}%;">
-            <img src="${escapeHtml(url)}" alt="${escapeHtml(caption || 'Note Figure')}" class="w-full h-auto object-contain block rounded-lg transition-all" loading="lazy" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 100 60\\'><rect width=\\'100\\' height=\\'60\\' fill=\\'%23242840\\'/><text x=\\'50\\' y=\\'33\\' fill=\\'%23a0a4b8\\' font-size=\\'8\\' text-anchor=\\'middle\\'>Image failed to load</text></svg>'" />
-          </div>
-        `;
-      }
-      if (captionText) {
-        appendFigureCaption(wrap, captionText, 'mt-1.5');
-      }
+      wrap.innerHTML = `
+        <div class="${frameClasses}" style="width: ${fitPercent}%;">
+          <img src="${escapeHtml(url)}" alt="${escapeHtml(caption || 'Note Figure')}" class="w-full h-auto object-contain block rounded-lg transition-all" loading="lazy" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 100 60\\'><rect width=\\'100\\' height=\\'60\\' fill=\\'%23242840\\'/><text x=\\'50\\' y=\\'33\\' fill=\\'%23a0a4b8\\' font-size=\\'8\\' text-anchor=\\'middle\\'>Image failed to load</text></svg>'" />
+        </div>
+      `;
+    }
+    if (captionText) {
+      appendFigureCaption(wrap, captionText, 'mt-1.5');
     }
 
     container.appendChild(wrap);
@@ -280,8 +280,8 @@ export function renderImageBlock(
             <input type="text" class="ig-cell-caption-input w-full text-[10.5px] text-center font-medium bg-transparent border-none outline-none text-[var(--text)] placeholder-[var(--text-dim)]" placeholder="(a) Subcaption..." value="${escapeHtml(cell.caption || '')}" data-cell-index="${i}" />
           </div>`
         : (cell.caption ? `
-          <figcaption class="ig-cell-caption-label w-full px-1.5 py-0.5 text-[10.5px] text-center text-[var(--text-secondary)] bg-[var(--surface)]/80 truncate border-t border-[var(--border)]/40 select-text">
-            ${escapeHtml(cell.caption)}
+          <figcaption class="ig-cell-caption-label w-full px-1.5 py-0.5 text-[10.5px] text-center text-[var(--text-secondary)] bg-[var(--surface)]/80 border-t border-[var(--border)]/40 select-text">
+            ${renderInlineMathCaption(cell.caption)}
           </figcaption>` : '');
 
       cellsHtml += `

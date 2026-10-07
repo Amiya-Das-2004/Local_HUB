@@ -753,7 +753,8 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 | :--- | :--- | :--- |
 | `applyFigureAttributes(figureEl, options)` | 15 - 27 | Applies scientific figure attributes (tag, ID, figure number) to a container element for cross-referencing. |
 | `formatFigureCaptionText(options)` | 38 - 44 | Formats standard scientific caption text: "Fig: X: Caption" or "Fig: X". |
-| `appendFigureCaption(figureEl, captionText, extraClass)` | 54 - 61 | Creates and appends a styled <figcaption> element to the figure container if captionText is non-empty. |
+| `appendFigureCaption(figureEl, captionText, extraClass)` | 79 - 88 | Creates and appends a styled <figcaption> element to the figure container if captionText is non-empty; content rendered via `renderInlineMathCaption` so captions support $inline math$. |
+| `renderInlineMathCaption(text)` | 61 - 75 | Renders caption text as safe HTML with inline math: $...$ segments compile via KaTeX (`renderKatex`), all other text stays HTML-escaped. Shared by Image/TikZ captions and grid cell subcaptions. |
 | `getFigureCaptionText(caption, figNumber, allowNumbering)` | 65 - 67 | Convenience alias function for formatFigureCaptionText. |
 
 **Heading_Block.js**
@@ -781,7 +782,7 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 | :--- | :--- | :--- |
 | `processAndCompressImage(fileOrDataUrl)` | 16 - 65 | Downsamples and compresses raster images (PNG/JPG) using an off-screen canvas, keeping vector SVGs intact. |
 | `compressRasterDataUrl(dataUrl, maxDim, quality)` | 67 - 106 | Internal helper compressing image on canvas to JPEG data URL with dimensions constrained to maxDim. |
-| `renderImageBlock(block, isEditing = false, onUpdate = null, options = {})` | 108 - 931 | Renders image figure block supporting file upload, clipboard paste, URL linking, Canva-style draggable edge handle on image preview to resize width percentage in real-time with double-click reset and "Reset" button (reverting to 100%), a Grid Collage mode (`block.grid`: N×M cells with click-two-then-Merge rectangle spans, per-column/row `1:2:1` ratio inputs with a "Reset Ratios" button, cover/contain cell fit, per-cell subcaption inputs matching cell width with global figure caption intact below, per-cell upload/paste/drop/clear, persisted via `block.gridOn`), surrounding border toggle, scientific captioning, and figure numbering. All mutations persist through the shared `commitFields()` helper. |
+| `renderImageBlock(block, isEditing = false, onUpdate = null, options = {})` | 108 - 931 | Renders image figure block supporting file upload, clipboard paste, URL linking, Canva-style draggable edge handle on image preview to resize width percentage in real-time with double-click reset and "Reset" button (reverting to 100%), a Grid Collage mode (`block.grid`: N×M cells with click-two-then-Merge rectangle spans, per-column/row `1:2:1` ratio inputs with a "Reset Ratios" button, cover/contain cell fit, per-cell subcaption inputs matching cell width with global figure caption intact below, per-cell upload/paste/drop/clear, persisted via `block.gridOn`), surrounding border toggle, scientific captioning (block caption + grid cell subcaptions support $inline math$), and figure numbering. Grid-only blocks (no single url) render their collage in view mode. All mutations persist through the shared `commitFields()` helper. |
 
 **Multi_Column_Block.js** *(rewritten — reference-model orientation container)*
 

@@ -4,6 +4,9 @@
  * for Image Block and TikZ Block.
  */
 
+import { escapeHtml } from '../../02_Utils.js';
+import { renderKatex } from '../../Writing_Engine/Math_Renderer.js';
+
 /**
  * Applies scientific figure attributes (tag, ID, figure number) to a container element.
  *
@@ -48,10 +51,29 @@ export function formatFigureCaptionText({ caption = '', allowNumbering = true, f
 }
 
 /**
+ * Renders caption text as safe HTML with inline math support: $...$ segments compile
+ * via KaTeX, everything else stays HTML-escaped plain text.
+ *
+ * @param {string} text - Caption text (may contain $inline math$)
+ * @returns {string} Safe HTML string
+ */
+export function renderInlineMathCaption(text) {
+  const raw = String(text || '');
+  if (!raw.includes('$')) return escapeHtml(raw);
+  return raw
+    .split(/(\$[^$\n]+?\$)/g)
+    .filter((seg) => seg !== '')
+    .map((seg) => (seg.length > 2 && seg.startsWith('$') && seg.endsWith('$')
+      ? renderKatex(seg.slice(1, -1), false)
+      : escapeHtml(seg)))
+    .join('');
+}
+
+/**
  * Creates and appends a styled <figcaption> element if captionText is non-empty.
- * 
+ *
  * @param {HTMLElement} figureEl - Parent figure element
- * @param {string} captionText - Formatted caption text
+ * @param {string} captionText - Formatted caption text ($inline math$ supported)
  * @param {string} [extraClass=''] - Additional CSS classes
  * @returns {HTMLElement|null} The created figcaption or null
  */
@@ -59,7 +81,7 @@ export function appendFigureCaption(figureEl, captionText, extraClass = '') {
   if (!figureEl || !captionText) return null;
   const capEl = document.createElement('figcaption');
   capEl.className = `text-xs text-[var(--text-secondary)] font-medium mt-2 px-2 text-center select-text ${extraClass}`.trim();
-  capEl.textContent = captionText;
+  capEl.innerHTML = renderInlineMathCaption(captionText);
   figureEl.appendChild(capEl);
   return capEl;
 }
