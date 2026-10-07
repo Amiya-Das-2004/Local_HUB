@@ -116,6 +116,9 @@ export function renderBlockBlock(block, isEditing = false, onUpdate = null, allN
     <div class="orientation-bar flex items-center gap-2 w-full flex-wrap select-none">
       <span class="orientation-summary text-[11px] font-mono text-[var(--text-dim)]"></span>
       <button type="button" class="btn-configure-orientation notes-ghost-btn h-7 px-2.5 text-[11px] font-semibold" title="Dock blocks into this callout and arrange them into rows">Configure Layout</button>
+      <button type="button" class="btn-reset-orientation notes-ghost-btn h-7 px-2 text-[11px] font-semibold flex items-center gap-1" title="Reset all column widths to equal distribution">
+        <span>↺</span><span>Reset Widths</span>
+      </button>
     </div>
   `;
 
@@ -161,6 +164,13 @@ export function renderBlockBlock(block, isEditing = false, onUpdate = null, allN
   };
   syncOrientationSummary();
 
+  editWrap.querySelector('.btn-reset-orientation')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const { rows: currentRows } = normalizeOrientationRows(block);
+    block.rowRatios = currentRows.map((r) => Array(r.length).fill(Math.round(100 / Math.max(1, r.length))));
+    if (onUpdate) onUpdate({ rowRatios: block.rowRatios });
+  });
+
   editWrap.querySelector('.btn-configure-orientation')?.addEventListener('click', (e) => {
     e.stopPropagation();
     if (!note) return;
@@ -168,8 +178,9 @@ export function renderBlockBlock(block, isEditing = false, onUpdate = null, allN
       onCommit: (result) => {
         block.members = result.members;
         block.rows = result.rows;
+        block.rowRatios = result.rowRatios;
         syncOrientationSummary();
-        if (onUpdate) onUpdate({ members: result.members, rows: result.rows });
+        if (onUpdate) onUpdate({ members: result.members, rows: result.rows, rowRatios: result.rowRatios });
       }
     });
   });

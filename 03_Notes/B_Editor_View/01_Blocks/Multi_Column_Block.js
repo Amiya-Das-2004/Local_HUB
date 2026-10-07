@@ -72,18 +72,6 @@ export function renderMultiColumnBlock(
       empty.className = 'text-[11px] italic text-[var(--text-dim)] py-2 select-none';
       empty.textContent = 'Empty multi-column container — no blocks docked.';
       viewWrap.appendChild(empty);
-    } else if (rows.length === 1) {
-      // Classic single-row multi-column layout honoring block.layout ratios
-      const gridEl = document.createElement('div');
-      gridEl.className = 'grid gap-3 w-full';
-      gridEl.style.gridTemplateColumns = getGridTemplate(block.layout, flat.length);
-
-      const memberHost = renderOrientationMemberRows(block, { note, allNotes, figureMap, eqMap, prefixMap });
-      const rowEl = memberHost.firstElementChild;
-      if (rowEl) {
-        while (rowEl.firstChild) gridEl.appendChild(rowEl.firstChild);
-      }
-      viewWrap.appendChild(gridEl);
     } else {
       viewWrap.appendChild(renderOrientationMemberRows(block, { note, allNotes, figureMap, eqMap, prefixMap }));
     }
@@ -107,6 +95,9 @@ export function renderMultiColumnBlock(
         <span class="text-xs font-bold text-[var(--text)] px-1">Multi-Column</span>
         <span class="mc-summary text-[11px] font-mono text-[var(--text-dim)] select-none"></span>
         <button type="button" class="btn-configure-orientation notes-ghost-btn h-7 px-2.5 text-[11px] font-semibold" title="Dock blocks into columns and arrange rows">Configure Layout</button>
+        <button type="button" class="btn-reset-columns notes-ghost-btn h-7 px-2 text-[11px] font-semibold flex items-center gap-1" title="Reset all column widths to equal distribution">
+          <span>↺</span><span>Reset Widths</span>
+        </button>
       </div>
       ${getBlockActionsHTML({ index, totalBlocks })}
     </div>
@@ -115,6 +106,13 @@ export function renderMultiColumnBlock(
       Docked blocks stay in the document flow below while editing and render inside this container in Reading &amp; Study view.
     </div>
   `;
+
+  editWrap.querySelector('.btn-reset-columns')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const { rows: currentRows } = normalizeOrientationRows(block);
+    block.rowRatios = currentRows.map((r) => Array(r.length).fill(Math.round(100 / Math.max(1, r.length))));
+    if (onUpdate) onUpdate({ rowRatios: block.rowRatios });
+  });
 
   editWrap.querySelector('.btn-configure-orientation')?.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -133,8 +131,9 @@ export function renderMultiColumnBlock(
       onCommit: (result) => {
         block.members = result.members;
         block.rows = result.rows;
+        block.rowRatios = result.rowRatios;
         syncSummary();
-        if (onUpdate) onUpdate({ members: result.members, rows: result.rows });
+        if (onUpdate) onUpdate({ members: result.members, rows: result.rows, rowRatios: result.rowRatios });
       }
     });
   });

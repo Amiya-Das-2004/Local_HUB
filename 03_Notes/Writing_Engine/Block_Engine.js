@@ -216,5 +216,15 @@ export function normalizeOrientationRows(block) {
   const missing = members.filter((id) => !seen.has(id));
   if (missing.length > 0) rows.push(missing);
 
-  return { members: rows.flat(), rows };
+  const rawRatios = Array.isArray(block?.rowRatios) ? block.rowRatios : [];
+  const rowRatios = rows.map((row, rIdx) => {
+    const existing = Array.isArray(rawRatios[rIdx]) ? rawRatios[rIdx] : null;
+    if (existing && existing.length === row.length && existing.every((v) => Number(v) > 0)) {
+      return existing.map(Number);
+    }
+    const share = Math.round(100 / Math.max(1, row.length));
+    return Array(row.length).fill(share);
+  });
+
+  return { members: rows.flat(), rows, rowRatios };
 }

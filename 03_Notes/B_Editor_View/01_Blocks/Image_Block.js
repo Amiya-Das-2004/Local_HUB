@@ -206,6 +206,7 @@ export function renderImageBlock(
       const prev = old[i];
       cells.push({
         src: (prev && prev.src) ? prev.src : '',
+        caption: (prev && prev.caption) ? String(prev.caption) : '',
         mw: (prev && !prev.gone) ? Math.max(1, Number(prev.mw) || 1) : 1,
         mh: (prev && !prev.gone) ? Math.max(1, Number(prev.mh) || 1) : 1,
         gone: Boolean(prev && prev.gone)
@@ -272,8 +273,25 @@ export function renderImageBlock(
       const selected = isEditView && (i === selA || i === selB);
       const imgHtml = cell.src
         ? `<img src="${escapeHtml(cell.src)}" alt="Grid cell" class="w-full h-full ${fitClass} block" loading="lazy" />`
-        : `<div class="w-full h-full flex items-center justify-center text-[10px] text-[var(--text-dim)] border border-dashed border-[var(--border)] rounded ${isEditView ? 'cursor-pointer' : ''} select-none">empty</div>`;
-      cellsHtml += `<div class="ig-cell relative overflow-hidden rounded ${selected ? 'ring-2 ring-purple-500' : ''}" data-cell-index="${i}" style="${spanStyle}">${imgHtml}</div>`;
+        : `<div class="w-full h-full min-h-[90px] flex items-center justify-center text-[10px] text-[var(--text-dim)] border border-dashed border-[var(--border)] rounded ${isEditView ? 'cursor-pointer' : ''} select-none">empty</div>`;
+
+      const captionHtml = isEditView
+        ? `<div class="ig-cell-caption-wrap w-full px-1.5 py-0.5 bg-[var(--surface)] border-t border-[var(--border)]/60 select-none">
+            <input type="text" class="ig-cell-caption-input w-full text-[10.5px] text-center font-medium bg-transparent border-none outline-none text-[var(--text)] placeholder-[var(--text-dim)]" placeholder="(a) Subcaption..." value="${escapeHtml(cell.caption || '')}" data-cell-index="${i}" />
+          </div>`
+        : (cell.caption ? `
+          <figcaption class="ig-cell-caption-label w-full px-1.5 py-0.5 text-[10.5px] text-center text-[var(--text-secondary)] bg-[var(--surface)]/80 truncate border-t border-[var(--border)]/40 select-text">
+            ${escapeHtml(cell.caption)}
+          </figcaption>` : '');
+
+      cellsHtml += `
+        <div class="ig-cell relative flex flex-col overflow-hidden rounded border border-[var(--border)]/70 bg-[var(--surface)] ${selected ? 'ring-2 ring-purple-500' : ''}" data-cell-index="${i}" style="${spanStyle}">
+          <div class="w-full flex-1 min-h-0 overflow-hidden flex items-center justify-center">
+            ${imgHtml}
+          </div>
+          ${captionHtml}
+        </div>
+      `;
     });
     return `<div class="image-grid-canvas w-full grid gap-1.5" style="grid-template-columns: ${colsTemplate}; grid-template-rows: ${rowsTemplate}; grid-auto-flow: dense;${isEditView ? ' min-height: 240px;' : ''}">${cellsHtml}</div>`;
   }
@@ -301,6 +319,12 @@ export function renderImageBlock(
             <input type="number" min="10" max="100" step="5" class="fit-percent-input w-11 h-5 text-center font-mono text-xs font-semibold text-[var(--text)] bg-transparent border-none outline-none p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" placeholder="50-100" value="${currentFitPercent}" />
             <span class="text-[11px] font-mono font-bold text-[var(--text-dim)] select-none">%</span>
           </div>
+
+          <!-- Reset Fit Button -->
+          <button type="button" class="btn-reset-fit notes-ghost-btn h-7 px-2 py-0 text-xs font-semibold rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--text-dim)] hover:text-[var(--text)] flex items-center gap-1 cursor-pointer transition-colors" title="Reset image width to 100%">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><polyline points="3 3 3 8 8 8"/></svg>
+            <span>Reset</span>
+          </button>
 
           <!-- Wrap-Beside UI removed: layout is owned by the Multi-Column orientation container -->
 
@@ -343,6 +367,10 @@ export function renderImageBlock(
             <label class="flex items-center gap-1 cursor-pointer" title="Relative heights of the rows">Row ratios
               <input type="text" class="grid-row-ratios w-24 h-6 text-center font-mono text-xs text-[var(--text)] rounded-md border border-[var(--border)] bg-[var(--surface)] outline-none focus:border-purple-500" value="${currentGrid.rowRatios.join(':')}" placeholder="1:1" spellcheck="false" />
             </label>
+            <button type="button" class="btn-grid-reset-ratios notes-ghost-btn h-6 px-2 py-0 text-[11px] font-semibold flex items-center gap-1" title="Reset grid row and column ratios to 1:1">
+              <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><polyline points="3 3 3 8 8 8"/></svg>
+              <span>Reset Ratios</span>
+            </button>
           </div>
 
           <div class="flex items-center gap-2 flex-wrap">
@@ -377,8 +405,12 @@ export function renderImageBlock(
         <!-- State B: Image Preview (fields are shared below) -->
         <div class="image-active-zone flex flex-col gap-2.5 w-full pt-1">
           <div class="image-preview-card w-full p-3 rounded-xl ${currentBorderState ? 'border border-[var(--border)] bg-[var(--surface)] shadow-xs' : 'border border-transparent bg-transparent'} flex flex-col items-center justify-center overflow-hidden transition-all">
-            <div class="image-preview-fit-box flex justify-center max-w-full transition-all" style="width: ${currentFitPercent}%;">
+            <div class="image-preview-fit-box relative flex justify-center max-w-full transition-all group/fit" style="width: ${currentFitPercent}%;">
               <img src="${escapeHtml(currentUrl)}" alt="Figure Preview" class="w-full h-auto object-contain rounded-lg transition-all" onerror="this.parentElement.innerHTML='<span class=\\'text-amber-400 text-xs p-3\\'>Invalid image data</span>'" />
+              <!-- Canva-Style Drag Resize Handle -->
+              <div class="image-resize-handle absolute top-0 -right-2.5 w-4 h-full cursor-ew-resize flex items-center justify-center group-hover/fit:opacity-100 opacity-60 hover:opacity-100 transition-opacity z-10 touch-none select-none" title="Drag to resize width (Double-click to reset 100%)">
+                <div class="w-1.5 h-10 bg-purple-500 rounded-full shadow-md hover:scale-110 active:scale-125 transition-transform"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -575,6 +607,7 @@ export function renderImageBlock(
       canvasMount?.querySelectorAll('.ig-cell').forEach((cellEl) => {
         const idx = Number(cellEl.getAttribute('data-cell-index'));
         cellEl.addEventListener('click', (e) => {
+          if (e.target.closest('.ig-cell-caption-input')) return;
           e.stopPropagation();
           if (selA === -1) {
             selA = idx;
@@ -599,6 +632,19 @@ export function renderImageBlock(
         cellEl.addEventListener('drop', async (ev) => {
           const file = ev.dataTransfer?.files?.[0];
           await applyGridCellImage(file || ev.dataTransfer?.getData('text'), idx);
+        });
+      });
+
+      canvasMount?.querySelectorAll('.ig-cell-caption-input').forEach((inputEl) => {
+        inputEl.addEventListener('click', (e) => e.stopPropagation());
+        inputEl.addEventListener('focus', (e) => e.stopPropagation());
+        inputEl.addEventListener('input', (e) => {
+          e.stopPropagation();
+          const cellIdx = Number(inputEl.getAttribute('data-cell-index'));
+          if (currentGrid && currentGrid.cells[cellIdx]) {
+            currentGrid.cells[cellIdx].caption = inputEl.value;
+            commitFields();
+          }
         });
       });
 
@@ -642,10 +688,11 @@ export function renderImageBlock(
         currentGrid.rows = r;
         currentGrid.colRatios = normalizeRatios(currentGrid.colRatios, c);
         currentGrid.rowRatios = normalizeRatios(currentGrid.rowRatios, r);
-        const srcs = (currentGrid.cells || []).map((cell) => (cell && !cell.gone) ? (cell.src || '') : '');
+        const oldCells = (currentGrid.cells || []).map((cell) => (cell && !cell.gone) ? { src: cell.src || '', caption: cell.caption || '' } : { src: '', caption: '' });
         currentGrid.cells = [];
         for (let i = 0; i < c * r; i++) {
-          currentGrid.cells.push({ src: srcs[i] || '', mw: 1, mh: 1, gone: false });
+          const old = oldCells[i] || { src: '', caption: '' };
+          currentGrid.cells.push({ src: old.src, caption: old.caption, mw: 1, mh: 1, gone: false });
         }
         selA = -1; selB = -1;
         commitFields();
@@ -671,6 +718,13 @@ export function renderImageBlock(
       editWrap.querySelector('.grid-row-ratios')?.addEventListener('change', (e) => {
         currentGrid.rowRatios = parseRatios(e.target.value, currentGrid.rows);
         e.target.value = currentGrid.rowRatios.join(':');
+        commitFields();
+        renderEditMode();
+      });
+      editWrap.querySelector('.btn-grid-reset-ratios')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        currentGrid.colRatios = normalizeRatios([], currentGrid.cols);
+        currentGrid.rowRatios = normalizeRatios([], currentGrid.rows);
         commitFields();
         renderEditMode();
       });
@@ -759,6 +813,66 @@ export function renderImageBlock(
       fitInput.value = val;
       updateFitWidth(val);
     });
+
+    // Reset Fit Button (reverts width to 100%)
+    editWrap.querySelector('.btn-reset-fit')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (fitInput) fitInput.value = 100;
+      updateFitWidth(100);
+    });
+
+    // Canva-Style Pointer Drag Resize Handle
+    const resizeHandle = editWrap.querySelector('.image-resize-handle');
+    if (resizeHandle && previewFitBox) {
+      let isDragging = false;
+      let startX = 0;
+      let startWidthPct = currentFitPercent;
+      let parentWidth = 1;
+
+      resizeHandle.addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+        if (fitInput) fitInput.value = 100;
+        updateFitWidth(100);
+      });
+
+      resizeHandle.addEventListener('pointerdown', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        isDragging = true;
+        resizeHandle.setPointerCapture(e.pointerId);
+        startX = e.clientX;
+        startWidthPct = currentFitPercent;
+        const parentCard = editWrap.querySelector('.image-preview-card');
+        parentWidth = parentCard ? parentCard.getBoundingClientRect().width : 600;
+        if (parentWidth <= 0) parentWidth = 1;
+        document.body.style.cursor = 'ew-resize';
+      });
+
+      resizeHandle.addEventListener('pointermove', (e) => {
+        if (!isDragging) return;
+        e.stopPropagation();
+        e.preventDefault();
+        const deltaX = (e.clientX - startX) * 2;
+        const deltaPct = (deltaX / parentWidth) * 100;
+        let newPct = Math.round(startWidthPct + deltaPct);
+        newPct = Math.max(10, Math.min(100, newPct));
+        if (fitInput) fitInput.value = newPct;
+        currentFitPercent = newPct;
+        block.width = newPct;
+        if (previewFitBox) previewFitBox.style.width = `${newPct}%`;
+      });
+
+      const stopDrag = (e) => {
+        if (!isDragging) return;
+        isDragging = false;
+        try { resizeHandle.releasePointerCapture(e.pointerId); } catch (_) {}
+        document.body.style.cursor = '';
+        updateFitWidth(currentFitPercent);
+      };
+
+      resizeHandle.addEventListener('pointerup', stopDrag);
+      resizeHandle.addEventListener('pointercancel', stopDrag);
+    }
 
     // Grid Collage Toggle
     editWrap.querySelector('.btn-grid-toggle')?.addEventListener('click', (e) => {

@@ -255,7 +255,7 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 | `createNewBlock(type, options = {})` | 161 - 168 | Instantiates a new note block object with a unique timestamped ID, block type, and default payload schema. |
 | `insertBlockAt(blocks = [], newBlock, targetIndex = -1)` | 175 - 183 | Inserts a block object into a blocks array at a specified index or appends it to the end if index is out of bounds. |
 | `isOrientationContainer(block)` | 189 - 199 | Returns true for Callout ('block'/'theorem') and Multi-Column ('columns'/'multicolumn'/'multi-column') blocks — the orientation container types that reference members by ID. |
-| `normalizeOrientationRows(block)` | 201 - 222 | Normalizes a container's `members`/`rows`: every member id appears in exactly one row, rows only reference live members, unplaced members append as a trailing row. Returns `{ members, rows }`. |
+| `normalizeOrientationRows(block)` | 201 - 230 | Normalizes a container's `members`/`rows`: every member id appears in exactly one row, rows only reference live members, unplaced members append as a trailing row, and derives proportional `rowRatios` (e.g. 50/50) per row. Returns `{ members, rows, rowRatios }`. |
 
 **Block_History.js**
 
@@ -659,7 +659,7 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
 | `BLOCK_THEME_STYLES` | 14 - 26 | Theme styling dictionary mapping callout environment types (Theorem, Definition, Proof, Lemma, Corollary, Proposition, Example, Remark, Note, Warning, Info) to CSS borders, badges, and colors. |
-| `renderBlockBlock(block, isEditing = false, onUpdate = null, allNotes = [], options = {})` | 30 - 194 | Renders callout/theorem blocks in view mode or interactive edit mode with live preview, environment selector, title input, resizable textarea, highlight synchronization, persistent per-block undo/redo history on content and title inputs (survives Done/reopen cycles), and Orientation container support — reading view renders docked member rows via `renderOrientationMemberRows`, edit mode offers a Configure Layout bar opening the Orientation Manager. |
+| `renderBlockBlock(block, isEditing = false, onUpdate = null, allNotes = [], options = {})` | 30 - 205 | Renders callout/theorem blocks in view mode or interactive edit mode with live preview, environment selector, title input, resizable textarea, highlight synchronization, persistent per-block undo/redo history on content and title inputs (survives Done/reopen cycles), and Orientation container support — reading view renders docked member rows via `renderOrientationMemberRows`, edit mode offers a Configure Layout bar opening the Orientation Manager and a "Reset Widths" button to equalize column widths per row. |
 
 **Block_Dispatcher.js**
 
@@ -700,9 +700,9 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `OpenOrientationModal(containerBlock, note = null, { onCommit = null } = {})` | 78 - 285 | Opens the Orientation Manager dialog: available (undocked) blocks listed by note index with add buttons, layout rows with per-chip reorder (◀ ▶ within row, ▲ ▼ across rows) and remove (un-dock only), add-row support, and Save/Cancel committing `{ members, rows }` back to the container block. Escape/backdrop dismissible. |
-| `CloseOrientationModal()` | 287 - 294 | Removes the modal backdrop and its document key listener. |
-| `renderOrientationMemberRows(containerBlock, options = {})` | 302 - 342 | Renders a container's member rows in view/study mode — each row a flex group of member blocks (equal share) rendered via `renderBlockContent` with per-member `figureInfo`/`eqInfo`/`prefix` from the maps in options, per-member view persistence (task checkboxes) via a scoped onUpdate, and a depth guard against circular nesting. |
+| `OpenOrientationModal(containerBlock, note = null, { onCommit = null } = {})` | 90 - 353 | Opens the Orientation Manager dialog: available (undocked) blocks listed by note index with add buttons, layout rows with per-chip reorder (◀ ▶ within row, ▲ ▼ across rows) and remove (un-dock only), add-row support, per-row percentage width controls (`.row-col-pct-input`) with "Equalize" reset button (`.btn-equalize-row`), and Save/Cancel committing `{ members, rows, rowRatios }` back to the container block. Escape/backdrop dismissible. |
+| `CloseOrientationModal()` | 355 - 361 | Removes the modal backdrop and its document key listener. |
+| `renderOrientationMemberRows(containerBlock, options = {})` | 369 - 490 | Renders a container's member rows in view/study mode — each row rendered with proportional column widths from `rowRatios` (`flex: ${share} ${share} 0%`), interactive draggable column splitters (`.orientation-col-splitter`) allowing live horizontal resizing per row (with double-click reset to equalize), per-member `figureInfo`/`eqInfo`/`prefix` from options, per-member view persistence (task checkboxes) via scoped onUpdate, and depth guard against circular nesting. |
 
 **Block_Textarea.js**
 
@@ -781,7 +781,7 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 | :--- | :--- | :--- |
 | `processAndCompressImage(fileOrDataUrl)` | 16 - 65 | Downsamples and compresses raster images (PNG/JPG) using an off-screen canvas, keeping vector SVGs intact. |
 | `compressRasterDataUrl(dataUrl, maxDim, quality)` | 67 - 106 | Internal helper compressing image on canvas to JPEG data URL with dimensions constrained to maxDim. |
-| `renderImageBlock(block, isEditing = false, onUpdate = null, options = {})` | 108 - 833 | Renders image figure block supporting file upload, clipboard paste, URL linking, customizable Fit % width with auto aspect-ratio height, a Grid Collage mode (`block.grid`: N×M cells with click-two-then-Merge rectangle spans, per-column/row `1:2:1` ratio inputs, cover/contain cell fit, per-cell upload/paste/drop/clear, persisted via `block.gridOn`), surrounding border toggle, scientific captioning, and figure numbering. All mutations persist through the shared `commitFields()` helper. |
+| `renderImageBlock(block, isEditing = false, onUpdate = null, options = {})` | 108 - 931 | Renders image figure block supporting file upload, clipboard paste, URL linking, Canva-style draggable edge handle on image preview to resize width percentage in real-time with double-click reset and "Reset" button (reverting to 100%), a Grid Collage mode (`block.grid`: N×M cells with click-two-then-Merge rectangle spans, per-column/row `1:2:1` ratio inputs with a "Reset Ratios" button, cover/contain cell fit, per-cell subcaption inputs matching cell width with global figure caption intact below, per-cell upload/paste/drop/clear, persisted via `block.gridOn`), surrounding border toggle, scientific captioning, and figure numbering. All mutations persist through the shared `commitFields()` helper. |
 
 **Multi_Column_Block.js** *(rewritten — reference-model orientation container)*
 
@@ -795,8 +795,8 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `getGridTemplate(layout, colCount)` | 13 - 26 | Parses legacy ratio keys ('50-50', '33-33-33', '70-30', '25-25-25-25', …) into grid-template-columns values for single-row layouts. |
-| `renderMultiColumnBlock(block, isEditing = false, onUpdate = null, allNotes = [], options = {})` | 38 - 137 | Orientation container (reference model): reading/study view renders member rows — a single row honors `block.layout` ratios as a CSS grid, multiple rows stack as flex groups — via `renderOrientationMemberRows`; edit mode renders a compact card (block/row summary + Configure Layout button opening the Orientation Manager) while docked members stay editable in the main flow. Legacy `cols[]` data is migrated by `00_State.js`. |
+| `getGridTemplate(layout, colCount)` | 19 - 32 | Parses legacy ratio keys ('50-50', '33-33-33', '70-30', '25-25-25-25', …) into grid-template-columns values for single-row layouts. |
+| `renderMultiColumnBlock(block, isEditing = false, onUpdate = null, allNotes = [], options = {})` | 38 - 145 | Orientation container (reference model): reading/study view renders member rows via `renderOrientationMemberRows` with proportional column widths (`rowRatios`), live draggable column splitters between columns, and per-member rendering; edit mode renders a compact card (block/row summary, a "Reset Widths" button to equalize row ratios, and a Configure Layout button opening the Orientation Manager) while docked members stay editable in the main flow. Legacy `cols[]` data is migrated by `00_State.js`. |
 
 **Table_Block.js**
 
