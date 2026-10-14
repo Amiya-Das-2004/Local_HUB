@@ -9,7 +9,7 @@
 // by Index.html.
 
 export function InitTabLogoOverride() {
-  const brandLink = document.querySelector('.icb-global-nav .icb-brand');
+  const brandLink = document.getElementById('logo-btn') || document.querySelector('.icb-global-nav .icb-brand');
   if (!brandLink) return;
   const clone = brandLink.cloneNode(true); // clone drops any shared listener
   brandLink.replaceWith(clone);

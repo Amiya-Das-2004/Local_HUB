@@ -218,20 +218,55 @@ export const createLiveWidget = (type, raw, contentHtml = '', options = {}) => {
     span.title = 'Only works inside $...$ math — wrap it: $' + (raw || '') + '$';
     span.innerHTML = escapeHtml(raw || `\\cite{${contentHtml || ''}}`);
   } else if (type === 'wikilink') {
-    const targetTitle = (contentHtml || '').trim();
+    // [[Note]] / [[Note^blockRef]] — click opens the draggable reading-mode popup,
+    // Ctrl+Click opens the note in a new browser tab, Alt+Click expands to raw text.
+    const inner = (contentHtml || '').trim();
+    const caretIdx = inner.indexOf('^');
+    const noteName = (caretIdx === -1 ? inner : inner.slice(0, caretIdx)).trim();
+    const blockRef = caretIdx !== -1 ? inner.slice(caretIdx + 1).trim() : '';
     const target = (allNotes || []).find(n =>
-      (n.title && n.title.toLowerCase() === targetTitle.toLowerCase()) ||
-      n.id === targetTitle ||
-      (n.slug && n.slug.toLowerCase() === targetTitle.toLowerCase())
+      (n.title && n.title.toLowerCase() === noteName.toLowerCase()) ||
+      n.id === noteName ||
+      (n.slug && n.slug.toLowerCase() === noteName.toLowerCase())
     );
-    span.className = `live-widget live-wikilink ${target ? 'text-purple-400 hover:text-purple-300 font-semibold underline decoration-dotted decoration-purple-500' : 'text-gray-400 italic'} inline-flex items-center align-middle cursor-pointer select-text`;
-    span.title = target ? `Jump to note: ${targetTitle}` : `Note "${targetTitle}" does not exist yet`;
-    span.textContent = targetTitle;
-    if (isViewMode && target) {
+    const resolved = !!target;
+
+    let refBadge = '';
+    let shortRef = '';
+    if (resolved && blockRef) {
+      const blocks = target.blocks || [];
+      const idx = blocks.findIndex(b => b && b.id === blockRef);
+      shortRef = idx !== -1 ? String(idx + 1) : (/^\d+$/.test(blockRef) ? blockRef : '');
+      if (shortRef) refBadge = ` <span class="text-[9px] font-mono opacity-60" title="Block ${shortRef}">¶${escapeHtml(shortRef)}</span>`;
+    }
+
+    span.className = `live-widget live-wikilink inline-flex items-center align-middle gap-0.5 select-text ${resolved
+      ? 'text-purple-400 hover:text-purple-300 font-semibold underline decoration-dotted decoration-purple-500 hover:decoration-solid cursor-pointer'
+      : 'text-gray-400 italic'}`;
+    span.title = resolved
+      ? `Click: open "${noteName}" in the reader popup • Ctrl+Click: new browser tab${blockRef ? ` • jumps to block ${shortRef || blockRef}` : ''}`
+      : `Note "${noteName}" does not exist yet`;
+    span.innerHTML = `${escapeHtml(noteName || '(empty)')}${refBadge}`;
+
+    if (resolved) {
       span.addEventListener('click', (e) => {
         e.stopPropagation();
-        window.location.hash = `#Notes?id=${encodeURIComponent(target.id)}`;
+        e.preventDefault();
+        if (e.ctrlKey || e.metaKey) {
+          // Lazy-loaded: importing the popup statically would create a module cycle
+          // (Text_Widgets → Wiki_Link_Popup → Block_Dispatcher → Text_Block → here)
+          import('./Wiki_Link_Popup.js').then((m) => {
+            if (e.ctrlKey || e.metaKey) window.open(m.wikiLinkTabUrl(target.id, blockRef), '_blank');
+            else m.openWikiNotePopup(target.id, blockRef);
+          });
+        } else if (e.altKey && !isViewMode && options.onExpand) {
+          options.onExpand(span);
+        } else {
+          import('./Wiki_Link_Popup.js').then((m) => m.openWikiNotePopup(target.id, blockRef));
+        }
       });
+    } else if (isViewMode) {
+      span.addEventListener('click', (e) => e.stopPropagation());
     }
   } else if (type === 'bullet') {
     // Bullet marker vertically centered with vertical-align: middle
@@ -255,7 +290,8 @@ export const createLiveWidget = (type, raw, contentHtml = '', options = {}) => {
 
   // Reference badges (\fig, \eq) navigate on click via the document-level citation
   // handlers — they must NOT expand to raw tokens on click, so skip onExpand for them.
-  if (!isViewMode && onExpand && type !== 'fig' && type !== 'eq') {
+  // Wikilinks own their click too (popup / Ctrl+Click new tab / Alt+Click raw edit).
+  if (!isViewMode && onExpand && type !== 'fig' && type !== 'eq' && type !== 'wikilink') {
     span.addEventListener('click', (e) => {
       e.stopPropagation();
       onExpand(span);

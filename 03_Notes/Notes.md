@@ -60,6 +60,8 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 │   │   ├── Text_Block/                     ← Specialized text block submodules
 │   │   │   ├── Cite_Autocomplete.js        ← Autocomplete popup for \cite{} references
 │   │   │   ├── Cite_Preview.js             ← Hover tooltip showing citation bibliography details
+│   │   │   ├── Wiki_Link_Autocomplete.js   ← Obsidian-style [[ note + ^block suggester popup
+│   │   │   ├── Wiki_Link_Popup.js          ← Draggable reading-mode note reader for [[wiki-links]]
 │   │   │   ├── Text_Block_Markdown.js      ← Real-time inline markdown renderer
 │   │   │   ├── Text_Keyboard.js            ← Keyboard shortcuts (multiline tab/indent, bullets)
 │   │   │   ├── Text_Parser.js              ← Fast markdown AST tokenizer and segmenter
@@ -143,7 +145,7 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 
 | Import Location | Functions Imported | used in Functions |
 | :--- | :--- | :--- |
-| `./Writing_Engine/Math_Renderer.js` | `formatRichTextWithMath` | `formatNoteDescription()` |
+| *(None — Pure leaf utility)* | — | — |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
@@ -975,7 +977,7 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
 | `renderBulletIcon(prefix)` | 110 - 120 | Compiles and renders bullet icon markup for unordered, ordered, or custom LaTeX list markers. |
-| `createLiveWidget(type, raw, contentHtml, options)` | 122 - 262 | Creates live interactive inline DOM widgets with seamless text selection (select-text) for math ($...$), formatting (**bold**, *italic*, <u>underline</u>), code (`code`), or inert literal tokens (`littex`). \fig, \eq, \cite, \href, \url function ONLY inside $...$ math (rendered by renderKatex preprocessing as real links/badges with data attrs for the delegated navigation/preview handlers); bare occurrences render as dim literal `littex` tokens. |
+| `createLiveWidget(type, raw, contentHtml, options)` | 122 - 290 | Creates live interactive inline DOM widgets with seamless text selection (select-text) for math ($...$), formatting (**bold**, *italic*, <u>underline</u>), code (`code`), or inert literal tokens (`littex`). `wikilink` (`[[Note]]` / `[[Note^blockRef]]`) renders a purple chip with a ¶index badge — click opens the draggable reading-mode popup (`Wiki_Link_Popup.js`, lazy import), Ctrl+Click opens the note in a new browser tab, Alt+Click expands to raw. \fig, \eq, \cite, \href, \url function ONLY inside $...$ math (rendered by renderKatex preprocessing as real links/badges with data attrs for the delegated navigation/preview handlers); bare occurrences render as dim literal `littex` tokens. |
 
 **Cite_Autocomplete.js**
 
@@ -1009,6 +1011,37 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 | `hideCitePreview()` | 124 - 126 | Hides the floating citation details dock. |
 
 Delegated document-level `mouseover`/`click` listeners (registered once, marker-guarded, lines 133 - 175) drive hover previews and click-to-pin behavior across edit and view/study modes.
+
+**Wiki_Link_Autocomplete.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| `../../../00_State.js` | `NotesState` | `findNoteByName()`, `renderWikiAcMatches()` |
+| `./Text_Keyboard.js` | `checkAutoCollapseTokensNearCaret` | `acceptWikiAcActive()` |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `ensureWikiAcPopup()` / `hideWikiAutocomplete()` | 29 - 53 | Caret-anchored suggestion popup (module singleton) + state reset. |
+| `findNoteByName(name)` | 56 - 65 | Case-insensitive note lookup: exact title > slug > id > title startsWith. |
+| `readWikiContext(liveSurface)` | 77 - 102 | Detects `[[query` / `[[Note^blockQuery` before the caret; resolves the target note for the `^` stage. |
+| `renderWikiAcMatches(...)` / `acceptWikiAcActive(...)` | 104 - 213 | Note list (title + folder) and block list (index, type, snippet); note accept inserts `[[Title]]` with the caret inside (typing `^` opens the block list), block accept inserts the reference and auto-hydrates the widget via `checkAutoCollapseTokensNearCaret`. |
+| `maybeShowWikiAutocomplete(...)` | 242 - 268 | Input-event entry point (skips raw block editors). |
+| `handleWikiAutocompleteKeydown(...)` | 273 - 312 | ArrowUp/Down navigation, Enter/Tab accept, Escape dismiss. |
+
+**Wiki_Link_Popup.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| `../../../00_State.js` | `NotesState` | `findWikiTargetNote()`, `renderWikiNoteBody()` |
+| `../Block_Dispatcher.js` | `renderBlockContent` | `renderWikiNoteBody()` |
+| `../../../Writing_Engine/Numbering_Engine.js` | `computeHeadingPrefixes`, `computeFigureNumbers`, `computeEquationNumbers` | `renderWikiNoteBody()` |
+| `../../../Writing_Engine/Math_Renderer.js` | `setActiveFigureTagMap`, `setActiveEquationTagMap`, `setActiveCitationMap` | `renderWikiNoteBody()` |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `wikiLinkTabUrl(noteId, blockRef)` | 22 - 27 | Builds the new-tab URL (`#Notes?id=…&goto=…`) used by Ctrl+Click and the panel's ↗ button. |
+| `openWikiNotePopup(noteId, blockRef)` | 153 - 197 | Opens/refocuses the draggable reading-mode panel: header (drag + ↗ tab + ✕ close), body renders every block via `renderBlockContent` in view mode with per-block figure/eq/prefix maps; `blockRef` (block id or 1-based index) scroll-into-views and pulses that block. |
+| `closeWikiNotePopup()` | 200 - 202 | Hides the panel (Esc also closes). |
 
 ## B_Editor_View/02_Sidebar
 **01_Sidebar_Logo.js**

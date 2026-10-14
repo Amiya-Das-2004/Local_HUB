@@ -267,12 +267,13 @@ handlePageRoute();
   clearAllTabLocalCaches();
 
   // Brief confirmation pulse on the header Save control
-  const saveBtn = document.querySelector('button[data-action="export-standalone"]');
+  const saveBtn = document.getElementById('save-btn') || document.querySelector('button[data-action="export-standalone"]');
   if (saveBtn) {
     const originalHTML = saveBtn.innerHTML;
-    const originalTip = saveBtn.getAttribute('data-tip');
+    const originalTip = saveBtn.getAttribute('data-tip') || saveBtn.title;
     saveBtn.style.background = '#16a34a';
-    saveBtn.setAttribute('data-tip', 'Saved to file & Cache Cleared!');
+    if (saveBtn.hasAttribute('data-tip')) saveBtn.setAttribute('data-tip', 'Saved to file & Cache Cleared!');
+    saveBtn.title = 'Saved to file & Cache Cleared!';
     saveBtn.innerHTML = `
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;">
         <polyline points="20 6 9 17 4 12"></polyline>
@@ -280,7 +281,10 @@ handlePageRoute();
     `;
     setTimeout(() => {
       saveBtn.style.background = '';
-      if (originalTip) saveBtn.setAttribute('data-tip', originalTip);
+      if (originalTip) {
+        if (saveBtn.hasAttribute('data-tip')) saveBtn.setAttribute('data-tip', originalTip);
+        saveBtn.title = originalTip;
+      }
       saveBtn.innerHTML = originalHTML;
     }, 2000);
   }
@@ -296,4 +300,13 @@ export function InitTabSaveOverride() {
   window.RDSaveButton = Object.assign({}, original, {
     DownloadStandaloneHTML: SaveRDStandalone
   });
+  const btn = document.getElementById('save-btn');
+  if (btn) {
+    const clone = btn.cloneNode(true);
+    btn.replaceWith(clone);
+    clone.addEventListener('click', (e) => {
+      e.preventDefault();
+      SaveRDStandalone();
+    });
+  }
 }

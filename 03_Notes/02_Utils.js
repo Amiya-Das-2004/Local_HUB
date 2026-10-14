@@ -6,8 +6,6 @@
  * - Rich note description formatting (Markdown & LaTeX Math)
  */
 
-import { formatRichTextWithMath } from './Writing_Engine/Math_Renderer.js';
-
 // Sanitizes raw strings by escaping HTML special characters to prevent XSS and layout breaks
 export function escapeHtml(str) {
   return String(str || '')
@@ -38,7 +36,10 @@ export function formatNoteDescription(rawText, { fallbackText = '' } = {}) {
   if (!clean) {
     return fallbackText || '';
   }
-  return formatRichTextWithMath(clean);
+  if (typeof window !== 'undefined' && typeof window.formatRichTextWithMath === 'function') {
+    return window.formatRichTextWithMath(clean);
+  }
+  return escapeHtml(clean);
 }
 
 // ---------- Obsidian-style typed note properties ----------

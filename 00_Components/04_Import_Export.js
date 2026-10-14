@@ -4,11 +4,20 @@ function getActiveTabPage() {
     return String(window.__LOCALHUB_PAGE__).toLowerCase().trim();
   }
   if (typeof document !== 'undefined') {
-    if (document.getElementById('NotesData') && !document.getElementById('LandingPageData') && !document.getElementById('Bookmarks')) {
+    if (document.getElementById('NotesData') && !document.getElementById('LandingPageData') && !document.getElementById('Bookmarks') && !document.getElementById('RDData')) {
       return 'notes';
     }
-    if (document.getElementById('Bookmarks') && !document.getElementById('LandingPageData') && !document.getElementById('NotesData')) {
+    if (document.getElementById('Bookmarks') && !document.getElementById('LandingPageData') && !document.getElementById('NotesData') && !document.getElementById('RDData')) {
       return 'bookmarks';
+    }
+    if (document.getElementById('RDData') && !document.getElementById('LandingPageData') && !document.getElementById('NotesData') && !document.getElementById('Bookmarks')) {
+      return 'rd';
+    }
+    if (window.location && window.location.hash) {
+      const h = window.location.hash.toLowerCase();
+      if (h.startsWith('#rd') || h.startsWith('#r&d')) return 'rd';
+      if (h.startsWith('#bookmarks')) return 'bookmarks';
+      if (h.startsWith('#notes')) return 'notes';
     }
   }
   return null;
@@ -18,7 +27,7 @@ function getActiveTabPage() {
 export function GetImportButtonHTML() {
   const activeTab = getActiveTabPage();
   const tooltip = activeTab
-    ? (activeTab === 'notes' ? 'Import Notes Data (JSON)' : activeTab === 'bookmarks' ? 'Import Bookmarks Data (JSON)' : 'Import Tab Data (JSON)')
+    ? (activeTab === 'notes' ? 'Import Notes Data (JSON)' : activeTab === 'bookmarks' ? 'Import Bookmarks Data (JSON)' : activeTab === 'rd' ? 'Import R&D Data (JSON)' : 'Import Tab Data (JSON)')
     : 'Import Data (JSON)';
   return `
     <style>
@@ -454,7 +463,7 @@ export function TriggerImport(onSuccess = null) {
 export function GetExportButtonHTML() {
   const activeTab = getActiveTabPage();
   const tooltip = activeTab
-    ? (activeTab === 'notes' ? 'Export Notes Data (JSON)' : activeTab === 'bookmarks' ? 'Export Bookmarks Data (JSON)' : 'Export Tab Data (JSON)')
+    ? (activeTab === 'notes' ? 'Export Notes Data (JSON)' : activeTab === 'bookmarks' ? 'Export Bookmarks Data (JSON)' : activeTab === 'rd' ? 'Export R&D Data (JSON)' : 'Export Tab Data (JSON)')
     : 'Export All Vault Data (JSON)';
   return `
     <button class="notes-icon-btn" id="btn-export" type="button" title="${tooltip}">
@@ -561,6 +570,46 @@ export function TriggerExport() {
     const a = document.createElement('a');
     a.href = url;
     a.download = 'Bookmarks_DATA.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    return;
+  }
+
+  if (activeTab === 'rd') {
+    let foundData = null;
+    if (typeof window !== 'undefined' && window.RDState && typeof window.RDState === 'object') {
+      foundData = window.RDState.rd || window.RDState;
+    }
+    if (!foundData) {
+      const script = document.getElementById('RDData');
+      if (script && script.textContent.trim()) {
+        try {
+          const parsed = JSON.parse(script.textContent);
+          foundData = (parsed && parsed.rd) ? parsed.rd : parsed;
+        } catch (e) { }
+      }
+    }
+    if (!foundData) {
+      try {
+        const cached = typeof localStorage !== 'undefined' ? localStorage.getItem('rd_library_v1') : null;
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          foundData = (parsed && parsed.rd) ? parsed.rd : parsed;
+        }
+      } catch (e) { }
+    }
+    const cleanData = (foundData && typeof foundData === 'object') ? JSON.parse(JSON.stringify(foundData)) : {};
+    if (!Array.isArray(cleanData.items)) cleanData.items = [];
+    cleanData._lastSaved = now;
+
+    const dataStr = JSON.stringify({ rd: cleanData }, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'RD_DATA.json';
     document.body.appendChild(a);
     a.click();
     a.remove();

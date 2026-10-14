@@ -177,7 +177,7 @@ export function LoadNotesState(forceReload = false) {
   const dataBlock = typeof document !== 'undefined' ? document.getElementById('NotesData') : null;
   let domState = null;
 
-  if (dataBlock && dataBlock.textContent.trim()) {
+  if (dataBlock && typeof dataBlock.textContent === 'string' && dataBlock.textContent.trim()) {
     try {
       const parsedDom = JSON.parse(dataBlock.textContent);
       if (parsedDom && typeof parsedDom === 'object') {

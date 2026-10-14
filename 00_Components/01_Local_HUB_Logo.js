@@ -61,6 +61,30 @@ const LOGO_VARIANTS = {
           <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
         </svg>
 `
+  },
+  rd: {
+    title: 'Local <span style="color:var(--accent, #8b6dff);">HUB</span>',
+    subtitle: 'R&D LIBRARY',
+    accent: null,
+    markColor: 'var(--accent, #8b6dff)',
+    markHover: 'var(--accent-hover, #704dff)',
+    subtitleColor: 'var(--accent, #8b6dff)',
+    subtitleOpacity: '1',
+    subtitleSize: '12px',
+    subtitleWeight: '800',
+    subtitleSpacing: '0.16em',
+    tooltip: 'Back to Landing Page',
+    markSvg: `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9.3 2.6h5.4"/>
+          <path d="M10.6 2.6v5.5L4.9 18.4a2.25 2.25 0 0 0 2 3.3h10.2a2.25 2.25 0 0 0 2-3.3L13.4 8.1V2.6"/>
+          <path d="M7.3 14.6h9.4"/>
+          <circle cx="10.9" cy="17.5" r=".55" fill="currentColor" stroke="none"/>
+          <circle cx="13.7" cy="18.7" r=".4" fill="currentColor" stroke="none"/>
+          <circle cx="15" cy="1.4" r=".85"/>
+          <circle cx="17.6" cy="3.4" r=".5"/>
+        </svg>
+`
   }
 };
 

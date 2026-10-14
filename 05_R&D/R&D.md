@@ -24,7 +24,7 @@ Modular Vanilla JS extraction of `workspace-a37acb61-8e9d-446b-84c9-92facd3a1b79
 ├── 03_Seed_Data.js                        ← Default color palettes, layout configs, and starter library dataset
 │
 ├── 01_HTML_Page/                          ← App shell components
-│   ├── 01_Header.js                       ← Top bar, view switchers (List, Timeline, Map), queue badge, theme, Save HTML
+│   ├── 01_Header.js                       ← Local HUB R&D Logo (left), View switchers (center), Import/Export/Save/Theme (right)
 │   ├── 02_Navbar.js                       ← Sub-navbar deprecated in v2.0 (view switchers promoted to header)
 │   ├── 03_Toolbar.js                      ← Search input, #chartToggleBtn, filters, sort selector, bulk selection bar
 │   └── 04_Footer.js                       ← Bottom stats and quick actions
@@ -120,7 +120,7 @@ The following tables document where every modular JS file derives its logic and 
 
 | Target File | Exported Symbols / Functions | Source / Feature | Description |
 | :--- | :--- | :--- | :--- |
-| `01_Header.js` | `GetHeaderHTML()`, `RenderHeader()`, `InitHeader()` | Header Actions | Sticky top header, integrated SVG view switchers (`List`, `Timeline`, `Map`), queue badge, Save HTML. |
+| `01_Header.js` | `GetHeaderHTML()`, `RenderHeader()`, `InitHeader()` | Header Actions | Bookmarks-aligned hybrid header: Local HUB R&D logo (left), view switchers (center: `List`, `Timeline`, `Map`), shared Import, Export, Save, Theme Toggle (right). |
 | `02_Navbar.js` | `GetTabbarHTML()`, `SwitchTab()`, `CurrentTab()` | Sub-navbar | Sub-navbar removed from DOM; `SwitchTab()` controller powers header buttons and view activation. |
 | `03_Toolbar.js` | `GetToolbarHTML()`, `#chartToggleBtn`, `InitToolbar()` | Toolbar | Search filter, `#chartToggleBtn` reading dashboard toggle, type chips, sort selector, bulk selection bar. |
 | `04_Footer.js` | `GetFooterHTML()`, `RenderFooter()` | Footer | Bottom status bar and quick library reset / health summary triggers. |

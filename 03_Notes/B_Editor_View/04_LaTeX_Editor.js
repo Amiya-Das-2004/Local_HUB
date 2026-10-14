@@ -702,6 +702,28 @@ export function RenderLaTeXEditor(container, noteId, isEditMode = true) {
     }
   });
 
+  // Wiki-link deep link: #Notes?id=...&goto=<blockId|index> scrolls to that block once.
+  try {
+    const h = window.location.hash || '';
+    const qIdx = h.indexOf('?');
+    const gotoRef = qIdx !== -1 ? (new URLSearchParams(h.slice(qIdx + 1))).get('goto') : null;
+    if (gotoRef) {
+      const blocks = note.blocks || [];
+      let gIdx = blocks.findIndex(b => b && b.id === gotoRef);
+      if (gIdx === -1 && /^\d+$/.test(gotoRef)) gIdx = parseInt(gotoRef, 10) - 1;
+      if (gIdx >= 0 && gIdx < blocks.length) {
+        setTimeout(() => {
+          const target = blocksContainer.querySelector(`[data-block-index="${gIdx}"]`);
+          if (target) {
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            target.classList.add('ring-2', 'ring-sky-400', 'ring-offset-2', 'ring-offset-[var(--card)]', 'transition-all', 'duration-300');
+            setTimeout(() => target.classList.remove('ring-2', 'ring-sky-400', 'ring-offset-2', 'ring-offset-[var(--card)]'), 1800);
+          }
+        }, 250);
+      }
+    }
+  } catch (_) { /* goto param optional */ }
+
   // Clean up any existing theme observer on container
   if (container.__themeObserver) {
     container.__themeObserver.disconnect();

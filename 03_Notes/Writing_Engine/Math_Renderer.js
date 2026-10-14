@@ -576,7 +576,7 @@ export function renderKatex(tex, isDisplayMode = false, noteContext = null) {
       // Numbered $$...$$ inside text blocks: wrap the compiled math with its far-right
       // number badge + anchor so \eqref{}/\ref{} jumps land on this exact equation.
       if (textEqEntry) {
-        rendered = `<div class="flex items-center w-full my-1" data-eq-block-id="${escapeHtml(textEqEntry.blockId)}"><div class="min-w-0 flex-1 flex justify-center overflow-x-auto" style="scrollbar-width: thin;">${rendered}</div><span class="eq-number-badge flex-shrink-0 text-xs font-mono text-[var(--text)] select-none min-w-[3rem] text-right" data-eq-badge="${escapeHtml(textEqEntry.label)}">(${escapeHtml(textEqEntry.label)})</span></div>`;
+          rendered = `<div class="flex items-center w-full my-1" data-eq-block-id="${escapeHtml(textEqEntry.blockId)}"><div class="min-w-0 flex-1 flex justify-center overflow-x-auto" style="scrollbar-width: thin; overflow-y: hidden;">${rendered}</div><span class="eq-number-badge flex-shrink-0 text-xs font-mono text-[var(--text)] select-none min-w-[3rem] text-right" data-eq-badge="${escapeHtml(textEqEntry.label)}">(${escapeHtml(textEqEntry.label)})</span></div>`;
       }
       if (katexCache.size >= MAX_KATEX_CACHE) {
         const firstKey = katexCache.keys().next().value;
@@ -853,4 +853,8 @@ function parseInlineMarkdownAndLatex(str) {
   // Markdown `code`
   s = s.replace(/`([^`]+)`/g, '<code class="note-inline-code">$1</code>');
   return s;
+}
+
+if (typeof window !== 'undefined') {
+  window.formatRichTextWithMath = formatRichTextWithMath;
 }

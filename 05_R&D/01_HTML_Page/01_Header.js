@@ -1,49 +1,45 @@
 // ============================================================
 // R&D Library — 01_HTML_Page/01_Header.js
-// Header bar: global nav cluster (flask identity, active), count
-// chip, and SVG-only action controls with tooltips (UI spec §16/25).
+// Header bar: Local HUB R&D Logo (left), View Switcher (center),
+// Import, Export, Save, Theme Toggle (right).
+// Conforms directly to the Local_HUB shared component architecture.
 // ============================================================
 
 import { ICONS } from '../01_Utils.js';
-import { GetAllItems, VisibleItems, QueueItems } from '../00_State.js';
 import { CurrentTab } from './02_Navbar.js';
-import { GlobalNavHTML, EnsureIconButtonStyles } from '../../00_Components/09_Icon_Button.js';
+import { GetLogoHTML, InitLogoLogic } from '../../00_Components/01_Local_HUB_Logo.js';
+import { GetThemeToggleHTML, InitThemeToggleLogic } from '../../00_Components/02_Theme_Toggle.js';
+import { GetImportButtonHTML, GetExportButtonHTML, InitImportExport } from '../../00_Components/04_Import_Export.js';
+import { GetSaveButtonHTML, InitSaveButtonLogic } from '../../00_Components/05_Save_Button.js';
 
 export function GetHeaderHTML() {
-  EnsureIconButtonStyles();
   const cur = CurrentTab();
   return `
-    <header class="rd-header">
-      <div class="rd-header-inner">
-        ${GlobalNavHTML({ active: 'rd', accent: '#8b6dff', cls: 'rd-global-nav' })}
-        <span class="rd-count-chip" id="rd-header-count"></span>
-        <div class="rd-header-actions">
+    <header class="app-header rd-header">
+      <div class="header-inner rd-header-inner">
+        <div class="header-left">
+          ${GetLogoHTML({ variant: 'rd' })}
+        </div>
+
+        <div class="header-center">
           <div class="rd-view-switcher" role="tablist" aria-label="View mode">
             <button type="button" class="rd-view-btn ${cur === 'list' ? 'active' : ''}" data-action="switch-tab" data-tab="list" id="btnViewList" title="List view (1)" aria-label="List view">
-              ${ICONS.list}
+              ${ICONS.list}<span>List</span>
             </button>
             <button type="button" class="rd-view-btn ${cur === 'timeline' ? 'active' : ''}" data-action="switch-tab" data-tab="timeline" id="btnViewTimeline" title="Timeline view (2)" aria-label="Timeline view">
-              ${ICONS.clock}
+              ${ICONS.clock}<span>Timeline</span>
             </button>
             <button type="button" class="rd-view-btn ${cur === 'map' ? 'active' : ''}" data-action="switch-tab" data-tab="map" id="btnViewMap" title="Mind map view (3)" aria-label="Mind map view">
-              ${ICONS.network}
+              ${ICONS.network}<span>Map</span>
             </button>
           </div>
-          <span class="rd-header-sep" style="width:1px;height:20px;background:var(--border);margin:0 4px;opacity:0.6;"></span>
-          <button class="icb-btn" data-action="toggle-queue" id="rd-queue-btn" data-tip="Reading queue (Q) — what to read next" aria-label="Reading queue">
-            ${ICONS.queue}<span class="rd-queue-badge" id="rd-queue-badge" hidden></span>
-          </button>
-          <button class="icb-btn" data-action="open-palette" data-tip="Search — command palette (Ctrl+K)" aria-label="Open command palette">
-            ${ICONS.search}
-          </button>
-          <button class="icb-btn" data-action="show-help" id="rd-help-btn" data-tip="Help &amp; keyboard shortcuts (?)" aria-label="Help and keyboard shortcuts">${ICONS.help}</button>
-          <button class="icb-btn" data-action="toggle-theme" id="rd-theme-btn" data-tip="Change theme" aria-label="Change theme">
-            <svg class="theme-icon-dark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-            <svg class="theme-icon-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="18.36" y2="21"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-          </button>
-          <button class="icb-btn icb-accent" data-action="export-standalone" data-tip="Save HTML — library + app in one offline file" aria-label="Save standalone HTML">
-            ${ICONS.download}
-          </button>
+        </div>
+
+        <div class="header-right">
+          ${GetImportButtonHTML()}
+          ${GetExportButtonHTML()}
+          ${GetSaveButtonHTML()}
+          ${GetThemeToggleHTML()}
         </div>
       </div>
     </header>
@@ -51,18 +47,6 @@ export function GetHeaderHTML() {
 }
 
 export function RenderHeader() {
-  const all = GetAllItems().length;
-  const vis = VisibleItems().length;
-  const countEl = document.getElementById('rd-header-count');
-  if (countEl) {
-    countEl.textContent = vis === all ? `${all} item${all === 1 ? '' : 's'}` : `${vis} of ${all}`;
-  }
-  const queueBadge = document.getElementById('rd-queue-badge');
-  if (queueBadge) {
-    const qCount = QueueItems().length;
-    queueBadge.textContent = String(qCount);
-    queueBadge.hidden = qCount === 0;
-  }
   const cur = CurrentTab();
   const listBtn = document.getElementById('btnViewList');
   if (listBtn) listBtn.classList.toggle('active', cur === 'list');
@@ -72,9 +56,35 @@ export function RenderHeader() {
   if (mapBtn) mapBtn.classList.toggle('active', cur === 'map');
 }
 
-export function InitHeader() {
+export function InitHeader(container) {
+  if (container) {
+    container.innerHTML = GetHeaderHTML();
+  }
+  InitLogoLogic();
+  InitImportExport();
+  InitThemeToggleLogic();
+  InitSaveButtonLogic();
   RenderHeader();
+
+  const header = document.querySelector('.rd-header, .app-header');
+  if (header) {
+    const updateHeaderH = () => {
+      const h = header.offsetHeight;
+      if (h > 0) document.documentElement.style.setProperty('--header-height', `${h}px`);
+    };
+    updateHeaderH();
+    if (window.ResizeObserver) {
+      new ResizeObserver(entries => {
+        for (const entry of entries) {
+          const h = entry.borderBoxSize ? entry.borderBoxSize[0].blockSize : header.offsetHeight;
+          if (h > 0) document.documentElement.style.setProperty('--header-height', `${h}px`);
+        }
+      }).observe(header);
+    }
+  }
 }
+
+export { InitSaveButtonLogic, InitImportExport };
 
 if (typeof window !== 'undefined') {
   window.RDHeader = {

@@ -11,6 +11,7 @@ import {
   SetGroupOrder,
   SetUI,
   VisibleItems,
+  QueueItems,
   BulkUpdate,
   BulkDelete,
   ReplaceAll,
@@ -343,6 +344,12 @@ export function GetToolbarHTML() {
               data-tip="Stats &amp; Activity — toggle the research dashboard" aria-label="Toggle research dashboard" aria-pressed="${isDashOpen ? 'true' : 'false'}">
         ${ICONS.chart}
       </button>
+      <button class="icb-btn rd-dashboard-toggle-btn" data-action="toggle-queue" id="rd-queue-btn" data-tip="Reading queue (Q) — what to read next" aria-label="Reading queue">
+        ${ICONS.queue}<span class="rd-queue-badge" id="rd-queue-badge" hidden></span>
+      </button>
+      <button class="icb-btn rd-dashboard-toggle-btn" data-action="show-help" id="rd-help-btn" data-tip="Help &amp; keyboard shortcuts (?)" aria-label="Help and keyboard shortcuts">
+        ${ICONS.help}
+      </button>
       <div class="rd-search-box">
         ${ICONS.search}
         <input type="text" id="rd-search-input" placeholder="Search title, author, journal, tag...  ( / )"
@@ -447,6 +454,12 @@ export function RenderToolbarLabels() {
   document.querySelectorAll('.rd-tab-panel').forEach((p) => {
     p.classList.toggle('active', p.id === 'panel-' + RD.ui.activeTab);
   });
+  const queueBadge = document.getElementById('rd-queue-badge');
+  if (queueBadge) {
+    const qCount = QueueItems().length;
+    queueBadge.textContent = String(qCount);
+    queueBadge.hidden = qCount === 0;
+  }
 }
 
 export function InitSectionsDropdown() {

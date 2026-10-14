@@ -146,14 +146,16 @@ export function TriggerTabImport(onSuccess = null) {
 export function InitTabImportExportOverride() {
   if (typeof document === 'undefined') return;
   document.addEventListener('click', (e) => {
-    const el = e.target && e.target.closest ? e.target.closest('[data-action]') : null;
+    const el = e.target && e.target.closest ? (e.target.closest('[data-action]') || e.target.closest('#btn-import, #btn-export')) : null;
     if (!el) return;
     const action = el.dataset.action;
-    if (action === 'export-json') {
+    const isExport = action === 'export-json' || el.id === 'btn-export';
+    const isImport = action === 'import-json' || el.id === 'btn-import';
+    if (isExport) {
       e.stopPropagation();
       e.preventDefault();
       TriggerTabExport();
-    } else if (action === 'import-json') {
+    } else if (isImport) {
       e.stopPropagation();
       e.preventDefault();
       TriggerTabImport(null);

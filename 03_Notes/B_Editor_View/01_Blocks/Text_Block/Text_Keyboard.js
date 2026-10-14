@@ -102,7 +102,7 @@ export const checkAutoCollapseTokensNearCaret = ({ editModeOptions, hideKatexPil
     { type: 'fig', regex: /(\\fig\{([^}]+)\})\s*$/ },
     { type: 'cite', regex: /(\\cite\{([^}]*)\})\s*$/ },
     { type: 'eq', regex: /(\\eq\{([^}]+)\})\s*$/ },
-    { type: 'wikilink', regex: /(\[\[([^\]\n\r]+)\]\])\s*$/ }
+    { type: 'wikilink', regex: /(\[\[([^\[\]\n\r]+)\]\])\s*$/ }
   ];
 
   for (let p of patterns) {

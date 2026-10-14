@@ -14,6 +14,7 @@ import { renderKatex } from '../../Writing_Engine/Math_Renderer.js';
 import { attachBlockHistory, recordBlockSnapshot, getCaretTextOffset } from '../../Writing_Engine/Block_History.js';
 import { getBlockActionsHTML, initBlockActions } from './Block_Actions.js';
 import { maybeShowCiteAutocomplete, handleCiteAutocompleteKeydown, hideCiteAutocomplete } from './Text_Block/Cite_Autocomplete.js';
+import { maybeShowWikiAutocomplete, handleWikiAutocompleteKeydown, hideWikiAutocomplete } from './Text_Block/Wiki_Link_Autocomplete.js';
 import { hideCitePreview } from './Text_Block/Cite_Preview.js';
 
 import {
@@ -530,6 +531,10 @@ export function renderTextBlock(
     if (handleCiteAutocompleteKeydown(e, liveSurface, editModeOptions, hideKatexPill, triggerUpdate)) {
       return;
     }
+    // [[ wiki-link autocomplete interception (notes + ^ block references)
+    if (handleWikiAutocompleteKeydown(e, liveSurface, editModeOptions, triggerUpdate)) {
+      return;
+    }
     handleTextBlockKeyDown(e, {
       liveSurface,
       editModeOptions,
@@ -602,6 +607,7 @@ export function renderTextBlock(
         triggerUpdate
       });
       maybeShowCiteAutocomplete(liveSurface, editModeOptions, hideKatexPill, triggerUpdate);
+      maybeShowWikiAutocomplete(liveSurface, editModeOptions, triggerUpdate);
     }
     triggerUpdate();
   });

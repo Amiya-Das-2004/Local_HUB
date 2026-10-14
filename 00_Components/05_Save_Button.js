@@ -302,6 +302,8 @@ export async function SaveAndDownloadApp() {
       '03_Notes/B_Editor_View/01_Blocks/Text_Block/Text_Keyboard.js',
       '03_Notes/B_Editor_View/01_Blocks/Text_Block/Cite_Autocomplete.js',
       '03_Notes/B_Editor_View/01_Blocks/Text_Block/Cite_Preview.js',
+      '03_Notes/B_Editor_View/01_Blocks/Text_Block/Wiki_Link_Autocomplete.js',
+      '03_Notes/B_Editor_View/01_Blocks/Text_Block/Wiki_Link_Popup.js',
       '03_Notes/B_Editor_View/01_Blocks/Text_Block/Text_Block_Markdown.js',
       '03_Notes/B_Editor_View/01_Blocks/Text_Block.js',
       '03_Notes/B_Editor_View/01_Blocks/Equation_Block.js',

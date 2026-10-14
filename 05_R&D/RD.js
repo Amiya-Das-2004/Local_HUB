@@ -282,12 +282,20 @@ export function RenderAll() {
 
 export function ApplyTheme() {
   const root = document.getElementById('rd-root') || document.getElementById('root');
-  const theme = (state.rd.ui && state.rd.ui.theme === 'light') ? 'light' : 'dark';
+  const globalTheme = (typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme'))
+    || (typeof localStorage !== 'undefined' && localStorage.getItem('lh_theme'))
+    || (state.rd.ui && state.rd.ui.theme)
+    || 'dark';
+  const theme = globalTheme === 'light' ? 'light' : 'dark';
+  if (typeof document !== 'undefined') {
+    document.documentElement.setAttribute('data-theme', theme);
+  }
   if (root) root.setAttribute('data-theme', theme);
   const app = document.querySelector('.rd-app');
   if (app) app.setAttribute('data-theme', theme);
-  const btn = document.getElementById('rd-theme-btn');
-  if (btn) btn.title = theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme';
+  if (state.rd && state.rd.ui) state.rd.ui.theme = theme;
+  const btn = document.getElementById('theme-toggle-btn') || document.getElementById('rd-theme-btn');
+  if (btn) btn.title = theme === 'light' ? 'Current: Light Theme (Click for Dark Theme)' : 'Current: Dark Theme (Click for Light Theme)';
 }
 
 export function StartGroupInlineRename(groupId) {
@@ -931,6 +939,7 @@ export function initRDApp(container) {
   const target = container || document.getElementById('rd-root') || document.getElementById('root') || document.body;
   target.innerHTML = GetAppHTML();
 
+  InitHeader();
   InitDelegatedEvents();
   InitToolbar();
   InitTabbar();
