@@ -1,4 +1,4 @@
-import { GetLogoHTML } from './04_Save_Icon_Logo.js';
+import { GetLandingSaveLogoHTML } from './04_Save_Icon_Logo.js';
 
 export function InitFooter(container) {
   // We've moved the layout entirely to traditional CSS here so you can easily control it.
@@ -68,7 +68,7 @@ export function InitFooter(container) {
 
       <div class="footer-left">
         <div class="logo-icon">
-          ${GetLogoHTML()}
+          ${GetLandingSaveLogoHTML()}
         </div>
 
         <div class="logo-title-group">

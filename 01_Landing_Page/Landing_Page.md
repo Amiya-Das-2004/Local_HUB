@@ -33,9 +33,9 @@ Interactive 3D WebGL portal and entry point for the Local_HUB workspace suite. P
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
 | `AppState` | 2 | Master state object holding theme, animation `speedMultiplier`, and registered workspace tabs (`Bookmarks`, `Notes`, `Professors`, `Settings`). |
-| `LoadLandingState()` | 5 - 55 | Hydrates `AppState` from `localStorage` (`landing_page_data` or fallback `local_hub_state`), setting up default tab routing (`#bookmarks`, `#notes`, `#professors`, `#settings`). |
-| `SaveLandingState()` | 61 - 82 | Serializes current `AppState` and persists to `localStorage` and `local_hub_state`. |
-| `ClearLandingLocalCache()` | 85 - 93 | Removes stale tab cache keys from `localStorage` while preserving user settings. |
+| `LoadLandingState()` | 5 - 45 | Hydrates `AppState` strictly from `#LandingPageData` embedded vault, wiping any leftover cache to prevent cross-file contamination. |
+| `SaveLandingState()` | 48 - 65 | Serializes current `AppState` to `#LandingPageData` and calls `window.MarkUnsavedChanges(true)`. |
+| `ClearLandingLocalCache()` | 68 - 76 | Removes stale tab cache keys from `localStorage`. |
 
 ---
 
@@ -89,7 +89,7 @@ Interactive 3D WebGL portal and entry point for the Local_HUB workspace suite. P
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `GetLogoHTML()` | 4 - 18 | Returns SVG logo mark inside `#btn-build` container for the standalone app download button. |
+| `GetLandingSaveLogoHTML()` | 4 - 18 | Returns SVG logo mark inside `#btn-build` container for the standalone app download button. |
 | `InitSaveButtonLandingPageLogic()` | 20 - 27 | Binds click handler to `#btn-build` to invoke `SaveAndDownloadApp()`. |
 
 ---
@@ -126,7 +126,7 @@ Interactive 3D WebGL portal and entry point for the Local_HUB workspace suite. P
 
 | Import Location | Functions Imported | used in Functions |
 | :--- | :--- | :--- |
-| `./04_Save_Icon_Logo.js` | `GetLogoHTML` | `InitFooter` |
+| `./04_Save_Icon_Logo.js` | `GetLandingSaveLogoHTML` | `InitFooter` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |

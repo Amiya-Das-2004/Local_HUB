@@ -249,10 +249,20 @@ export function TriggerImport(onSuccess = null) {
             console.warn('[Notes Import] Failed to cache in localStorage:', err);
           }
 
+          // Mark unsaved changes
+          if (typeof window !== 'undefined' && typeof window.MarkUnsavedChanges === 'function') {
+            window.MarkUnsavedChanges(true);
+          }
+
           alert('Notes imported successfully! Remember to click SAVE to make it permanent in your HTML.');
           if (onSuccess) {
             onSuccess(cleanData);
+          } else if (typeof window !== 'undefined' && typeof window.initNotesApp === 'function') {
+            window.initNotesApp();
+          } else if (typeof window !== 'undefined' && typeof window.handleLocalHubRoute === 'function') {
+            window.handleLocalHubRoute();
           } else {
+            if (typeof window !== 'undefined') window.__SUPPRESS_BEFOREUNLOAD__ = true;
             window.location.reload();
           }
           return;
@@ -302,10 +312,20 @@ export function TriggerImport(onSuccess = null) {
             console.warn('[Bookmarks Import] Failed to cache in localStorage:', err);
           }
 
+          // Mark unsaved changes
+          if (typeof window !== 'undefined' && typeof window.MarkUnsavedChanges === 'function') {
+            window.MarkUnsavedChanges(true);
+          }
+
           alert('Bookmarks imported successfully! Remember to click SAVE to make it permanent in your HTML.');
           if (onSuccess) {
             onSuccess(cleanData);
+          } else if (typeof window !== 'undefined' && typeof window.initBookmarksApp === 'function') {
+            window.initBookmarksApp();
+          } else if (typeof window !== 'undefined' && typeof window.handleLocalHubRoute === 'function') {
+            window.handleLocalHubRoute();
           } else {
+            if (typeof window !== 'undefined') window.__SUPPRESS_BEFOREUNLOAD__ = true;
             window.location.reload();
           }
           return;
@@ -443,11 +463,19 @@ export function TriggerImport(onSuccess = null) {
           }
         }
 
+        // Mark unsaved changes
+        if (typeof window !== 'undefined' && typeof window.MarkUnsavedChanges === 'function') {
+          window.MarkUnsavedChanges(true);
+        }
+
         alert('Data imported successfully! All missing fields were automatically structured. Remember to click SAVE to make it permanent in your HTML.');
 
         if (onSuccess) {
           onSuccess(masterBlocks);
+        } else if (typeof window !== 'undefined' && typeof window.handleLocalHubRoute === 'function') {
+          window.handleLocalHubRoute();
         } else {
+          if (typeof window !== 'undefined') window.__SUPPRESS_BEFOREUNLOAD__ = true;
           window.location.reload();
         }
       } catch (err) {

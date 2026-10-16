@@ -197,6 +197,9 @@ export function persist(silent) {
   }
   if (typeof window !== 'undefined') {
     try { window.RDState = state; } catch (e) { }
+    if (typeof window.MarkUnsavedChanges === 'function') {
+      window.MarkUnsavedChanges(true);
+    }
   }
   syncVault();
   if (!silent && PersistCb) PersistCb();
@@ -212,32 +215,22 @@ export function syncVault() {
 
 export function loadState() {
   const embedded = EmbeddedInitialData();
-  let stored = null;
+
+  // 1. Wipe any stale leftover cache from previous files or sessions
   try {
-    stored = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
-  } catch (e) {
-    stored = null;
-  }
-
-  if (stored && stored.rd) {
-    state = NormalizeState(stored);
-    ui = state.rd.ui;
-    if (
-      embedded && embedded.rd && embedded.rd.meta && embedded.rd.meta.exportedAt &&
-      state.rd.meta.exportedAt && embedded.rd.meta.exportedAt > state.rd.meta.exportedAt &&
-      embedded.rd.meta.exportedAt !== state.rd.meta.embeddedExportedAt
-    ) {
-      state.__pendingEmbedded = embedded;
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(STORE_KEY);
     }
-    return state;
-  }
+  } catch (e) { }
 
+  // 2. Pure load directly from embedded HTML data vault (#RDData)
   if (embedded && embedded.rd) {
     state = NormalizeState(embedded);
     ui = state.rd.ui;
     return state;
   }
 
+  // 3. Clean default fallback
   state = DefaultState();
   ui = state.rd.ui;
   return state;

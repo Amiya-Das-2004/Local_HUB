@@ -109,9 +109,10 @@ Professors/
 | | `ui` | 1353 | In-memory UI state: sort, paperSort, search, statusFilter, tagFilter, collapsed groups, kbIdx, heatYear, expandedProf/Paper, drag state, favOnly, printMode. |
 | | `replaceState(next)` | — (ESM adapter) | Only 00_State may reassign `state`; import handlers/clear-all call this (ES module bindings are read-only for importers). |
 | | `paperPasses(pp)` | 1392 - 1396 | Status-filter + tag-filter gate shared by every renderer. |
-| | `persist()` | 1505 - 1508 | Writes `state` to localStorage; **additionally** syncs the `#ProfessorsData`/`#app-data` vault tag when present (LocalHUB vault convention; original wrote localStorage only). |
+| | `persist()` | 1505 - 1508 | Writes `state` to localStorage, calls `window.MarkUnsavedChanges(true)`, and syncs the `#ProfessorsData`/`#app-data` vault tag when present. |
 | | `isEmptyData(d)` (private) | 1509 - 1511 | True when a data candidate has no professors array content. |
-| | `loadState()` | 1512 - 1536 | Picks the newest of vault/localStorage candidates; respects a deliberate clear; seeds the sample library on first run. Reads `#ProfessorsData` first (original read `#app-data`). |
+| | `loadState()` | 1512 - 1536 | Loads state strictly from the embedded `#ProfessorsData` HTML vault, wiping any leftover machine-local cache to eliminate cross-file contamination; seeds sample library on clean first run. |
+| | `ClearProfessorsLocalCache()` | — | Purges `profftrack:v1` from browser `localStorage`. |
 | | `sanitizeIds()` | 1587 - 1599 | Repairs records saved by older builds (missing ids/status, malformed rereads/journal arrays). |
 | | `getProf(id)` | 1635 - 1638 | Finds a professor by id. |
 | | `upsertProf(data)` | 1639 - 1653 | Creates or updates a professor and persists. |

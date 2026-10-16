@@ -78,14 +78,26 @@ function syncTabStatesToDOM(doc) {
 function clearAllTabLocalCaches() {
   if (typeof localStorage === 'undefined') return;
   try {
+    localStorage.removeItem('profftrack:v1');
+    localStorage.removeItem('rd_library_v1');
+    localStorage.removeItem('PapersData_Local_Cache');
+    localStorage.removeItem('NotesData_Local_Cache');
+    localStorage.removeItem('Bookmarks_Local_Cache');
+    localStorage.removeItem('LandingPageData_Local_Cache');
+  } catch (e) { }
+
+  try {
     for (let i = localStorage.length - 1; i >= 0; i--) {
       const key = localStorage.key(i);
       if (key && (key.endsWith('_Local_Cache') || key.includes('_Cache'))) {
         localStorage.removeItem(key);
       }
     }
-    localStorage.removeItem('rd_library_v1');
   } catch (e) { }
+
+  if (typeof window !== 'undefined' && typeof window.MarkUnsavedChanges === 'function') {
+    window.MarkUnsavedChanges(false);
+  }
 }
 
 // Fetches one modular JS file and strips ES module syntax for flat embedding.

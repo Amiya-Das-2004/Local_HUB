@@ -1,7 +1,7 @@
 // Renders and handles the footer SVG logo button on the landing page that triggers standalone HTML file generation and download.
 import { SaveAndDownloadApp } from '../00_Components/05_Save_Button.js';
 
-export function GetLogoHTML() {
+export function GetLandingSaveLogoHTML() {
   return `
     <div id="btn-build"
       class="w-[140px] text-[--muted] hover:text-[--accent] cursor-pointer transition-colors duration-300"

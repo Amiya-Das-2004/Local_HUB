@@ -88,7 +88,7 @@ The following tables document where every modular JS file derives its logic and 
 | `00_State.js` | `STORE_KEY`, `state`, `ui` | `public/js/storage.js` | 1 – 45 | LocalStorage store key (`rd_library_v1`), in-memory state vault. |
 | | `DefaultState()`, `NormalizeState()` | `public/js/papers.js` | 10 – 120 | Schema normalization, version checking, default UI settings. |
 | | `EmbeddedInitialData()`, `syncVault()` | `public/js/storage.js` | 50 – 110 | DOM vault sync with `<script id="RDData">` and `__RD_INITIAL_DATA__`. |
-| | `loadState()`, `persist()` | `public/js/storage.js` | 115 – 221 | Load from vault / localStorage; mirror to `window.RDState`. |
+| | `loadState()`, `persist()` | `public/js/storage.js` | 115 – 221 | Load strictly from embedded `#RDData` HTML vault, wiping stale machine-local cache to eliminate cross-file contamination; mirror to `window.RDState` and mark unsaved changes on write. |
 | | `GetAllItems()`, `GetItem()`, `UpdateItem()`, `DeleteItem()` | `public/js/papers.js` | 130 – 310 | Core item CRUD operations. |
 | | `CycleItemStatus()`, `ToggleStar()` | `public/js/papers.js` | 315 – 375 | Status rotation (unread → reading → read) and favorite toggling. |
 | | `AssignItemToGroup()`, `UpdateGroup()`, `DeleteGroup()` | `public/js/papers.js` | 380 – 490 | Group creation, color assignment, and reordering. |

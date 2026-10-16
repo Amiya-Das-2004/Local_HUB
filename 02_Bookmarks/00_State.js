@@ -25,30 +25,12 @@ export function LoadBookmarkState() {
     }
   }
 
-  // 1. Check if browser Local Storage has an active unsaved crash recovery buffer
+  // 1. Wipe any stale leftover cache from previous files or sessions
   try {
-    const cached = typeof localStorage !== 'undefined' ? localStorage.getItem('Bookmarks_Local_Cache') : null;
-    if (cached) {
-      const parsedCache = JSON.parse(cached);
-      const domTimestamp = domState?._lastSaved || 0;
-      const cacheTimestamp = parsedCache?._savedAt || 0;
-
-      // Only restore from cache if it represents active unsaved edits newer than the HTML file
-      if (parsedCache && parsedCache._unsaved === true && cacheTimestamp > domTimestamp && Array.isArray(parsedCache.bookmarks)) {
-        console.log('[BookmarkState] Recovering uncommitted bookmark edits from local cache...');
-        BookmarkState = {
-          bookmarks: parsedCache.bookmarks,
-          sectionOrder: Array.isArray(parsedCache.sectionOrder) ? parsedCache.sectionOrder : ['ALL'],
-          _lastSaved: cacheTimestamp
-        };
-        if (dataBlock) dataBlock.textContent = JSON.stringify(BookmarkState, null, 2);
-        if (typeof window !== 'undefined') window.BookmarkState = BookmarkState;
-        return BookmarkState;
-      }
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('Bookmarks_Local_Cache');
     }
-  } catch (e) {
-    console.warn('Could not read Bookmarks_Local_Cache:', e);
-  }
+  } catch (e) { }
 
   // 2. Pure, clean load directly from HTML data vault (#Bookmarks)
   if (domState) {
@@ -73,7 +55,12 @@ export function SaveBookmarkState(newState = null) {
   const dataBlock = typeof document !== 'undefined' ? document.getElementById('Bookmarks') : null;
   if (dataBlock) dataBlock.textContent = JSON.stringify(BookmarkState, null, 2);
 
-  if (typeof window !== 'undefined') window.BookmarkState = BookmarkState;
+  if (typeof window !== 'undefined') {
+    window.BookmarkState = BookmarkState;
+    if (typeof window.MarkUnsavedChanges === 'function') {
+      window.MarkUnsavedChanges(true);
+    }
+  }
 
   // Persist to browser Local Storage as active unsaved working buffer
   try {

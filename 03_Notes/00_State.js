@@ -155,23 +155,9 @@ function migrateOrientationContainers(note) {
 
 // Loads notes from HTML vault (#NotesData) and optionally recovers uncommitted edits from localStorage
 export function LoadNotesState(forceReload = false) {
-  // Reuse in-memory state if already loaded and not stale to avoid multi-MB JSON parsing on every route change
+  // Reuse in-memory state if already loaded to avoid multi-MB JSON parsing on every route change
   if (!forceReload && NotesState.notes && NotesState.notes.length > 0) {
-    try {
-      const cached = typeof localStorage !== 'undefined' ? localStorage.getItem('NotesData_Local_Cache') : null;
-      if (cached) {
-        const parsedCache = JSON.parse(cached);
-        const cacheTimestamp = parsedCache?._savedAt || 0;
-        const currentTimestamp = NotesState.vaultMeta?.lastSaved || 0;
-        if (cacheTimestamp <= currentTimestamp) {
-          return NotesState;
-        }
-      } else {
-        return NotesState;
-      }
-    } catch (e) {
-      return NotesState;
-    }
+    return NotesState;
   }
 
   const dataBlock = typeof document !== 'undefined' ? document.getElementById('NotesData') : null;
@@ -198,40 +184,12 @@ export function LoadNotesState(forceReload = false) {
     }
   }
 
-  // 1. Check if browser Local Storage has an active unsaved crash recovery buffer
+  // 1. Wipe any stale leftover cache from previous files or sessions
   try {
-    const cached = typeof localStorage !== 'undefined' ? localStorage.getItem('NotesData_Local_Cache') : null;
-    if (cached) {
-      const parsedCache = JSON.parse(cached);
-      const domTimestamp = domState?.vaultMeta?.lastSaved || 0;
-      const cacheTimestamp = parsedCache?._savedAt || 0;
-
-      // Only restore from cache if it represents active unsaved edits newer than the HTML file's last saved date
-      if (parsedCache && parsedCache._unsaved === true && cacheTimestamp > domTimestamp && Array.isArray(parsedCache.notes)) {
-        console.log('[NotesState] Recovering uncommitted working edits from local cache...');
-        const cachedNotes = parsedCache.notes.map(sanitizeNote);
-
-        Object.assign(NotesState, {
-          vaultMeta: parsedCache.vaultMeta || domState?.vaultMeta || { title: "My Research & Notes Vault", version: "1.0.0", lastSaved: cacheTimestamp },
-          globalMacros: parsedCache.globalMacros || domState?.globalMacros || { ...DEFAULT_GLOBAL_MACROS },
-          tableTemplates: parsedCache.tableTemplates || domState?.tableTemplates || [],
-          tikzTemplates: parsedCache.tikzTemplates || domState?.tikzTemplates || [],
-          bibliography: Array.isArray(parsedCache.bibliography) ? parsedCache.bibliography : (domState?.bibliography || []),
-          citationStyle: typeof parsedCache.citationStyle === 'string' ? parsedCache.citationStyle : (domState?.citationStyle || 'numeric'),
-          // Recovery must not discard vault-level folders/tags that have no cached note (they may be intentionally empty or hand-ordered)
-          folders: mergeOrderedLists(parsedCache.folders || domState?.folders || [], Array.from(new Set(cachedNotes.map(n => n.folder || 'General').filter(Boolean)))),
-          tags: mergeOrderedLists(parsedCache.tags || domState?.tags || [], Array.from(new Set(cachedNotes.flatMap(n => n.tags || []).filter(Boolean)))),
-          notes: cachedNotes
-        });
-
-        if (dataBlock) dataBlock.textContent = JSON.stringify(NotesState, null, 2);
-        if (typeof window !== 'undefined') window.NotesState = NotesState;
-        return NotesState;
-      }
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('NotesData_Local_Cache');
     }
-  } catch (e) {
-    console.warn('Could not read NotesData_Local_Cache from localStorage:', e);
-  }
+  } catch (e) { }
 
   // 2. Pure, clean load directly from HTML data vault (#NotesData)
   if (domState) {
@@ -326,9 +284,12 @@ export function SaveNotesState(newState = null, { immediate = false } = {}) {
     NotesState.tags = mergeOrderedLists(NotesState.tags, derivedTags);
   }
 
-  // Keep window.NotesState synchronously in sync
+  // Keep window.NotesState synchronously in sync and mark unsaved changes
   if (typeof window !== 'undefined') {
     window.NotesState = NotesState;
+    if (typeof window.MarkUnsavedChanges === 'function') {
+      window.MarkUnsavedChanges(true);
+    }
   }
 
   if (immediate) {

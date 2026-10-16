@@ -94,12 +94,15 @@ Universal, dependency-free UI modules shared across all Local_HUB workspace tabs
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `GetSaveButtonHTML()` | 2 - 68 | Returns HTML and responsive styles for the primary application Save button. |
-| `syncAllStatesToDOM(doc)` | 71 - 160 | Synchronizes in-memory window states (`window.BookmarkState`, `window.NotesState`, `window.AppState`, `window.ProfessorsState`) and localStorage caches into DOM `<script type="application/json">` vault tags. JSON is `<`-escaped to `\u003c` so vault data can never close the host `<script>` block in the generated standalone. |
-| `bundleFile(filePath)` | 193 - 226 | Fetches a modular JavaScript file and strips ES module `import`/`export` syntax into a single flat scope, then escapes literal `</script` sequences to `<\/script` (source-level only — runtime strings are unchanged) so embedded sources (e.g. the Professors/R&D standalone templates) cannot terminate the host script block. |
-| `SaveAndDownloadApp()` | 183 - 482 | Bundles all modular JS files across components, landing, bookmarks, notes, professors, and R&D, embeds live data vaults, flushes unsaved caches, and downloads standalone `Local_HUB.html`. **Bundle lists must be dependency-ordered** (imported leaf modules before their importers — see `rdFiles` comment): the flat bundle executes top-level code in list order, unlike dev-mode ES modules which resolve lazily. |
-| `ClearAllLocalCaches()` | 473 - 504 | Sweeps and removes all unsaved recovery caches (`*_Local_Cache`) and clears block undo/redo stacks after a successful save. |
-| `InitSaveButtonLogic()` | 507 - 514 | Attaches click listener to `#save-btn` to trigger `SaveAndDownloadApp()`. |
+| `GetSaveButtonHTML()` | 2 - 104 | Returns HTML and responsive styles for the primary application Save button, including `.has-unsaved` pulsing indicator. |
+| `HasUnsavedChanges()` | 108 - 110 | Returns boolean indicating whether any tab has uncommitted changes in memory. |
+| `MarkUnsavedChanges(isDirty = true)` | 114 - 131 | Marks workspace dirty/clean, updates button title (*"SAVE APPLICATION (Unsaved Changes)"* vs *"SAVE APPLICATION"*), and toggles the pulsing amber badge on `#save-btn`. |
+| `ShowUnsavedRefreshModal()` | 134 - 231 | In-app modal for keyboard reloads (`F5`, `Ctrl+R`, `Cmd+R`), providing explicit **[Cancel]** and **[Discard & Refresh]** choices. Discard purges caches and reloads clean from HTML file. |
+| `syncAllStatesToDOM(doc)` | 234 - 325 | Synchronizes in-memory window states (`window.BookmarkState`, `window.NotesState`, `window.AppState`, `window.ProfessorsState`, `window.RDState`) into DOM `<script type="application/json">` vault tags. JSON is `<`-escaped to `\u003c` so vault data can never close the host `<script>` block in the generated standalone. |
+| `bundleFile(filePath)` | 358 - 391 | Fetches a modular JavaScript file and strips ES module `import`/`export` syntax into a single flat scope, then escapes literal `</script` sequences to `<\/script` (source-level only — runtime strings are unchanged) so embedded sources cannot terminate the host script block. |
+| `SaveAndDownloadApp()` | 348 - 650 | Bundles all modular JS files across components, landing, bookmarks, notes, professors, and R&D, embeds live data vaults, flushes unsaved caches, resets unsaved state, and downloads standalone `Local_HUB.html`. |
+| `ClearAllLocalCaches()` | 653 - 710 | Sweeps and removes all unsaved recovery caches (`*_Local_Cache`, `profftrack:v1`, `rd_library_v1`, `PapersData_Local_Cache`), clears block undo/redo stacks, and resets dirty flag after save or discard. |
+| `InitSaveButtonLogic()` | 713 - 755 | Attaches click listener to `#save-btn`, installs `beforeunload` native prompt guard, `pagehide` cache wipe, and `keydown` reload interception. |
 
 ---
 
@@ -167,7 +170,8 @@ Canonical cross-tab research registry — the "common ground" for papers, books,
 | `RL_NormalizeItem(raw)` | 63 - 108 | Coerces any raw/imported object into a valid item (never throws); preserves legacy `attachment.data` untouched for later migration; drops empty attachments. |
 | `RL_Load()` | 115 - 137 | Reads the `#PapersData` vault (fallback: localStorage cache) and hydrates `RL_State`. |
 | `RL_EnsureLoaded()` | 139 - 142 | Lazy idempotent loader. |
-| `RL_SyncVault()` | 145 - 164 | Serializes state into the DOM vault tag (creates it if missing) + localStorage cache. |
+| `RL_SyncVault()` | 145 - 164 | Serializes state into the DOM vault tag (creates it if missing) + localStorage cache and marks unsaved changes. |
+| `RL_ClearLocalCache()` | 167 - 171 | Purges `PapersData_Local_Cache` from browser localStorage. |
 | `RL_Emit(name, detail)` | 166 - 170 | Internal: dispatches `localhub:<name>` CustomEvents on `window`. |
 | `RL_All()` | 176 - 179 | All items (live array reference). |
 | `RL_Get(id)` | 181 - 184 | Item by id or `null`. |

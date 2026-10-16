@@ -68,6 +68,29 @@ export function GetSaveButtonHTML() {
           height: 13px;
         }
       }
+
+      .save-btn.has-unsaved {
+        position: relative;
+      }
+
+      .save-btn.has-unsaved::after {
+        content: '';
+        position: absolute;
+        top: -2px;
+        right: -2px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #f59e0b;
+        border: 2px solid var(--surface, #181b27);
+        box-shadow: 0 0 8px rgba(245, 158, 11, 0.85);
+        animation: saveBtnPulse 2s infinite ease-in-out;
+      }
+
+      @keyframes saveBtnPulse {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.28); opacity: 0.8; }
+      }
     </style>
 
     <button class="save-btn" id="save-btn" title="SAVE APPLICATION">
@@ -553,6 +576,7 @@ handleRoute();
 
   // Clear unsaved working caches in localStorage (Option 1)
   ClearAllLocalCaches();
+  MarkUnsavedChanges(false);
 
   // Visual feedback on Save button
   const saveBtn = document.getElementById('save-btn');
@@ -574,6 +598,201 @@ handleRoute();
   }
 }
 
+// Global unsaved changes state tracker
+let isAppDirty = false;
+
+export function HasUnsavedChanges() {
+  if (typeof window !== 'undefined' && window.__HAS_UNSAVED_CHANGES__ === true) {
+    return true;
+  }
+  return isAppDirty;
+}
+
+export function MarkUnsavedChanges(isDirty = true) {
+  isAppDirty = !!isDirty;
+  if (typeof window !== 'undefined') {
+    window.__HAS_UNSAVED_CHANGES__ = isAppDirty;
+  }
+  const saveBtn = typeof document !== 'undefined' ? document.getElementById('save-btn') : null;
+  if (saveBtn) {
+    if (isAppDirty) {
+      saveBtn.classList.add('has-unsaved');
+      saveBtn.title = 'SAVE APPLICATION (Unsaved Changes)';
+    } else {
+      saveBtn.classList.remove('has-unsaved');
+      saveBtn.title = 'SAVE APPLICATION';
+    }
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.HasUnsavedChanges = HasUnsavedChanges;
+  window.MarkUnsavedChanges = MarkUnsavedChanges;
+}
+
+// Custom styled LocalHUB modal for in-page reload shortcuts (F5, Ctrl+R, Cmd+R)
+export function ShowUnsavedRefreshModal() {
+  if (typeof document === 'undefined') return;
+  const existing = document.getElementById('unsaved-refresh-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'unsaved-refresh-modal';
+  modal.style.cssText = `
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.72);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    animation: unsavedFadeIn 0.15s ease-out;
+  `;
+
+  modal.innerHTML = `
+    <style>
+      @keyframes unsavedFadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      .unsaved-card {
+        width: 100%;
+        max-width: 440px;
+        background: var(--surface, #181b27);
+        border: 1px solid var(--border, #2a2e40);
+        border-radius: 14px;
+        box-shadow: 0 20px 48px rgba(0, 0, 0, 0.65);
+        padding: 24px;
+        color: var(--text, #e8eaf2);
+        font-family: inherit;
+        box-sizing: border-box;
+      }
+      .unsaved-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 14px;
+      }
+      .unsaved-icon {
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
+        background: rgba(245, 158, 11, 0.15);
+        color: #f59e0b;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      .unsaved-title {
+        font-size: 17px;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+      }
+      .unsaved-body {
+        font-size: 13.5px;
+        line-height: 1.55;
+        color: var(--text-secondary, #a0a4b8);
+        margin-bottom: 22px;
+      }
+      .unsaved-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 10px;
+      }
+      .unsaved-btn-cancel {
+        height: 36px;
+        padding: 0 16px;
+        border-radius: 8px;
+        background: transparent;
+        border: 1px solid var(--border, #2a2e40);
+        color: var(--text, #e8eaf2);
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.15s ease;
+      }
+      .unsaved-btn-cancel:hover {
+        background: var(--card, #1c1f2e);
+        border-color: var(--border-light, #353a52);
+      }
+      .unsaved-btn-discard {
+        height: 36px;
+        padding: 0 16px;
+        border-radius: 8px;
+        background: #ef4444;
+        border: 1px solid transparent;
+        color: #ffffff;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s ease;
+      }
+      .unsaved-btn-discard:hover {
+        background: #dc2626;
+        box-shadow: 0 0 14px rgba(239, 68, 68, 0.4);
+      }
+    </style>
+    <div class="unsaved-card">
+      <div class="unsaved-header">
+        <div class="unsaved-icon">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+        </div>
+        <div class="unsaved-title">Unsaved Changes</div>
+      </div>
+      <div class="unsaved-body">
+        You have unsaved changes in your workspace. If you refresh, all unsaved changes will be permanently discarded and the workspace will reload the saved data from the HTML file.
+      </div>
+      <div class="unsaved-actions">
+        <button type="button" class="unsaved-btn-cancel" id="btn-unsaved-cancel">Cancel</button>
+        <button type="button" class="unsaved-btn-discard" id="btn-unsaved-discard">Discard & Refresh</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  const cleanup = () => {
+    modal.remove();
+    document.removeEventListener('keydown', onKeyDown);
+  };
+
+  const onKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      cleanup();
+    }
+  };
+  document.addEventListener('keydown', onKeyDown);
+
+  const btnCancel = modal.querySelector('#btn-unsaved-cancel');
+  if (btnCancel) {
+    btnCancel.addEventListener('click', (e) => {
+      e.preventDefault();
+      cleanup();
+    });
+  }
+
+  const btnDiscard = modal.querySelector('#btn-unsaved-discard');
+  if (btnDiscard) {
+    btnDiscard.addEventListener('click', (e) => {
+      e.preventDefault();
+      ClearAllLocalCaches();
+      MarkUnsavedChanges(false);
+      if (typeof window !== 'undefined') {
+        window.__SUPPRESS_BEFOREUNLOAD__ = true;
+        window.location.reload();
+      }
+    });
+  }
+}
+
 // Clears all unsaved local cache keys from browser localStorage
 export function ClearAllLocalCaches() {
   if (typeof localStorage === 'undefined') return;
@@ -588,7 +807,18 @@ export function ClearAllLocalCaches() {
       } catch (e) { }
     });
   }
-  // 2. Also sweep any key in localStorage ending with _Local_Cache
+
+  // 2. Clear known specific tab storage keys
+  try {
+    localStorage.removeItem('profftrack:v1');
+    localStorage.removeItem('rd_library_v1');
+    localStorage.removeItem('PapersData_Local_Cache');
+    localStorage.removeItem('NotesData_Local_Cache');
+    localStorage.removeItem('Bookmarks_Local_Cache');
+    localStorage.removeItem('LandingPageData_Local_Cache');
+  } catch (e) { }
+
+  // 3. Also sweep any key in localStorage ending with _Local_Cache or containing _Cache
   try {
     for (let i = localStorage.length - 1; i >= 0; i--) {
       const key = localStorage.key(i);
@@ -598,22 +828,65 @@ export function ClearAllLocalCaches() {
     }
   } catch (e) { }
 
-  // 3. Clear per-block undo/redo history stacks from memory
+  // 4. Clear per-block undo/redo history stacks from memory
   if (typeof window !== 'undefined' && window.__blockHistories) {
     try {
       window.__blockHistories.clear();
     } catch (e) { }
   }
 
+  // 5. Reset unsaved changes flag
+  isAppDirty = false;
+  if (typeof window !== 'undefined') {
+    window.__HAS_UNSAVED_CHANGES__ = false;
+  }
+  const saveBtn = typeof document !== 'undefined' ? document.getElementById('save-btn') : null;
+  if (saveBtn) {
+    saveBtn.classList.remove('has-unsaved');
+    saveBtn.title = 'SAVE APPLICATION';
+  }
+
   console.log('[Save] All unsaved local caches flushed successfully.');
 }
 
-// Button Click Logic
+// Button Click & Lifecycle Guard Logic
 export function InitSaveButtonLogic() {
   const btn = document.getElementById('save-btn');
   if (btn) {
     btn.addEventListener('click', () => {
       SaveAndDownloadApp();
     });
+  }
+
+  // Install navigation guards once per window
+  if (typeof window !== 'undefined' && !window.__UNSAVED_GUARD_INSTALLED__) {
+    window.__UNSAVED_GUARD_INSTALLED__ = true;
+
+    // Prompt on tab close / browser reload
+    window.addEventListener('beforeunload', (e) => {
+      if (window.__SUPPRESS_BEFOREUNLOAD__) return;
+      if (HasUnsavedChanges()) {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+      }
+    });
+
+    // Immediately wipe localStorage cache when leaving or closing the page
+    window.addEventListener('pagehide', () => {
+      ClearAllLocalCaches();
+    });
+
+    // In-page keyboard reload interception (F5, Ctrl+R, Cmd+R)
+    window.addEventListener('keydown', (e) => {
+      const isReload = e.key === 'F5' || ((e.ctrlKey || e.metaKey) && (e.key === 'r' || e.key === 'R'));
+      if (isReload && HasUnsavedChanges()) {
+        e.preventDefault();
+        ShowUnsavedRefreshModal();
+      }
+    });
+
+    // Clean sweep on initial startup to ensure no stale cache from other files contaminates this session
+    ClearAllLocalCaches();
   }
 }

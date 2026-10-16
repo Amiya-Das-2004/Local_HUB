@@ -39,9 +39,9 @@ Bookmark manager for Local_HUB. Features group/section categorization, responsiv
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
 | `BookmarkState` | 1 - 4 | Master reactive in-memory state object holding `bookmarks: []` and `sectionOrder: ['ALL']`. |
-| `LoadBookmarkState()` | 6 - 68 | Reads bookmark JSON from DOM vault `#Bookmarks`, recovers newer uncommitted edits from `localStorage['Bookmarks_Local_Cache']`, and synchronizes `window.BookmarkState`. |
-| `SaveBookmarkState(newState = null)` | 70 - 91 | Syncs state to `#Bookmarks` DOM script and writes recovery buffer to `localStorage['Bookmarks_Local_Cache']`. |
-| `ClearBookmarkLocalCache()` | 94 - 102 | Clears unsaved `Bookmarks_Local_Cache` from `localStorage` upon file save/download. |
+| `LoadBookmarkState()` | 6 - 50 | Reads bookmark JSON directly from DOM vault `#Bookmarks`, wipes leftover cache to prevent cross-file contamination, and synchronizes `window.BookmarkState`. |
+| `SaveBookmarkState(newState = null)` | 52 - 75 | Syncs state to `#Bookmarks` DOM script, calls `window.MarkUnsavedChanges(true)`, and writes active working buffer to `localStorage['Bookmarks_Local_Cache']`. |
+| `ClearBookmarkLocalCache()` | 78 - 86 | Clears unsaved `Bookmarks_Local_Cache` from `localStorage` upon file save/download. |
 
 ---
 
@@ -231,7 +231,7 @@ Standalone single-tab HTML runner for Bookmarks. Houses the `#Bookmarks` DOM vau
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
 | `syncTabStatesToDOM(doc)` | 15 - 99 | Synchronizes active `BookmarkState` and localStorage caches into the DOM `<script id="Bookmarks">` vault block. |
-| `clearAllTabLocalCaches()` | 102 - 118 | Purges all `_Local_Cache` items from browser `localStorage` upon standalone build save. |
+| `clearAllTabLocalCaches()` | 102 - 128 | Purges all known cache keys (`_Local_Cache`, `profftrack:v1`, `rd_library_v1`, `PapersData_Local_Cache`) and resets `MarkUnsavedChanges(false)` upon standalone build save. |
 | `bundleTabFile(filePath)` | 122 - 146 | Asynchronously fetches module code and strips ES module `import`/`export` syntax for bundling. Resolves paths two levels deep (`../../`) relative to repository root. |
 | `bundleTabGroup(files)` | 148 - 152 | Sequentially bundles an array of file paths. |
 | `SaveBookmarksStandalone()` | 185 - 299 | Compiles shared components, tab handlers, and bookmark modules into a self-contained standalone `Bookmarks.html` file and triggers browser download. |

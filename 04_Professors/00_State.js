@@ -8,8 +8,8 @@
 
 import { toast, uid, norm, todayISO, statusOf, avatarColor } from './01_Utils.js';
 import { seedSamples } from './03_Seed_Data.js';
-import { RL_Upsert, RL_Get, RL_Delete, RL_FindByTitle } from '../../00_Components/08_Research_Library.js';
-import { BlobStore_PutDataUrl } from '../../00_Components/07_Blob_Store.js';
+import { RL_Upsert, RL_Get, RL_Delete, RL_FindByTitle } from '../00_Components/08_Research_Library.js';
+import { BlobStore_PutDataUrl } from '../00_Components/07_Blob_Store.js';
 import { render } from './Professors.js';
 
 export var STORE_KEY = 'profftrack:v1';
@@ -35,6 +35,9 @@ export function persist() {
   /* LocalHUB Save button vault sync: candidate key 'ProfessorsState' mirrors
      the live library into #ProfessorsData on every save-and-download */
   try { window.ProfessorsState = state; } catch (e) { /* not in a browser */ }
+  if (typeof window !== 'undefined' && typeof window.MarkUnsavedChanges === 'function') {
+    window.MarkUnsavedChanges(true);
+  }
   syncVault();
 }
 /* LocalHUB convention: keep the JSON vault script tag in the live document in
@@ -48,35 +51,38 @@ function isEmptyData(d) {
   return !d || !Array.isArray(d.professors) || d.professors.length === 0;
 }
 export function loadState() {
-  var embedded = null, stored = null;
+  var embedded = null;
   var vaultEl = typeof document !== 'undefined'
     ? (document.getElementById('ProfessorsData') || document.getElementById('app-data'))
     : null;
   try { embedded = vaultEl ? JSON.parse(vaultEl.textContent || 'null') : null; } catch (e) {}
-  try { stored = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); } catch (e) {}
-  var candidates = [];
-  if (!isEmptyData(embedded) && embedded.updatedAt) candidates.push(embedded);
-  if (!isEmptyData(stored) && stored.updatedAt) candidates.push(stored);
-  if (!isEmptyData(embedded) && !embedded.updatedAt) candidates.push(embedded);
-  if (!isEmptyData(stored) && !stored.updatedAt) candidates.push(stored);
-  if (candidates.length) {
-    candidates.sort(function (a, b) { return String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')); });
-    state = candidates[0];
+
+  // 1. Wipe any stale leftover cache from previous files or sessions
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(STORE_KEY);
+    }
+  } catch (e) {}
+
+  // 2. Pure load directly from embedded HTML data vault
+  if (embedded && Array.isArray(embedded.professors)) {
+    state = embedded;
     decorateAllProfessors();
     return;
   }
-  if (stored && Array.isArray(stored.professors) && stored.professors.length === 0) {
-    state = { version: 1, updatedAt: null, professors: [] }; /* user cleared it — respect that */
-    decorateAllProfessors();
-    return;
-  }
-  if (embedded && Array.isArray(embedded.professors) && embedded.professors.length === 0 && embedded.updatedAt) {
-    state = { version: 1, updatedAt: null, professors: [] };
-    return;
-  }
+
+  // 3. Fallback to seed samples if no valid embedded state exists
   state = { version: 1, updatedAt: null, professors: seedSamples() };
-  persist();
+  syncVault();
   decorateAllProfessors();
+}
+
+export function ClearProfessorsLocalCache() {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(STORE_KEY);
+    }
+  } catch (e) {}
 }
 
 /* repair items saved by older builds without ids (or with null ids) */

@@ -6,7 +6,7 @@ export function LoadLandingState() {
   const dataBlock = typeof document !== 'undefined' ? document.getElementById('LandingPageData') : null;
   let domState = null;
 
-  if (dataBlock && dataBlock.textContent.trim()) {
+  if (dataBlock && typeof dataBlock.textContent === 'string' && dataBlock.textContent.trim()) {
     try {
       domState = JSON.parse(dataBlock.textContent);
     } catch (e) {
@@ -14,29 +14,12 @@ export function LoadLandingState() {
     }
   }
 
-  // 1. Check if browser Local Storage has an active unsaved crash recovery buffer
+  // 1. Wipe any stale leftover cache from previous files or sessions
   try {
-    const cached = typeof localStorage !== 'undefined' ? localStorage.getItem('LandingPageData_Local_Cache') : null;
-    if (cached) {
-      const parsedCache = JSON.parse(cached);
-      const domTimestamp = domState?._lastSaved || 0;
-      const cacheTimestamp = parsedCache?._savedAt || 0;
-
-      // Only restore from cache if it represents active unsaved edits newer than the HTML file
-      if (parsedCache && parsedCache._unsaved === true && cacheTimestamp > domTimestamp && Array.isArray(parsedCache.tabs)) {
-        console.log('[LandingState] Recovering uncommitted tab edits from local cache...');
-        AppState = {
-          tabs: parsedCache.tabs,
-          _lastSaved: cacheTimestamp
-        };
-        if (dataBlock) dataBlock.textContent = JSON.stringify(AppState, null, 2);
-        if (typeof window !== 'undefined') window.AppState = AppState;
-        return AppState;
-      }
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('LandingPageData_Local_Cache');
     }
-  } catch (e) {
-    console.warn('Could not read LandingPageData_Local_Cache:', e);
-  }
+  } catch (e) { }
 
   // 2. Pure, clean load directly from HTML data vault (#LandingPageData)
   if (domState) {
@@ -57,7 +40,7 @@ export function LoadLandingState() {
 // Runs on startup to read existing data from HTML into JavaScript memory (AppState).
 LoadLandingState();
 
-// Serializes AppState into #LandingPageData and unsaved localStorage cache
+// Serializes AppState into #LandingPageData and marks unsaved changes
 export function SaveLandingState() {
   const dataBlock = typeof document !== 'undefined' ? document.getElementById('LandingPageData') : null;
   if (dataBlock) {
@@ -65,6 +48,9 @@ export function SaveLandingState() {
   }
   if (typeof window !== 'undefined') {
     window.AppState = AppState;
+    if (typeof window.MarkUnsavedChanges === 'function') {
+      window.MarkUnsavedChanges(true);
+    }
   }
 
   try {

@@ -117,23 +117,22 @@ export function RL_NormalizeItem(raw) {
 /* Boot: vault load & sync                                             */
 /* ------------------------------------------------------------------ */
 
-/** Read `#PapersData` vault (fallback: localStorage cache). Idempotent. */
+/** Read `#PapersData` vault (embedded HTML is single source of truth). Idempotent. */
 export function RL_Load() {
   let payload = null;
   const tag = (typeof document !== 'undefined') ? document.getElementById(RL_VAULT_ID) : null;
   if (tag && tag.textContent) {
     try { payload = JSON.parse(tag.textContent); }
-    catch (e) { console.warn('[ResearchLibrary] Vault parse failed; falling back to cache.', e); }
+    catch (e) { console.warn('[ResearchLibrary] Vault parse failed.', e); }
   }
-  if (!payload || !Array.isArray(payload.items)) {
-    try {
-      const raw = localStorage.getItem(RL_CACHE_KEY);
-      if (raw) {
-        const cache = JSON.parse(raw);
-        if (cache && Array.isArray(cache.items)) payload = cache;
-      }
-    } catch (e) { /* corrupted cache — ignore */ }
-  }
+
+  // Wipe any stale leftover cache from previous files or sessions
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(RL_CACHE_KEY);
+    }
+  } catch (e) { }
+
   RL_State.items = ((payload && Array.isArray(payload.items)) ? payload.items : [])
     .map(RL_NormalizeItem).filter(Boolean);
   RL_State.schema = (payload && payload.schema) || RL_SCHEMA_VERSION;
@@ -147,7 +146,7 @@ export function RL_EnsureLoaded() {
   return RL_State;
 }
 
-/** Serialize live state into the DOM vault + localStorage cache. */
+/** Serialize live state into the DOM vault + localStorage cache and mark unsaved changes. */
 export function RL_SyncVault() {
   const payload = JSON.stringify({
     schema: RL_State.schema,
@@ -164,9 +163,23 @@ export function RL_SyncVault() {
     }
     tag.textContent = payload;
   }
+  if (typeof window !== 'undefined') {
+    window.PapersState = RL_State;
+    if (typeof window.MarkUnsavedChanges === 'function') {
+      window.MarkUnsavedChanges(true);
+    }
+  }
   try { localStorage.setItem(RL_CACHE_KEY, payload); }
   catch (e) { console.warn('[ResearchLibrary] localStorage cache write failed:', e); }
   return payload;
+}
+
+export function RL_ClearLocalCache() {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(RL_CACHE_KEY);
+    }
+  } catch (e) { }
 }
 
 function RL_Emit(name, detail) {

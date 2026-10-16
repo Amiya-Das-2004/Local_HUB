@@ -120,10 +120,10 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 | `NotesState` | 48 - 58 | Central in-memory reactive state object holding vault metadata, global macros, table templates, tikz templates, bibliography entries, citation style, folders, tags, and notes. |
 | `sanitizeNote(n, idx = 0)` | 68 - 102 | Validates note object schema, fills missing fallback properties (id, slug, title, folder, tags, blocks, macros, autoNumbering), passes through per-note numbering configs (`equationNumbering`, `figureNumbering`, `showFigureCaptions` — objects or legacy strings), prevents data corruption, and runs the orientation-container migration. |
 | `migrateOrientationContainers(note)` | 105 - 139 | One-time legacy migration: hoists Multi-Column `cols[]` embedded children to top-level blocks (inserted right after the container) and rewrites them as non-destructive `members`/`rows` references. |
-| `LoadNotesState(forceReload = false)` | 100 - 202 | Reads and parses notes from DOM script vault (#NotesData), recovers newer uncommitted edits from localStorage, and reuses in-memory state when not stale to eliminate multi-MB JSON re-parsing on route changes. |
-| `flushNotesSave()` | 234 - 238 | Immediately flushes any pending debounced state writes to DOM #NotesData and localStorage. |
-| `SaveNotesState(newState = null, { immediate = false } = {})` | 247 - 275 | Re-derives active folder/tag lists, synchronizes window.NotesState, and persists unsaved buffer to DOM vault and localStorage with debouncing (~280ms) for high-speed typing. |
-| `ClearNotesLocalCache()` | 278 - 288 | Clears the unsaved localStorage recovery cache (NotesData_Local_Cache) after downloading or saving standalone application HTML. |
+| `LoadNotesState(forceReload = false)` | 157 - 240 | Reads and parses notes directly from DOM script vault (#NotesData), wipes leftover cache to eliminate cross-file contamination, and reuses in-memory state when not stale to eliminate multi-MB JSON re-parsing on route changes. |
+| `flushNotesSave()` | 299 - 302 | Immediately flushes any pending debounced state writes to DOM #NotesData and localStorage. |
+| `SaveNotesState(newState = null, { immediate = false } = {})` | 316 - 342 | Re-derives active folder/tag lists, synchronizes window.NotesState, calls `window.MarkUnsavedChanges(true)`, and persists active working buffer to DOM vault and localStorage with debouncing (~280ms) for high-speed typing. |
+| `ClearNotesLocalCache()` | 345 - 360 | Clears the unsaved localStorage recovery cache (NotesData_Local_Cache) after downloading or saving standalone application HTML. |
 
 **01_Header.js**
 
