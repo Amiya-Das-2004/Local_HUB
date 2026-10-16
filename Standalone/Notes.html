@@ -6824,77 +6824,108 @@ const TIKZ_ENGINE_BASES = [
 // so browsers re-fetch the engine instead of serving a stale heuristic-cached copy.
 const TIKZ_ENGINE_VERSION = 'v2';
 
-let tikzEngineLoading = false;
+let loadTikzEnginePromise = null;
 function ensureTikzJaxLoaded(callback) {
   if (typeof window.__tikzjax_runner === 'function') {
     if (callback) callback();
-    return;
+    return Promise.resolve();
   }
 
-  if (tikzEngineLoading || document.getElementById('tikzjax-js')) {
-    // Script tag already injected (or cascade in progress); poll until runner is defined
-    let attempts = 0;
-    const checkInterval = setInterval(() => {
-      attempts++;
-      if (typeof window.__tikzjax_runner === 'function') {
-        clearInterval(checkInterval);
-        if (callback) callback();
-      } else if (typeof window.onload === 'function') {
-        window.__tikzjax_runner = window.onload;
-        clearInterval(checkInterval);
-        if (callback) callback();
-      } else if (attempts > 40) {
-        clearInterval(checkInterval);
-        if (callback) callback();
-      }
-    }, 80);
-    return;
-  }
-
-  tikzEngineLoading = true;
-  let baseIndex = 0;
-  const tryNextBase = () => {
-    if (baseIndex >= TIKZ_ENGINE_BASES.length) {
-      tikzEngineLoading = false;
-      console.error('TikZ engine unavailable: local Tikz_Engine/ folder not found and the tikzjax.com CDN fallback failed.');
-      return; // caller surfaces its own timeout + ↻ Retry UI
-    }
-    const base = TIKZ_ENGINE_BASES[baseIndex++];
-
-    if (!document.getElementById('tikzjax-css')) {
-      const link = document.createElement('link');
-      link.id = 'tikzjax-css';
-      link.rel = 'stylesheet';
-      link.href = base + 'fonts.css';
-      document.head.appendChild(link);
-    }
-
-    const script = document.createElement('script');
-    script.src = base + 'tikzjax.js?v=' + TIKZ_ENGINE_VERSION;
-
-    script.onload = () => {
-      script.id = 'tikzjax-js';
-      tikzEngineLoading = false;
-      // tikzjax sets window.onload = async function() { ... }
-      if (typeof window.onload === 'function') {
-        window.__tikzjax_runner = window.onload;
-      }
+  if (loadTikzEnginePromise) {
+    return loadTikzEnginePromise.then(() => {
       if (callback) callback();
+    }).catch(err => {
+      if (callback) callback(err);
+      throw err;
+    });
+  }
+
+  loadTikzEnginePromise = new Promise((resolve, reject) => {
+    // 1. Purge any dead or uninitialized script/css tags left from exported HTML
+    if (typeof document !== 'undefined') {
+      const deadScript = document.getElementById('tikzjax-js');
+      if (deadScript && typeof window.__tikzjax_runner !== 'function') {
+        deadScript.remove();
+      }
+      const deadCss = document.getElementById('tikzjax-css');
+      if (deadCss && typeof window.__tikzjax_runner !== 'function') {
+        deadCss.remove();
+      }
+    }
+
+    let baseIndex = 0;
+    const tryNextBase = () => {
+      if (baseIndex >= TIKZ_ENGINE_BASES.length) {
+        loadTikzEnginePromise = null;
+        const errMsg = 'TikZ engine unavailable: local Tikz_Engine/ folder not found and the tikzjax.com CDN fallback failed.';
+        console.error(errMsg);
+        reject(new Error(errMsg));
+        return;
+      }
+
+      const base = TIKZ_ENGINE_BASES[baseIndex++];
+
+      if (!document.getElementById('tikzjax-css')) {
+        const link = document.createElement('link');
+        link.id = 'tikzjax-css';
+        link.rel = 'stylesheet';
+        link.href = base + 'fonts.css';
+        document.head.appendChild(link);
+      }
+
+      const script = document.createElement('script');
+      script.src = base + 'tikzjax.js?v=' + TIKZ_ENGINE_VERSION;
+
+      script.onload = () => {
+        script.id = 'tikzjax-js';
+        if (typeof window.onload === 'function') {
+          window.__tikzjax_runner = window.onload;
+          resolve();
+        } else if (typeof window.__tikzjax_runner === 'function') {
+          resolve();
+        } else {
+          // Poll briefly (max 600ms) in case window.onload takes a tick
+          let checks = 0;
+          const t = setInterval(() => {
+            checks++;
+            if (typeof window.onload === 'function') {
+              window.__tikzjax_runner = window.onload;
+              clearInterval(t);
+              resolve();
+            } else if (typeof window.__tikzjax_runner === 'function') {
+              clearInterval(t);
+              resolve();
+            } else if (checks > 12) {
+              clearInterval(t);
+              script.remove();
+              const cssLink = document.getElementById('tikzjax-css');
+              if (cssLink) cssLink.remove();
+              tryNextBase();
+            }
+          }, 50);
+        }
+      };
+
+      script.onerror = () => {
+        // This candidate does not resolve (unexpected shell depth, or standalone
+        // moved without its engine folder) — clean up and try the next base.
+        script.remove();
+        const cssLink = document.getElementById('tikzjax-css');
+        if (cssLink) cssLink.remove();
+        tryNextBase();
+      };
+
+      document.head.appendChild(script);
     };
 
-    script.onerror = () => {
-      // This candidate does not resolve (unexpected shell depth, or standalone
-      // moved without its engine folder) — clean up and try the next base.
-      script.remove();
-      const cssLink = document.getElementById('tikzjax-css');
-      if (cssLink) cssLink.remove();
-      tryNextBase();
-    };
+    tryNextBase();
+  });
 
-    document.head.appendChild(script);
-  };
-
-  tryNextBase();
+  return loadTikzEnginePromise.then(() => {
+    if (callback) callback();
+  }).catch(err => {
+    if (callback) callback(err);
+  });
 }
 
 
@@ -6962,6 +6993,12 @@ function getCachedTikzSvg(code, theme = null, preambleKey = '') {
  */
 const activeTikzContainers = new Set();
 let themeChangeDebounceTimer = null;
+
+/**
+ * Sequential FIFO compile mutex queue: ensures only one TikZ diagram compiles in the
+ * single-threaded TeX WASM virtual filesystem (sample.tex, sample.dvi) at any given moment.
+ */
+let tikzCompileQueue = Promise.resolve();
 
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
   const themeObserver = new MutationObserver(() => {
@@ -7148,7 +7185,7 @@ function waitForTikzSvg(targetContainer, renderId, timeoutMs = 25000) {
       const script = targetContainer.querySelector('script[type="text/tikz"]');
       if (!script && !isSettled) {
         const divReplacement = targetContainer.querySelector('div.page') || targetContainer.querySelector('div[style*="display: flex"]');
-        if (divReplacement && !divReplacement.querySelector('svg') && (Date.now() - startTime > 1500)) {
+        if (divReplacement && !divReplacement.querySelector('svg') && (Date.now() - startTime > 8000)) {
           cleanup();
           reject(new Error('TikZ compilation completed but no SVG was generated. Please check syntax and semicolons.'));
           return;
@@ -7401,7 +7438,30 @@ function renderTikzToElement(tikzCode, targetContainer, onComplete = null, noteC
   whenConnected(targetContainer, () => {
     if (targetContainer.__tikzRenderId !== currentRenderId || !targetContainer.isConnected) return;
 
-    ensureTikzJaxLoaded(async () => {
+    tikzCompileQueue = tikzCompileQueue.catch(() => {}).then(async () => {
+      if (targetContainer.__tikzRenderId !== currentRenderId || !targetContainer.isConnected) return;
+
+      try {
+        await ensureTikzJaxLoaded();
+      } catch (loadErr) {
+        if (targetContainer.__tikzRenderId !== currentRenderId) return;
+        targetContainer.innerHTML = `
+          <div class="p-3 text-xs text-red-400 bg-red-950/20 border border-red-800/40 rounded-lg select-text text-center flex flex-col items-center gap-2">
+            <div><strong>TikZ Engine Unavailable:</strong> ${loadErr.message || 'Check network connection or local engine folder.'}</div>
+            <button type="button" class="tikz-retry-btn px-2.5 py-1 rounded-md border border-red-700/60 bg-red-900/30 hover:bg-red-900/60 text-red-200 text-[11px] font-semibold cursor-pointer transition-colors" title="Try loading again">↻ Retry Load</button>
+          </div>
+        `;
+        const retryBtn = targetContainer.querySelector('.tikz-retry-btn');
+        if (retryBtn) {
+          retryBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            renderTikzToElement(tikzCode, targetContainer, onComplete, noteContext);
+          });
+        }
+        if (onComplete) onComplete(false, loadErr);
+        return;
+      }
+
       if (targetContainer.__tikzRenderId !== currentRenderId || !targetContainer.isConnected) return;
 
       try {
@@ -7415,14 +7475,17 @@ function renderTikzToElement(tikzCode, targetContainer, onComplete = null, noteC
         if (typeof runner === 'function') {
           window.__tikzjax_runner = runner;
           try {
-            runner();
+            const runnerPromise = runner();
+            if (runnerPromise && typeof runnerPromise.catch === 'function') {
+              runnerPromise.catch(e => console.warn('TikZJax background promise rejection handled:', e));
+            }
           } catch (e) {
             console.error('TikZJax runner invocation error:', e);
           }
         }
 
         // Asynchronously wait for TikzJax to finish compilation and mount the SVG
-        const svgEl = await waitForTikzSvg(targetContainer, currentRenderId, 25000);
+        const svgEl = await waitForTikzSvg(targetContainer, currentRenderId, 30000);
         if (targetContainer.__tikzRenderId !== currentRenderId) return;
 
         if (svgEl) {
@@ -7504,7 +7567,6 @@ function renderTikzToElement(tikzCode, targetContainer, onComplete = null, noteC
     });
   });
 }
-
 
 /* --- 03_Notes/Writing_Engine/Code_Highlighter.js --- */
 /**

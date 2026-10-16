@@ -413,15 +413,16 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `ensureTikzJaxLoaded(callback)` | 26 - 96 | Loads the self-contained local TikZ engine (`v1/tikzjax.js` + `v1/fonts.css`, zero network fetches) via a page-relative base cascade: repo root → `../Writing_Engine/` (Tab_Notes shell) → `../03_Notes/` (Standalone/) → sibling `Tikz_Engine/` → tikzjax.com CDN fallback. Captures the engine runner and guards concurrent loads. |
-| `setActiveTikzNoteContext(note)` | 103 - 105 | Sets the active note context for note-level TikZ preamble and style customization. |
-| `clearTikzSvgCache()` | 123 - 137 | Clears the in-memory cache and sessionStorage of rendered TikZ SVG graphics. |
-| `getCachedTikzSvg(code, theme)` | 139 - 161 | Retrieves cached SVG output with versioned cache keys (`v2_glyph_fix`) from in-memory Map or sessionStorage. |
-| `whenConnected(element, callback)` | 200 - 232 | Ensures target DOM container is attached to document body before triggering TikZJax script execution. |
-| `getActiveTikzPreamble(note)` | 237 - 269 | Combines core math punctuation fixes (`\mathcode` primitives mapping comma/period to `operators`/`cmr10` — NOT `\DeclareMathSymbol`, which is preamble-only LaTeX and fatals the TikZJax WASM core when it lands after the engine's injected `\begin{document}`), default TikZ libraries, global vault preambles, and note-level local TikZ styles with theme color tokens. |
-| `waitForTikzSvg(targetContainer, renderId, timeoutMs)` | 275 - 367 | Polls, listens for TeX engine unhandled rejections, and uses MutationObserver to wait until TikZJax replaces the script tag with compiled SVG markup. |
-| `fixTikzSvgGlyphs(container)` | 437 - 508 | Corrects BaKoMa font encoding mismatches: cmsy bars, cmmi vector accents, cmex delimiters, and normalizes cmmi math commas/turned quotes to baseline cmr commas. |
-| `renderTikzToElement(tikzCode, targetContainer, onComplete, noteContext)` | 517 - 710 | Compiles TikZ code into an SVG element within target container, utilizing 2-tier in-memory and sessionStorage caching with glyph sanitization for 0ms re-rendering without re-invoking TeX WASM. |
+| `ensureTikzJaxLoaded(callback)` | 30 - 136 | Loads the self-contained local TikZ engine (`v1/tikzjax.js` + `v1/fonts.css`, zero network fetches) via a Promise-based singleton and base cascade (repo root → `../Writing_Engine/` → `../03_Notes/` → `Tikz_Engine/` → CDN). Includes startup dead-tag purge and eliminates race conditions. |
+| `setActiveTikzNoteContext(note)` | 138 - 140 | Sets the active note context for note-level TikZ preamble and style customization. |
+| `clearTikzSvgCache()` | 158 - 172 | Clears the in-memory cache and sessionStorage of rendered TikZ SVG graphics. |
+| `getCachedTikzSvg(code, theme)` | 174 - 196 | Retrieves cached SVG output with versioned cache keys (`v2_glyph_fix`) from in-memory Map or sessionStorage. |
+| `whenConnected(element, callback)` | 241 - 273 | Ensures target DOM container is attached to document body before triggering TikZJax script execution. |
+| `getActiveTikzPreamble(note)` | 278 - 310 | Combines core math punctuation fixes (`\mathcode` primitives mapping comma/period to `operators`/`cmr10`), default TikZ libraries, global vault preambles, and note-level local TikZ styles with theme color tokens. |
+| `waitForTikzSvg(targetContainer, renderId, timeoutMs)` | 316 - 408 | Polls, listens for TeX engine unhandled rejections, and uses MutationObserver to wait until TikZJax replaces the script tag with compiled SVG markup. |
+| `healTikzCode(code)` | 415 - 429 | Auto-heals missing backslashes for common TikZ commands while strictly respecting path syntax. |
+| `fixTikzSvgGlyphs(container)` | 478 - 549 | Corrects BaKoMa font encoding mismatches: cmsy bars, cmmi vector accents, cmex delimiters, and normalizes cmmi math commas/turned quotes to baseline cmr commas. |
+| `renderTikzToElement(tikzCode, targetContainer, onComplete, noteContext)` | 558 - 785 | Compiles TikZ code into an SVG element within target container using a sequential FIFO mutex queue (`tikzCompileQueue`) to prevent TeX WASM memory collisions, utilizing 2-tier in-memory and sessionStorage caching. |
 
 ## A_Notes_Card_View
 **01_Navbar.js**
