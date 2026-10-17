@@ -422,7 +422,9 @@ export function SetNotesUnsavedChanges(dirty = true) {
     window.__NOTES_UNSAVED__ = hasUnsavedNotesChanges;
     window.__NOTES_UNSAVED_COUNT__ = count;
     if (typeof window.MarkUnsavedChanges === 'function') {
-      window.MarkUnsavedChanges(hasUnsavedNotesChanges, count);
+      const overallDirty = typeof window.HasUnsavedChanges === 'function' ? window.HasUnsavedChanges() : hasUnsavedNotesChanges;
+      const overallCount = typeof window.GetUnsavedChangesCount === 'function' ? window.GetUnsavedChangesCount() : count;
+      window.MarkUnsavedChanges(overallDirty, overallCount);
     }
   }
 }

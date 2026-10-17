@@ -39,9 +39,14 @@ Bookmark manager for Local_HUB. Features group/section categorization, responsiv
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
 | `BookmarkState` | 1 - 4 | Master reactive in-memory state object holding `bookmarks: []` and `sectionOrder: ['ALL']`. |
-| `LoadBookmarkState()` | 6 - 50 | Reads bookmark JSON directly from DOM vault `#Bookmarks`, wipes leftover cache to prevent cross-file contamination, and synchronizes `window.BookmarkState`. |
-| `SaveBookmarkState(newState = null)` | 52 - 75 | Syncs state to `#Bookmarks` DOM script, calls `window.MarkUnsavedChanges(true)`, and writes active working buffer to `localStorage['Bookmarks_Local_Cache']`. |
-| `ClearBookmarkLocalCache()` | 78 - 86 | Clears unsaved `Bookmarks_Local_Cache` from `localStorage` upon file save/download. |
+| `CaptureBookmarkBaseline(state)` | 28 - 47 | Captures initial state fingerprint map of bookmarks (`id` -> serialized properties) and marks dirty count as 0. |
+| `CalculateBookmarkChanges()` | 49 - 91 | Compares live `BookmarkState.bookmarks` against captured baseline to count added, edited, and deleted bookmarks. |
+| `GetBookmarksUnsavedChangesCount()` | 93 - 96 | Returns total number of unsaved bookmark additions, edits, and deletions. |
+| `HasUnsavedBookmarkChanges()` | 98 - 102 | Returns true if any bookmarks have been added, edited, or deleted since baseline. |
+| `SetBookmarksUnsavedChanges(dirty = true)` | 104 - 129 | Evaluates change count, updates dirty flags, and synchronizes Save button badge and tooltip. |
+| `LoadBookmarkState()` | 131 - 182 | Reads bookmark JSON directly from DOM vault `#Bookmarks`, wipes leftover cache to prevent cross-file contamination, captures baseline, and synchronizes `window.BookmarkState`. |
+| `SaveBookmarkState(newState = null)` | 184 - 212 | Syncs state to `#Bookmarks` DOM script, calls `SetBookmarksUnsavedChanges(true)`, and writes active working buffer to `localStorage['Bookmarks_Local_Cache']`. |
+| `ClearBookmarkLocalCache()` | 215 - 225 | Clears unsaved `Bookmarks_Local_Cache` from `localStorage` upon file save/download and recaptures baseline. |
 
 ---
 

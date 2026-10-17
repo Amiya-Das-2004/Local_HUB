@@ -3,6 +3,131 @@ export let BookmarkState = {
   sectionOrder: ['ALL']
 };
 
+let baselineBookmarksMap = (typeof window !== 'undefined' && window.__BOOKMARKS_BASELINE__)
+  ? window.__BOOKMARKS_BASELINE__
+  : new Map(); // id -> fingerprint string
+let isBaselineCaptured = Boolean(typeof window !== 'undefined' && window.__BOOKMARKS_BASELINE_CAPTURED__);
+let hasUnsavedBookmarkChanges = Boolean(typeof window !== 'undefined' && window.__BOOKMARKS_UNSAVED__);
+
+if (typeof window !== 'undefined') {
+  window.__BOOKMARKS_BASELINE__ = baselineBookmarksMap;
+  window.__BOOKMARKS_BASELINE_CAPTURED__ = isBaselineCaptured;
+  window.__BOOKMARKS_UNSAVED__ = hasUnsavedBookmarkChanges;
+}
+
+function getBookmarkFingerprint(b) {
+  if (!b || typeof b !== 'object') return '';
+  return JSON.stringify({
+    name: String(b.name || '').trim(),
+    url: String(b.url || '').trim(),
+    group: String(b.group || '').trim(),
+    customIcon: String(b.customIcon || '').trim(),
+    useTitleLogo: Boolean(b.useTitleLogo)
+  });
+}
+
+export function CaptureBookmarkBaseline(state = BookmarkState) {
+  baselineBookmarksMap.clear();
+  if (state && Array.isArray(state.bookmarks)) {
+    state.bookmarks.forEach(b => {
+      if (!b || !b.id) return;
+      baselineBookmarksMap.set(b.id, getBookmarkFingerprint(b));
+    });
+  }
+  isBaselineCaptured = true;
+  hasUnsavedBookmarkChanges = false;
+  if (typeof window !== 'undefined') {
+    window.__BOOKMARKS_BASELINE__ = baselineBookmarksMap;
+    window.__BOOKMARKS_BASELINE_CAPTURED__ = true;
+    window.__BOOKMARKS_UNSAVED__ = false;
+    window.__BOOKMARKS_UNSAVED_COUNT__ = 0;
+    if (typeof window.MarkUnsavedChanges === 'function') {
+      window.MarkUnsavedChanges(false, 0);
+    }
+  }
+}
+
+export function CalculateBookmarkChanges() {
+  if (!isBaselineCaptured) {
+    return { count: 0, isDirty: false, addedCount: 0, editedCount: 0, deletedCount: 0 };
+  }
+
+  let addedCount = 0;
+  let editedCount = 0;
+  let deletedCount = 0;
+  const currentIds = new Set();
+
+  if (BookmarkState && Array.isArray(BookmarkState.bookmarks)) {
+    BookmarkState.bookmarks.forEach(b => {
+      if (!b || !b.id) return;
+      currentIds.add(b.id);
+      const origFp = baselineBookmarksMap.get(b.id);
+      if (origFp === undefined) {
+        addedCount++;
+      } else {
+        const currFp = getBookmarkFingerprint(b);
+        if (origFp !== currFp) {
+          editedCount++;
+        }
+      }
+    });
+  }
+
+  for (const [origId] of baselineBookmarksMap) {
+    if (!currentIds.has(origId)) {
+      deletedCount++;
+    }
+  }
+
+  const totalCount = addedCount + editedCount + deletedCount;
+  const isDirty = totalCount > 0;
+
+  return {
+    count: totalCount,
+    isDirty,
+    addedCount,
+    editedCount,
+    deletedCount
+  };
+}
+
+export function GetBookmarksUnsavedChangesCount() {
+  const diff = CalculateBookmarkChanges();
+  return diff.count;
+}
+
+export function HasUnsavedBookmarkChanges() {
+  if (!isBaselineCaptured) return hasUnsavedBookmarkChanges;
+  const diff = CalculateBookmarkChanges();
+  return diff.isDirty;
+}
+
+export function SetBookmarksUnsavedChanges(dirty = true) {
+  let isDirty = false;
+  let count = 0;
+  if (dirty === false) {
+    isDirty = false;
+    count = 0;
+  } else if (isBaselineCaptured) {
+    const diff = CalculateBookmarkChanges();
+    isDirty = diff.isDirty;
+    count = diff.count;
+  } else {
+    isDirty = Boolean(dirty);
+    count = isDirty ? 1 : 0;
+  }
+  hasUnsavedBookmarkChanges = isDirty;
+  if (typeof window !== 'undefined') {
+    window.__BOOKMARKS_UNSAVED__ = hasUnsavedBookmarkChanges;
+    window.__BOOKMARKS_UNSAVED_COUNT__ = count;
+    if (typeof window.MarkUnsavedChanges === 'function') {
+      const overallDirty = typeof window.HasUnsavedChanges === 'function' ? window.HasUnsavedChanges() : hasUnsavedBookmarkChanges;
+      const overallCount = typeof window.GetUnsavedChangesCount === 'function' ? window.GetUnsavedChangesCount() : count;
+      window.MarkUnsavedChanges(overallDirty, overallCount);
+    }
+  }
+}
+
 export function LoadBookmarkState() {
   const dataBlock = typeof document !== 'undefined' ? document.getElementById('Bookmarks') : null;
   let domState = null;
@@ -40,12 +165,18 @@ export function LoadBookmarkState() {
       _lastSaved: domState._lastSaved || 0
     };
     if (typeof window !== 'undefined') window.BookmarkState = BookmarkState;
+    if (!isBaselineCaptured) {
+      CaptureBookmarkBaseline(BookmarkState);
+    }
     return BookmarkState;
   }
 
   // 3. Default empty state
   BookmarkState = { bookmarks: [], sectionOrder: ['ALL'], _lastSaved: 0 };
   if (typeof window !== 'undefined') window.BookmarkState = BookmarkState;
+  if (!isBaselineCaptured) {
+    CaptureBookmarkBaseline(BookmarkState);
+  }
   return BookmarkState;
 }
 
@@ -57,9 +188,7 @@ export function SaveBookmarkState(newState = null) {
 
   if (typeof window !== 'undefined') {
     window.BookmarkState = BookmarkState;
-    if (typeof window.MarkUnsavedChanges === 'function') {
-      window.MarkUnsavedChanges(true);
-    }
+    SetBookmarksUnsavedChanges(true);
   }
 
   // Persist to browser Local Storage as active unsaved working buffer
@@ -86,6 +215,18 @@ export function ClearBookmarkLocalCache() {
   } catch (e) {
     console.warn('Failed to clear Bookmarks_Local_Cache:', e);
   }
+  CaptureBookmarkBaseline(BookmarkState);
+}
+
+if (typeof window !== 'undefined') {
+  window.BookmarkState = BookmarkState;
+  window.SaveBookmarkState = SaveBookmarkState;
+  window.ClearBookmarkLocalCache = ClearBookmarkLocalCache;
+  window.CaptureBookmarkBaseline = CaptureBookmarkBaseline;
+  window.CalculateBookmarkChanges = CalculateBookmarkChanges;
+  window.GetBookmarksUnsavedChangesCount = GetBookmarksUnsavedChangesCount;
+  window.HasUnsavedBookmarkChanges = HasUnsavedBookmarkChanges;
+  window.SetBookmarksUnsavedChanges = SetBookmarksUnsavedChanges;
 }
 
 // Initial load on import

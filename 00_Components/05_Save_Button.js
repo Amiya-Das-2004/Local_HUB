@@ -628,19 +628,60 @@ let appUnsavedCount = 0;
 
 export function HasUnsavedChanges() {
   if (typeof window !== 'undefined') {
+    let hasProvider = false;
+    let anyDirty = false;
+
+    if (typeof window.HasUnsavedBookmarkChanges === 'function') {
+      hasProvider = true;
+      if (window.HasUnsavedBookmarkChanges()) anyDirty = true;
+    } else if (typeof window.__BOOKMARKS_UNSAVED__ === 'boolean') {
+      hasProvider = true;
+      if (window.__BOOKMARKS_UNSAVED__) anyDirty = true;
+    }
+
+    if (typeof window.HasUnsavedNotesChanges === 'function') {
+      hasProvider = true;
+      if (window.HasUnsavedNotesChanges()) anyDirty = true;
+    } else if (typeof window.__NOTES_UNSAVED__ === 'boolean') {
+      hasProvider = true;
+      if (window.__NOTES_UNSAVED__) anyDirty = true;
+    }
+
+    if (hasProvider) {
+      return anyDirty;
+    }
+
     if (typeof window.__HAS_UNSAVED_CHANGES__ === 'boolean') {
       return window.__HAS_UNSAVED_CHANGES__;
-    }
-    if (typeof window.__NOTES_UNSAVED__ === 'boolean') {
-      return window.__NOTES_UNSAVED__;
     }
   }
   return isAppDirty;
 }
 
 export function GetUnsavedChangesCount() {
-  if (typeof window !== 'undefined' && typeof window.__NOTES_UNSAVED_COUNT__ === 'number') {
-    return window.__NOTES_UNSAVED_COUNT__;
+  if (typeof window !== 'undefined') {
+    let total = 0;
+    let hasProvider = false;
+
+    if (typeof window.GetBookmarksUnsavedChangesCount === 'function') {
+      total += window.GetBookmarksUnsavedChangesCount();
+      hasProvider = true;
+    } else if (typeof window.__BOOKMARKS_UNSAVED_COUNT__ === 'number') {
+      total += window.__BOOKMARKS_UNSAVED_COUNT__;
+      hasProvider = true;
+    }
+
+    if (typeof window.GetNotesUnsavedChangesCount === 'function') {
+      total += window.GetNotesUnsavedChangesCount();
+      hasProvider = true;
+    } else if (typeof window.__NOTES_UNSAVED_COUNT__ === 'number') {
+      total += window.__NOTES_UNSAVED_COUNT__;
+      hasProvider = true;
+    }
+
+    if (hasProvider) {
+      return total;
+    }
   }
   return appUnsavedCount;
 }
@@ -651,8 +692,11 @@ export function MarkUnsavedChanges(isDirty = true, count = null) {
     appUnsavedCount = Math.max(0, count);
   } else if (!isAppDirty) {
     appUnsavedCount = 0;
-  } else if (appUnsavedCount === 0) {
-    appUnsavedCount = 1;
+  } else {
+    appUnsavedCount = GetUnsavedChangesCount();
+    if (appUnsavedCount === 0 && isAppDirty) {
+      appUnsavedCount = 1;
+    }
   }
 
   if (typeof window !== 'undefined') {
@@ -669,7 +713,7 @@ export function MarkUnsavedChanges(isDirty = true, count = null) {
         badge.textContent = appUnsavedCount > 99 ? '99+' : String(appUnsavedCount);
         badge.style.display = 'flex';
       }
-      const changeText = appUnsavedCount === 1 ? '1 unsaved block change' : `${appUnsavedCount} unsaved block changes`;
+      const changeText = appUnsavedCount === 1 ? '1 unsaved change' : `${appUnsavedCount} unsaved changes`;
       saveBtn.title = `SAVE APPLICATION (${changeText})`;
     } else {
       saveBtn.classList.remove('has-unsaved');
@@ -741,9 +785,13 @@ export function ClearAllLocalCaches() {
   if (typeof window !== 'undefined') {
     window.__HAS_UNSAVED_CHANGES__ = false;
     window.__NOTES_UNSAVED__ = false;
-    window.__NOTES_UNSAVED_COUNT__ = 0;
+    window.__BOOKMARKS_UNSAVED__ = false;
+    window.__BOOKMARKS_UNSAVED_COUNT__ = 0;
     if (typeof window.ClearNotesLocalCache === 'function') {
       try { window.ClearNotesLocalCache(); } catch (e) { }
+    }
+    if (typeof window.ClearBookmarkLocalCache === 'function') {
+      try { window.ClearBookmarkLocalCache(); } catch (e) { }
     }
   }
   const saveBtn = typeof document !== 'undefined' ? document.getElementById('save-btn') : null;

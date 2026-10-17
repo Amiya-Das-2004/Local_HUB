@@ -1284,6 +1284,49 @@ function GetSaveButtonHTML() {
           height: 13px;
         }
       }
+
+      .save-btn.has-unsaved {
+        position: relative;
+      }
+
+      .save-badge {
+        position: absolute;
+        top: -6px;
+        right: -6px;
+        min-width: 17px;
+        height: 17px;
+        padding: 0 4px;
+        border-radius: 9999px;
+        background: #f59e0b;
+        color: #0e1018;
+        font-size: 10px;
+        font-weight: 800;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+        border: 2px solid var(--surface, #181b27);
+        box-shadow: 0 0 10px rgba(245, 158, 11, 0.7);
+        pointer-events: none;
+        user-select: none;
+        box-sizing: border-box;
+        z-index: 5;
+      }
+
+      :root[data-theme="light"] .save-badge {
+        border-color: var(--surface, #ffffff);
+      }
+
+      .save-btn.has-unsaved .save-badge {
+        display: flex;
+        animation: saveBadgePop 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      }
+
+      @keyframes saveBadgePop {
+        0% { transform: scale(0.35); opacity: 0; }
+        100% { transform: scale(1); opacity: 1; }
+      }
     </style>
 
     <button class="save-btn" id="save-btn" title="SAVE APPLICATION">
@@ -1292,6 +1335,7 @@ function GetSaveButtonHTML() {
         <polyline points="17 21 17 13 7 13 7 21" />
         <polyline points="7 3 7 8 15 8" />
       </svg>
+      <span class="save-badge" id="save-badge" aria-hidden="true"></span>
     </button>
   `;
 }
@@ -1518,6 +1562,8 @@ async function SaveAndDownloadApp() {
       '03_Notes/B_Editor_View/01_Blocks/Text_Block/Text_Keyboard.js',
       '03_Notes/B_Editor_View/01_Blocks/Text_Block/Cite_Autocomplete.js',
       '03_Notes/B_Editor_View/01_Blocks/Text_Block/Cite_Preview.js',
+      '03_Notes/B_Editor_View/01_Blocks/Text_Block/Wiki_Link_Autocomplete.js',
+      '03_Notes/B_Editor_View/01_Blocks/Text_Block/Wiki_Link_Popup.js',
       '03_Notes/B_Editor_View/01_Blocks/Text_Block/Text_Block_Markdown.js',
       '03_Notes/B_Editor_View/01_Blocks/Text_Block.js',
       '03_Notes/B_Editor_View/01_Blocks/Equation_Block.js',
@@ -1540,6 +1586,7 @@ async function SaveAndDownloadApp() {
       '03_Notes/B_Editor_View/03_Floating_ToolBar/04_Macros_Modal.js',
       '03_Notes/B_Editor_View/03_Floating_ToolBar/05_Citation_Style.js',
       '03_Notes/B_Editor_View/03_Floating_ToolBar/06_Equation_Numbering.js',
+      '03_Notes/B_Editor_View/03_Floating_ToolBar/07_Figure_Numbering.js',
       '03_Notes/B_Editor_View/02_Floating_Toolbar.js',
       '03_Notes/B_Editor_View/03_Study_View.js',
       '03_Notes/B_Editor_View/04_LaTeX_Editor.js',
@@ -1609,7 +1656,10 @@ async function SaveAndDownloadApp() {
       '05_R&D/03_Views/01_List_View.js',
       '05_R&D/03_Views/02_Timeline_View.js',
       '05_R&D/03_Views/03_Map_View.js',
-      '05_R&D/03_Views/04_Group_View.js',
+      '05_R&D/02_Dashboard/03_Heatmap.js',
+      '05_R&D/02_Dashboard/01_Stats_Bar.js',
+      '05_R&D/02_Dashboard/02_Resume_Section.js',
+      '05_R&D/02_Dashboard/04_Tag_Bar.js',
       '05_R&D/04_Modals/01_Modal_Core.js',
       '05_R&D/04_Modals/02_Item_Modal.js',
       '05_R&D/04_Modals/03_Drawer.js',
@@ -1697,6 +1747,9 @@ ${bundledRD}
 function handleRoute() {
   const currentHash = (window.location.hash || '').trim();
   const lowerHash = currentHash.toLowerCase();
+  if (lowerHash.startsWith('#fig-') || lowerHash.startsWith('#eq-')) {
+    return;
+  }
   const root = document.getElementById('root');
   if (root) {
     root.innerHTML = '';
@@ -1742,8 +1795,8 @@ handleRoute();
     }
   }
 
-  // Cleanup injected dev scripts and runtime containers before download
-  DocClone.querySelectorAll('script[src*="livepreview"], script[src*="livereload"]').forEach(s => s.remove());
+  // Cleanup injected dev scripts, runtime containers, and dynamic TikZ engine tags before download
+  DocClone.querySelectorAll('script[src*="livepreview"], script[src*="livereload"], #tikzjax-js, #tikzjax-css, script[src*="tikzjax"]').forEach(s => s.remove());
   ['#canvas-container', '#loading-container', '#root'].forEach(sel => {
     const el = DocClone.querySelector(sel);
     if (el) el.innerHTML = '';
@@ -1763,6 +1816,7 @@ handleRoute();
 
   // Clear unsaved working caches in localStorage (Option 1)
   ClearAllLocalCaches();
+  MarkUnsavedChanges(false);
 
   // Visual feedback on Save button
   const saveBtn = document.getElementById('save-btn');
@@ -1778,10 +1832,122 @@ handleRoute();
     `;
     setTimeout(() => {
       saveBtn.style.background = originalBg;
-      saveBtn.title = 'SAVE APPLICATION';
       saveBtn.innerHTML = originalHTML;
+      MarkUnsavedChanges(false, 0);
     }, 2000);
   }
+}
+
+// Global unsaved changes state tracker
+let isAppDirty = false;
+let appUnsavedCount = 0;
+function HasUnsavedChanges() {
+  if (typeof window !== 'undefined') {
+    let hasProvider = false;
+    let anyDirty = false;
+
+    if (typeof window.HasUnsavedBookmarkChanges === 'function') {
+      hasProvider = true;
+      if (window.HasUnsavedBookmarkChanges()) anyDirty = true;
+    } else if (typeof window.__BOOKMARKS_UNSAVED__ === 'boolean') {
+      hasProvider = true;
+      if (window.__BOOKMARKS_UNSAVED__) anyDirty = true;
+    }
+
+    if (typeof window.HasUnsavedNotesChanges === 'function') {
+      hasProvider = true;
+      if (window.HasUnsavedNotesChanges()) anyDirty = true;
+    } else if (typeof window.__NOTES_UNSAVED__ === 'boolean') {
+      hasProvider = true;
+      if (window.__NOTES_UNSAVED__) anyDirty = true;
+    }
+
+    if (hasProvider) {
+      return anyDirty;
+    }
+
+    if (typeof window.__HAS_UNSAVED_CHANGES__ === 'boolean') {
+      return window.__HAS_UNSAVED_CHANGES__;
+    }
+  }
+  return isAppDirty;
+}
+function GetUnsavedChangesCount() {
+  if (typeof window !== 'undefined') {
+    let total = 0;
+    let hasProvider = false;
+
+    if (typeof window.GetBookmarksUnsavedChangesCount === 'function') {
+      total += window.GetBookmarksUnsavedChangesCount();
+      hasProvider = true;
+    } else if (typeof window.__BOOKMARKS_UNSAVED_COUNT__ === 'number') {
+      total += window.__BOOKMARKS_UNSAVED_COUNT__;
+      hasProvider = true;
+    }
+
+    if (typeof window.GetNotesUnsavedChangesCount === 'function') {
+      total += window.GetNotesUnsavedChangesCount();
+      hasProvider = true;
+    } else if (typeof window.__NOTES_UNSAVED_COUNT__ === 'number') {
+      total += window.__NOTES_UNSAVED_COUNT__;
+      hasProvider = true;
+    }
+
+    if (hasProvider) {
+      return total;
+    }
+  }
+  return appUnsavedCount;
+}
+function MarkUnsavedChanges(isDirty = true, count = null) {
+  isAppDirty = Boolean(isDirty);
+  if (typeof count === 'number') {
+    appUnsavedCount = Math.max(0, count);
+  } else if (!isAppDirty) {
+    appUnsavedCount = 0;
+  } else {
+    appUnsavedCount = GetUnsavedChangesCount();
+    if (appUnsavedCount === 0 && isAppDirty) {
+      appUnsavedCount = 1;
+    }
+  }
+
+  if (typeof window !== 'undefined') {
+    window.__HAS_UNSAVED_CHANGES__ = isAppDirty;
+    window.__APP_UNSAVED_COUNT__ = appUnsavedCount;
+  }
+
+  const saveBtn = typeof document !== 'undefined' ? document.getElementById('save-btn') : null;
+  if (saveBtn) {
+    const badge = saveBtn.querySelector('.save-badge');
+    if (isAppDirty && appUnsavedCount > 0) {
+      saveBtn.classList.add('has-unsaved');
+      if (badge) {
+        badge.textContent = appUnsavedCount > 99 ? '99+' : String(appUnsavedCount);
+        badge.style.display = 'flex';
+      }
+      const changeText = appUnsavedCount === 1 ? '1 unsaved change' : `${appUnsavedCount} unsaved changes`;
+      saveBtn.title = `SAVE APPLICATION (${changeText})`;
+    } else {
+      saveBtn.classList.remove('has-unsaved');
+      if (badge) {
+        badge.textContent = '';
+        badge.style.display = 'none';
+      }
+      saveBtn.title = 'SAVE APPLICATION';
+    }
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.HasUnsavedChanges = HasUnsavedChanges;
+  window.GetUnsavedChangesCount = GetUnsavedChangesCount;
+  window.MarkUnsavedChanges = MarkUnsavedChanges;
+}
+
+// Deprecated refresh modal (kept as safe no-op for backward compatibility)
+function ShowUnsavedRefreshModal() {
+  // Pure in-memory sessions rely on standard browser beforeunload navigation prompts
 }
 
 // Clears all unsaved local cache keys from browser localStorage
@@ -1798,7 +1964,18 @@ function ClearAllLocalCaches() {
       } catch (e) { }
     });
   }
-  // 2. Also sweep any key in localStorage ending with _Local_Cache
+
+  // 2. Clear known specific tab storage keys
+  try {
+    localStorage.removeItem('profftrack:v1');
+    localStorage.removeItem('rd_library_v1');
+    localStorage.removeItem('PapersData_Local_Cache');
+    localStorage.removeItem('NotesData_Local_Cache');
+    localStorage.removeItem('Bookmarks_Local_Cache');
+    localStorage.removeItem('LandingPageData_Local_Cache');
+  } catch (e) { }
+
+  // 3. Also sweep any key in localStorage ending with _Local_Cache or containing _Cache
   try {
     for (let i = localStorage.length - 1; i >= 0; i--) {
       const key = localStorage.key(i);
@@ -1808,23 +1985,79 @@ function ClearAllLocalCaches() {
     }
   } catch (e) { }
 
-  // 3. Clear per-block undo/redo history stacks from memory
+  // 4. Clear per-block undo/redo history stacks from memory
   if (typeof window !== 'undefined' && window.__blockHistories) {
     try {
       window.__blockHistories.clear();
     } catch (e) { }
   }
 
+  // 5. Reset unsaved changes flag and baseline
+  isAppDirty = false;
+  appUnsavedCount = 0;
+  if (typeof window !== 'undefined') {
+    window.__HAS_UNSAVED_CHANGES__ = false;
+    window.__NOTES_UNSAVED__ = false;
+    window.__BOOKMARKS_UNSAVED__ = false;
+    window.__BOOKMARKS_UNSAVED_COUNT__ = 0;
+    if (typeof window.ClearNotesLocalCache === 'function') {
+      try { window.ClearNotesLocalCache(); } catch (e) { }
+    }
+    if (typeof window.ClearBookmarkLocalCache === 'function') {
+      try { window.ClearBookmarkLocalCache(); } catch (e) { }
+    }
+  }
+  const saveBtn = typeof document !== 'undefined' ? document.getElementById('save-btn') : null;
+  if (saveBtn) {
+    saveBtn.classList.remove('has-unsaved');
+    const badge = saveBtn.querySelector('.save-badge');
+    if (badge) {
+      badge.textContent = '';
+      badge.style.display = 'none';
+    }
+    saveBtn.title = 'SAVE APPLICATION';
+  }
+
   console.log('[Save] All unsaved local caches flushed successfully.');
 }
 
-// Button Click Logic
+// Button Click & Lifecycle Guard Logic
 function InitSaveButtonLogic() {
   const btn = document.getElementById('save-btn');
   if (btn) {
     btn.addEventListener('click', () => {
       SaveAndDownloadApp();
     });
+  }
+
+  // Restore unsaved indicator & badge if changes exist in active session
+  if (HasUnsavedChanges()) {
+    MarkUnsavedChanges(true, GetUnsavedChangesCount());
+  } else {
+    MarkUnsavedChanges(false, 0);
+  }
+
+  // Install navigation guards once per window
+  if (typeof window !== 'undefined' && !window.__UNSAVED_GUARD_INSTALLED__) {
+    window.__UNSAVED_GUARD_INSTALLED__ = true;
+
+    // Prompt on tab close / browser reload
+    window.addEventListener('beforeunload', (e) => {
+      if (window.__SUPPRESS_BEFOREUNLOAD__) return;
+      if (HasUnsavedChanges()) {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+      }
+    });
+
+    // Immediately wipe localStorage cache when leaving or closing the page
+    window.addEventListener('pagehide', () => {
+      ClearAllLocalCaches();
+    });
+
+    // Clean sweep on initial startup to ensure no stale cache from other files contaminates this session
+    ClearAllLocalCaches();
   }
 }
 
@@ -2382,6 +2615,15 @@ function syncTabStatesToDOM(doc) {
 function clearAllTabLocalCaches() {
   if (typeof localStorage === 'undefined') return;
   try {
+    localStorage.removeItem('profftrack:v1');
+    localStorage.removeItem('rd_library_v1');
+    localStorage.removeItem('PapersData_Local_Cache');
+    localStorage.removeItem('NotesData_Local_Cache');
+    localStorage.removeItem('Bookmarks_Local_Cache');
+    localStorage.removeItem('LandingPageData_Local_Cache');
+  } catch (e) { }
+
+  try {
     for (let i = localStorage.length - 1; i >= 0; i--) {
       const key = localStorage.key(i);
       if (key && (key.endsWith('_Local_Cache') || key.includes('_Cache'))) {
@@ -2394,6 +2636,10 @@ function clearAllTabLocalCaches() {
     try {
       window.__blockHistories.clear();
     } catch (e) { }
+  }
+
+  if (typeof window !== 'undefined' && typeof window.MarkUnsavedChanges === 'function') {
+    window.MarkUnsavedChanges(false);
   }
 }
 
@@ -2557,6 +2803,12 @@ handlePageRoute();
   URL.revokeObjectURL(url);
 
   clearAllTabLocalCaches();
+  if (typeof window.CaptureBookmarkBaseline === 'function') {
+    window.CaptureBookmarkBaseline(window.BookmarkState);
+  }
+  if (typeof window.MarkUnsavedChanges === 'function') {
+    window.MarkUnsavedChanges(false, 0);
+  }
 
   const saveBtn = document.getElementById('save-btn');
   if (saveBtn) {
@@ -2573,6 +2825,9 @@ handlePageRoute();
       saveBtn.style.background = originalBg;
       saveBtn.title = 'SAVE APPLICATION';
       saveBtn.innerHTML = originalHTML;
+      if (typeof window.MarkUnsavedChanges === 'function') {
+        window.MarkUnsavedChanges(false, 0);
+      }
     }, 2000);
   }
 }
@@ -2589,7 +2844,6 @@ function InitTabSaveOverride() {
     SaveBookmarksStandalone();
   });
 }
-
 
 /* --- 02_Bookmarks/01_Tab_Bookmarks/Tab_Logo_Handler.js --- */
 // Per-tab logo click handler for 02_Bookmarks/01_Tab_Bookmarks/Bookmarks.html.
@@ -2801,6 +3055,126 @@ let BookmarkState = {
   bookmarks: [],
   sectionOrder: ['ALL']
 };
+
+let baselineBookmarksMap = (typeof window !== 'undefined' && window.__BOOKMARKS_BASELINE__)
+  ? window.__BOOKMARKS_BASELINE__
+  : new Map(); // id -> fingerprint string
+let isBaselineCaptured = Boolean(typeof window !== 'undefined' && window.__BOOKMARKS_BASELINE_CAPTURED__);
+let hasUnsavedBookmarkChanges = Boolean(typeof window !== 'undefined' && window.__BOOKMARKS_UNSAVED__);
+
+if (typeof window !== 'undefined') {
+  window.__BOOKMARKS_BASELINE__ = baselineBookmarksMap;
+  window.__BOOKMARKS_BASELINE_CAPTURED__ = isBaselineCaptured;
+  window.__BOOKMARKS_UNSAVED__ = hasUnsavedBookmarkChanges;
+}
+
+function getBookmarkFingerprint(b) {
+  if (!b || typeof b !== 'object') return '';
+  return JSON.stringify({
+    name: String(b.name || '').trim(),
+    url: String(b.url || '').trim(),
+    group: String(b.group || '').trim(),
+    customIcon: String(b.customIcon || '').trim(),
+    useTitleLogo: Boolean(b.useTitleLogo)
+  });
+}
+function CaptureBookmarkBaseline(state = BookmarkState) {
+  baselineBookmarksMap.clear();
+  if (state && Array.isArray(state.bookmarks)) {
+    state.bookmarks.forEach(b => {
+      if (!b || !b.id) return;
+      baselineBookmarksMap.set(b.id, getBookmarkFingerprint(b));
+    });
+  }
+  isBaselineCaptured = true;
+  hasUnsavedBookmarkChanges = false;
+  if (typeof window !== 'undefined') {
+    window.__BOOKMARKS_BASELINE__ = baselineBookmarksMap;
+    window.__BOOKMARKS_BASELINE_CAPTURED__ = true;
+    window.__BOOKMARKS_UNSAVED__ = false;
+    window.__BOOKMARKS_UNSAVED_COUNT__ = 0;
+    if (typeof window.MarkUnsavedChanges === 'function') {
+      window.MarkUnsavedChanges(false, 0);
+    }
+  }
+}
+function CalculateBookmarkChanges() {
+  if (!isBaselineCaptured) {
+    return { count: 0, isDirty: false, addedCount: 0, editedCount: 0, deletedCount: 0 };
+  }
+
+  let addedCount = 0;
+  let editedCount = 0;
+  let deletedCount = 0;
+  const currentIds = new Set();
+
+  if (BookmarkState && Array.isArray(BookmarkState.bookmarks)) {
+    BookmarkState.bookmarks.forEach(b => {
+      if (!b || !b.id) return;
+      currentIds.add(b.id);
+      const origFp = baselineBookmarksMap.get(b.id);
+      if (origFp === undefined) {
+        addedCount++;
+      } else {
+        const currFp = getBookmarkFingerprint(b);
+        if (origFp !== currFp) {
+          editedCount++;
+        }
+      }
+    });
+  }
+
+  for (const [origId] of baselineBookmarksMap) {
+    if (!currentIds.has(origId)) {
+      deletedCount++;
+    }
+  }
+
+  const totalCount = addedCount + editedCount + deletedCount;
+  const isDirty = totalCount > 0;
+
+  return {
+    count: totalCount,
+    isDirty,
+    addedCount,
+    editedCount,
+    deletedCount
+  };
+}
+function GetBookmarksUnsavedChangesCount() {
+  const diff = CalculateBookmarkChanges();
+  return diff.count;
+}
+function HasUnsavedBookmarkChanges() {
+  if (!isBaselineCaptured) return hasUnsavedBookmarkChanges;
+  const diff = CalculateBookmarkChanges();
+  return diff.isDirty;
+}
+function SetBookmarksUnsavedChanges(dirty = true) {
+  let isDirty = false;
+  let count = 0;
+  if (dirty === false) {
+    isDirty = false;
+    count = 0;
+  } else if (isBaselineCaptured) {
+    const diff = CalculateBookmarkChanges();
+    isDirty = diff.isDirty;
+    count = diff.count;
+  } else {
+    isDirty = Boolean(dirty);
+    count = isDirty ? 1 : 0;
+  }
+  hasUnsavedBookmarkChanges = isDirty;
+  if (typeof window !== 'undefined') {
+    window.__BOOKMARKS_UNSAVED__ = hasUnsavedBookmarkChanges;
+    window.__BOOKMARKS_UNSAVED_COUNT__ = count;
+    if (typeof window.MarkUnsavedChanges === 'function') {
+      const overallDirty = typeof window.HasUnsavedChanges === 'function' ? window.HasUnsavedChanges() : hasUnsavedBookmarkChanges;
+      const overallCount = typeof window.GetUnsavedChangesCount === 'function' ? window.GetUnsavedChangesCount() : count;
+      window.MarkUnsavedChanges(overallDirty, overallCount);
+    }
+  }
+}
 function LoadBookmarkState() {
   const dataBlock = typeof document !== 'undefined' ? document.getElementById('Bookmarks') : null;
   let domState = null;
@@ -2823,30 +3197,12 @@ function LoadBookmarkState() {
     }
   }
 
-  // 1. Check if browser Local Storage has an active unsaved crash recovery buffer
+  // 1. Wipe any stale leftover cache from previous files or sessions
   try {
-    const cached = typeof localStorage !== 'undefined' ? localStorage.getItem('Bookmarks_Local_Cache') : null;
-    if (cached) {
-      const parsedCache = JSON.parse(cached);
-      const domTimestamp = domState?._lastSaved || 0;
-      const cacheTimestamp = parsedCache?._savedAt || 0;
-
-      // Only restore from cache if it represents active unsaved edits newer than the HTML file
-      if (parsedCache && parsedCache._unsaved === true && cacheTimestamp > domTimestamp && Array.isArray(parsedCache.bookmarks)) {
-        console.log('[BookmarkState] Recovering uncommitted bookmark edits from local cache...');
-        BookmarkState = {
-          bookmarks: parsedCache.bookmarks,
-          sectionOrder: Array.isArray(parsedCache.sectionOrder) ? parsedCache.sectionOrder : ['ALL'],
-          _lastSaved: cacheTimestamp
-        };
-        if (dataBlock) dataBlock.textContent = JSON.stringify(BookmarkState, null, 2);
-        if (typeof window !== 'undefined') window.BookmarkState = BookmarkState;
-        return BookmarkState;
-      }
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('Bookmarks_Local_Cache');
     }
-  } catch (e) {
-    console.warn('Could not read Bookmarks_Local_Cache:', e);
-  }
+  } catch (e) { }
 
   // 2. Pure, clean load directly from HTML data vault (#Bookmarks)
   if (domState) {
@@ -2856,12 +3212,18 @@ function LoadBookmarkState() {
       _lastSaved: domState._lastSaved || 0
     };
     if (typeof window !== 'undefined') window.BookmarkState = BookmarkState;
+    if (!isBaselineCaptured) {
+      CaptureBookmarkBaseline(BookmarkState);
+    }
     return BookmarkState;
   }
 
   // 3. Default empty state
   BookmarkState = { bookmarks: [], sectionOrder: ['ALL'], _lastSaved: 0 };
   if (typeof window !== 'undefined') window.BookmarkState = BookmarkState;
+  if (!isBaselineCaptured) {
+    CaptureBookmarkBaseline(BookmarkState);
+  }
   return BookmarkState;
 }
 function SaveBookmarkState(newState = null) {
@@ -2870,7 +3232,10 @@ function SaveBookmarkState(newState = null) {
   const dataBlock = typeof document !== 'undefined' ? document.getElementById('Bookmarks') : null;
   if (dataBlock) dataBlock.textContent = JSON.stringify(BookmarkState, null, 2);
 
-  if (typeof window !== 'undefined') window.BookmarkState = BookmarkState;
+  if (typeof window !== 'undefined') {
+    window.BookmarkState = BookmarkState;
+    SetBookmarksUnsavedChanges(true);
+  }
 
   // Persist to browser Local Storage as active unsaved working buffer
   try {
@@ -2896,6 +3261,18 @@ function ClearBookmarkLocalCache() {
   } catch (e) {
     console.warn('Failed to clear Bookmarks_Local_Cache:', e);
   }
+  CaptureBookmarkBaseline(BookmarkState);
+}
+
+if (typeof window !== 'undefined') {
+  window.BookmarkState = BookmarkState;
+  window.SaveBookmarkState = SaveBookmarkState;
+  window.ClearBookmarkLocalCache = ClearBookmarkLocalCache;
+  window.CaptureBookmarkBaseline = CaptureBookmarkBaseline;
+  window.CalculateBookmarkChanges = CalculateBookmarkChanges;
+  window.GetBookmarksUnsavedChangesCount = GetBookmarksUnsavedChangesCount;
+  window.HasUnsavedBookmarkChanges = HasUnsavedBookmarkChanges;
+  window.SetBookmarksUnsavedChanges = SetBookmarksUnsavedChanges;
 }
 
 // Initial load on import

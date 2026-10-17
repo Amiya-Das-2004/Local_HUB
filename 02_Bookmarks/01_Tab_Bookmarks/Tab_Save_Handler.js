@@ -290,6 +290,12 @@ handlePageRoute();
   URL.revokeObjectURL(url);
 
   clearAllTabLocalCaches();
+  if (typeof window.CaptureBookmarkBaseline === 'function') {
+    window.CaptureBookmarkBaseline(window.BookmarkState);
+  }
+  if (typeof window.MarkUnsavedChanges === 'function') {
+    window.MarkUnsavedChanges(false, 0);
+  }
 
   const saveBtn = document.getElementById('save-btn');
   if (saveBtn) {
@@ -306,6 +312,9 @@ handlePageRoute();
       saveBtn.style.background = originalBg;
       saveBtn.title = 'SAVE APPLICATION';
       saveBtn.innerHTML = originalHTML;
+      if (typeof window.MarkUnsavedChanges === 'function') {
+        window.MarkUnsavedChanges(false, 0);
+      }
     }, 2000);
   }
 }

@@ -2728,34 +2728,75 @@ handleRoute();
 // Global unsaved changes state tracker
 let isAppDirty = false;
 let appUnsavedCount = 0;
-
 function HasUnsavedChanges() {
   if (typeof window !== 'undefined') {
+    let hasProvider = false;
+    let anyDirty = false;
+
+    if (typeof window.HasUnsavedBookmarkChanges === 'function') {
+      hasProvider = true;
+      if (window.HasUnsavedBookmarkChanges()) anyDirty = true;
+    } else if (typeof window.__BOOKMARKS_UNSAVED__ === 'boolean') {
+      hasProvider = true;
+      if (window.__BOOKMARKS_UNSAVED__) anyDirty = true;
+    }
+
+    if (typeof window.HasUnsavedNotesChanges === 'function') {
+      hasProvider = true;
+      if (window.HasUnsavedNotesChanges()) anyDirty = true;
+    } else if (typeof window.__NOTES_UNSAVED__ === 'boolean') {
+      hasProvider = true;
+      if (window.__NOTES_UNSAVED__) anyDirty = true;
+    }
+
+    if (hasProvider) {
+      return anyDirty;
+    }
+
     if (typeof window.__HAS_UNSAVED_CHANGES__ === 'boolean') {
       return window.__HAS_UNSAVED_CHANGES__;
-    }
-    if (typeof window.__NOTES_UNSAVED__ === 'boolean') {
-      return window.__NOTES_UNSAVED__;
     }
   }
   return isAppDirty;
 }
-
 function GetUnsavedChangesCount() {
-  if (typeof window !== 'undefined' && typeof window.__NOTES_UNSAVED_COUNT__ === 'number') {
-    return window.__NOTES_UNSAVED_COUNT__;
+  if (typeof window !== 'undefined') {
+    let total = 0;
+    let hasProvider = false;
+
+    if (typeof window.GetBookmarksUnsavedChangesCount === 'function') {
+      total += window.GetBookmarksUnsavedChangesCount();
+      hasProvider = true;
+    } else if (typeof window.__BOOKMARKS_UNSAVED_COUNT__ === 'number') {
+      total += window.__BOOKMARKS_UNSAVED_COUNT__;
+      hasProvider = true;
+    }
+
+    if (typeof window.GetNotesUnsavedChangesCount === 'function') {
+      total += window.GetNotesUnsavedChangesCount();
+      hasProvider = true;
+    } else if (typeof window.__NOTES_UNSAVED_COUNT__ === 'number') {
+      total += window.__NOTES_UNSAVED_COUNT__;
+      hasProvider = true;
+    }
+
+    if (hasProvider) {
+      return total;
+    }
   }
   return appUnsavedCount;
 }
-
 function MarkUnsavedChanges(isDirty = true, count = null) {
   isAppDirty = Boolean(isDirty);
   if (typeof count === 'number') {
     appUnsavedCount = Math.max(0, count);
   } else if (!isAppDirty) {
     appUnsavedCount = 0;
-  } else if (appUnsavedCount === 0) {
-    appUnsavedCount = 1;
+  } else {
+    appUnsavedCount = GetUnsavedChangesCount();
+    if (appUnsavedCount === 0 && isAppDirty) {
+      appUnsavedCount = 1;
+    }
   }
 
   if (typeof window !== 'undefined') {
@@ -2772,7 +2813,7 @@ function MarkUnsavedChanges(isDirty = true, count = null) {
         badge.textContent = appUnsavedCount > 99 ? '99+' : String(appUnsavedCount);
         badge.style.display = 'flex';
       }
-      const changeText = appUnsavedCount === 1 ? '1 unsaved block change' : `${appUnsavedCount} unsaved block changes`;
+      const changeText = appUnsavedCount === 1 ? '1 unsaved change' : `${appUnsavedCount} unsaved changes`;
       saveBtn.title = `SAVE APPLICATION (${changeText})`;
     } else {
       saveBtn.classList.remove('has-unsaved');
@@ -2844,9 +2885,13 @@ function ClearAllLocalCaches() {
   if (typeof window !== 'undefined') {
     window.__HAS_UNSAVED_CHANGES__ = false;
     window.__NOTES_UNSAVED__ = false;
-    window.__NOTES_UNSAVED_COUNT__ = 0;
+    window.__BOOKMARKS_UNSAVED__ = false;
+    window.__BOOKMARKS_UNSAVED_COUNT__ = 0;
     if (typeof window.ClearNotesLocalCache === 'function') {
       try { window.ClearNotesLocalCache(); } catch (e) { }
+    }
+    if (typeof window.ClearBookmarkLocalCache === 'function') {
+      try { window.ClearBookmarkLocalCache(); } catch (e) { }
     }
   }
   const saveBtn = typeof document !== 'undefined' ? document.getElementById('save-btn') : null;
@@ -3978,14 +4023,12 @@ function sanitizeNote(n, idx = 0) {
         return out; });
     })(),
     meta: n.meta || { created: new Date().toISOString().slice(0, 10), author: 'User' },
-    flashcard: n.flashcard || null,
     blocks: Array.isArray(n.blocks) ? n.blocks.map((b, bIdx) => {
       if (b && typeof b === 'object' && !b.id) {
         b.id = `b_${Date.now()}_${idx}_${bIdx}_${Math.random().toString(36).slice(2, 6)}`;
       }
       return b;
     }) : [],
-    autoNumbering: n.autoNumbering || { h1: 'numeric', h2: 'numeric', h3: 'numeric' },
     // Per-note numbering configs pass through untouched (objects or legacy strings):
     ...(n.equationNumbering !== undefined ? { equationNumbering: n.equationNumbering } : {}),
     ...(n.figureNumbering !== undefined ? { figureNumbering: n.figureNumbering } : {}),
@@ -4152,7 +4195,6 @@ function getBlockFingerprint(block) {
     return String(block.id || '') + ':' + String(block.type || '') + ':' + String(block.content || '');
   }
 }
-
 function CaptureNotesBaseline(state = NotesState) {
   baselineBlocksMap.clear();
   baselineNotesMeta.clear();
@@ -4192,7 +4234,6 @@ function CaptureNotesBaseline(state = NotesState) {
     }
   }
 }
-
 function CalculateNotesBlockChanges() {
   if (!isBaselineCaptured) {
     return { count: 0, isDirty: false, modifiedCount: 0, addedCount: 0, deletedCount: 0, metadataChangesCount: 0 };
@@ -4269,18 +4310,15 @@ function CalculateNotesBlockChanges() {
     metadataChangesCount
   };
 }
-
 function GetNotesUnsavedChangesCount() {
   const diff = CalculateNotesBlockChanges();
   return diff.count;
 }
-
 function HasUnsavedNotesChanges() {
   if (!isBaselineCaptured) return hasUnsavedNotesChanges;
   const diff = CalculateNotesBlockChanges();
   return diff.isDirty;
 }
-
 function SetNotesUnsavedChanges(dirty = true) {
   let isDirty = false;
   let count = 0;
@@ -4300,7 +4338,9 @@ function SetNotesUnsavedChanges(dirty = true) {
     window.__NOTES_UNSAVED__ = hasUnsavedNotesChanges;
     window.__NOTES_UNSAVED_COUNT__ = count;
     if (typeof window.MarkUnsavedChanges === 'function') {
-      window.MarkUnsavedChanges(hasUnsavedNotesChanges, count);
+      const overallDirty = typeof window.HasUnsavedChanges === 'function' ? window.HasUnsavedChanges() : hasUnsavedNotesChanges;
+      const overallCount = typeof window.GetUnsavedChangesCount === 'function' ? window.GetUnsavedChangesCount() : count;
+      window.MarkUnsavedChanges(overallDirty, overallCount);
     }
   }
 }
