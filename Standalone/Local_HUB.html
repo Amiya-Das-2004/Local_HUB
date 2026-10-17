@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en"><head>
+<html lang="en" data-theme="light" style="--notes-header-height: 74px; --notes-toolbar-height: 74px;"><head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Local HUB</title>
@@ -64,35 +64,16 @@
   </style>
 
   <!-- THE VAULT: Data is stored here -->
-  <script type="application/json" id="LandingPageData">{
-  "tabs": [
+  <script type="application/json" id="LandingPageData">
     {
-      "Name": "BOOKMARK",
-      "Url": "#Bookmarks",
-      "PageUrl": "02_Bookmarks/01_Tab_Bookmarks/Bookmarks.html",
-      "Color": 14037359
-    },
-    {
-      "Name": "NOTES",
-      "Url": "#Notes",
-      "PageUrl": "03_Notes/Tab_Notes/Notes.html",
-      "Color": 4048447
-    },
-    {
-      "Name": "PROFESSORS",
-      "Url": "#Professors",
-      "PageUrl": "04_Professors/06_Tab_Professors/Professor.html",
-      "Color": 1013358
-    },
-    {
-      "Name": "R&D",
-      "Url": "#RD",
-      "PageUrl": "05_R&D/06_Tab_RD/R&D.html",
-      "Color": 9137663
+      "tabs": [
+        { "Name": "BOOKMARK", "Url": "#Bookmarks", "PageUrl": "02_Bookmarks/01_Tab_Bookmarks/Bookmarks.html", "Color": 14037359 },
+        { "Name": "NOTES", "Url": "#Notes", "PageUrl": "03_Notes/Tab_Notes/Notes.html", "Color": 4048447 },
+        { "Name": "PROFESSORS", "Url": "#Professors", "PageUrl": "04_Professors/06_Tab_Professors/Professor.html", "Color": 1013358 },
+        { "Name": "R&D", "Url": "#RD", "PageUrl": "05_R&D/06_Tab_RD/R&D.html", "Color": 9137663 }
+      ]
     }
-  ],
-  "_lastSaved": 1792198837459
-}</script>
+  </script>
   <script type="application/json" id="Bookmarks">
     {
       "bookmarks": [
@@ -105,7 +86,7 @@
   "vaultMeta": {
     "title": "Notes Vault",
     "version": "1.0.0",
-    "lastSaved": 1791047174862
+    "lastSaved": 1792225331038
   },
   "globalMacros": {
     "equation": "\\newcommand{\\mb}[1]{\\mathbf{#1}}\n\\newcommand{\\cancelto}[2]{\\htmlClass{lh-cancelto}{\\htmlClass{lh-cancelto-base}{#2}\\htmlClass{lh-cancelto-val}{\\scriptstyle #1}}}\n\\newcommand{\\comment}[1]{\\textcolor{#dc2626|#f87171}{[#1]}}\n\\newcommand{\\R}{\\mathbb{R}}\n\\newcommand{\\C}{\\mathbb{C}}\n\\newcommand{\\N}{\\mathbb{N}}\n\\newcommand{\\Z}{\\mathbb{Z}}",
@@ -139,14 +120,16 @@
         "katex"
       ],
       "description": "LaTeX Support in LocalHUB",
+      "properties": [
+        {
+          "key": "Description",
+          "value": "LaTeX Support in LocalHUB",
+          "type": "text"
+        }
+      ],
       "meta": {
         "created": "2026-08-31",
         "author": "Amiya"
-      },
-      "flashcard": {
-        "isFlashcard": true,
-        "front": "LaTeX Support in LocalHUB",
-        "back": "LaTeX Support in LocalHUB"
       },
       "blocks": [
         {
@@ -235,7 +218,7 @@
         {
           "id": "b_lat_t4",
           "type": "text",
-          "content": "- **Auto-sizing Delimiters**: `\\left( ... \\right)`, `\\left[ ... \\right]`, `\\left\\{ ... \\right\\}`, `\\left| ... \\right|`, `\\left\\| ... \\right\\|`, `\\left\\langle ... \\right\\rangle`, `\\left\\lfloor ... \\right\\rfloor`, `\\left\\lceil ... \\right\\rceil`.\n- **Evaluated-at Bar**: `\\left. \\frac{\\mathrm{d}f}{\\mathrm{d}x} \\right|_{x=0}` produces $\\left. \\frac{\\mathrm{d}f}{\\mathrm{d}x} \\right|_{x=0}$.\n- **Manual Sizing Scale**: `\\bigl( \\dots \\bigr) < \\Bigl( \\dots \\Bigr) < \\biggl( \\dots \\biggr) < \\Biggl( \\dots \\Biggr)`."
+          "content": "- **Auto-sizing Delimiters**: `\\left( ... \\right)`, `\\left[ ... \\right]`, `\\left\\{ ... \\right\\}`, `\\left| ... \\right|`, `\\left\\| ... \\right\\|`, `\\left\\langle ... \\right\\rangle`, `\\left\\lfloor ... \\right\\rfloor`, `\\left\\lceil ... \\right\\rceil`.\n- **Evaluated-at Bar**: `\\left. \\frac{\\mathrm{d}f}{\\mathrm{d}x} \\right|_{x=0}` produces $\\left. \\frac{\\mathrm{d}f}{\\mathrm{d}x} \\right|_{x=0}$.\n- **Manual Sizing Scale**: `\\bigl( \\dots \\bigr) \u003c \\Bigl( \\dots \\Bigr) \u003c \\biggl( \\dots \\biggr) \u003c \\Biggl( \\dots \\Biggr)`."
         },
         {
           "id": "b_lat_h5",
@@ -334,7 +317,7 @@
         {
           "id": "b_lat_t9_3",
           "type": "text",
-          "content": "- **Equality & Equivalence**:\n  - `=` ($=$), `\\neq` ($\\neq$), `\\equiv` ($\\equiv$), `\\sim` ($\\sim$), `\\approx` ($\\approx`), `\\simeq` ($\\simeq`), `\\cong` ($\\cong`), `\\propto` ($\\propto`), `\\doteq` ($\\doteq$), `\\asymp` ($\\asymp$).\n- **Ordering**:\n  - `<` ($<$), `>` ($>$), `\\le` or `\\leq` ($\\le$), `\\ge` or `\\geq` ($\\ge`), `\\ll` ($\\ll`), `\\gg` ($\\gg$), `\\prec` ($\\prec$), `\\succ` ($\\succ$), `\\preceq` ($\\preceq$), `\\succeq` ($\\succeq$).\n- **Geometry & Alignment**:\n  - `\\parallel` ($\\parallel$), `\\nparallel` ($\\nparallel$), `\\perp` ($\\perp$), `\\mid` ($\\mid$), `\\nmid` ($\\nmid$)."
+          "content": "- **Equality & Equivalence**:\n  - `=` ($=$), `\\neq` ($\\neq$), `\\equiv` ($\\equiv$), `\\sim` ($\\sim$), `\\approx` ($\\approx`), `\\simeq` ($\\simeq`), `\\cong` ($\\cong`), `\\propto` ($\\propto`), `\\doteq` ($\\doteq$), `\\asymp` ($\\asymp$).\n- **Ordering**:\n  - `\u003c` ($\u003c$), `>` ($>$), `\\le` or `\\leq` ($\\le$), `\\ge` or `\\geq` ($\\ge`), `\\ll` ($\\ll`), `\\gg` ($\\gg$), `\\prec` ($\\prec$), `\\succ` ($\\succ$), `\\preceq` ($\\preceq$), `\\succeq` ($\\succeq$).\n- **Geometry & Alignment**:\n  - `\\parallel` ($\\parallel$), `\\nparallel` ($\\nparallel$), `\\perp` ($\\perp$), `\\mid` ($\\mid$), `\\nmid` ($\\nmid$)."
         },
         {
           "id": "b_lat_h9_4",
@@ -491,20 +474,15 @@
           "content": "Referring across environments: the group is $\\eqref{env}$, its rows are $\\eqref{env1}$ and $\\eqref{env2}$, the standalone part is $\\eqref{env3}$, and the single labeled equation is $\\ref{envg}$ — every badge is click-to-jump.\n\nAnd a numbered equation written straight inside this text block's display-math environment (referenced as $\\eqref{envt}$ like any equation block):\n$$\n\\int_0^{\\infty} e^{-x^2}\\,dx = \\frac{\\sqrt{\\pi}}{2} \\label{envt}\n$$"
         }
       ],
-      "autoNumbering": {
-        "h1": "numeric",
-        "h2": "numeric",
-        "h3": "numeric"
+      "equationNumbering": {
+        "level1": "numeric",
+        "level2": "numeric",
+        "level3": "numeric"
       },
       "logo": null,
       "macros": {
         "equation": "",
         "tikz": ""
-      },
-      "equationNumbering": {
-        "level1": "numeric",
-        "level2": "numeric",
-        "level3": "numeric"
       }
     },
     {
@@ -520,14 +498,16 @@
         "packages"
       ],
       "description": "TikZ engine packages showcase — tagged figures with \\fig cross-references",
+      "properties": [
+        {
+          "key": "Description",
+          "value": "TikZ engine packages showcase — tagged figures with \\fig cross-references",
+          "type": "text"
+        }
+      ],
       "meta": {
         "created": "2026-10-03",
         "author": "Amiya"
-      },
-      "flashcard": {
-        "isFlashcard": false,
-        "front": "Tikzipicture Examples",
-        "back": "Tikzipicture Examples"
       },
       "blocks": [
         {
@@ -743,11 +723,6 @@
           "content": "The embedded core does **not** carry every pgf library: `automata`, `mindmap`, `decorations.pathmorphing` (coil/zigzag), `backgrounds` layers, `perspective`, `spy` and `shapes.symbols` are unavailable, and external packages (`pgfplots`, `tcolorbox`, `circuitikz`, …) cannot be loaded — all verified and documented in `03_Notes/Writing_Engine/Tikz_Engine/packages/README.md`. Everything shown above, however, compiles fully offline."
         }
       ],
-      "autoNumbering": {
-        "h1": "numeric",
-        "h2": "numeric",
-        "h3": "numeric"
-      },
       "logo": null,
       "macros": {
         "equation": "",
@@ -781,37 +756,675 @@
     "items": []
   }
   </script>
-<style>*, ::before, ::after{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }/* ! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com */*,::after,::before{box-sizing:border-box;border-width:0;border-style:solid;border-color:#e5e7eb}::after,::before{--tw-content:''}:host,html{line-height:1.5;-webkit-text-size-adjust:100%;-moz-tab-size:4;tab-size:4;font-family:ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";font-feature-settings:normal;font-variation-settings:normal;-webkit-tap-highlight-color:transparent}body{margin:0;line-height:inherit}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,pre,samp{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;font-feature-settings:normal;font-variation-settings:normal;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}button,input,optgroup,select,textarea{font-family:inherit;font-feature-settings:inherit;font-variation-settings:inherit;font-size:100%;font-weight:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:transparent;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dd,dl,figure,h1,h2,h3,h4,h5,h6,hr,p,pre{margin:0}fieldset{margin:0;padding:0}legend{padding:0}menu,ol,ul{list-style:none;margin:0;padding:0}dialog{padding:0}textarea{resize:vertical}input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}[role=button],button{cursor:pointer}:disabled{cursor:default}audio,canvas,embed,iframe,img,object,svg,video{display:block;vertical-align:middle}img,video{max-width:100%;height:auto}[hidden]:where(:not([hidden=until-found])){display:none}.pointer-events-none{pointer-events:none}.pointer-events-auto{pointer-events:auto}.fixed{position:fixed}.inset-0{inset:0px}.bottom-0{bottom:0px}.left-0{left:0px}.right-0{right:0px}.top-0{top:0px}.z-10{z-index:10}.z-20{z-index:20}.mb-2{margin-bottom:0.5rem}.flex{display:flex}.w-\[140px\]{width:140px}.w-full{width:100%}.cursor-pointer{cursor:pointer}.select-none{-webkit-user-select:none;user-select:none}.items-center{align-items:center}.justify-end{justify-content:flex-end}.gap-2{gap:0.5rem}.gap-3{gap:0.75rem}.px-5{padding-left:1.25rem;padding-right:1.25rem}.py-4{padding-top:1rem;padding-bottom:1rem}.text-center{text-align:center}.text-\[10px\]{font-size:10px}.tracking-\[0\.3em\]{letter-spacing:0.3em}.tracking-\[0\.4em\]{letter-spacing:0.4em}.text-\[--accent\]{color:var(--accent)}.text-\[--muted\]{color:var(--muted)}.transition-colors{transition-property:color, background-color, border-color, fill, stroke, -webkit-text-decoration-color;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke, -webkit-text-decoration-color;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.duration-300{transition-duration:300ms}.hover\:text-\[--accent\]:hover{color:var(--accent)}</style><style id="landing-theme-style">
-  :root {
-    --bg: #03010a;
-    --fg: #e2e8f0;
-    --accent: #6b8cff;
-    --muted: #475569;
-    --border: rgba(107, 140, 255, 0.2);
-  }
+<style>*, ::before, ::after{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }/* ! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com */*,::after,::before{box-sizing:border-box;border-width:0;border-style:solid;border-color:#e5e7eb}::after,::before{--tw-content:''}:host,html{line-height:1.5;-webkit-text-size-adjust:100%;-moz-tab-size:4;tab-size:4;font-family:ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";font-feature-settings:normal;font-variation-settings:normal;-webkit-tap-highlight-color:transparent}body{margin:0;line-height:inherit}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,pre,samp{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;font-feature-settings:normal;font-variation-settings:normal;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}button,input,optgroup,select,textarea{font-family:inherit;font-feature-settings:inherit;font-variation-settings:inherit;font-size:100%;font-weight:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:transparent;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dd,dl,figure,h1,h2,h3,h4,h5,h6,hr,p,pre{margin:0}fieldset{margin:0;padding:0}legend{padding:0}menu,ol,ul{list-style:none;margin:0;padding:0}dialog{padding:0}textarea{resize:vertical}input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}[role=button],button{cursor:pointer}:disabled{cursor:default}audio,canvas,embed,iframe,img,object,svg,video{display:block;vertical-align:middle}img,video{max-width:100%;height:auto}[hidden]:where(:not([hidden=until-found])){display:none}.fixed{position:fixed}.absolute{position:absolute}.relative{position:relative}.inset-x-2{left:0.5rem;right:0.5rem}.bottom-3{bottom:0.75rem}.left-1\/2{left:50%}.right-2{right:0.5rem}.top-2{top:0.5rem}.z-10{z-index:10}.z-20{z-index:20}.z-40{z-index:40}.mx-auto{margin-left:auto;margin-right:auto}.my-0\.5{margin-top:0.125rem;margin-bottom:0.125rem}.my-1{margin-top:0.25rem;margin-bottom:0.25rem}.my-\[-3px\]{margin-top:-3px;margin-bottom:-3px}.mb-1{margin-bottom:0.25rem}.mb-1\.5{margin-bottom:0.375rem}.mb-2{margin-bottom:0.5rem}.mb-2\.5{margin-bottom:0.625rem}.mb-4{margin-bottom:1rem}.mt-0\.5{margin-top:0.125rem}.mt-1{margin-top:0.25rem}.mt-2{margin-top:0.5rem}.mt-3\.5{margin-top:0.875rem}.mt-5{margin-top:1.25rem}.box-border{box-sizing:border-box}.flex{display:flex}.inline-flex{display:inline-flex}.hidden{display:none}.h-16{height:4rem}.h-4{height:1rem}.h-5{height:1.25rem}.h-6{height:1.5rem}.h-\[1\.5px\]{height:1.5px}.h-\[72px\]{height:72px}.min-h-\[1\.5em\]{min-height:1.5em}.w-16{width:4rem}.w-6{width:1.5rem}.w-\[72px\]{width:72px}.w-full{width:100%}.min-w-0{min-width:0px}.max-w-\[130px\]{max-width:130px}.max-w-\[220px\]{max-width:220px}.max-w-\[calc\(100vw-16px\)\]{max-width:calc(100vw - 16px)}.max-w-full{max-width:100%}.flex-1{flex:1 1 0%}.flex-shrink-0{flex-shrink:0}.-translate-x-1\/2{--tw-translate-x:-50%;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.scale-90{--tw-scale-x:.9;--tw-scale-y:.9;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.cursor-pointer{cursor:pointer}.select-none{-webkit-user-select:none;user-select:none}.select-text{-webkit-user-select:text;user-select:text}.flex-col{flex-direction:column}.flex-wrap{flex-wrap:wrap}.items-start{align-items:flex-start}.items-center{align-items:center}.items-baseline{align-items:baseline}.justify-center{justify-content:center}.justify-between{justify-content:space-between}.gap-1{gap:0.25rem}.gap-1\.5{gap:0.375rem}.gap-2{gap:0.5rem}.gap-3{gap:0.75rem}.gap-6{gap:1.5rem}.space-y-0\.5 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(0.125rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(0.125rem * var(--tw-space-y-reverse))}.truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rounded-2xl{border-radius:1rem}.rounded-full{border-radius:9999px}.rounded-lg{border-radius:0.5rem}.rounded-md{border-radius:0.375rem}.rounded-xl{border-radius:0.75rem}.border{border-width:1px}.border-b{border-bottom-width:1px}.border-t{border-top-width:1px}.border-t-0{border-top-width:0px}.border-\[var\(--border\)\]{border-color:var(--border)}.border-purple-500\/60{border-color:rgb(168 85 247 / 0.6)}.border-transparent{border-color:transparent}.bg-\[var\(--card\)\]{background-color:var(--card)}.bg-\[var\(--surface\)\]{background-color:var(--surface)}.bg-purple-500\/0{background-color:rgb(168 85 247 / 0)}.p-1{padding:0.25rem}.p-2\.5{padding:0.625rem}.p-3{padding:0.75rem}.p-4{padding:1rem}.px-1{padding-left:0.25rem;padding-right:0.25rem}.px-2{padding-left:0.5rem;padding-right:0.5rem}.px-2\.5{padding-left:0.625rem;padding-right:0.625rem}.py-0{padding-top:0px;padding-bottom:0px}.py-1{padding-top:0.25rem;padding-bottom:0.25rem}.py-2{padding-top:0.5rem;padding-bottom:0.5rem}.pb-0\.5{padding-bottom:0.125rem}.pb-1\.5{padding-bottom:0.375rem}.pb-24{padding-bottom:6rem}.pb-3{padding-bottom:0.75rem}.pt-0{padding-top:0px}.pt-2{padding-top:0.5rem}.text-center{text-align:center}.align-middle{vertical-align:middle}.font-mono{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace}.font-serif{font-family:ui-serif, Georgia, Cambria, "Times New Roman", Times, serif}.text-2xl{font-size:1.5rem;line-height:2rem}.text-\[10px\]{font-size:10px}.text-\[11px\]{font-size:11px}.text-xs{font-size:0.75rem;line-height:1rem}.font-bold{font-weight:700}.font-extrabold{font-weight:800}.font-medium{font-weight:500}.font-semibold{font-weight:600}.uppercase{text-transform:uppercase}.italic{font-style:italic}.leading-tight{line-height:1.25}.leading-snug{line-height:1.375}.tracking-tight{letter-spacing:-0.025em}.tracking-wider{letter-spacing:0.05em}.tracking-widest{letter-spacing:0.1em}.text-\[var\(--text\)\]{color:var(--text)}.text-\[var\(--text-dim\)\]{color:var(--text-dim)}.text-\[var\(--text-secondary\)\]{color:var(--text-secondary)}.text-purple-300{--tw-text-opacity:1;color:rgb(216 180 254 / var(--tw-text-opacity, 1))}.text-purple-400{--tw-text-opacity:1;color:rgb(192 132 252 / var(--tw-text-opacity, 1))}.text-purple-400\/90{color:rgb(192 132 252 / 0.9)}.accent-amber-500{accent-color:#f59e0b}.opacity-0{opacity:0}.shadow-2xl{--tw-shadow:0 25px 50px -12px rgb(0 0 0 / 0.25);--tw-shadow-colored:0 25px 50px -12px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-md{--tw-shadow:0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);--tw-shadow-colored:0 4px 6px -1px var(--tw-shadow-color), 0 2px 4px -2px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-sm{--tw-shadow:0 1px 2px 0 rgb(0 0 0 / 0.05);--tw-shadow-colored:0 1px 2px 0 var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.backdrop-blur-md{--tw-backdrop-blur:blur(12px);-webkit-backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)}.transition-all{transition-property:all;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.transition-colors{transition-property:color, background-color, border-color, fill, stroke, -webkit-text-decoration-color;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke, -webkit-text-decoration-color;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.transition-opacity{transition-property:opacity;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.duration-200{transition-duration:200ms}.ease-out{transition-timing-function:cubic-bezier(0, 0, 0.2, 1)}.hover\:border-\[var\(--border\)\]:hover{border-color:var(--border)}.hover\:border-purple-400:hover{--tw-border-opacity:1;border-color:rgb(192 132 252 / var(--tw-border-opacity, 1))}.hover\:border-purple-500:hover{--tw-border-opacity:1;border-color:rgb(168 85 247 / var(--tw-border-opacity, 1))}.hover\:bg-purple-600:hover{--tw-bg-opacity:1;background-color:rgb(147 51 234 / var(--tw-bg-opacity, 1))}.hover\:text-purple-400:hover{--tw-text-opacity:1;color:rgb(192 132 252 / var(--tw-text-opacity, 1))}.hover\:text-white:hover{--tw-text-opacity:1;color:rgb(255 255 255 / var(--tw-text-opacity, 1))}.hover\:opacity-80:hover{opacity:0.8}.group:hover .group-hover\:scale-100{--tw-scale-x:1;--tw-scale-y:1;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.group:hover .group-hover\:bg-purple-500\/50{background-color:rgb(168 85 247 / 0.5)}.group:hover .group-hover\:opacity-100{opacity:1}@media (min-width: 640px){.sm\:inset-x-6{left:1.5rem;right:1.5rem}.sm\:bottom-4{bottom:1rem}.sm\:gap-2{gap:0.5rem}.sm\:p-1\.5{padding:0.375rem}.sm\:p-6{padding:1.5rem}}@media (min-width: 768px){.md\:p-8{padding:2rem}.md\:text-3xl{font-size:1.875rem;line-height:2.25rem}}</style><style id="note-code-style">
+    .live-code, .note-inline-code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.85em;
+      padding: 0.15em 0.4em;
+      border-radius: 4px;
+      background-color: rgba(139, 92, 246, 0.15);
+      color: #c084fc;
+      border: 1px solid rgba(139, 92, 246, 0.25);
+      vertical-align: baseline;
+    }
+    [data-theme="light"] .live-code,
+    [data-theme="light"] .note-inline-code,
+    .light .live-code,
+    .light .note-inline-code {
+      background-color: #f3e8ff !important;
+      color: #581c87 !important;
+      border-color: #d8b4fe !important;
+      font-weight: 600 !important;
+    }
+    .obsidian-raw-block-editor {
+      background-color: #141622;
+      color: #e2e8f0;
+      border: 1px solid rgba(139, 92, 246, 0.4);
+      transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    }
+    [data-theme="light"] .obsidian-raw-block-editor,
+    .light .obsidian-raw-block-editor {
+      background-color: #f3f4f8 !important;
+      color: #1a1d2e !important;
+      border: 1px solid #d1d5e0 !important;
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+    }
+    .floating-katex-pill {
+      background-color: rgba(22, 25, 38, 0.95);
+      color: #d8b4fe;
+      border: 1px solid rgba(139, 92, 246, 0.4);
+    }
+    [data-theme="light"] .floating-katex-pill,
+    .light .floating-katex-pill {
+      background-color: rgba(255, 255, 255, 0.95) !important;
+      color: #581c87 !important;
+      border: 1px solid #d8b4fe !important;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+    }
+    .live-line {
+      min-height: 1.5em;
+      line-height: var(--note-line-height, 1.7);
+    }
+    .live-widget.live-bullet {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      vertical-align: middle;
+      line-height: 1;
+    }
+    .live-widget.live-checkbox {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      vertical-align: middle;
+      line-height: 1;
+    }
+    .live-widget.live-checkbox .note-task-checkbox {
+      margin: 0;
+      vertical-align: middle;
+    }
+    .live-widget.live-math {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      vertical-align: middle;
+      line-height: 1;
+    }
+    .live-widget.live-math .katex {
+      display: inline-flex;
+      align-items: center;
+      vertical-align: middle;
+      line-height: normal;
+    }
+    .live-widget.live-math .katex-html {
+      display: inline-flex;
+      align-items: center;
+      vertical-align: middle;
+    }
+    .live-widget.live-wikilink {
+      cursor: pointer;
+      display: inline;
+    }
+  </style><div id="note-cite-preview-handler" style="display: none;"></div><style id="notes-code-editor-sticky-styles">
+    .notes-code-editor-root.sticky-editing {
+      position: sticky;
+      z-index: 35;
+      box-shadow: 0 22px 48px -20px rgba(0, 0, 0, 0.55);
+      border-radius: 0.75rem;
+    }
+    /* Wheel over the writing area scrolls the code, never the page */
+    .notes-code-editor-root .code-editor-body,
+    .notes-code-editor-root .code-editor-textarea {
+      overscroll-behavior: contain;
+    }
+    .notes-code-editor-root.sticky-editing .code-editor-body {
+      max-height: min(55vh, 520px);
+    }
+  </style><style id="tikz-block-animation-styles">
+    @keyframes tikzWorkspaceFadeIn {
+      0% {
+        opacity: 0;
+        transform: translateY(-4px);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
 
-  body {
-    margin: 0;
-    padding: 0;
-    background-color: var(--bg);
-    color: var(--fg);
-    font-family: 'Space Grotesk', sans-serif;
-  }
+    @keyframes tikzHeaderSlideDown {
+      0% {
+        opacity: 0;
+        transform: translateY(-3px);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
 
-  .mono {
-    font-family: 'JetBrains Mono', monospace;
-  }
+    @keyframes tikzTextareaExpand {
+      0% {
+        opacity: 0;
+        transform: scaleY(0.98);
+      }
+      100% {
+        opacity: 1;
+        transform: scaleY(1);
+      }
+    }
 
-  .vignette {
-    position: fixed;
-    inset: 0;
-    z-index: 5;
-    pointer-events: none;
-    background: radial-gradient(circle at center, transparent 30%, rgba(3, 1, 10, 0.8) 100%);
-  }
+    .tikz-edit-workspace {
+      animation: tikzWorkspaceFadeIn 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      will-change: transform, opacity;
+    }
 
-  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&family=JetBrains+Mono:wght@300;400;600;700&display=swap');
-  </style></head>
+    .tikz-edit-header {
+      animation: tikzHeaderSlideDown 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      will-change: transform, opacity;
+    }
+
+    .tikz-edit-code-drawer {
+      animation: tikzTextareaExpand 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      will-change: transform, opacity;
+    }
+  </style><style id="notes-code-block-styles">
+    .notes-code-card {
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      background-color: var(--surface);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .notes-code-header {
+      background-color: #161926;
+      color: #e2e8f0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    }
+    [data-theme="light"] .notes-code-header {
+      background-color: #eaecf5;
+      color: #1e293b;
+      border-bottom: 1px solid var(--border);
+    }
+    .code-header-btn {
+      background-color: rgba(255, 255, 255, 0.08);
+      color: #cbd5e1;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      transition: all 0.18s ease;
+    }
+    .code-header-btn:hover {
+      background-color: rgba(255, 255, 255, 0.2);
+      color: #ffffff;
+    }
+    [data-theme="light"] .code-header-btn {
+      background-color: rgba(0, 0, 0, 0.05);
+      color: #475569;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+    }
+    [data-theme="light"] .code-header-btn:hover {
+      background-color: rgba(0, 0, 0, 0.12);
+      color: #0f172a;
+    }
+    .code-header-del-btn:hover {
+      background-color: #ef4444 !important;
+      color: #ffffff !important;
+      border-color: #ef4444 !important;
+    }
+    .code-title-input {
+      color: #e2e8f0;
+    }
+    [data-theme="light"] .code-title-input {
+      color: #1e293b;
+    }
+    .code-title-input:focus {
+      color: #ffffff;
+    }
+    [data-theme="light"] .code-title-input:focus {
+      color: #0f172a;
+    }
+    .code-title-static {
+      color: #e2e8f0;
+    }
+    [data-theme="light"] .code-title-static {
+      color: #1e293b;
+    }
+    .notes-code-body {
+      background-color: #12141e;
+      color: #abb2bf;
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+    [data-theme="light"] .notes-code-body {
+      background-color: #f8fafc;
+      color: #1e293b;
+    }
+    .notes-code-body pre {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12.5px;
+      line-height: 1.6;
+      tab-size: 2;
+      margin: 0;
+      padding: 12px 14px;
+      white-space: pre;
+      word-break: normal;
+      overflow-x: auto;
+    }
+    .notes-code-textarea {
+      width: 100%;
+      border: none;
+      outline: none;
+      background: transparent;
+      color: inherit;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12.5px;
+      line-height: 1.6;
+      tab-size: 2;
+      padding: 12px 14px;
+      margin: 0;
+      box-sizing: border-box;
+      resize: none;
+      display: block;
+      overflow-y: hidden;
+      overflow-x: hidden;
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+  </style><style id="universal-scrollbar-styles">
+      /* Universal Thin Opposite-Theme Scrollbars */
+      *,
+      *::before,
+      *::after {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(232, 234, 242, 0.45) transparent;
+      }
+
+      [data-theme="light"] *,
+      [data-theme="light"] *::before,
+      [data-theme="light"] *::after {
+        scrollbar-color: rgba(26, 29, 46, 0.45) transparent;
+      }
+
+      /* WebKit & Chromium Horizontal & Vertical Scrollbars */
+      ::-webkit-scrollbar {
+        width: 4px;
+        height: 4px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: transparent !important;
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: rgba(232, 234, 242, 0.42);
+        border-radius: 9999px;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.85);
+      }
+
+      [data-theme="light"] ::-webkit-scrollbar-thumb {
+        background: rgba(26, 29, 46, 0.42);
+      }
+
+      [data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+        background: rgba(0, 0, 0, 0.85);
+      }
+
+      ::-webkit-scrollbar-corner {
+        background: transparent !important;
+      }
+    </style><style id="note-task-checkbox-style">
+      .note-task-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        margin: 4px 0;
+        user-select: none;
+        line-height: 1.45;
+      }
+      .note-task-checkbox {
+        appearance: none;
+        -webkit-appearance: none;
+        width: 15px;
+        height: 15px;
+        min-width: 15px;
+        min-height: 15px;
+        border-radius: 4px;
+        border: 1.5px solid var(--border-light, #4a516d);
+        background: var(--card, #1c1f2e);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        margin-top: 3px;
+        margin-right: 0;
+        flex-shrink: 0;
+        transition: background-color 0.15s ease, border-color 0.15s ease;
+        outline: none;
+        box-sizing: border-box;
+      }
+      [data-theme="light"] .note-task-checkbox {
+        background: #ffffff;
+        border-color: #a0a8c0;
+      }
+      .note-task-checkbox:hover {
+        border-color: var(--accent, #8b6dff);
+      }
+      .note-task-checkbox:checked {
+        background: var(--accent, #8b6dff) !important;
+        border-color: var(--accent, #8b6dff) !important;
+      }
+      .note-task-checkbox:checked::after {
+        content: "";
+        display: block;
+        width: 3.5px;
+        height: 7.5px;
+        border: solid #ffffff;
+        border-width: 0 1.8px 1.8px 0;
+        transform: rotate(45deg) translate(-0.5px, -0.8px);
+      }
+      .note-task-text {
+        flex: 1;
+        word-break: break-word;
+        transition: opacity 0.2s ease, text-decoration 0.2s ease;
+      }
+      .note-task-text.is-done {
+        text-decoration: line-through;
+        opacity: 0.5;
+      }
+      .live-code, .note-inline-code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 0.85em;
+        padding: 0.15em 0.4em;
+        border-radius: 4px;
+        background-color: rgba(139, 92, 246, 0.15);
+        color: #c084fc;
+        border: 1px solid rgba(139, 92, 246, 0.25);
+        vertical-align: baseline;
+      }
+      [data-theme="light"] .live-code,
+      [data-theme="light"] .note-inline-code,
+      .light .live-code,
+      .light .note-inline-code {
+        background-color: #f3e8ff !important;
+        color: #581c87 !important;
+        border-color: #d8b4fe !important;
+        font-weight: 600 !important;
+      }
+    </style><style id="notes-floating-toolbar-styles">
+    .nft-icon-btn {
+      width: 32px; height: 32px; min-width: 32px; min-height: 32px; padding: 0;
+      display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 9999px; border: 1px solid var(--border, #2a2e40);
+      background: var(--surface, #181b27); color: var(--text, #e8eaf2);
+      cursor: pointer; flex-shrink: 0;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+    }
+    .nft-icon-btn:hover { transform: translateY(-1px); }
+    .nft-accent-sky:hover { color: #38bdf8; border-color: rgba(56, 189, 248, 0.5); background: rgba(56, 189, 248, 0.08); }
+    .nft-accent-purple:hover { color: #c084fc; border-color: rgba(192, 132, 252, 0.5); background: rgba(192, 132, 252, 0.08); }
+    .nft-accent-amber:hover { color: #fbbf24; border-color: rgba(251, 191, 36, 0.5); background: rgba(251, 191, 36, 0.08); }
+    .nft-accent-emerald:hover { color: #34d399; border-color: rgba(52, 211, 153, 0.5); background: rgba(52, 211, 153, 0.08); }
+    .nft-divider { width: 1px; height: 20px; background: var(--border, #2a2e40); opacity: 0.7; flex-shrink: 0; }
+
+    .nft-menu {
+      position: absolute; bottom: calc(100% + 10px); left: 0; min-width: 150px; padding: 4px;
+      border-radius: 12px; border: 1px solid var(--border, #2a2e40);
+      background: var(--card, #1c1f2e); box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45); z-index: 90;
+    }
+    .nft-menu.hidden { display: none; }
+
+    .nft-numbering-wrap { position: relative; }
+    .nft-numbering-panel {
+      position: absolute; bottom: calc(100% + 12px); right: -6px;
+      width: 238px; max-width: calc(100vw - 20px); padding: 8px;
+      border-radius: 14px; border: 1px solid var(--border, #2a2e40);
+      background: var(--card, #1c1f2e); box-shadow: 0 14px 36px rgba(0, 0, 0, 0.5);
+      z-index: 95; display: none;
+    }
+    .nft-numbering-panel.open { display: block; }
+    .nft-num-triggers { display: flex; gap: 6px; }
+    .nft-num-chip {
+      flex: 1; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12px; font-weight: 700; padding: 8px 10px; border-radius: 9px;
+      border: 1px solid var(--border, #2a2e40); background: var(--surface, #181b27);
+      color: var(--text, #e8eaf2); cursor: pointer; transition: all 0.15s; text-align: center;
+    }
+    .nft-num-chip-cite:hover, .nft-num-chip-cite.active { color: #facc15; border-color: rgba(250, 204, 21, 0.5); background: rgba(250, 204, 21, 0.1); }
+    .nft-num-chip-fig:hover, .nft-num-chip-fig.active { color: #fbbf24; border-color: rgba(251, 191, 36, 0.5); background: rgba(251, 191, 36, 0.1); }
+    .nft-num-chip-eq:hover, .nft-num-chip-eq.active { color: #34d399; border-color: rgba(52, 211, 153, 0.5); background: rgba(52, 211, 153, 0.1); }
+    .nft-num-section { display: none; margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--border, #2a2e40); }
+    .nft-num-section.open { display: block; }
+
+    /* Display-specific: tablet */
+    @media (max-width: 768px) {
+      .notes-floating-toolbar { gap: 4px !important; padding: 4px !important; }
+      .notes-floating-toolbar .nft-icon-btn,
+      .notes-floating-toolbar .notes-sidebar-toggle-btn,
+      .notes-floating-toolbar .notes-study-toggle-btn {
+        width: 30px !important; height: 30px !important; min-width: 30px !important; min-height: 30px !important;
+      }
+      .notes-floating-toolbar .nft-divider { height: 18px; }
+    }
+
+    /* Display-specific: phone */
+    @media (max-width: 520px) {
+      .notes-floating-toolbar { gap: 2px !important; padding: 3px !important; border-radius: 18px; }
+      .notes-floating-toolbar .nft-icon-btn,
+      .notes-floating-toolbar .notes-sidebar-toggle-btn,
+      .notes-floating-toolbar .notes-study-toggle-btn {
+        width: 28px !important; height: 28px !important; min-width: 28px !important; min-height: 28px !important;
+      }
+      .notes-floating-toolbar .nft-icon-btn svg { width: 14px; height: 14px; }
+      .notes-floating-toolbar .nft-divider { display: none; }
+    }
+  </style><style id="note-font-menu-styles">
+    .note-font-family-option {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      width: 100%; padding: 7px 10px; font-size: 11px; border-radius: 8px;
+      border: none; background: transparent; color: var(--text, #e8eaf2);
+      cursor: pointer; text-align: left; transition: background 0.15s; font-family: inherit;
+    }
+    .note-font-family-option:hover { background: var(--surface-hover, rgba(255,255,255,0.06)); }
+    .note-font-family-option.active { background: rgba(192, 132, 252, 0.14); }
+    .note-font-option-preview { font-size: 13px; color: #c084fc; line-height: 1; }
+  </style><style id="note-size-menu-styles">
+    .note-font-size-option {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      width: 100%; padding: 7px 10px; font-size: 11px; border-radius: 8px;
+      border: none; background: transparent; color: var(--text, #e8eaf2);
+      cursor: pointer; text-align: left; transition: background 0.15s; font-family: inherit;
+    }
+    .note-font-size-option:hover { background: var(--surface-hover, rgba(255,255,255,0.06)); }
+    .note-font-size-option.active { background: rgba(192, 132, 252, 0.14); }
+    .note-size-option-preview { color: #c084fc; line-height: 1; }
+  </style><style id="cite-style-opts-styles">
+    .cite-style-option {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      width: 100%; padding: 7px 10px; font-size: 11px; border-radius: 8px;
+      border: none; background: transparent; color: var(--text, #e8eaf2);
+      cursor: pointer; text-align: left; transition: background 0.15s; font-family: inherit;
+    }
+    .cite-style-option:hover { background: var(--surface-hover, rgba(255,255,255,0.06)); }
+    .cite-style-option.active { background: rgba(250, 204, 21, 0.12); }
+    .cite-style-option .opt-style {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      color: #facc15;
+    }
+  </style><style id="fig-numbering-opts-styles">
+    .fig-numbering-option {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      width: 100%; padding: 7px 10px; font-size: 11px; border-radius: 8px;
+      border: none; background: transparent; color: var(--text, #e8eaf2);
+      cursor: pointer; text-align: left; transition: background 0.15s; font-family: inherit;
+    }
+    .fig-numbering-option:hover { background: var(--surface-hover, rgba(255,255,255,0.06)); }
+    .fig-numbering-option.active { background: rgba(245, 158, 11, 0.12); }
+    .fig-numbering-option .opt-style {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      color: #fbbf24;
+    }
+  </style><style id="eq-numbering-opts-styles">
+    .eq-level-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      width: 100%; padding: 4px 2px;
+    }
+    .eq-level-name { font-size: 11px; color: var(--text-secondary, #a0a4b8); flex-shrink: 0; }
+    .eq-level-choices { display: flex; gap: 3px; }
+    .eq-numbering-option {
+      width: 26px; height: 24px; display: inline-flex; align-items: center; justify-content: center;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px;
+      border-radius: 6px; border: 1px solid transparent; background: transparent;
+      color: var(--text-secondary, #a0a4b8); cursor: pointer; transition: all 0.15s; padding: 0;
+    }
+    .eq-numbering-option:hover { background: var(--surface-hover, rgba(255,255,255,0.06)); color: var(--text, #e8eaf2); }
+    .eq-numbering-option.active { background: rgba(16, 185, 129, 0.14); border-color: rgba(16, 185, 129, 0.5); color: #34d399; }
+    .eq-level-preview {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      width: 100%; padding: 6px 8px; margin-bottom: 4px; font-size: 11px;
+      border-radius: 8px; background: rgba(16, 185, 129, 0.07); color: var(--text-secondary, #a0a4b8);
+    }
+    .eq-format-sample { color: #34d399; font-weight: 700; letter-spacing: 0.04em; }
+  </style><style id="notes-wrap-row-styles">
+        .notes-wrap-row > [data-wrap-fig] { flex: 0 0 auto; }
+        .notes-wrap-row > [data-wrap-partner] { flex: 1 1 0%; min-width: 0; }
+        .notes-wrap-row > [data-wrap-fig] .preview-inner,
+        .notes-wrap-row > [data-wrap-fig] .image-preview-fit-box { width: 100% !important; }
+      </style><style id="lh-cancelto-styles">
+      .lh-cancelto {
+        position: relative !important;
+        display: inline-block !important;
+        vertical-align: baseline !important;
+        overflow: visible !important;
+      }
+      .lh-cancelto-base {
+        display: inline-block !important;
+      }
+      .lh-cancelto-svg {
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        overflow: visible !important;
+        pointer-events: none !important;
+        z-index: 2 !important;
+      }
+      .lh-cancelto-val {
+        position: absolute !important;
+        white-space: nowrap !important;
+        pointer-events: none !important;
+        z-index: 3 !important;
+        line-height: 1 !important;
+        font-size: 0.68em !important;
+        font-family: KaTeX_Main, "Times New Roman", serif !important;
+        color: currentColor !important;
+      }
+      /* Optical Math Size Normalization: KaTeX defaults to 1.21em, making it too large compared to body text */
+      .note-inline-math .katex,
+      .notes-text-content .katex:not(.katex-display .katex),
+      .obsidian-callout-body .katex:not(.katex-display .katex),
+      p .katex:not(.katex-display .katex),
+      li .katex:not(.katex-display .katex),
+      .content-display .katex:not(.katex-display .katex) {
+        font-size: 1.0em !important;
+      }
+      .katex-display .katex,
+      .note-equation-content .katex {
+        font-size: 1.05em !important;
+      }
+      .obsidian-display-math .katex-display,
+      .notes-text-content .katex-display {
+        margin: 0.25em 0 !important;
+      }
+      /* Labeled equation member rows: KaTeX display margins would stack 2em between
+         members (flex never collapses them). 0.3em keeps rows clearly separated while
+         staying far tighter than the 1em default — intermediate between labeled groups
+         and plain aligned environments. */
+      [data-eq-member] .katex-display {
+        margin: 0.3em 0 !important;
+      }
+      /* LaTeX Math Hyperlinks (\url{} & \href{}) */
+      .katex a,
+      .note-katex-link {
+        color: #38bdf8 !important;
+        text-decoration: underline !important;
+        text-decoration-style: dotted !important;
+        text-underline-offset: 3px !important;
+        cursor: pointer !important;
+        transition: color 0.15s ease, text-decoration-style 0.15s ease !important;
+      }
+      .katex a:hover,
+      .note-katex-link:hover {
+        color: #7dd3fc !important;
+        text-decoration-style: solid !important;
+      }
+      /* In-math figure and equation citation badge styles */
+      .katex a:has(.note-fig-citation),
+      .katex .note-fig-citation {
+        color: #c084fc !important;
+        text-decoration: none !important;
+        cursor: pointer !important;
+        font-weight: 600 !important;
+        border-radius: 4px !important;
+        padding: 0 3px !important;
+        transition: color 0.15s ease, background 0.15s ease !important;
+      }
+      .katex a:has(.note-fig-citation):hover,
+      .katex .note-fig-citation:hover {
+        color: #d8b4fe !important;
+        background: rgba(192, 132, 252, 0.15) !important;
+      }
+      .katex a:has(.note-eq-citation),
+      .katex .note-eq-citation {
+        color: #34d399 !important;
+        text-decoration: none !important;
+        cursor: pointer !important;
+        font-weight: 600 !important;
+        border-radius: 4px !important;
+        padding: 0 3px !important;
+        transition: color 0.15s ease, background 0.15s ease !important;
+      }
+      .katex a:has(.note-eq-citation):hover,
+      .katex .note-eq-citation:hover {
+        color: #6ee7b7 !important;
+        background: rgba(52, 211, 153, 0.15) !important;
+      }
+    </style><style id="note-cite-math-styles">
+    .note-cite-math { color: #38bdf8; cursor: pointer; border-radius: 4px; padding: 0 2px; font-weight: 600; transition: color 0.15s, background 0.15s; }
+    .note-cite-math:hover { color: #7dd3fc; background: rgba(56, 189, 248, 0.12); }
+    .note-cite-math.note-cite-missing { color: #fbbf24; }
+    .note-cite-math.note-cite-missing:hover { background: rgba(251, 191, 36, 0.12); }
+  </style><link id="hljs-css" rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.8.0/build/styles/atom-one-light.min.css"><style id="hljs-transparent-style">
+      pre code.hljs,
+      code.hljs {
+        background: transparent !important;
+        padding: 0 !important;
+      }
+      .obsidian-highlighted-code-block {
+        background-color: #202332;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        color: #abb2bf;
+        transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+      }
+      .obsidian-code-disguised-btn {
+        background-color: #141622;
+        color: #94a3b8;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        transition: all 0.15s ease;
+      }
+      .obsidian-code-disguised-btn:hover {
+        background-color: #0d0f17;
+        color: #f8fafc;
+      }
+
+      [data-theme="light"] .obsidian-highlighted-code-block {
+        background-color: #f3f4f8;
+        border: 1px solid #e0e2ea;
+        color: #1f2937;
+      }
+      [data-theme="light"] .obsidian-code-disguised-btn {
+        background-color: #e2e5ec;
+        color: #475569;
+        border: 1px solid #d1d5e0;
+      }
+      [data-theme="light"] .obsidian-code-disguised-btn:hover {
+        background-color: #d8dce6;
+        color: #0f172a;
+      }
+    </style><style id="note-props-styles">
+      .note-props-block { display: flex; flex-direction: column; gap: 3px; margin: 6px 0 2px 0; }
+      .note-prop-row { display: flex; align-items: baseline; gap: 8px; font-size: 11.5px; line-height: 1.45; min-width: 0; }
+      .note-prop-key { flex-shrink: 0; font-weight: 600; color: var(--text-secondary, #a0a4b8); max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .note-prop-key::after { content: ':'; opacity: 0.6; }
+      .note-prop-value { color: var(--text, #e8eaf2); min-width: 0; overflow-wrap: anywhere; }
+      .note-prop-value .katex { font-size: 1.05em; }
+      .note-prop-pill { display: inline-flex; align-items: center; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--border, #2a2e40); background: var(--surface, #1c1f2e); font-size: 10.5px; }
+    </style></head>
 
 <body>
   <div id="root"></div>
@@ -2736,7 +3349,6 @@ handleRoute();
 // Global unsaved changes state tracker
 let isAppDirty = false;
 let appUnsavedCount = 0;
-
 function HasUnsavedChanges() {
   if (typeof window !== 'undefined') {
     if (typeof window.__HAS_UNSAVED_CHANGES__ === 'boolean') {
@@ -2748,14 +3360,12 @@ function HasUnsavedChanges() {
   }
   return isAppDirty;
 }
-
 function GetUnsavedChangesCount() {
   if (typeof window !== 'undefined' && typeof window.__NOTES_UNSAVED_COUNT__ === 'number') {
     return window.__NOTES_UNSAVED_COUNT__;
   }
   return appUnsavedCount;
 }
-
 function MarkUnsavedChanges(isDirty = true, count = null) {
   isAppDirty = Boolean(isDirty);
   if (typeof count === 'number') {
@@ -8009,14 +8619,12 @@ function sanitizeNote(n, idx = 0) {
         return out; });
     })(),
     meta: n.meta || { created: new Date().toISOString().slice(0, 10), author: 'User' },
-    flashcard: n.flashcard || null,
     blocks: Array.isArray(n.blocks) ? n.blocks.map((b, bIdx) => {
       if (b && typeof b === 'object' && !b.id) {
         b.id = `b_${Date.now()}_${idx}_${bIdx}_${Math.random().toString(36).slice(2, 6)}`;
       }
       return b;
     }) : [],
-    autoNumbering: n.autoNumbering || { h1: 'numeric', h2: 'numeric', h3: 'numeric' },
     // Per-note numbering configs pass through untouched (objects or legacy strings):
     ...(n.equationNumbering !== undefined ? { equationNumbering: n.equationNumbering } : {}),
     ...(n.figureNumbering !== undefined ? { figureNumbering: n.figureNumbering } : {}),
@@ -8183,7 +8791,6 @@ function getBlockFingerprint(block) {
     return String(block.id || '') + ':' + String(block.type || '') + ':' + String(block.content || '');
   }
 }
-
 function CaptureNotesBaseline(state = NotesState) {
   baselineBlocksMap.clear();
   baselineNotesMeta.clear();
@@ -8223,7 +8830,6 @@ function CaptureNotesBaseline(state = NotesState) {
     }
   }
 }
-
 function CalculateNotesBlockChanges() {
   if (!isBaselineCaptured) {
     return { count: 0, isDirty: false, modifiedCount: 0, addedCount: 0, deletedCount: 0, metadataChangesCount: 0 };
@@ -8300,18 +8906,15 @@ function CalculateNotesBlockChanges() {
     metadataChangesCount
   };
 }
-
 function GetNotesUnsavedChangesCount() {
   const diff = CalculateNotesBlockChanges();
   return diff.count;
 }
-
 function HasUnsavedNotesChanges() {
   if (!isBaselineCaptured) return hasUnsavedNotesChanges;
   const diff = CalculateNotesBlockChanges();
   return diff.isDirty;
 }
-
 function SetNotesUnsavedChanges(dirty = true) {
   let isDirty = false;
   let count = 0;
@@ -22973,8 +23576,8 @@ function renderImageBlock(
   // editor's wrap-row pairing pass.
   let gridOn = Boolean(block.grid && block.gridOn);
   let currentGrid = gridOn ? normalizeGrid(block.grid) : null;
-  let selA = -1; // first selected grid cell
-  let selB = -1; // second selected grid cell (merge target)
+  let selectedCells = new Set();
+  let isMultiSelectActive = false;
 
   function normalizeRatios(arr, len) {
     const out = [];
@@ -22997,7 +23600,8 @@ function renderImageBlock(
         caption: (prev && prev.caption) ? String(prev.caption) : '',
         mw: (prev && !prev.gone) ? Math.max(1, Number(prev.mw) || 1) : 1,
         mh: (prev && !prev.gone) ? Math.max(1, Number(prev.mh) || 1) : 1,
-        gone: Boolean(prev && prev.gone)
+        gone: Boolean(prev && prev.gone),
+        fitPercent: (prev && prev.fitPercent != null && !isNaN(Number(prev.fitPercent))) ? Math.max(10, Math.min(100, Number(prev.fitPercent))) : 100
       });
     }
     return {
@@ -23010,24 +23614,150 @@ function renderImageBlock(
     };
   }
 
-  function mergeGridCells(a, b) {
-    const g = currentGrid;
-    if (!g) return;
-    const rA = Math.floor(a / g.cols), cA = a % g.cols;
-    const rB = Math.floor(b / g.cols), cB = b % g.cols;
-    const r0 = Math.min(rA, rB), r1 = Math.max(rA, rB);
-    const c0 = Math.min(cA, cB), c1 = Math.max(cA, cB);
-    for (let r = r0; r <= r1; r++) {
-      for (let c = c0; c <= c1; c++) {
-        const cell = g.cells[r * g.cols + c];
-        if (r === r0 && c === c0) {
-          cell.mw = c1 - c0 + 1;
-          cell.mh = r1 - r0 + 1;
-          cell.gone = false;
-        } else {
-          cell.mw = 1; cell.mh = 1; cell.gone = true;
+  function getSelectedAtomicPoints(grid, selectedSet) {
+    if (!grid || !grid.cells) return [];
+    const points = [];
+    for (const idx of selectedSet) {
+      const cell = grid.cells[idx];
+      if (!cell || cell.gone) continue;
+      const r0 = Math.floor(idx / grid.cols);
+      const c0 = idx % grid.cols;
+      const mw = cell.mw || 1;
+      const mh = cell.mh || 1;
+      for (let r = 0; r < mh; r++) {
+        for (let c = 0; c < mw; c++) {
+          points.push({ r: r0 + r, c: c0 + c, cellIndex: idx });
         }
       }
+    }
+    return points;
+  }
+
+  function validateRectangularSelection(grid, selectedSet) {
+    if (!grid || !selectedSet || selectedSet.size < 2) return null;
+    const points = getSelectedAtomicPoints(grid, selectedSet);
+    if (points.length < 2) return null;
+
+    let rMin = Infinity, rMax = -Infinity;
+    let cMin = Infinity, cMax = -Infinity;
+    const pointSet = new Set();
+
+    for (const pt of points) {
+      rMin = Math.min(rMin, pt.r);
+      rMax = Math.max(rMax, pt.r);
+      cMin = Math.min(cMin, pt.c);
+      cMax = Math.max(cMax, pt.c);
+      const key = `${pt.r},${pt.c}`;
+      if (pointSet.has(key)) return null;
+      pointSet.add(key);
+    }
+
+    const expectedCount = (rMax - rMin + 1) * (cMax - cMin + 1);
+    if (points.length !== expectedCount) return null;
+
+    for (let r = rMin; r <= rMax; r++) {
+      for (let c = cMin; c <= cMax; c++) {
+        if (!pointSet.has(`${r},${c}`)) return null;
+      }
+    }
+
+    return {
+      rMin,
+      rMax,
+      cMin,
+      cMax,
+      width: cMax - cMin + 1,
+      height: rMax - rMin + 1
+    };
+  }
+
+  function mergeSelectedCells(rect) {
+    const g = currentGrid;
+    if (!g || !rect) return;
+    const { rMin, rMax, cMin, cMax, width, height } = rect;
+    const originIdx = rMin * g.cols + cMin;
+    const originCell = g.cells[originIdx];
+
+    let primarySrc = originCell?.src || '';
+    let primaryCaption = originCell?.caption || '';
+    let primaryFitPercent = originCell?.fitPercent || 100;
+
+    for (let r = rMin; r <= rMax; r++) {
+      for (let c = cMin; c <= cMax; c++) {
+        const idx = r * g.cols + c;
+        const cell = g.cells[idx];
+        if (!cell) continue;
+        if (!primarySrc && cell.src) {
+          primarySrc = cell.src;
+          primaryCaption = cell.caption || primaryCaption;
+          primaryFitPercent = cell.fitPercent || primaryFitPercent;
+        }
+      }
+    }
+
+    for (let r = rMin; r <= rMax; r++) {
+      for (let c = cMin; c <= cMax; c++) {
+        const idx = r * g.cols + c;
+        const cell = g.cells[idx];
+        if (!cell) continue;
+        if (r === rMin && c === cMin) {
+          cell.mw = width;
+          cell.mh = height;
+          cell.gone = false;
+          cell.src = primarySrc;
+          cell.caption = primaryCaption;
+          cell.fitPercent = primaryFitPercent;
+        } else {
+          cell.mw = 1;
+          cell.mh = 1;
+          cell.gone = true;
+          cell.src = '';
+          cell.caption = '';
+          cell.fitPercent = 100;
+        }
+      }
+    }
+
+    selectedCells.clear();
+    selectedCells.add(originIdx);
+    isMultiSelectActive = false;
+  }
+
+  function unmergeSelectedCells() {
+    const g = currentGrid;
+    if (!g || selectedCells.size === 0) return;
+    let didUnmerge = false;
+    for (const idx of Array.from(selectedCells)) {
+      const origin = findMergeOrigin(idx);
+      if (origin !== -1) {
+        const cell = g.cells[origin];
+        if (cell && (cell.mw > 1 || cell.mh > 1)) {
+          const mw = cell.mw;
+          const mh = cell.mh;
+          const r0 = Math.floor(origin / g.cols);
+          const c0 = origin % g.cols;
+          for (let r = 0; r < mh; r++) {
+            for (let c = 0; c < mw; c++) {
+              const t = g.cells[(r0 + r) * g.cols + (c0 + c)];
+              if (t) {
+                t.mw = 1;
+                t.mh = 1;
+                t.gone = false;
+                if ((r0 + r) * g.cols + (c0 + c) !== origin) {
+                  t.src = '';
+                  t.caption = '';
+                  t.fitPercent = 100;
+                }
+              }
+            }
+          }
+          didUnmerge = true;
+        }
+      }
+    }
+    if (didUnmerge) {
+      selectedCells.clear();
+      isMultiSelectActive = false;
     }
   }
 
@@ -23058,9 +23788,10 @@ function renderImageBlock(
     (g.cells || []).forEach((cell, i) => {
       if (!cell || cell.gone) return;
       const spanStyle = `grid-column: span ${cell.mw || 1}; grid-row: span ${cell.mh || 1};`;
-      const selected = isEditView && (i === selA || i === selB);
+      const selected = isEditView && selectedCells.has(i);
+      const cellFit = (cell.fitPercent != null && !isNaN(Number(cell.fitPercent))) ? Math.max(10, Math.min(100, Number(cell.fitPercent))) : 100;
       const imgHtml = cell.src
-        ? `<img src="${escapeHtml(cell.src)}" alt="Grid cell" class="w-full h-full ${fitClass} block" loading="lazy" />`
+        ? `<img src="${escapeHtml(cell.src)}" alt="Grid cell" class="${fitClass} block transition-all" style="width: ${cellFit}%; height: ${cellFit}%; max-width: 100%; max-height: 100%;" loading="lazy" />`
         : `<div class="w-full h-full min-h-[90px] flex items-center justify-center text-[10px] text-[var(--text-dim)] border border-dashed border-[var(--border)] rounded ${isEditView ? 'cursor-pointer' : ''} select-none">empty</div>`;
 
       const captionHtml = isEditView
@@ -23086,6 +23817,17 @@ function renderImageBlock(
 
   const renderEditMode = () => {
     const hasImage = Boolean(currentUrl);
+    let currentDisplayFit = currentFitPercent;
+    if (gridOn && currentGrid && selectedCells.size > 0) {
+      const firstIdx = selectedCells.values().next().value;
+      const cell = currentGrid.cells[firstIdx];
+      if (cell && cell.fitPercent != null) {
+        currentDisplayFit = cell.fitPercent;
+      }
+    }
+    const mergeRect = gridOn && currentGrid ? validateRectangularSelection(currentGrid, selectedCells) : null;
+    const canMerge = Boolean(mergeRect);
+    const canUnmerge = Boolean(gridOn && currentGrid && Array.from(selectedCells).some((idx) => findMergeOrigin(idx) !== -1));
 
     editWrap.innerHTML = `
       <!-- Top Row: Minimal Header & Action Controls -->
@@ -23102,17 +23844,11 @@ function renderImageBlock(
           </button>
 
           <!-- Fit % Control Group -->
-          <div class="fit-control-wrap flex items-center gap-1 h-7 px-2 rounded-md border border-[var(--border)] bg-[var(--surface)] text-xs text-[var(--text-secondary)] select-none" title="Figure Width Percentage (10% - 100%)">
+          <div class="fit-control-wrap flex items-center gap-1 h-7 px-2 rounded-md border border-[var(--border)] bg-[var(--surface)] text-xs text-[var(--text-secondary)] select-none" title="${gridOn && selectedCells.size > 0 ? 'Selected Cell Image Fit (10% - 100%)' : 'Figure Width Percentage (10% - 100%)'}">
             <span class="text-[11px] font-semibold text-[var(--text-dim)] select-none">Fit:</span>
-            <input type="number" min="10" max="100" step="5" class="fit-percent-input w-11 h-5 text-center font-mono text-xs font-semibold text-[var(--text)] bg-transparent border-none outline-none p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" placeholder="50-100" value="${currentFitPercent}" />
+            <input type="number" min="10" max="100" step="5" class="fit-percent-input w-11 h-5 text-center font-mono text-xs font-semibold text-[var(--text)] bg-transparent border-none outline-none p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" placeholder="50-100" value="${currentDisplayFit}" />
             <span class="text-[11px] font-mono font-bold text-[var(--text-dim)] select-none">%</span>
           </div>
-
-          <!-- Reset Fit Button -->
-          <button type="button" class="btn-reset-fit notes-ghost-btn h-7 px-2 py-0 text-xs font-semibold rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--text-dim)] hover:text-[var(--text)] flex items-center gap-1 cursor-pointer transition-colors" title="Reset image width to 100%">
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><polyline points="3 3 3 8 8 8"/></svg>
-            <span>Reset</span>
-          </button>
 
           <!-- Wrap-Beside UI removed: layout is owned by the Multi-Column orientation container -->
 
@@ -23141,9 +23877,13 @@ function renderImageBlock(
               <option value="cover" ${currentGrid.fit === 'cover' ? 'selected' : ''}>Fill cell (cover)</option>
               <option value="contain" ${currentGrid.fit === 'contain' ? 'selected' : ''}>Fit inside (contain)</option>
             </select>
-            <button type="button" class="btn-grid-merge notes-ghost-btn h-7 px-2.5 py-0 text-[11px] font-semibold" title="Merge the two selected cells into one rectangle">Merge</button>
-            <button type="button" class="btn-grid-unmerge notes-ghost-btn h-7 px-2.5 py-0 text-[11px] font-semibold" title="Restore the selected merged region into individual cells">Unmerge</button>
-            <span class="text-[10px] text-[var(--text-dim)] italic">Click a cell, then another, then Merge. Drop images straight onto cells.</span>
+            <button type="button" class="btn-grid-multiselect h-7 px-2.5 py-0 text-[11px] font-semibold rounded-md border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${isMultiSelectActive ? 'border-purple-500 bg-purple-500/15 text-purple-300 shadow-xs' : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-dim)] hover:text-[var(--text)]'}" title="Multi-select grid cells (Click to select all cells, click cells to toggle selection)">
+              <span>Multi-select</span>
+              ${selectedCells.size > 0 ? `<span class="px-1 py-0.2 rounded-full text-[9px] font-mono bg-purple-500/30 text-purple-200">${selectedCells.size}</span>` : ''}
+            </button>
+            <button type="button" class="btn-grid-merge h-7 px-2.5 py-0 text-[11px] font-semibold rounded-md border flex items-center justify-center transition-all ${canMerge ? 'border-purple-500 bg-purple-500/15 text-purple-300 shadow-xs cursor-pointer hover:bg-purple-500/25' : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-dim)] opacity-40 cursor-not-allowed pointer-events-none'}" title="Merge the selected cells into one rectangle" ${canMerge ? '' : 'disabled'}>Merge</button>
+            <button type="button" class="btn-grid-unmerge h-7 px-2.5 py-0 text-[11px] font-semibold rounded-md border flex items-center justify-center transition-all ${canUnmerge ? 'border-purple-500 bg-purple-500/15 text-purple-300 shadow-xs cursor-pointer hover:bg-purple-500/25' : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-dim)] opacity-40 cursor-not-allowed pointer-events-none'}" title="Restore the selected merged region into individual cells" ${canUnmerge ? '' : 'disabled'}>Unmerge</button>
+            <span class="text-[10px] text-[var(--text-dim)] italic">Select adjacent cells/rectangle to merge. Drop images straight onto cells.</span>
           </div>
 
           <div class="grid-canvas-mount w-full"></div>
@@ -23397,13 +24137,15 @@ function renderImageBlock(
         cellEl.addEventListener('click', (e) => {
           if (e.target.closest('.ig-cell-caption-input')) return;
           e.stopPropagation();
-          if (selA === -1) {
-            selA = idx;
-          } else if (selB === -1 && idx !== selA) {
-            selB = idx;
+          if (isMultiSelectActive || e.shiftKey || e.ctrlKey || e.metaKey) {
+            if (selectedCells.has(idx)) {
+              selectedCells.delete(idx);
+            } else {
+              selectedCells.add(idx);
+            }
           } else {
-            selA = idx;
-            selB = -1;
+            selectedCells.clear();
+            selectedCells.add(idx);
           }
           renderEditMode();
         });
@@ -23436,11 +24178,28 @@ function renderImageBlock(
         });
       });
 
+      editWrap.querySelector('.btn-grid-multiselect')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const activeIndices = [];
+        currentGrid.cells.forEach((c, i) => {
+          if (c && !c.gone) activeIndices.push(i);
+        });
+        if (selectedCells.size === activeIndices.length && activeIndices.length > 0) {
+          selectedCells.clear();
+          isMultiSelectActive = false;
+        } else {
+          selectedCells.clear();
+          activeIndices.forEach((i) => selectedCells.add(i));
+          isMultiSelectActive = true;
+        }
+        renderEditMode();
+      });
+
       editWrap.querySelector('.btn-grid-merge')?.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (selA >= 0 && selB >= 0) {
-          mergeGridCells(selA, selB);
-          selA = -1; selB = -1;
+        const rect = validateRectangularSelection(currentGrid, selectedCells);
+        if (rect) {
+          mergeSelectedCells(rect);
           commitFields();
           renderEditMode();
         }
@@ -23448,21 +24207,9 @@ function renderImageBlock(
 
       editWrap.querySelector('.btn-grid-unmerge')?.addEventListener('click', (e) => {
         e.stopPropagation();
-        const target = selA >= 0 ? selA : 0;
-        const origin = findMergeOrigin(target);
-        if (origin !== -1) {
-          const g = currentGrid;
-          const cell = g.cells[origin];
-          for (let r = 0; r < cell.mh; r++) {
-            for (let c = 0; c < cell.mw; c++) {
-              const t = g.cells[origin + r * g.cols + c];
-              if (t) { t.mw = 1; t.mh = 1; t.gone = false; }
-            }
-          }
-          selA = -1; selB = -1;
-          commitFields();
-          renderEditMode();
-        }
+        unmergeSelectedCells();
+        commitFields();
+        renderEditMode();
       });
 
       const colsInput = editWrap.querySelector('.grid-cols-input');
@@ -23476,13 +24223,14 @@ function renderImageBlock(
         currentGrid.rows = r;
         currentGrid.colRatios = normalizeRatios(currentGrid.colRatios, c);
         currentGrid.rowRatios = normalizeRatios(currentGrid.rowRatios, r);
-        const oldCells = (currentGrid.cells || []).map((cell) => (cell && !cell.gone) ? { src: cell.src || '', caption: cell.caption || '' } : { src: '', caption: '' });
+        const oldCells = (currentGrid.cells || []).map((cell) => (cell && !cell.gone) ? { src: cell.src || '', caption: cell.caption || '', fitPercent: cell.fitPercent || 100 } : { src: '', caption: '', fitPercent: 100 });
         currentGrid.cells = [];
         for (let i = 0; i < c * r; i++) {
-          const old = oldCells[i] || { src: '', caption: '' };
-          currentGrid.cells.push({ src: old.src, caption: old.caption, mw: 1, mh: 1, gone: false });
+          const old = oldCells[i] || { src: '', caption: '', fitPercent: 100 };
+          currentGrid.cells.push({ src: old.src, caption: old.caption, fitPercent: old.fitPercent || 100, mw: 1, mh: 1, gone: false });
         }
-        selA = -1; selB = -1;
+        selectedCells.clear();
+        isMultiSelectActive = false;
         commitFields();
         renderEditMode();
       };
@@ -23524,7 +24272,7 @@ function renderImageBlock(
       });
       gridFileInput?.addEventListener('change', async (e) => {
         const file = e.target.files?.[0];
-        const target = selA >= 0 ? selA : Math.max(0, currentGrid.cells.findIndex((c) => !c.src && !c.gone));
+        const target = selectedCells.size > 0 ? selectedCells.values().next().value : Math.max(0, currentGrid.cells.findIndex((c) => !c.src && !c.gone));
         if (file) await applyGridCellImage(file, target);
         e.target.value = '';
       });
@@ -23538,7 +24286,7 @@ function renderImageBlock(
               const file = item.getAsFile();
               if (file) {
                 e.preventDefault();
-                const target = selA >= 0 ? selA : Math.max(0, currentGrid.cells.findIndex((c) => !c.src && !c.gone));
+                const target = selectedCells.size > 0 ? selectedCells.values().next().value : Math.max(0, currentGrid.cells.findIndex((c) => !c.src && !c.gone));
                 await applyGridCellImage(file, target);
                 return;
               }
@@ -23549,17 +24297,21 @@ function renderImageBlock(
       gridPasteSlot?.addEventListener('change', async () => {
         const val = gridPasteSlot.value.trim();
         if (val) {
-          const target = selA >= 0 ? selA : Math.max(0, currentGrid.cells.findIndex((c) => !c.src && !c.gone));
+          const target = selectedCells.size > 0 ? selectedCells.values().next().value : Math.max(0, currentGrid.cells.findIndex((c) => !c.src && !c.gone));
           await applyGridCellImage(val, target);
         }
       });
 
       editWrap.querySelector('.btn-grid-cell-remove')?.addEventListener('click', (e) => {
         e.stopPropagation();
-        const target = selA >= 0 ? findMergeOrigin(selA) : -1;
-        const cellIdx = target >= 0 ? target : (selA >= 0 ? selA : -1);
-        if (cellIdx >= 0 && currentGrid.cells[cellIdx]) {
-          currentGrid.cells[cellIdx].src = '';
+        if (selectedCells.size > 0) {
+          selectedCells.forEach((idx) => {
+            const origin = findMergeOrigin(idx);
+            const targetIdx = origin >= 0 ? origin : idx;
+            if (currentGrid.cells[targetIdx]) {
+              currentGrid.cells[targetIdx].src = '';
+            }
+          });
           commitFields();
           renderEditMode();
         }
@@ -23571,11 +24323,28 @@ function renderImageBlock(
     const previewFitBox = editWrap.querySelector('.image-preview-fit-box');
 
     const updateFitWidth = (newVal) => {
-      currentFitPercent = newVal;
-      block.width = currentFitPercent;
-      if (previewFitBox) previewFitBox.style.width = `${currentFitPercent}%`;
-      if (onUpdate) {
-        commitFields();
+      if (gridOn && currentGrid && selectedCells.size > 0) {
+        selectedCells.forEach((idx) => {
+          const cell = currentGrid.cells[idx];
+          if (cell) {
+            cell.fitPercent = newVal;
+            const imgEl = editWrap.querySelector(`.ig-cell[data-cell-index="${idx}"] img`);
+            if (imgEl) {
+              imgEl.style.width = `${newVal}%`;
+              imgEl.style.height = `${newVal}%`;
+            }
+          }
+        });
+        if (onUpdate) {
+          commitFields();
+        }
+      } else {
+        currentFitPercent = newVal;
+        block.width = currentFitPercent;
+        if (previewFitBox) previewFitBox.style.width = `${currentFitPercent}%`;
+        if (onUpdate) {
+          commitFields();
+        }
       }
     };
 
@@ -23600,13 +24369,6 @@ function renderImageBlock(
       if (val > 100) val = 100;
       fitInput.value = val;
       updateFitWidth(val);
-    });
-
-    // Reset Fit Button (reverts width to 100%)
-    editWrap.querySelector('.btn-reset-fit')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (fitInput) fitInput.value = 100;
-      updateFitWidth(100);
     });
 
     // Canva-Style Pointer Drag Resize Handle
@@ -23669,8 +24431,8 @@ function renderImageBlock(
       if (gridOn) {
         currentGrid = normalizeGrid(currentGrid || block.grid || null);
       }
-      selA = -1;
-      selB = -1;
+      selectedCells.clear();
+      isMultiSelectActive = false;
       commitFields();
       renderEditMode();
     });

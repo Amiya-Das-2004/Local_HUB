@@ -186,8 +186,8 @@ export function renderImageBlock(
   // editor's wrap-row pairing pass.
   let gridOn = Boolean(block.grid && block.gridOn);
   let currentGrid = gridOn ? normalizeGrid(block.grid) : null;
-  let selA = -1; // first selected grid cell
-  let selB = -1; // second selected grid cell (merge target)
+  let selectedCells = new Set();
+  let isMultiSelectActive = false;
 
   function normalizeRatios(arr, len) {
     const out = [];
@@ -210,7 +210,8 @@ export function renderImageBlock(
         caption: (prev && prev.caption) ? String(prev.caption) : '',
         mw: (prev && !prev.gone) ? Math.max(1, Number(prev.mw) || 1) : 1,
         mh: (prev && !prev.gone) ? Math.max(1, Number(prev.mh) || 1) : 1,
-        gone: Boolean(prev && prev.gone)
+        gone: Boolean(prev && prev.gone),
+        fitPercent: (prev && prev.fitPercent != null && !isNaN(Number(prev.fitPercent))) ? Math.max(10, Math.min(100, Number(prev.fitPercent))) : 100
       });
     }
     return {
@@ -223,24 +224,150 @@ export function renderImageBlock(
     };
   }
 
-  function mergeGridCells(a, b) {
-    const g = currentGrid;
-    if (!g) return;
-    const rA = Math.floor(a / g.cols), cA = a % g.cols;
-    const rB = Math.floor(b / g.cols), cB = b % g.cols;
-    const r0 = Math.min(rA, rB), r1 = Math.max(rA, rB);
-    const c0 = Math.min(cA, cB), c1 = Math.max(cA, cB);
-    for (let r = r0; r <= r1; r++) {
-      for (let c = c0; c <= c1; c++) {
-        const cell = g.cells[r * g.cols + c];
-        if (r === r0 && c === c0) {
-          cell.mw = c1 - c0 + 1;
-          cell.mh = r1 - r0 + 1;
-          cell.gone = false;
-        } else {
-          cell.mw = 1; cell.mh = 1; cell.gone = true;
+  function getSelectedAtomicPoints(grid, selectedSet) {
+    if (!grid || !grid.cells) return [];
+    const points = [];
+    for (const idx of selectedSet) {
+      const cell = grid.cells[idx];
+      if (!cell || cell.gone) continue;
+      const r0 = Math.floor(idx / grid.cols);
+      const c0 = idx % grid.cols;
+      const mw = cell.mw || 1;
+      const mh = cell.mh || 1;
+      for (let r = 0; r < mh; r++) {
+        for (let c = 0; c < mw; c++) {
+          points.push({ r: r0 + r, c: c0 + c, cellIndex: idx });
         }
       }
+    }
+    return points;
+  }
+
+  function validateRectangularSelection(grid, selectedSet) {
+    if (!grid || !selectedSet || selectedSet.size < 2) return null;
+    const points = getSelectedAtomicPoints(grid, selectedSet);
+    if (points.length < 2) return null;
+
+    let rMin = Infinity, rMax = -Infinity;
+    let cMin = Infinity, cMax = -Infinity;
+    const pointSet = new Set();
+
+    for (const pt of points) {
+      rMin = Math.min(rMin, pt.r);
+      rMax = Math.max(rMax, pt.r);
+      cMin = Math.min(cMin, pt.c);
+      cMax = Math.max(cMax, pt.c);
+      const key = `${pt.r},${pt.c}`;
+      if (pointSet.has(key)) return null;
+      pointSet.add(key);
+    }
+
+    const expectedCount = (rMax - rMin + 1) * (cMax - cMin + 1);
+    if (points.length !== expectedCount) return null;
+
+    for (let r = rMin; r <= rMax; r++) {
+      for (let c = cMin; c <= cMax; c++) {
+        if (!pointSet.has(`${r},${c}`)) return null;
+      }
+    }
+
+    return {
+      rMin,
+      rMax,
+      cMin,
+      cMax,
+      width: cMax - cMin + 1,
+      height: rMax - rMin + 1
+    };
+  }
+
+  function mergeSelectedCells(rect) {
+    const g = currentGrid;
+    if (!g || !rect) return;
+    const { rMin, rMax, cMin, cMax, width, height } = rect;
+    const originIdx = rMin * g.cols + cMin;
+    const originCell = g.cells[originIdx];
+
+    let primarySrc = originCell?.src || '';
+    let primaryCaption = originCell?.caption || '';
+    let primaryFitPercent = originCell?.fitPercent || 100;
+
+    for (let r = rMin; r <= rMax; r++) {
+      for (let c = cMin; c <= cMax; c++) {
+        const idx = r * g.cols + c;
+        const cell = g.cells[idx];
+        if (!cell) continue;
+        if (!primarySrc && cell.src) {
+          primarySrc = cell.src;
+          primaryCaption = cell.caption || primaryCaption;
+          primaryFitPercent = cell.fitPercent || primaryFitPercent;
+        }
+      }
+    }
+
+    for (let r = rMin; r <= rMax; r++) {
+      for (let c = cMin; c <= cMax; c++) {
+        const idx = r * g.cols + c;
+        const cell = g.cells[idx];
+        if (!cell) continue;
+        if (r === rMin && c === cMin) {
+          cell.mw = width;
+          cell.mh = height;
+          cell.gone = false;
+          cell.src = primarySrc;
+          cell.caption = primaryCaption;
+          cell.fitPercent = primaryFitPercent;
+        } else {
+          cell.mw = 1;
+          cell.mh = 1;
+          cell.gone = true;
+          cell.src = '';
+          cell.caption = '';
+          cell.fitPercent = 100;
+        }
+      }
+    }
+
+    selectedCells.clear();
+    selectedCells.add(originIdx);
+    isMultiSelectActive = false;
+  }
+
+  function unmergeSelectedCells() {
+    const g = currentGrid;
+    if (!g || selectedCells.size === 0) return;
+    let didUnmerge = false;
+    for (const idx of Array.from(selectedCells)) {
+      const origin = findMergeOrigin(idx);
+      if (origin !== -1) {
+        const cell = g.cells[origin];
+        if (cell && (cell.mw > 1 || cell.mh > 1)) {
+          const mw = cell.mw;
+          const mh = cell.mh;
+          const r0 = Math.floor(origin / g.cols);
+          const c0 = origin % g.cols;
+          for (let r = 0; r < mh; r++) {
+            for (let c = 0; c < mw; c++) {
+              const t = g.cells[(r0 + r) * g.cols + (c0 + c)];
+              if (t) {
+                t.mw = 1;
+                t.mh = 1;
+                t.gone = false;
+                if ((r0 + r) * g.cols + (c0 + c) !== origin) {
+                  t.src = '';
+                  t.caption = '';
+                  t.fitPercent = 100;
+                }
+              }
+            }
+          }
+          didUnmerge = true;
+        }
+      }
+    }
+    if (didUnmerge) {
+      selectedCells.clear();
+      isMultiSelectActive = false;
     }
   }
 
@@ -271,9 +398,10 @@ export function renderImageBlock(
     (g.cells || []).forEach((cell, i) => {
       if (!cell || cell.gone) return;
       const spanStyle = `grid-column: span ${cell.mw || 1}; grid-row: span ${cell.mh || 1};`;
-      const selected = isEditView && (i === selA || i === selB);
+      const selected = isEditView && selectedCells.has(i);
+      const cellFit = (cell.fitPercent != null && !isNaN(Number(cell.fitPercent))) ? Math.max(10, Math.min(100, Number(cell.fitPercent))) : 100;
       const imgHtml = cell.src
-        ? `<img src="${escapeHtml(cell.src)}" alt="Grid cell" class="w-full h-full ${fitClass} block" loading="lazy" />`
+        ? `<img src="${escapeHtml(cell.src)}" alt="Grid cell" class="${fitClass} block transition-all" style="width: ${cellFit}%; height: ${cellFit}%; max-width: 100%; max-height: 100%;" loading="lazy" />`
         : `<div class="w-full h-full min-h-[90px] flex items-center justify-center text-[10px] text-[var(--text-dim)] border border-dashed border-[var(--border)] rounded ${isEditView ? 'cursor-pointer' : ''} select-none">empty</div>`;
 
       const captionHtml = isEditView
@@ -299,6 +427,17 @@ export function renderImageBlock(
 
   const renderEditMode = () => {
     const hasImage = Boolean(currentUrl);
+    let currentDisplayFit = currentFitPercent;
+    if (gridOn && currentGrid && selectedCells.size > 0) {
+      const firstIdx = selectedCells.values().next().value;
+      const cell = currentGrid.cells[firstIdx];
+      if (cell && cell.fitPercent != null) {
+        currentDisplayFit = cell.fitPercent;
+      }
+    }
+    const mergeRect = gridOn && currentGrid ? validateRectangularSelection(currentGrid, selectedCells) : null;
+    const canMerge = Boolean(mergeRect);
+    const canUnmerge = Boolean(gridOn && currentGrid && Array.from(selectedCells).some((idx) => findMergeOrigin(idx) !== -1));
 
     editWrap.innerHTML = `
       <!-- Top Row: Minimal Header & Action Controls -->
@@ -315,17 +454,11 @@ export function renderImageBlock(
           </button>
 
           <!-- Fit % Control Group -->
-          <div class="fit-control-wrap flex items-center gap-1 h-7 px-2 rounded-md border border-[var(--border)] bg-[var(--surface)] text-xs text-[var(--text-secondary)] select-none" title="Figure Width Percentage (10% - 100%)">
+          <div class="fit-control-wrap flex items-center gap-1 h-7 px-2 rounded-md border border-[var(--border)] bg-[var(--surface)] text-xs text-[var(--text-secondary)] select-none" title="${gridOn && selectedCells.size > 0 ? 'Selected Cell Image Fit (10% - 100%)' : 'Figure Width Percentage (10% - 100%)'}">
             <span class="text-[11px] font-semibold text-[var(--text-dim)] select-none">Fit:</span>
-            <input type="number" min="10" max="100" step="5" class="fit-percent-input w-11 h-5 text-center font-mono text-xs font-semibold text-[var(--text)] bg-transparent border-none outline-none p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" placeholder="50-100" value="${currentFitPercent}" />
+            <input type="number" min="10" max="100" step="5" class="fit-percent-input w-11 h-5 text-center font-mono text-xs font-semibold text-[var(--text)] bg-transparent border-none outline-none p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" placeholder="50-100" value="${currentDisplayFit}" />
             <span class="text-[11px] font-mono font-bold text-[var(--text-dim)] select-none">%</span>
           </div>
-
-          <!-- Reset Fit Button -->
-          <button type="button" class="btn-reset-fit notes-ghost-btn h-7 px-2 py-0 text-xs font-semibold rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--text-dim)] hover:text-[var(--text)] flex items-center gap-1 cursor-pointer transition-colors" title="Reset image width to 100%">
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><polyline points="3 3 3 8 8 8"/></svg>
-            <span>Reset</span>
-          </button>
 
           <!-- Wrap-Beside UI removed: layout is owned by the Multi-Column orientation container -->
 
@@ -354,9 +487,13 @@ export function renderImageBlock(
               <option value="cover" ${currentGrid.fit === 'cover' ? 'selected' : ''}>Fill cell (cover)</option>
               <option value="contain" ${currentGrid.fit === 'contain' ? 'selected' : ''}>Fit inside (contain)</option>
             </select>
-            <button type="button" class="btn-grid-merge notes-ghost-btn h-7 px-2.5 py-0 text-[11px] font-semibold" title="Merge the two selected cells into one rectangle">Merge</button>
-            <button type="button" class="btn-grid-unmerge notes-ghost-btn h-7 px-2.5 py-0 text-[11px] font-semibold" title="Restore the selected merged region into individual cells">Unmerge</button>
-            <span class="text-[10px] text-[var(--text-dim)] italic">Click a cell, then another, then Merge. Drop images straight onto cells.</span>
+            <button type="button" class="btn-grid-multiselect h-7 px-2.5 py-0 text-[11px] font-semibold rounded-md border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${isMultiSelectActive ? 'border-purple-500 bg-purple-500/15 text-purple-300 shadow-xs' : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-dim)] hover:text-[var(--text)]'}" title="Multi-select grid cells (Click to select all cells, click cells to toggle selection)">
+              <span>Multi-select</span>
+              ${selectedCells.size > 0 ? `<span class="px-1 py-0.2 rounded-full text-[9px] font-mono bg-purple-500/30 text-purple-200">${selectedCells.size}</span>` : ''}
+            </button>
+            <button type="button" class="btn-grid-merge h-7 px-2.5 py-0 text-[11px] font-semibold rounded-md border flex items-center justify-center transition-all ${canMerge ? 'border-purple-500 bg-purple-500/15 text-purple-300 shadow-xs cursor-pointer hover:bg-purple-500/25' : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-dim)] opacity-40 cursor-not-allowed pointer-events-none'}" title="Merge the selected cells into one rectangle" ${canMerge ? '' : 'disabled'}>Merge</button>
+            <button type="button" class="btn-grid-unmerge h-7 px-2.5 py-0 text-[11px] font-semibold rounded-md border flex items-center justify-center transition-all ${canUnmerge ? 'border-purple-500 bg-purple-500/15 text-purple-300 shadow-xs cursor-pointer hover:bg-purple-500/25' : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-dim)] opacity-40 cursor-not-allowed pointer-events-none'}" title="Restore the selected merged region into individual cells" ${canUnmerge ? '' : 'disabled'}>Unmerge</button>
+            <span class="text-[10px] text-[var(--text-dim)] italic">Select adjacent cells/rectangle to merge. Drop images straight onto cells.</span>
           </div>
 
           <div class="grid-canvas-mount w-full"></div>
@@ -610,13 +747,15 @@ export function renderImageBlock(
         cellEl.addEventListener('click', (e) => {
           if (e.target.closest('.ig-cell-caption-input')) return;
           e.stopPropagation();
-          if (selA === -1) {
-            selA = idx;
-          } else if (selB === -1 && idx !== selA) {
-            selB = idx;
+          if (isMultiSelectActive || e.shiftKey || e.ctrlKey || e.metaKey) {
+            if (selectedCells.has(idx)) {
+              selectedCells.delete(idx);
+            } else {
+              selectedCells.add(idx);
+            }
           } else {
-            selA = idx;
-            selB = -1;
+            selectedCells.clear();
+            selectedCells.add(idx);
           }
           renderEditMode();
         });
@@ -649,11 +788,28 @@ export function renderImageBlock(
         });
       });
 
+      editWrap.querySelector('.btn-grid-multiselect')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const activeIndices = [];
+        currentGrid.cells.forEach((c, i) => {
+          if (c && !c.gone) activeIndices.push(i);
+        });
+        if (selectedCells.size === activeIndices.length && activeIndices.length > 0) {
+          selectedCells.clear();
+          isMultiSelectActive = false;
+        } else {
+          selectedCells.clear();
+          activeIndices.forEach((i) => selectedCells.add(i));
+          isMultiSelectActive = true;
+        }
+        renderEditMode();
+      });
+
       editWrap.querySelector('.btn-grid-merge')?.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (selA >= 0 && selB >= 0) {
-          mergeGridCells(selA, selB);
-          selA = -1; selB = -1;
+        const rect = validateRectangularSelection(currentGrid, selectedCells);
+        if (rect) {
+          mergeSelectedCells(rect);
           commitFields();
           renderEditMode();
         }
@@ -661,21 +817,9 @@ export function renderImageBlock(
 
       editWrap.querySelector('.btn-grid-unmerge')?.addEventListener('click', (e) => {
         e.stopPropagation();
-        const target = selA >= 0 ? selA : 0;
-        const origin = findMergeOrigin(target);
-        if (origin !== -1) {
-          const g = currentGrid;
-          const cell = g.cells[origin];
-          for (let r = 0; r < cell.mh; r++) {
-            for (let c = 0; c < cell.mw; c++) {
-              const t = g.cells[origin + r * g.cols + c];
-              if (t) { t.mw = 1; t.mh = 1; t.gone = false; }
-            }
-          }
-          selA = -1; selB = -1;
-          commitFields();
-          renderEditMode();
-        }
+        unmergeSelectedCells();
+        commitFields();
+        renderEditMode();
       });
 
       const colsInput = editWrap.querySelector('.grid-cols-input');
@@ -689,13 +833,14 @@ export function renderImageBlock(
         currentGrid.rows = r;
         currentGrid.colRatios = normalizeRatios(currentGrid.colRatios, c);
         currentGrid.rowRatios = normalizeRatios(currentGrid.rowRatios, r);
-        const oldCells = (currentGrid.cells || []).map((cell) => (cell && !cell.gone) ? { src: cell.src || '', caption: cell.caption || '' } : { src: '', caption: '' });
+        const oldCells = (currentGrid.cells || []).map((cell) => (cell && !cell.gone) ? { src: cell.src || '', caption: cell.caption || '', fitPercent: cell.fitPercent || 100 } : { src: '', caption: '', fitPercent: 100 });
         currentGrid.cells = [];
         for (let i = 0; i < c * r; i++) {
-          const old = oldCells[i] || { src: '', caption: '' };
-          currentGrid.cells.push({ src: old.src, caption: old.caption, mw: 1, mh: 1, gone: false });
+          const old = oldCells[i] || { src: '', caption: '', fitPercent: 100 };
+          currentGrid.cells.push({ src: old.src, caption: old.caption, fitPercent: old.fitPercent || 100, mw: 1, mh: 1, gone: false });
         }
-        selA = -1; selB = -1;
+        selectedCells.clear();
+        isMultiSelectActive = false;
         commitFields();
         renderEditMode();
       };
@@ -737,7 +882,7 @@ export function renderImageBlock(
       });
       gridFileInput?.addEventListener('change', async (e) => {
         const file = e.target.files?.[0];
-        const target = selA >= 0 ? selA : Math.max(0, currentGrid.cells.findIndex((c) => !c.src && !c.gone));
+        const target = selectedCells.size > 0 ? selectedCells.values().next().value : Math.max(0, currentGrid.cells.findIndex((c) => !c.src && !c.gone));
         if (file) await applyGridCellImage(file, target);
         e.target.value = '';
       });
@@ -751,7 +896,7 @@ export function renderImageBlock(
               const file = item.getAsFile();
               if (file) {
                 e.preventDefault();
-                const target = selA >= 0 ? selA : Math.max(0, currentGrid.cells.findIndex((c) => !c.src && !c.gone));
+                const target = selectedCells.size > 0 ? selectedCells.values().next().value : Math.max(0, currentGrid.cells.findIndex((c) => !c.src && !c.gone));
                 await applyGridCellImage(file, target);
                 return;
               }
@@ -762,17 +907,21 @@ export function renderImageBlock(
       gridPasteSlot?.addEventListener('change', async () => {
         const val = gridPasteSlot.value.trim();
         if (val) {
-          const target = selA >= 0 ? selA : Math.max(0, currentGrid.cells.findIndex((c) => !c.src && !c.gone));
+          const target = selectedCells.size > 0 ? selectedCells.values().next().value : Math.max(0, currentGrid.cells.findIndex((c) => !c.src && !c.gone));
           await applyGridCellImage(val, target);
         }
       });
 
       editWrap.querySelector('.btn-grid-cell-remove')?.addEventListener('click', (e) => {
         e.stopPropagation();
-        const target = selA >= 0 ? findMergeOrigin(selA) : -1;
-        const cellIdx = target >= 0 ? target : (selA >= 0 ? selA : -1);
-        if (cellIdx >= 0 && currentGrid.cells[cellIdx]) {
-          currentGrid.cells[cellIdx].src = '';
+        if (selectedCells.size > 0) {
+          selectedCells.forEach((idx) => {
+            const origin = findMergeOrigin(idx);
+            const targetIdx = origin >= 0 ? origin : idx;
+            if (currentGrid.cells[targetIdx]) {
+              currentGrid.cells[targetIdx].src = '';
+            }
+          });
           commitFields();
           renderEditMode();
         }
@@ -784,11 +933,28 @@ export function renderImageBlock(
     const previewFitBox = editWrap.querySelector('.image-preview-fit-box');
 
     const updateFitWidth = (newVal) => {
-      currentFitPercent = newVal;
-      block.width = currentFitPercent;
-      if (previewFitBox) previewFitBox.style.width = `${currentFitPercent}%`;
-      if (onUpdate) {
-        commitFields();
+      if (gridOn && currentGrid && selectedCells.size > 0) {
+        selectedCells.forEach((idx) => {
+          const cell = currentGrid.cells[idx];
+          if (cell) {
+            cell.fitPercent = newVal;
+            const imgEl = editWrap.querySelector(`.ig-cell[data-cell-index="${idx}"] img`);
+            if (imgEl) {
+              imgEl.style.width = `${newVal}%`;
+              imgEl.style.height = `${newVal}%`;
+            }
+          }
+        });
+        if (onUpdate) {
+          commitFields();
+        }
+      } else {
+        currentFitPercent = newVal;
+        block.width = currentFitPercent;
+        if (previewFitBox) previewFitBox.style.width = `${currentFitPercent}%`;
+        if (onUpdate) {
+          commitFields();
+        }
       }
     };
 
@@ -813,13 +979,6 @@ export function renderImageBlock(
       if (val > 100) val = 100;
       fitInput.value = val;
       updateFitWidth(val);
-    });
-
-    // Reset Fit Button (reverts width to 100%)
-    editWrap.querySelector('.btn-reset-fit')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (fitInput) fitInput.value = 100;
-      updateFitWidth(100);
     });
 
     // Canva-Style Pointer Drag Resize Handle
@@ -882,8 +1041,8 @@ export function renderImageBlock(
       if (gridOn) {
         currentGrid = normalizeGrid(currentGrid || block.grid || null);
       }
-      selA = -1;
-      selB = -1;
+      selectedCells.clear();
+      isMultiSelectActive = false;
       commitFields();
       renderEditMode();
     });
