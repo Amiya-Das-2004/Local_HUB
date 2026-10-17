@@ -96,7 +96,26 @@ function ensureCiteMathStyles() {
   document.head.appendChild(styleEl);
 }
 
-// Global click handler for figure citation links [Fig. X]
+// Global capturing-phase click handler for KaTeX external hyperlinks (\url{} & \href{})
+if (typeof document !== 'undefined' && !document.getElementById('note-katex-link-handler')) {
+  const marker = document.createElement('div');
+  marker.id = 'note-katex-link-handler';
+  marker.style.display = 'none';
+  document.head.appendChild(marker);
+
+  document.addEventListener('click', (e) => {
+    const link = e.target.closest('a.note-katex-link, .katex a[href]');
+    if (!link) return;
+    const href = link.getAttribute('href');
+    if (href && /^https?:\/\//i.test(href)) {
+      e.preventDefault();
+      e.stopPropagation();
+      window.open(href, '_blank', 'noopener,noreferrer');
+    }
+  }, true); // capturing phase: intercepts BEFORE live-editor onExpand can collapse widget
+}
+
+// Global click handler for figure citations [Fig. X], anchor links, and figure captions
 if (typeof document !== 'undefined' && !document.getElementById('note-fig-citation-handler')) {
   const marker = document.createElement('div');
   marker.id = 'note-fig-citation-handler';
@@ -104,33 +123,82 @@ if (typeof document !== 'undefined' && !document.getElementById('note-fig-citati
   document.head.appendChild(marker);
 
   document.addEventListener('click', (e) => {
-    const citation = e.target.closest('.note-fig-citation');
+    const citation = e.target.closest('.note-fig-citation, a[href*="#fig-"], [data-fig-target], [data-fig-num], figcaption');
     if (!citation) return;
     e.preventDefault();
     e.stopPropagation();
 
-    const target = citation.getAttribute('data-fig-target');
-    const num = citation.getAttribute('data-fig-num');
-    if (!target && !num) return;
+    let target = citation.getAttribute('data-fig-target')
+      || citation.closest?.('[data-fig-target]')?.getAttribute('data-fig-target')
+      || citation.querySelector?.('[data-fig-target]')?.getAttribute('data-fig-target')
+      || '';
+    let num = citation.getAttribute('data-fig-num')
+      || citation.closest?.('[data-fig-num]')?.getAttribute('data-fig-num')
+      || citation.querySelector?.('[data-fig-num]')?.getAttribute('data-fig-num')
+      || '';
+
+    const anchorEl = citation.closest?.('a[href*="#fig-"]')
+      || (citation.getAttribute?.('href')?.includes('#fig-') ? citation : null)
+      || citation.querySelector?.('a[href*="#fig-"]');
+    const href = anchorEl ? anchorEl.getAttribute('href') : '';
+    if (href && href.includes('#fig-')) {
+      const anchor = href.split('#fig-')[1];
+      if (!target && isNaN(Number(anchor))) target = anchor;
+      if (!num && !isNaN(Number(anchor))) num = anchor;
+      if (!target && !num) target = anchor;
+    }
+
+    if (target && !num && activeFigureTagMap) {
+      const mapped = activeFigureTagMap.get(target.toLowerCase()) ?? activeFigureTagMap.get(target);
+      if (mapped !== null && mapped !== undefined) num = String(mapped);
+    }
+    if (!target && num && activeFigureTagMap) {
+      for (const [k, v] of activeFigureTagMap.entries()) {
+        if (String(v) === String(num) && isNaN(Number(k))) {
+          target = k;
+          break;
+        }
+      }
+    }
 
     let targetEl = null;
-    if (target) {
-      targetEl = document.querySelector(`[data-fig-tag="${CSS.escape(target)}"]`) ||
-                 document.getElementById(`fig-${target}`);
-    }
-    if (!targetEl && num) {
-      targetEl = document.getElementById(`fig-${num}`) ||
-                 document.querySelector(`[data-fig-num="${CSS.escape(num)}"]`);
+    if (citation.tagName && citation.tagName.toLowerCase() === 'figcaption') {
+      // If clicking the caption itself, highlight its parent figure container
+      targetEl = citation.closest('figure') || citation.closest('[data-fig-tag]') || citation.closest('[id^="fig-"]') || citation.parentElement;
+    } else {
+      const normTarget = (target || '').trim().toLowerCase();
+      if (normTarget) {
+        targetEl = document.querySelector(`[data-fig-tag="${CSS.escape(normTarget)}"]`)
+          || Array.from(document.querySelectorAll('[data-fig-tag]')).find(el => (el.getAttribute('data-fig-tag') || '').toLowerCase() === normTarget)
+          || document.getElementById(`fig-${normTarget}`);
+      }
+      if (!targetEl && num) {
+        targetEl = document.getElementById(`fig-${num}`)
+          || document.querySelector(`[data-fig-num="${CSS.escape(num)}"]`);
+      }
+      if (!targetEl && target) {
+        targetEl = document.getElementById(`fig-${target}`)
+          || document.querySelector(`[data-fig-tag="${CSS.escape(target)}"]`);
+      }
+      if (!targetEl && (normTarget || num)) {
+        const key = normTarget || num;
+        targetEl = document.querySelector(`[data-block-id="${CSS.escape(key)}"]`)
+          || document.getElementById(key);
+      }
     }
 
     if (targetEl) {
-      targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      targetEl.classList.add('ring-2', 'ring-purple-500', 'ring-offset-2', 'ring-offset-[var(--card)]', 'transition-all', 'duration-300');
+      const highlightEl = (targetEl.tagName && targetEl.tagName.toLowerCase() === 'figure')
+        ? targetEl
+        : (targetEl.querySelector('figure') || targetEl.querySelector('.tikz-edit-workspace, .image-edit-workspace') || targetEl.closest('.notes-block-item') || targetEl);
+
+      highlightEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      highlightEl.classList.add('ring-4', 'ring-emerald-500/80', 'ring-offset-2', 'ring-offset-[var(--card)]', 'shadow-[0_0_25px_rgba(16,185,129,0.5)]', 'transition-all', 'duration-300');
       setTimeout(() => {
-        targetEl.classList.remove('ring-2', 'ring-purple-500', 'ring-offset-2', 'ring-offset-[var(--card)]');
-      }, 1600);
+        highlightEl.classList.remove('ring-4', 'ring-emerald-500/80', 'ring-offset-2', 'ring-offset-[var(--card)]', 'shadow-[0_0_25px_rgba(16,185,129,0.5)]');
+      }, 1800);
     }
-  });
+  }, true); // capturing phase: prevents hash alteration and router hijacking
 }
 
 // Active equation tag map for the note being rendered (normalized tag -> { label, blockId, subIndex }),
@@ -145,9 +213,8 @@ export function getActiveEquationTagMap() {
   return activeEquationTagMap;
 }
 
-// Global click handler for equation reference badges (2.a.i) — scrolls to the equation
-// block (or the exact member row via its data-eq-badge anchor) and pulses a highlight
-// ring, mirroring the figure citation behavior.
+// Global click handler for equation reference badges and citations — scrolls to the equation
+// block (or the exact member row via its data-eq-badge anchor) and pulses a highlight ring.
 if (typeof document !== 'undefined' && !document.getElementById('note-eq-citation-handler')) {
   const marker = document.createElement('div');
   marker.id = 'note-eq-citation-handler';
@@ -155,32 +222,47 @@ if (typeof document !== 'undefined' && !document.getElementById('note-eq-citatio
   document.head.appendChild(marker);
 
   document.addEventListener('click', (e) => {
-    const citation = e.target.closest('.note-eq-citation');
+    const citation = e.target.closest('.note-eq-citation, a[href^="#eq-"], [data-eq-target], [data-eq-badge], .eq-number-badge');
     if (!citation) return;
     e.preventDefault();
     e.stopPropagation();
 
-    const blockId = citation.getAttribute('data-eq-block')
+    let blockId = citation.getAttribute('data-eq-block')
       || citation.closest?.('[data-eq-block]')?.getAttribute('data-eq-block');
-    if (!blockId) return;
-
-    const badgeLabel = citation.getAttribute('data-eq-badge')
+    let badgeLabel = citation.getAttribute('data-eq-badge')
       || citation.closest?.('[data-eq-badge]')?.getAttribute('data-eq-badge') || '';
+    const href = citation.getAttribute('href');
+    if (href && href.startsWith('#eq-')) {
+      const anchor = href.slice(4);
+      if (!blockId) blockId = anchor;
+    }
 
-    let targetEl = document.querySelector(`[data-eq-block-id="${CSS.escape(blockId)}"]`);
-    if (targetEl && badgeLabel) {
-      targetEl = targetEl.querySelector(`[data-eq-badge="${CSS.escape(badgeLabel)}"]`)?.closest('[data-eq-member]')
-        || targetEl;
+    let targetEl = null;
+    if (citation.classList.contains('eq-number-badge')) {
+      targetEl = citation.closest('[data-eq-member]') || citation.closest('[data-eq-block-id]') || citation.closest('.preview-pane') || citation.parentElement;
+    } else {
+      if (blockId) {
+        targetEl = document.querySelector(`[data-eq-block-id="${CSS.escape(blockId)}"]`) ||
+                   document.getElementById(`eq-${blockId}`);
+        if (targetEl && badgeLabel) {
+          targetEl = targetEl.querySelector(`[data-eq-badge="${CSS.escape(badgeLabel)}"]`)?.closest('[data-eq-member]')
+            || targetEl;
+        }
+      }
+      if (!targetEl && badgeLabel) {
+        targetEl = document.querySelector(`[data-eq-badge="${CSS.escape(badgeLabel)}"]`)?.closest('[data-eq-member]')
+          || document.querySelector(`[data-eq-badge="${CSS.escape(badgeLabel)}"]`);
+      }
     }
 
     if (targetEl) {
       targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      targetEl.classList.add('ring-2', 'ring-purple-500', 'ring-offset-2', 'ring-offset-[var(--card)]', 'transition-all', 'duration-300');
+      targetEl.classList.add('ring-4', 'ring-emerald-500/80', 'ring-offset-2', 'ring-offset-[var(--card)]', 'shadow-[0_0_25px_rgba(16,185,129,0.5)]', 'transition-all', 'duration-300');
       setTimeout(() => {
-        targetEl.classList.remove('ring-2', 'ring-purple-500', 'ring-offset-2', 'ring-offset-[var(--card)]');
-      }, 1600);
+        targetEl.classList.remove('ring-4', 'ring-emerald-500/80', 'ring-offset-2', 'ring-offset-[var(--card)]', 'shadow-[0_0_25px_rgba(16,185,129,0.5)]');
+      }, 1800);
     }
-  });
+  }, true); // capturing phase: prevents hash alteration and router hijacking
 }
 
 
@@ -473,6 +555,52 @@ function ensureCanceltoStyles() {
       [data-eq-member] .katex-display {
         margin: 0.3em 0 !important;
       }
+      /* LaTeX Math Hyperlinks (\\url{} & \\href{}) */
+      .katex a,
+      .note-katex-link {
+        color: #38bdf8 !important;
+        text-decoration: underline !important;
+        text-decoration-style: dotted !important;
+        text-underline-offset: 3px !important;
+        cursor: pointer !important;
+        transition: color 0.15s ease, text-decoration-style 0.15s ease !important;
+      }
+      .katex a:hover,
+      .note-katex-link:hover {
+        color: #7dd3fc !important;
+        text-decoration-style: solid !important;
+      }
+      /* In-math figure and equation citation badge styles */
+      .katex a:has(.note-fig-citation),
+      .katex .note-fig-citation {
+        color: #c084fc !important;
+        text-decoration: none !important;
+        cursor: pointer !important;
+        font-weight: 600 !important;
+        border-radius: 4px !important;
+        padding: 0 3px !important;
+        transition: color 0.15s ease, background 0.15s ease !important;
+      }
+      .katex a:has(.note-fig-citation):hover,
+      .katex .note-fig-citation:hover {
+        color: #d8b4fe !important;
+        background: rgba(192, 132, 252, 0.15) !important;
+      }
+      .katex a:has(.note-eq-citation),
+      .katex .note-eq-citation {
+        color: #34d399 !important;
+        text-decoration: none !important;
+        cursor: pointer !important;
+        font-weight: 600 !important;
+        border-radius: 4px !important;
+        padding: 0 3px !important;
+        transition: color 0.15s ease, background 0.15s ease !important;
+      }
+      .katex a:has(.note-eq-citation):hover,
+      .katex .note-eq-citation:hover {
+        color: #6ee7b7 !important;
+        background: rgba(52, 211, 153, 0.15) !important;
+      }
     `;
     document.head.appendChild(style);
   }
@@ -481,7 +609,22 @@ function ensureCanceltoStyles() {
 }
 
 function postProcessKatexHtml(html) {
-  return html;
+  if (!html) return html;
+  return html.replace(/<a\s+([^>]*href=["'](https?:\/\/[^"']+)["'][^>]*)>/gi, (match, attrs, url) => {
+    let newAttrs = attrs;
+    if (!/target\s*=/i.test(newAttrs)) {
+      newAttrs += ' target="_blank"';
+    }
+    if (!/rel\s*=/i.test(newAttrs)) {
+      newAttrs += ' rel="noopener noreferrer"';
+    }
+    if (/class\s*=\s*["']([^"']*)["']/i.test(newAttrs)) {
+      newAttrs = newAttrs.replace(/class\s*=\s*["']([^"']*)["']/i, 'class="$1 note-katex-link"');
+    } else {
+      newAttrs += ' class="note-katex-link"';
+    }
+    return `<a ${newAttrs}>`;
+  });
 }
 
 const katexCache = new Map();
@@ -540,15 +683,24 @@ export function renderKatex(tex, isDisplayMode = false, noteContext = null) {
       };
       let pre = cleanTex
         .replace(/\\label\{[^}]*\}/g, ' ')
-        .replace(/\\fig\{([a-zA-Z0-9_\-\.\:]+)\}/g, (m, rawTag) => {
+        .replace(/\\fig\{\s*([a-zA-Z0-9_\-\.\:]+)\s*\}/g, (m, rawTag) => {
           const norm = String(rawTag).trim().toLowerCase();
           const num = activeFigureTagMap.get(norm) ?? activeFigureTagMap.get(rawTag) ?? null;
-          if (num === null || num === undefined) return `\\text{[Fig. ${rawTag}]}`;
+          if (num === null || num === undefined) {
+            return `\\href{#fig-${norm}}{\\htmlData{fig-target=${norm}}{\\htmlClass{note-fig-citation}{\\text{[Fig. ${rawTag}]}}}}`;
+          }
           return `\\href{#fig-${num}}{\\htmlData{fig-target=${norm},fig-num=${num}}{\\htmlClass{note-fig-citation}{\\text{[Fig. ${num}]}}}}`;
         })
         .replace(/\\eqref\{([a-zA-Z0-9_\-\.\:]+)\}/g, (m, rawTag) => eqRefBadge(rawTag, true))
         .replace(/\\eq\{([a-zA-Z0-9_\-\.\:]+)\}/g, (m, rawTag) => eqRefBadge(rawTag, true))
         .replace(/\\ref\{([a-zA-Z0-9_\-\.\:]+)\}/g, (m, rawTag) => eqRefBadge(rawTag, false))
+        .replace(/\\url\{([^}]+)\}/g, (m, rawUrl) => {
+          let u = (rawUrl || '').trim();
+          if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(u) && !u.startsWith('#')) {
+            u = 'https://' + u;
+          }
+          return `\\url{${u}}`;
+        })
         .replace(/\\cite\{([^}]*)\}/g, (m, keysRaw) => {
           const { parts, missing } = resolveCitationLabels(keysRaw);
           const missClass = missing ? ' note-cite-missing' : '';
@@ -568,7 +720,7 @@ export function renderKatex(tex, isDisplayMode = false, noteContext = null) {
         trust: (context) => {
           if (context.command === '\\htmlClass' || context.command === '\\htmlData') return true;
           if (context.command === '\\href') return /^https?:\/\//i.test(context.url || '') || (context.url || '').startsWith('#');
-          if (context.command === '\\url') return /^https?:\/\//i.test(context.url || '');
+          if (context.command === '\\url') return /^https?:\/\//i.test(context.url || '') || (context.url || '').startsWith('#');
           return false;
         }
       });

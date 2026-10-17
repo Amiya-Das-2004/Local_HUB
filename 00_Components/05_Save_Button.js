@@ -510,6 +510,9 @@ ${bundledRD}
 function handleRoute() {
   const currentHash = (window.location.hash || '').trim();
   const lowerHash = currentHash.toLowerCase();
+  if (lowerHash.startsWith('#fig-') || lowerHash.startsWith('#eq-')) {
+    return;
+  }
   const root = document.getElementById('root');
   if (root) {
     root.innerHTML = '';

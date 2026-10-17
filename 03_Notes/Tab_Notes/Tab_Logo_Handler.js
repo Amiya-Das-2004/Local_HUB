@@ -18,7 +18,22 @@ export function InitTabLogoOverride() {
       if (typeof el.__cleanup === 'function') el.__cleanup();
       el.remove();
     });
-    // Stay within the isolated Notes tab without redirecting to Index.html
-    window.location.hash = '';
+
+    const currentHash = (typeof window !== 'undefined' && window.location.hash) || '';
+    const lowerHash = currentHash.toLowerCase();
+    const isInsideNote = lowerHash.includes('?id=') || (lowerHash.startsWith('#notes') && lowerHash.includes('id='));
+
+    if (isInsideNote) {
+      // Level 1: Return from note editor to Notes Deck overview
+      window.location.hash = '#Notes';
+    } else {
+      // Level 2: On Notes Deck overview -> navigate to master hub if available
+      const hubUrl = (typeof window !== 'undefined' && window.__LOCALHUB_HUB_URL__) || '';
+      if (hubUrl) {
+        window.location.href = hubUrl;
+      } else {
+        window.location.hash = '';
+      }
+    }
   });
 }

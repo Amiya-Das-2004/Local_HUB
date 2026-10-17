@@ -112,6 +112,7 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
     wrap.className = `my-1 p-4 rounded-xl ${borderClasses} flex flex-col items-center justify-center w-full select-text transition-all box-border`;
     wrap.style.scrollbarWidth = 'thin';
 
+    applyFigureAttributes(container, { tag, figNumber, label: figLabel });
     applyFigureAttributes(wrap, { tag, figNumber, label: figLabel });
 
     const svgWrap = document.createElement('div');
@@ -133,6 +134,7 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
   }
 
   // 2. Edit Mode
+  applyFigureAttributes(container, { tag, figNumber, label: figLabel });
   const editWrap = document.createElement('div');
   editWrap.className = 'tikz-edit-workspace flex flex-col gap-1.5 my-0.5 w-full relative';
 

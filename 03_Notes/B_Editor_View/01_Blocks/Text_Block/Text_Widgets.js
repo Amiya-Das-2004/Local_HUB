@@ -293,6 +293,7 @@ export const createLiveWidget = (type, raw, contentHtml = '', options = {}) => {
   // Wikilinks own their click too (popup / Ctrl+Click new tab / Alt+Click raw edit).
   if (!isViewMode && onExpand && type !== 'fig' && type !== 'eq' && type !== 'wikilink') {
     span.addEventListener('click', (e) => {
+      if (e.target.closest('a')) return;
       e.stopPropagation();
       onExpand(span);
     });

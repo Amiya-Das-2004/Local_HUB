@@ -48,12 +48,12 @@ const LOGO_VARIANTS = {
 `
   },
   notes: {
-    // HyperLeaf brand: "Hyper" inherits --text (black in light theme), "Leaf" in green
-    title: 'Hyper<span style="color:#3db63f;">Leaf</span>',
+    // TeXidian brand: "TeX" in green (#22c55e), "idian" inherits --text
+    title: '<span style="color:#22c55e;">TeX</span>idian',
     subtitle: 'personal notes',
-    accent: '#2b8a2d',
-    markColor: '#3db63f',
-    markHover: '#2b8a2d',
+    accent: '#16a34a',
+    markColor: '#22c55e',
+    markHover: '#16a34a',
     // SWAP ARTWORK: placeholder open-book mark (matches the NOTES orb color)
     markSvg: `
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -236,6 +236,17 @@ export function InitLogoLogic() {
         if (typeof el.__cleanup === 'function') el.__cleanup();
         el.remove();
       });
+
+      const currentHash = (typeof window !== 'undefined' && window.location.hash) || '';
+      const lowerHash = currentHash.toLowerCase();
+      // Level 1: If inside a note (#Notes?id=... or contains ?id=), navigate back to Notes deck overview
+      const isInsideNote = lowerHash.includes('?id=') || (lowerHash.startsWith('#notes') && lowerHash.includes('id='));
+      if (isInsideNote) {
+        window.location.hash = '#Notes';
+        return;
+      }
+
+      // Level 2: If already on Notes deck or other tab overview, navigate back to Landing Page
       const hubUrl = (typeof window !== 'undefined' && window.__LOCALHUB_HUB_URL__) || '';
       if (hubUrl) {
         window.location.href = hubUrl;

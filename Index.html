@@ -784,6 +784,11 @@
       // Hygiene between routes: never let a previous tab's DOM or theme state
       // bleed into the next app (apps that don't clear #root themselves would
       // stack, and a leftover data-theme attribute would re-skin other tabs).
+      // If hash is an in-page anchor within Notes (e.g. #fig- or #eq-), do not re-route or wipe page
+      if (lowerHash.startsWith('#fig-') || lowerHash.startsWith('#eq-')) {
+        return;
+      }
+
       if (routeRoot) {
         routeRoot.innerHTML = '';
         routeRoot.removeAttribute('data-theme');

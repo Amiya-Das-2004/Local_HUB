@@ -133,6 +133,7 @@ export function renderImageBlock(
     const wrap = document.createElement('figure');
     wrap.className = 'w-full flex flex-col items-center my-2 select-text';
 
+    applyFigureAttributes(container, { tag, figNumber, label: figLabel });
     applyFigureAttributes(wrap, { tag, figNumber, label: figLabel });
 
     const captionText = showCaptions ? formatFigureCaptionText({ caption, allowNumbering, figNumber, label: figLabel }) : '';
@@ -171,6 +172,7 @@ export function renderImageBlock(
   // =========================================================================
   // 2. EDIT MODE
   // =========================================================================
+  applyFigureAttributes(container, { tag, figNumber, label: figLabel });
   const editWrap = document.createElement('div');
   editWrap.className = 'flex flex-col gap-2 my-0.5 w-full';
 

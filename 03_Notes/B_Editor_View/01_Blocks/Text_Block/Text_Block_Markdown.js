@@ -588,8 +588,8 @@ export function createLiveBlockElement(blk, options = {}) {
   // Click-to-reveal raw markdown code for Live Preview editing
   if (!isViewMode && onExpandBlock && ['code_block', 'display_math', 'table', 'callout', 'blockquote', 'horizontal_rule'].includes(blk.type)) {
     el.addEventListener('click', (e) => {
-      // Don't expand if clicking copy button on code block
-      if (e.target.closest('.copy-btn')) return;
+      // Don't expand if clicking copy button on code block or an anchor link (e.g. \url{} or \href{})
+      if (e.target.closest('.copy-btn') || e.target.closest('a')) return;
       e.stopPropagation();
       onExpandBlock(el, blk.raw);
     });
