@@ -133,7 +133,6 @@ export function renderImageBlock(
     const wrap = document.createElement('figure');
     wrap.className = 'w-full flex flex-col items-center my-2 select-text';
 
-    applyFigureAttributes(container, { tag, figNumber, label: figLabel });
     applyFigureAttributes(wrap, { tag, figNumber, label: figLabel });
 
     const captionText = showCaptions ? formatFigureCaptionText({ caption, allowNumbering, figNumber, label: figLabel }) : '';

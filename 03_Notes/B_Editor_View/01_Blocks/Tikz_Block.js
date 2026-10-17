@@ -112,7 +112,6 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
     wrap.className = `my-1 p-4 rounded-xl ${borderClasses} flex flex-col items-center justify-center w-full select-text transition-all box-border`;
     wrap.style.scrollbarWidth = 'thin';
 
-    applyFigureAttributes(container, { tag, figNumber, label: figLabel });
     applyFigureAttributes(wrap, { tag, figNumber, label: figLabel });
 
     const svgWrap = document.createElement('div');

@@ -10330,13 +10330,11 @@ function ensureCiteMathStyles() {
 }
 
 // Global capturing-phase click handler for KaTeX external hyperlinks (\url{} & \href{})
-if (typeof document !== 'undefined' && !document.getElementById('note-katex-link-handler')) {
-  const marker = document.createElement('div');
-  marker.id = 'note-katex-link-handler';
-  marker.style.display = 'none';
-  document.head.appendChild(marker);
+if (typeof window !== 'undefined' && !window.__noteKatexLinkHandlerInit) {
+  window.__noteKatexLinkHandlerInit = true;
 
   document.addEventListener('click', (e) => {
+    if (e.target.closest('button, input, textarea, select')) return;
     const link = e.target.closest('a.note-katex-link, .katex a[href]');
     if (!link) return;
     const href = link.getAttribute('href');
@@ -10348,15 +10346,15 @@ if (typeof document !== 'undefined' && !document.getElementById('note-katex-link
   }, true); // capturing phase: intercepts BEFORE live-editor onExpand can collapse widget
 }
 
-// Global click handler for figure citations [Fig. X], anchor links, and figure captions
-if (typeof document !== 'undefined' && !document.getElementById('note-fig-citation-handler')) {
-  const marker = document.createElement('div');
-  marker.id = 'note-fig-citation-handler';
-  marker.style.display = 'none';
-  document.head.appendChild(marker);
+// Global click handler for figure citations [Fig. X] and anchor links
+if (typeof window !== 'undefined' && !window.__noteFigCitationHandlerInit) {
+  window.__noteFigCitationHandlerInit = true;
 
   document.addEventListener('click', (e) => {
-    const citation = e.target.closest('.note-fig-citation, a[href*="#fig-"], [data-fig-target], [data-fig-num], figcaption');
+    // Never hijack clicks on or inside interactive form controls or toolbar buttons
+    if (e.target.closest('button, input, textarea, select')) return;
+
+    const citation = e.target.closest('.note-fig-citation, a[href*="#fig-"]');
     if (!citation) return;
     e.preventDefault();
     e.stopPropagation();
@@ -10395,29 +10393,24 @@ if (typeof document !== 'undefined' && !document.getElementById('note-fig-citati
     }
 
     let targetEl = null;
-    if (citation.tagName && citation.tagName.toLowerCase() === 'figcaption') {
-      // If clicking the caption itself, highlight its parent figure container
-      targetEl = citation.closest('figure') || citation.closest('[data-fig-tag]') || citation.closest('[id^="fig-"]') || citation.parentElement;
-    } else {
-      const normTarget = (target || '').trim().toLowerCase();
-      if (normTarget) {
-        targetEl = document.querySelector(`[data-fig-tag="${CSS.escape(normTarget)}"]`)
-          || Array.from(document.querySelectorAll('[data-fig-tag]')).find(el => (el.getAttribute('data-fig-tag') || '').toLowerCase() === normTarget)
-          || document.getElementById(`fig-${normTarget}`);
-      }
-      if (!targetEl && num) {
-        targetEl = document.getElementById(`fig-${num}`)
-          || document.querySelector(`[data-fig-num="${CSS.escape(num)}"]`);
-      }
-      if (!targetEl && target) {
-        targetEl = document.getElementById(`fig-${target}`)
-          || document.querySelector(`[data-fig-tag="${CSS.escape(target)}"]`);
-      }
-      if (!targetEl && (normTarget || num)) {
-        const key = normTarget || num;
-        targetEl = document.querySelector(`[data-block-id="${CSS.escape(key)}"]`)
-          || document.getElementById(key);
-      }
+    const normTarget = (target || '').trim().toLowerCase();
+    if (normTarget) {
+      targetEl = document.querySelector(`[data-fig-tag="${CSS.escape(normTarget)}"]`)
+        || Array.from(document.querySelectorAll('[data-fig-tag]')).find(el => (el.getAttribute('data-fig-tag') || '').toLowerCase() === normTarget)
+        || document.getElementById(`fig-${normTarget}`);
+    }
+    if (!targetEl && num) {
+      targetEl = document.getElementById(`fig-${num}`)
+        || document.querySelector(`[data-fig-num="${CSS.escape(num)}"]`);
+    }
+    if (!targetEl && target) {
+      targetEl = document.getElementById(`fig-${target}`)
+        || document.querySelector(`[data-fig-tag="${CSS.escape(target)}"]`);
+    }
+    if (!targetEl && (normTarget || num)) {
+      const key = normTarget || num;
+      targetEl = document.querySelector(`[data-block-id="${CSS.escape(key)}"]`)
+        || document.getElementById(key);
     }
 
     if (targetEl) {
@@ -10446,14 +10439,14 @@ function getActiveEquationTagMap() {
 
 // Global click handler for equation reference badges and citations — scrolls to the equation
 // block (or the exact member row via its data-eq-badge anchor) and pulses a highlight ring.
-if (typeof document !== 'undefined' && !document.getElementById('note-eq-citation-handler')) {
-  const marker = document.createElement('div');
-  marker.id = 'note-eq-citation-handler';
-  marker.style.display = 'none';
-  document.head.appendChild(marker);
+if (typeof window !== 'undefined' && !window.__noteEqCitationHandlerInit) {
+  window.__noteEqCitationHandlerInit = true;
 
   document.addEventListener('click', (e) => {
-    const citation = e.target.closest('.note-eq-citation, a[href^="#eq-"], [data-eq-target], [data-eq-badge], .eq-number-badge');
+    // Never hijack clicks on or inside interactive form controls or toolbar buttons
+    if (e.target.closest('button, input, textarea, select')) return;
+
+    const citation = e.target.closest('.note-eq-citation, a[href^="#eq-"], .eq-number-badge');
     if (!citation) return;
     e.preventDefault();
     e.stopPropagation();
@@ -22327,7 +22320,6 @@ function renderTikzBlock(block, isEditing = false, onUpdate = null, { onDone = n
     wrap.className = `my-1 p-4 rounded-xl ${borderClasses} flex flex-col items-center justify-center w-full select-text transition-all box-border`;
     wrap.style.scrollbarWidth = 'thin';
 
-    applyFigureAttributes(container, { tag, figNumber, label: figLabel });
     applyFigureAttributes(wrap, { tag, figNumber, label: figLabel });
 
     const svgWrap = document.createElement('div');
@@ -22928,7 +22920,6 @@ function renderImageBlock(
     const wrap = document.createElement('figure');
     wrap.className = 'w-full flex flex-col items-center my-2 select-text';
 
-    applyFigureAttributes(container, { tag, figNumber, label: figLabel });
     applyFigureAttributes(wrap, { tag, figNumber, label: figLabel });
 
     const captionText = showCaptions ? formatFigureCaptionText({ caption, allowNumbering, figNumber, label: figLabel }) : '';
