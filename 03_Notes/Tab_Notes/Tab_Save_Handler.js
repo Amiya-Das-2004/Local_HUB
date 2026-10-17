@@ -48,7 +48,7 @@ function syncTabStatesToDOM(doc) {
       }
     }
 
-    if (!foundData) {
+    if (!foundData && id !== 'NotesData') {
       const cacheKeys = [id + '_Local_Cache', id.replace(/Data$/, '') + '_Local_Cache', id];
       for (const ck of cacheKeys) {
         try {
@@ -125,8 +125,12 @@ function clearAllTabLocalCaches() {
     } catch (e) { }
   }
 
-  if (typeof window !== 'undefined' && typeof window.MarkUnsavedChanges === 'function') {
-    window.MarkUnsavedChanges(false);
+  if (typeof window !== 'undefined') {
+    window.__NOTES_UNSAVED__ = false;
+    window.__HAS_UNSAVED_CHANGES__ = false;
+    if (typeof window.MarkUnsavedChanges === 'function') {
+      window.MarkUnsavedChanges(false);
+    }
   }
 }
 
@@ -375,11 +379,51 @@ handlePageRoute();
 // per-tab standalone builder. Called after initNotesApp() mounts the header.
 export function InitTabSaveOverride() {
   const btn = document.getElementById('save-btn');
-  if (!btn) return;
-  const clone = btn.cloneNode(true); // clone drops the shared click listener
-  btn.replaceWith(clone);
-  clone.addEventListener('click', (e) => {
-    e.preventDefault();
-    SaveNotesStandalone();
-  });
+  if (btn) {
+    const clone = btn.cloneNode(true); // clone drops the shared click listener
+    btn.replaceWith(clone);
+    clone.addEventListener('click', (e) => {
+      e.preventDefault();
+      SaveNotesStandalone();
+    });
+  }
+
+  // Provide MarkUnsavedChanges for standalone Notes tab
+  if (typeof window !== 'undefined') {
+    window.MarkUnsavedChanges = function(dirty) {
+      window.__HAS_UNSAVED_CHANGES__ = Boolean(dirty);
+      window.__NOTES_UNSAVED__ = Boolean(dirty);
+      const currentBtn = document.getElementById('save-btn');
+      if (currentBtn) {
+        if (dirty) {
+          currentBtn.classList.add('has-unsaved');
+          currentBtn.title = 'SAVE APPLICATION (Unsaved Changes)';
+        } else {
+          currentBtn.classList.remove('has-unsaved');
+          currentBtn.title = 'SAVE APPLICATION';
+        }
+      }
+    };
+
+    // Install in-page keyboard reload interception (F5, Ctrl+R, Cmd+R) for standalone Notes
+    if (!window.__NOTES_KEYBOARD_GUARD_INSTALLED__) {
+      window.__NOTES_KEYBOARD_GUARD_INSTALLED__ = true;
+      window.addEventListener('keydown', (e) => {
+        const isReload = e.key === 'F5' || ((e.ctrlKey || e.metaKey) && (e.key === 'r' || e.key === 'R'));
+        if (isReload && (window.__NOTES_UNSAVED__ || window.__HAS_UNSAVED_CHANGES__)) {
+          e.preventDefault();
+          if (typeof window.ShowUnsavedRefreshModal === 'function') {
+            window.ShowUnsavedRefreshModal();
+          } else {
+            if (confirm("You have unsaved changes in your workspace. If you refresh, all unsaved changes will be permanently discarded and the workspace will reload the saved data from the HTML file.\n\nDo you want to discard unsaved changes and refresh?")) {
+              clearAllTabLocalCaches();
+              window.MarkUnsavedChanges(false);
+              window.__SUPPRESS_BEFOREUNLOAD__ = true;
+              window.location.reload();
+            }
+          }
+        }
+      });
+    }
+  }
 }

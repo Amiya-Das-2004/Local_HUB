@@ -225,6 +225,21 @@ export function LoadNotesState(forceReload = false) {
 }
 
 let notesSaveDebounceTimer = null;
+let hasUnsavedNotesChanges = false;
+
+export function HasUnsavedNotesChanges() {
+  return hasUnsavedNotesChanges;
+}
+
+export function SetNotesUnsavedChanges(dirty = true) {
+  hasUnsavedNotesChanges = Boolean(dirty);
+  if (typeof window !== 'undefined') {
+    window.__NOTES_UNSAVED__ = hasUnsavedNotesChanges;
+    if (typeof window.MarkUnsavedChanges === 'function') {
+      window.MarkUnsavedChanges(hasUnsavedNotesChanges);
+    }
+  }
+}
 
 function persistNotesToStorageImmediate() {
   if (notesSaveDebounceTimer) {
@@ -232,28 +247,17 @@ function persistNotesToStorageImmediate() {
     notesSaveDebounceTimer = null;
   }
 
-  // 1. Write to DOM <script id="NotesData">
+  // 1. Write to live in-memory DOM <script id="NotesData">
   const dataBlock = typeof document !== 'undefined' ? document.getElementById('NotesData') : null;
   if (dataBlock) {
     dataBlock.textContent = JSON.stringify(NotesState, null, 2);
   }
 
-  // 2. Persist to browser Local Storage as active unsaved working buffer (compact unindented JSON for speed)
-  try {
-    if (typeof localStorage !== 'undefined') {
-      const cachePayload = {
-        ...NotesState,
-        _unsaved: true,
-        _savedAt: Date.now()
-      };
-      localStorage.setItem('NotesData_Local_Cache', JSON.stringify(cachePayload));
-    }
-  } catch (err) {
-    console.warn('Failed to save NotesData to localStorage:', err);
-  }
+  // Pure in-memory session: do NOT persist unsaved working notes buffer to browser localStorage.
+  // This ensures zero cross-file cache contamination between different standalone LocalHUB files.
 }
 
-// Immediately flushes any pending debounced state writes to DOM & localStorage
+// Immediately flushes any pending debounced state writes to the DOM vault
 export function flushNotesSave() {
   persistNotesToStorageImmediate();
 }
@@ -262,15 +266,20 @@ if (typeof window !== 'undefined') {
   window.flushNotesSave = flushNotesSave;
 }
 
-if (typeof window !== 'undefined') {
-  window.addEventListener('beforeunload', () => {
-    if (notesSaveDebounceTimer) {
-      persistNotesToStorageImmediate();
+// Protect against accidental data loss: prompt user on browser close or refresh if there are unsaved edits
+if (typeof window !== 'undefined' && !window.__NOTES_BEFOREUNLOAD_INSTALLED__) {
+  window.__NOTES_BEFOREUNLOAD_INSTALLED__ = true;
+  window.addEventListener('beforeunload', (e) => {
+    if (window.__SUPPRESS_BEFOREUNLOAD__) return;
+    if (hasUnsavedNotesChanges || (typeof window.HasUnsavedChanges === 'function' && window.HasUnsavedChanges())) {
+      e.preventDefault();
+      e.returnValue = '';
+      return '';
     }
   });
 }
 
-// Persists active notes, syncs folder/tag lists, and updates HTML vault & unsaved localStorage cache with debouncing
+// Persists active notes, syncs folder/tag lists, and updates HTML vault in-memory with debouncing
 export function SaveNotesState(newState = null, { immediate = false } = {}) {
   if (newState) NotesState = newState;
 
@@ -284,13 +293,8 @@ export function SaveNotesState(newState = null, { immediate = false } = {}) {
     NotesState.tags = mergeOrderedLists(NotesState.tags, derivedTags);
   }
 
-  // Keep window.NotesState synchronously in sync and mark unsaved changes
-  if (typeof window !== 'undefined') {
-    window.NotesState = NotesState;
-    if (typeof window.MarkUnsavedChanges === 'function') {
-      window.MarkUnsavedChanges(true);
-    }
-  }
+  // Mark in-memory state as dirty and keep window.NotesState synchronously in sync
+  SetNotesUnsavedChanges(true);
 
   if (immediate) {
     persistNotesToStorageImmediate();
@@ -308,6 +312,7 @@ export function ClearNotesLocalCache() {
     clearTimeout(notesSaveDebounceTimer);
     notesSaveDebounceTimer = null;
   }
+  SetNotesUnsavedChanges(false);
   try {
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem('NotesData_Local_Cache');
