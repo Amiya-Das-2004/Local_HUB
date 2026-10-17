@@ -94,15 +94,15 @@ Universal, dependency-free UI modules shared across all Local_HUB workspace tabs
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `GetSaveButtonHTML()` | 2 - 104 | Returns HTML and responsive styles for the primary application Save button, including `.has-unsaved` pulsing indicator. |
+| `GetSaveButtonHTML()` | 2 - 104 | Returns HTML and responsive styles for the primary application Save button, including `.save-badge` notification count badge. |
 | `HasUnsavedChanges()` | 108 - 110 | Returns boolean indicating whether any tab has uncommitted changes in memory. |
-| `MarkUnsavedChanges(isDirty = true)` | 114 - 131 | Marks workspace dirty/clean, updates button title (*"SAVE APPLICATION (Unsaved Changes)"* vs *"SAVE APPLICATION"*), and toggles the pulsing amber badge on `#save-btn`. |
-| `ShowUnsavedRefreshModal()` | 134 - 231 | In-app modal for keyboard reloads (`F5`, `Ctrl+R`, `Cmd+R`), providing explicit **[Cancel]** and **[Discard & Refresh]** choices. Discard purges caches and reloads clean from HTML file. |
-| `syncAllStatesToDOM(doc)` | 234 - 325 | Synchronizes in-memory window states (`window.BookmarkState`, `window.NotesState`, `window.AppState`, `window.ProfessorsState`, `window.RDState`) into DOM `<script type="application/json">` vault tags. JSON is `<`-escaped to `\u003c` so vault data can never close the host `<script>` block in the generated standalone. |
-| `bundleFile(filePath)` | 358 - 391 | Fetches a modular JavaScript file and strips ES module `import`/`export` syntax into a single flat scope, then escapes literal `</script` sequences to `<\/script` (source-level only — runtime strings are unchanged) so embedded sources cannot terminate the host script block. |
-| `SaveAndDownloadApp()` | 348 - 650 | Bundles all modular JS files across components, landing, bookmarks, notes, professors, and R&D, embeds live data vaults, flushes unsaved caches, resets unsaved state, and downloads standalone `Local_HUB.html`. |
-| `ClearAllLocalCaches()` | 653 - 710 | Sweeps and removes all unsaved recovery caches (`*_Local_Cache`, `profftrack:v1`, `rd_library_v1`, `PapersData_Local_Cache`), clears block undo/redo stacks, and resets dirty flag after save or discard. |
-| `InitSaveButtonLogic()` | 713 - 755 | Attaches click listener to `#save-btn`, installs `beforeunload` native prompt guard, `pagehide` cache wipe, and `keydown` reload interception. |
+| `GetUnsavedChangesCount()` | 112 - 117 | Returns integer count of unsaved modified, added, or deleted blocks across the workspace. |
+| `MarkUnsavedChanges(isDirty = true, count = null)` | 119 - 156 | Updates workspace dirty state and notification count badge (`.save-badge`) on `#save-btn` with dynamic tooltip. |
+| `syncAllStatesToDOM(doc)` | 234 - 325 | Synchronizes in-memory window states into DOM `<script type="application/json">` vault tags. |
+| `bundleFile(filePath)` | 358 - 391 | Fetches a modular JavaScript file and strips ES module `import`/`export` syntax into a single flat scope. |
+| `SaveAndDownloadApp()` | 348 - 650 | Bundles all modular JS files across components and tabs, embeds live data vaults, flushes caches, resets unsaved state and badge, and downloads standalone `Local_HUB.html`. |
+| `ClearAllLocalCaches()` | 653 - 710 | Sweeps and removes all unsaved recovery caches, clears block undo/redo stacks, and resets dirty flag and count badge after save or discard. |
+| `InitSaveButtonLogic()` | 713 - 755 | Attaches click listener to `#save-btn`, restores active count badge on mount, installs `beforeunload` native prompt guard, and `pagehide` cache wipe. |
 
 ---
 

@@ -45,17 +45,22 @@ export const DEFAULT_GLOBAL_MACROS = {
 };
 
 // In-memory state holding notes, folders, tags, vault metadata, macros, custom templates, and the BibTeX library
-export let NotesState = {
-  vaultMeta: { title: "Notes Vault", version: "1.0.0" },
-  globalMacros: { ...DEFAULT_GLOBAL_MACROS },
-  tableTemplates: [],
-  tikzTemplates: [],
-  bibliography: [],
-  citationStyle: 'numeric',
-  folders: [],
-  tags: [],
-  notes: []
-};
+export let NotesState = (typeof window !== 'undefined' && window.NotesState && Array.isArray(window.NotesState.notes) && window.NotesState.notes.length > 0)
+  ? window.NotesState
+  : {
+      vaultMeta: { title: "Notes Vault", version: "1.0.0" },
+      globalMacros: { ...DEFAULT_GLOBAL_MACROS },
+      tableTemplates: [],
+      tikzTemplates: [],
+      bibliography: [],
+      citationStyle: 'numeric',
+      folders: [],
+      tags: [],
+      notes: []
+    };
+if (typeof window !== 'undefined') {
+  window.NotesState = NotesState;
+}
 
 // Preserves a manually curated order (e.g. drag-reordered folders) and only appends newly seen values.
 function mergeOrderedLists(existing, derived) {
@@ -97,9 +102,12 @@ function sanitizeNote(n, idx = 0) {
         return out; });
     })(),
     meta: n.meta || { created: new Date().toISOString().slice(0, 10), author: 'User' },
-    flashcard: n.flashcard || null,
-    blocks: Array.isArray(n.blocks) ? n.blocks : [],
-    autoNumbering: n.autoNumbering || { h1: 'numeric', h2: 'numeric', h3: 'numeric' },
+    blocks: Array.isArray(n.blocks) ? n.blocks.map((b, bIdx) => {
+      if (b && typeof b === 'object' && !b.id) {
+        b.id = `b_${Date.now()}_${idx}_${bIdx}_${Math.random().toString(36).slice(2, 6)}`;
+      }
+      return b;
+    }) : [],
     // Per-note numbering configs pass through untouched (objects or legacy strings):
     ...(n.equationNumbering !== undefined ? { equationNumbering: n.equationNumbering } : {}),
     ...(n.figureNumbering !== undefined ? { figureNumbering: n.figureNumbering } : {}),
@@ -156,7 +164,13 @@ function migrateOrientationContainers(note) {
 // Loads notes from HTML vault (#NotesData) and optionally recovers uncommitted edits from localStorage
 export function LoadNotesState(forceReload = false) {
   // Reuse in-memory state if already loaded to avoid multi-MB JSON parsing on every route change
-  if (!forceReload && NotesState.notes && NotesState.notes.length > 0) {
+  if (!forceReload && (
+    (NotesState.notes && NotesState.notes.length > 0) ||
+    (typeof window !== 'undefined' && window.NotesState && Array.isArray(window.NotesState.notes) && window.NotesState.notes.length > 0)
+  )) {
+    if (typeof window !== 'undefined' && window.NotesState && NotesState !== window.NotesState) {
+      Object.assign(NotesState, window.NotesState);
+    }
     return NotesState;
   }
 
@@ -205,6 +219,9 @@ export function LoadNotesState(forceReload = false) {
       notes: domState.notes
     });
     if (typeof window !== 'undefined') window.NotesState = NotesState;
+    if (!isBaselineCaptured) {
+      CaptureNotesBaseline(NotesState);
+    }
     return NotesState;
   }
 
@@ -221,22 +238,191 @@ export function LoadNotesState(forceReload = false) {
     notes: []
   });
   if (typeof window !== 'undefined') window.NotesState = NotesState;
+  if (!isBaselineCaptured) {
+    CaptureNotesBaseline(NotesState);
+  }
   return NotesState;
 }
 
 let notesSaveDebounceTimer = null;
-let hasUnsavedNotesChanges = false;
+let hasUnsavedNotesChanges = Boolean(typeof window !== 'undefined' && window.__NOTES_UNSAVED__);
+
+// Baseline snapshot of loaded or saved vault data
+let baselineBlocksMap = (typeof window !== 'undefined' && window.__NOTES_BASELINE_BLOCKS__)
+  ? window.__NOTES_BASELINE_BLOCKS__
+  : new Map(); // blockId -> { noteId, fingerprint }
+let baselineNotesMeta = (typeof window !== 'undefined' && window.__NOTES_BASELINE_META__)
+  ? window.__NOTES_BASELINE_META__
+  : new Map(); // noteId -> { title, folder, tagsString, description, blockIdsOrder }
+let isBaselineCaptured = Boolean(typeof window !== 'undefined' && window.__NOTES_BASELINE_CAPTURED__);
+
+if (typeof window !== 'undefined') {
+  window.__NOTES_BASELINE_BLOCKS__ = baselineBlocksMap;
+  window.__NOTES_BASELINE_META__ = baselineNotesMeta;
+  window.__NOTES_BASELINE_CAPTURED__ = isBaselineCaptured;
+  window.__NOTES_UNSAVED__ = hasUnsavedNotesChanges;
+}
+
+function getBlockFingerprint(block) {
+  if (!block || typeof block !== 'object') return '';
+  const copy = { ...block };
+  delete copy._isEditing;
+  delete copy._temp;
+  try {
+    return JSON.stringify(copy);
+  } catch (e) {
+    return String(block.id || '') + ':' + String(block.type || '') + ':' + String(block.content || '');
+  }
+}
+
+export function CaptureNotesBaseline(state = NotesState) {
+  baselineBlocksMap.clear();
+  baselineNotesMeta.clear();
+  if (state && Array.isArray(state.notes)) {
+    state.notes.forEach(note => {
+      if (!note) return;
+      const blockIds = [];
+      if (Array.isArray(note.blocks)) {
+        note.blocks.forEach(b => {
+          if (!b || !b.id) return;
+          blockIds.push(b.id);
+          baselineBlocksMap.set(b.id, {
+            noteId: note.id,
+            fingerprint: getBlockFingerprint(b)
+          });
+        });
+      }
+      baselineNotesMeta.set(note.id, {
+        title: String(note.title || ''),
+        folder: String(note.folder || ''),
+        tagsString: (Array.isArray(note.tags) ? note.tags.slice().sort().join(',') : ''),
+        description: String(note.description || ''),
+        blockIdsOrder: blockIds.join(',')
+      });
+    });
+  }
+  isBaselineCaptured = true;
+  hasUnsavedNotesChanges = false;
+  if (typeof window !== 'undefined') {
+    window.__NOTES_BASELINE_BLOCKS__ = baselineBlocksMap;
+    window.__NOTES_BASELINE_META__ = baselineNotesMeta;
+    window.__NOTES_BASELINE_CAPTURED__ = true;
+    window.__NOTES_UNSAVED__ = false;
+    window.__NOTES_UNSAVED_COUNT__ = 0;
+    if (typeof window.MarkUnsavedChanges === 'function') {
+      window.MarkUnsavedChanges(false, 0);
+    }
+  }
+}
+
+export function CalculateNotesBlockChanges() {
+  if (!isBaselineCaptured) {
+    return { count: 0, isDirty: false, modifiedCount: 0, addedCount: 0, deletedCount: 0, metadataChangesCount: 0 };
+  }
+
+  const currentBlockIds = new Set();
+  let modifiedCount = 0;
+  let addedCount = 0;
+  let deletedCount = 0;
+  let metadataChangesCount = 0;
+
+  if (Array.isArray(NotesState.notes)) {
+    NotesState.notes.forEach(note => {
+      if (!note) return;
+
+      const origMeta = baselineNotesMeta.get(note.id);
+      if (!origMeta) {
+        metadataChangesCount++;
+      } else {
+        const currentTagsStr = (Array.isArray(note.tags) ? note.tags.slice().sort().join(',') : '');
+        const currentBlockIdsOrder = (Array.isArray(note.blocks) ? note.blocks.map(b => b?.id).filter(Boolean).join(',') : '');
+        if (
+          origMeta.title !== String(note.title || '') ||
+          origMeta.folder !== String(note.folder || '') ||
+          origMeta.tagsString !== currentTagsStr ||
+          origMeta.description !== String(note.description || '') ||
+          origMeta.blockIdsOrder !== currentBlockIdsOrder
+        ) {
+          metadataChangesCount++;
+        }
+      }
+
+      if (Array.isArray(note.blocks)) {
+        note.blocks.forEach(b => {
+          if (!b || !b.id) return;
+          currentBlockIds.add(b.id);
+          const orig = baselineBlocksMap.get(b.id);
+          if (!orig) {
+            addedCount++;
+          } else {
+            const currentFp = getBlockFingerprint(b);
+            if (orig.fingerprint !== currentFp) {
+              modifiedCount++;
+            }
+          }
+        });
+      }
+    });
+  }
+
+  for (const [origBlockId] of baselineBlocksMap) {
+    if (!currentBlockIds.has(origBlockId)) {
+      deletedCount++;
+    }
+  }
+
+  for (const [origNoteId] of baselineNotesMeta) {
+    const stillExists = NotesState.notes.some(n => n && n.id === origNoteId);
+    if (!stillExists) {
+      metadataChangesCount++;
+    }
+  }
+
+  const blockChangesCount = modifiedCount + addedCount + deletedCount;
+  const totalCount = blockChangesCount + metadataChangesCount;
+  const isDirty = totalCount > 0;
+
+  return {
+    count: totalCount,
+    isDirty: isDirty,
+    modifiedCount,
+    addedCount,
+    deletedCount,
+    metadataChangesCount
+  };
+}
+
+export function GetNotesUnsavedChangesCount() {
+  const diff = CalculateNotesBlockChanges();
+  return diff.count;
+}
 
 export function HasUnsavedNotesChanges() {
-  return hasUnsavedNotesChanges;
+  if (!isBaselineCaptured) return hasUnsavedNotesChanges;
+  const diff = CalculateNotesBlockChanges();
+  return diff.isDirty;
 }
 
 export function SetNotesUnsavedChanges(dirty = true) {
-  hasUnsavedNotesChanges = Boolean(dirty);
+  let isDirty = false;
+  let count = 0;
+  if (dirty === false) {
+    isDirty = false;
+    count = 0;
+  } else if (isBaselineCaptured) {
+    const diff = CalculateNotesBlockChanges();
+    isDirty = diff.isDirty;
+    count = diff.count;
+  } else {
+    isDirty = Boolean(dirty);
+    count = isDirty ? 1 : 0;
+  }
+  hasUnsavedNotesChanges = isDirty;
   if (typeof window !== 'undefined') {
     window.__NOTES_UNSAVED__ = hasUnsavedNotesChanges;
+    window.__NOTES_UNSAVED_COUNT__ = count;
     if (typeof window.MarkUnsavedChanges === 'function') {
-      window.MarkUnsavedChanges(hasUnsavedNotesChanges);
+      window.MarkUnsavedChanges(hasUnsavedNotesChanges, count);
     }
   }
 }
@@ -263,7 +449,14 @@ export function flushNotesSave() {
 }
 
 if (typeof window !== 'undefined') {
+  window.SaveNotesState = SaveNotesState;
   window.flushNotesSave = flushNotesSave;
+  window.ClearNotesLocalCache = ClearNotesLocalCache;
+  window.CaptureNotesBaseline = CaptureNotesBaseline;
+  window.CalculateNotesBlockChanges = CalculateNotesBlockChanges;
+  window.GetNotesUnsavedChangesCount = GetNotesUnsavedChangesCount;
+  window.HasUnsavedNotesChanges = HasUnsavedNotesChanges;
+  window.SetNotesUnsavedChanges = SetNotesUnsavedChanges;
 }
 
 // Protect against accidental data loss: prompt user on browser close or refresh if there are unsaved edits
@@ -312,7 +505,7 @@ export function ClearNotesLocalCache() {
     clearTimeout(notesSaveDebounceTimer);
     notesSaveDebounceTimer = null;
   }
-  SetNotesUnsavedChanges(false);
+  CaptureNotesBaseline(NotesState);
   try {
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem('NotesData_Local_Cache');

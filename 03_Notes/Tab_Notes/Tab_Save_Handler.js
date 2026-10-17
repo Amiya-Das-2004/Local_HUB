@@ -128,8 +128,12 @@ function clearAllTabLocalCaches() {
   if (typeof window !== 'undefined') {
     window.__NOTES_UNSAVED__ = false;
     window.__HAS_UNSAVED_CHANGES__ = false;
+    window.__NOTES_UNSAVED_COUNT__ = 0;
+    if (typeof window.ClearNotesLocalCache === 'function') {
+      try { window.ClearNotesLocalCache(); } catch (e) { }
+    }
     if (typeof window.MarkUnsavedChanges === 'function') {
-      window.MarkUnsavedChanges(false);
+      window.MarkUnsavedChanges(false, 0);
     }
   }
 }
@@ -291,8 +295,9 @@ ${bundledHandlers}
 /* ==========================================================================
    NOTES PAGE MODULE
    ========================================================================== */
-function LoadThisPage() {
 ${bundledTab}
+
+function LoadThisPage() {
   if (typeof initNotesApp === 'function') initNotesApp();
   if (typeof InitTabSaveOverride === 'function') InitTabSaveOverride();
   if (typeof InitTabLogoOverride === 'function') InitTabLogoOverride();
@@ -369,8 +374,10 @@ handlePageRoute();
     `;
     setTimeout(() => {
       saveBtn.style.background = originalBg;
-      saveBtn.title = 'SAVE APPLICATION';
       saveBtn.innerHTML = originalHTML;
+      if (typeof window.MarkUnsavedChanges === 'function') {
+        window.MarkUnsavedChanges(false, 0);
+      }
     }, 2000);
   }
 }
@@ -390,40 +397,38 @@ export function InitTabSaveOverride() {
 
   // Provide MarkUnsavedChanges for standalone Notes tab
   if (typeof window !== 'undefined') {
-    window.MarkUnsavedChanges = function(dirty) {
+    window.MarkUnsavedChanges = function(dirty, count = null) {
       window.__HAS_UNSAVED_CHANGES__ = Boolean(dirty);
       window.__NOTES_UNSAVED__ = Boolean(dirty);
+      const unsavedCount = (typeof count === 'number') ? count : (typeof window.__NOTES_UNSAVED_COUNT__ === 'number' ? window.__NOTES_UNSAVED_COUNT__ : (dirty ? 1 : 0));
+      window.__NOTES_UNSAVED_COUNT__ = unsavedCount;
       const currentBtn = document.getElementById('save-btn');
       if (currentBtn) {
-        if (dirty) {
+        const badge = currentBtn.querySelector('.save-badge');
+        if (dirty && unsavedCount > 0) {
           currentBtn.classList.add('has-unsaved');
-          currentBtn.title = 'SAVE APPLICATION (Unsaved Changes)';
+          if (badge) {
+            badge.textContent = unsavedCount > 99 ? '99+' : String(unsavedCount);
+            badge.style.display = 'flex';
+          }
+          const changeText = unsavedCount === 1 ? '1 unsaved block change' : `${unsavedCount} unsaved block changes`;
+          currentBtn.title = `SAVE APPLICATION (${changeText})`;
         } else {
           currentBtn.classList.remove('has-unsaved');
+          if (badge) {
+            badge.textContent = '';
+            badge.style.display = 'none';
+          }
           currentBtn.title = 'SAVE APPLICATION';
         }
       }
     };
 
-    // Install in-page keyboard reload interception (F5, Ctrl+R, Cmd+R) for standalone Notes
-    if (!window.__NOTES_KEYBOARD_GUARD_INSTALLED__) {
-      window.__NOTES_KEYBOARD_GUARD_INSTALLED__ = true;
-      window.addEventListener('keydown', (e) => {
-        const isReload = e.key === 'F5' || ((e.ctrlKey || e.metaKey) && (e.key === 'r' || e.key === 'R'));
-        if (isReload && (window.__NOTES_UNSAVED__ || window.__HAS_UNSAVED_CHANGES__)) {
-          e.preventDefault();
-          if (typeof window.ShowUnsavedRefreshModal === 'function') {
-            window.ShowUnsavedRefreshModal();
-          } else {
-            if (confirm("You have unsaved changes in your workspace. If you refresh, all unsaved changes will be permanently discarded and the workspace will reload the saved data from the HTML file.\n\nDo you want to discard unsaved changes and refresh?")) {
-              clearAllTabLocalCaches();
-              window.MarkUnsavedChanges(false);
-              window.__SUPPRESS_BEFOREUNLOAD__ = true;
-              window.location.reload();
-            }
-          }
-        }
-      });
+    // Immediately restore badge count if unsaved changes exist upon mount
+    if (window.__NOTES_UNSAVED__ || window.__HAS_UNSAVED_CHANGES__) {
+      window.MarkUnsavedChanges(true, window.__NOTES_UNSAVED_COUNT__);
+    } else {
+      window.MarkUnsavedChanges(false, 0);
     }
   }
 }

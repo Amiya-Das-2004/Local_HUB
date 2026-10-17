@@ -120,10 +120,15 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 | `NotesState` | 48 - 58 | Central in-memory reactive state object holding vault metadata, global macros, table templates, tikz templates, bibliography entries, citation style, folders, tags, and notes. |
 | `sanitizeNote(n, idx = 0)` | 68 - 102 | Validates note object schema, fills missing fallback properties (id, slug, title, folder, tags, blocks, macros, autoNumbering), passes through per-note numbering configs (`equationNumbering`, `figureNumbering`, `showFigureCaptions` — objects or legacy strings), prevents data corruption, and runs the orientation-container migration. |
 | `migrateOrientationContainers(note)` | 105 - 139 | One-time legacy migration: hoists Multi-Column `cols[]` embedded children to top-level blocks (inserted right after the container) and rewrites them as non-destructive `members`/`rows` references. |
-| `LoadNotesState(forceReload = false)` | 157 - 240 | Reads and parses notes directly from DOM script vault (#NotesData), wipes leftover cache to eliminate cross-file contamination, and reuses in-memory state when not stale to eliminate multi-MB JSON re-parsing on route changes. |
-| `flushNotesSave()` | 299 - 302 | Immediately flushes any pending debounced state writes to DOM #NotesData and localStorage. |
-| `SaveNotesState(newState = null, { immediate = false } = {})` | 316 - 342 | Re-derives active folder/tag lists, synchronizes window.NotesState, calls `window.MarkUnsavedChanges(true)`, and persists active working buffer to DOM vault and localStorage with debouncing (~280ms) for high-speed typing. |
-| `ClearNotesLocalCache()` | 345 - 360 | Clears the unsaved localStorage recovery cache (NotesData_Local_Cache) after downloading or saving standalone application HTML. |
+| `LoadNotesState(forceReload = false)` | 160 - 230 | Reads and parses notes directly from DOM script vault (#NotesData), wipes leftover cache to eliminate cross-file contamination, reuses in-memory state when not stale to eliminate multi-MB JSON re-parsing on route changes, and calls `CaptureNotesBaseline(NotesState)`. |
+| `CaptureNotesBaseline(state = NotesState)` | 252 - 287 | Captures initial/committed baseline snapshot of all note blocks (fingerprints) and metadata (title, folder, tags, order) for idempotent change diffing. Resets unsaved status and badge count to 0. |
+| `CalculateNotesBlockChanges()` | 289 - 364 | Computes exact count of modified, added, deleted blocks across all notes, plus metadata changes, comparing current state against the captured baseline snapshot. |
+| `GetNotesUnsavedChangesCount()` | 366 - 369 | Returns the exact number of unsaved block/metadata changes across all notes. |
+| `HasUnsavedNotesChanges()` | 371 - 375 | Returns boolean whether any uncommitted block or metadata changes exist. |
+| `SetNotesUnsavedChanges(dirty = true)` | 377 - 396 | Computes block diff and syncs unsaved state and count with `window.MarkUnsavedChanges(isDirty, count)` and global window flags. |
+| `flushNotesSave()` | 443 - 446 | Immediately flushes any pending debounced state writes to DOM #NotesData. |
+| `SaveNotesState(newState = null, { immediate = false } = {})` | 449 - 475 | Re-derives active folder/tag lists, synchronizes `window.NotesState`, updates unsaved change diff count, and persists active working buffer to DOM vault with debouncing (~280ms). |
+| `ClearNotesLocalCache()` | 477 - 489 | Clears unsaved localStorage recovery cache and re-captures baseline snapshot to reset change tracking count to 0 after save/export. |
 
 **01_Header.js**
 

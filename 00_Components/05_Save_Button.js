@@ -73,23 +73,43 @@ export function GetSaveButtonHTML() {
         position: relative;
       }
 
-      .save-btn.has-unsaved::after {
-        content: '';
+      .save-badge {
         position: absolute;
-        top: -2px;
-        right: -2px;
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
+        top: -6px;
+        right: -6px;
+        min-width: 17px;
+        height: 17px;
+        padding: 0 4px;
+        border-radius: 9999px;
         background: #f59e0b;
+        color: #0e1018;
+        font-size: 10px;
+        font-weight: 800;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
         border: 2px solid var(--surface, #181b27);
-        box-shadow: 0 0 8px rgba(245, 158, 11, 0.85);
-        animation: saveBtnPulse 2s infinite ease-in-out;
+        box-shadow: 0 0 10px rgba(245, 158, 11, 0.7);
+        pointer-events: none;
+        user-select: none;
+        box-sizing: border-box;
+        z-index: 5;
       }
 
-      @keyframes saveBtnPulse {
-        0%, 100% { transform: scale(1); opacity: 1; }
-        50% { transform: scale(1.28); opacity: 0.8; }
+      :root[data-theme="light"] .save-badge {
+        border-color: var(--surface, #ffffff);
+      }
+
+      .save-btn.has-unsaved .save-badge {
+        display: flex;
+        animation: saveBadgePop 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      }
+
+      @keyframes saveBadgePop {
+        0% { transform: scale(0.35); opacity: 0; }
+        100% { transform: scale(1); opacity: 1; }
       }
     </style>
 
@@ -99,6 +119,7 @@ export function GetSaveButtonHTML() {
         <polyline points="17 21 17 13 7 13 7 21" />
         <polyline points="7 3 7 8 15 8" />
       </svg>
+      <span class="save-badge" id="save-badge" aria-hidden="true"></span>
     </button>
   `;
 }
@@ -595,34 +616,67 @@ handleRoute();
     `;
     setTimeout(() => {
       saveBtn.style.background = originalBg;
-      saveBtn.title = 'SAVE APPLICATION';
       saveBtn.innerHTML = originalHTML;
+      MarkUnsavedChanges(false, 0);
     }, 2000);
   }
 }
 
 // Global unsaved changes state tracker
 let isAppDirty = false;
+let appUnsavedCount = 0;
 
 export function HasUnsavedChanges() {
-  if (typeof window !== 'undefined' && window.__HAS_UNSAVED_CHANGES__ === true) {
-    return true;
+  if (typeof window !== 'undefined') {
+    if (typeof window.__HAS_UNSAVED_CHANGES__ === 'boolean') {
+      return window.__HAS_UNSAVED_CHANGES__;
+    }
+    if (typeof window.__NOTES_UNSAVED__ === 'boolean') {
+      return window.__NOTES_UNSAVED__;
+    }
   }
   return isAppDirty;
 }
 
-export function MarkUnsavedChanges(isDirty = true) {
-  isAppDirty = !!isDirty;
+export function GetUnsavedChangesCount() {
+  if (typeof window !== 'undefined' && typeof window.__NOTES_UNSAVED_COUNT__ === 'number') {
+    return window.__NOTES_UNSAVED_COUNT__;
+  }
+  return appUnsavedCount;
+}
+
+export function MarkUnsavedChanges(isDirty = true, count = null) {
+  isAppDirty = Boolean(isDirty);
+  if (typeof count === 'number') {
+    appUnsavedCount = Math.max(0, count);
+  } else if (!isAppDirty) {
+    appUnsavedCount = 0;
+  } else if (appUnsavedCount === 0) {
+    appUnsavedCount = 1;
+  }
+
   if (typeof window !== 'undefined') {
     window.__HAS_UNSAVED_CHANGES__ = isAppDirty;
+    window.__APP_UNSAVED_COUNT__ = appUnsavedCount;
   }
+
   const saveBtn = typeof document !== 'undefined' ? document.getElementById('save-btn') : null;
   if (saveBtn) {
-    if (isAppDirty) {
+    const badge = saveBtn.querySelector('.save-badge');
+    if (isAppDirty && appUnsavedCount > 0) {
       saveBtn.classList.add('has-unsaved');
-      saveBtn.title = 'SAVE APPLICATION (Unsaved Changes)';
+      if (badge) {
+        badge.textContent = appUnsavedCount > 99 ? '99+' : String(appUnsavedCount);
+        badge.style.display = 'flex';
+      }
+      const changeText = appUnsavedCount === 1 ? '1 unsaved block change' : `${appUnsavedCount} unsaved block changes`;
+      saveBtn.title = `SAVE APPLICATION (${changeText})`;
     } else {
       saveBtn.classList.remove('has-unsaved');
+      if (badge) {
+        badge.textContent = '';
+        badge.style.display = 'none';
+      }
       saveBtn.title = 'SAVE APPLICATION';
     }
   }
@@ -630,170 +684,13 @@ export function MarkUnsavedChanges(isDirty = true) {
 
 if (typeof window !== 'undefined') {
   window.HasUnsavedChanges = HasUnsavedChanges;
+  window.GetUnsavedChangesCount = GetUnsavedChangesCount;
   window.MarkUnsavedChanges = MarkUnsavedChanges;
 }
 
-// Custom styled LocalHUB modal for in-page reload shortcuts (F5, Ctrl+R, Cmd+R)
+// Deprecated refresh modal (kept as safe no-op for backward compatibility)
 export function ShowUnsavedRefreshModal() {
-  if (typeof document === 'undefined') return;
-  const existing = document.getElementById('unsaved-refresh-modal');
-  if (existing) existing.remove();
-
-  const modal = document.createElement('div');
-  modal.id = 'unsaved-refresh-modal';
-  modal.style.cssText = `
-    position: fixed;
-    inset: 0;
-    z-index: 99999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(0, 0, 0, 0.72);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
-    animation: unsavedFadeIn 0.15s ease-out;
-  `;
-
-  modal.innerHTML = `
-    <style>
-      @keyframes unsavedFadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-      }
-      .unsaved-card {
-        width: 100%;
-        max-width: 440px;
-        background: var(--surface, #181b27);
-        border: 1px solid var(--border, #2a2e40);
-        border-radius: 14px;
-        box-shadow: 0 20px 48px rgba(0, 0, 0, 0.65);
-        padding: 24px;
-        color: var(--text, #e8eaf2);
-        font-family: inherit;
-        box-sizing: border-box;
-      }
-      .unsaved-header {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin-bottom: 14px;
-      }
-      .unsaved-icon {
-        width: 38px;
-        height: 38px;
-        border-radius: 10px;
-        background: rgba(245, 158, 11, 0.15);
-        color: #f59e0b;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-      }
-      .unsaved-title {
-        font-size: 17px;
-        font-weight: 700;
-        letter-spacing: -0.01em;
-      }
-      .unsaved-body {
-        font-size: 13.5px;
-        line-height: 1.55;
-        color: var(--text-secondary, #a0a4b8);
-        margin-bottom: 22px;
-      }
-      .unsaved-actions {
-        display: flex;
-        align-items: center;
-        justify-content: flex-end;
-        gap: 10px;
-      }
-      .unsaved-btn-cancel {
-        height: 36px;
-        padding: 0 16px;
-        border-radius: 8px;
-        background: transparent;
-        border: 1px solid var(--border, #2a2e40);
-        color: var(--text, #e8eaf2);
-        font-size: 13px;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.15s ease;
-      }
-      .unsaved-btn-cancel:hover {
-        background: var(--card, #1c1f2e);
-        border-color: var(--border-light, #353a52);
-      }
-      .unsaved-btn-discard {
-        height: 36px;
-        padding: 0 16px;
-        border-radius: 8px;
-        background: #ef4444;
-        border: 1px solid transparent;
-        color: #ffffff;
-        font-size: 13px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.15s ease;
-      }
-      .unsaved-btn-discard:hover {
-        background: #dc2626;
-        box-shadow: 0 0 14px rgba(239, 68, 68, 0.4);
-      }
-    </style>
-    <div class="unsaved-card">
-      <div class="unsaved-header">
-        <div class="unsaved-icon">
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-            <line x1="12" y1="9" x2="12" y2="13"/>
-            <line x1="12" y1="17" x2="12.01" y2="17"/>
-          </svg>
-        </div>
-        <div class="unsaved-title">Unsaved Changes</div>
-      </div>
-      <div class="unsaved-body">
-        You have unsaved changes in your workspace. If you refresh, all unsaved changes will be permanently discarded and the workspace will reload the saved data from the HTML file.
-      </div>
-      <div class="unsaved-actions">
-        <button type="button" class="unsaved-btn-cancel" id="btn-unsaved-cancel">Cancel</button>
-        <button type="button" class="unsaved-btn-discard" id="btn-unsaved-discard">Discard & Refresh</button>
-      </div>
-    </div>
-  `;
-
-  document.body.appendChild(modal);
-
-  const cleanup = () => {
-    modal.remove();
-    document.removeEventListener('keydown', onKeyDown);
-  };
-
-  const onKeyDown = (e) => {
-    if (e.key === 'Escape') {
-      cleanup();
-    }
-  };
-  document.addEventListener('keydown', onKeyDown);
-
-  const btnCancel = modal.querySelector('#btn-unsaved-cancel');
-  if (btnCancel) {
-    btnCancel.addEventListener('click', (e) => {
-      e.preventDefault();
-      cleanup();
-    });
-  }
-
-  const btnDiscard = modal.querySelector('#btn-unsaved-discard');
-  if (btnDiscard) {
-    btnDiscard.addEventListener('click', (e) => {
-      e.preventDefault();
-      ClearAllLocalCaches();
-      MarkUnsavedChanges(false);
-      if (typeof window !== 'undefined') {
-        window.__SUPPRESS_BEFOREUNLOAD__ = true;
-        window.location.reload();
-      }
-    });
-  }
+  // Pure in-memory sessions rely on standard browser beforeunload navigation prompts
 }
 
 // Clears all unsaved local cache keys from browser localStorage
@@ -838,14 +735,25 @@ export function ClearAllLocalCaches() {
     } catch (e) { }
   }
 
-  // 5. Reset unsaved changes flag
+  // 5. Reset unsaved changes flag and baseline
   isAppDirty = false;
+  appUnsavedCount = 0;
   if (typeof window !== 'undefined') {
     window.__HAS_UNSAVED_CHANGES__ = false;
+    window.__NOTES_UNSAVED__ = false;
+    window.__NOTES_UNSAVED_COUNT__ = 0;
+    if (typeof window.ClearNotesLocalCache === 'function') {
+      try { window.ClearNotesLocalCache(); } catch (e) { }
+    }
   }
   const saveBtn = typeof document !== 'undefined' ? document.getElementById('save-btn') : null;
   if (saveBtn) {
     saveBtn.classList.remove('has-unsaved');
+    const badge = saveBtn.querySelector('.save-badge');
+    if (badge) {
+      badge.textContent = '';
+      badge.style.display = 'none';
+    }
     saveBtn.title = 'SAVE APPLICATION';
   }
 
@@ -859,6 +767,13 @@ export function InitSaveButtonLogic() {
     btn.addEventListener('click', () => {
       SaveAndDownloadApp();
     });
+  }
+
+  // Restore unsaved indicator & badge if changes exist in active session
+  if (HasUnsavedChanges()) {
+    MarkUnsavedChanges(true, GetUnsavedChangesCount());
+  } else {
+    MarkUnsavedChanges(false, 0);
   }
 
   // Install navigation guards once per window
@@ -878,15 +793,6 @@ export function InitSaveButtonLogic() {
     // Immediately wipe localStorage cache when leaving or closing the page
     window.addEventListener('pagehide', () => {
       ClearAllLocalCaches();
-    });
-
-    // In-page keyboard reload interception (F5, Ctrl+R, Cmd+R)
-    window.addEventListener('keydown', (e) => {
-      const isReload = e.key === 'F5' || ((e.ctrlKey || e.metaKey) && (e.key === 'r' || e.key === 'R'));
-      if (isReload && HasUnsavedChanges()) {
-        e.preventDefault();
-        ShowUnsavedRefreshModal();
-      }
     });
 
     // Clean sweep on initial startup to ensure no stale cache from other files contaminates this session

@@ -2176,23 +2176,43 @@ function GetSaveButtonHTML() {
         position: relative;
       }
 
-      .save-btn.has-unsaved::after {
-        content: '';
+      .save-badge {
         position: absolute;
-        top: -2px;
-        right: -2px;
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
+        top: -6px;
+        right: -6px;
+        min-width: 17px;
+        height: 17px;
+        padding: 0 4px;
+        border-radius: 9999px;
         background: #f59e0b;
+        color: #0e1018;
+        font-size: 10px;
+        font-weight: 800;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
         border: 2px solid var(--surface, #181b27);
-        box-shadow: 0 0 8px rgba(245, 158, 11, 0.85);
-        animation: saveBtnPulse 2s infinite ease-in-out;
+        box-shadow: 0 0 10px rgba(245, 158, 11, 0.7);
+        pointer-events: none;
+        user-select: none;
+        box-sizing: border-box;
+        z-index: 5;
       }
 
-      @keyframes saveBtnPulse {
-        0%, 100% { transform: scale(1); opacity: 1; }
-        50% { transform: scale(1.28); opacity: 0.8; }
+      :root[data-theme="light"] .save-badge {
+        border-color: var(--surface, #ffffff);
+      }
+
+      .save-btn.has-unsaved .save-badge {
+        display: flex;
+        animation: saveBadgePop 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      }
+
+      @keyframes saveBadgePop {
+        0% { transform: scale(0.35); opacity: 0; }
+        100% { transform: scale(1); opacity: 1; }
       }
     </style>
 
@@ -2202,6 +2222,7 @@ function GetSaveButtonHTML() {
         <polyline points="17 21 17 13 7 13 7 21" />
         <polyline points="7 3 7 8 15 8" />
       </svg>
+      <span class="save-badge" id="save-badge" aria-hidden="true"></span>
     </button>
   `;
 }
@@ -2698,32 +2719,67 @@ handleRoute();
     `;
     setTimeout(() => {
       saveBtn.style.background = originalBg;
-      saveBtn.title = 'SAVE APPLICATION';
       saveBtn.innerHTML = originalHTML;
+      MarkUnsavedChanges(false, 0);
     }, 2000);
   }
 }
 
 // Global unsaved changes state tracker
 let isAppDirty = false;
+let appUnsavedCount = 0;
+
 function HasUnsavedChanges() {
-  if (typeof window !== 'undefined' && window.__HAS_UNSAVED_CHANGES__ === true) {
-    return true;
+  if (typeof window !== 'undefined') {
+    if (typeof window.__HAS_UNSAVED_CHANGES__ === 'boolean') {
+      return window.__HAS_UNSAVED_CHANGES__;
+    }
+    if (typeof window.__NOTES_UNSAVED__ === 'boolean') {
+      return window.__NOTES_UNSAVED__;
+    }
   }
   return isAppDirty;
 }
-function MarkUnsavedChanges(isDirty = true) {
-  isAppDirty = !!isDirty;
+
+function GetUnsavedChangesCount() {
+  if (typeof window !== 'undefined' && typeof window.__NOTES_UNSAVED_COUNT__ === 'number') {
+    return window.__NOTES_UNSAVED_COUNT__;
+  }
+  return appUnsavedCount;
+}
+
+function MarkUnsavedChanges(isDirty = true, count = null) {
+  isAppDirty = Boolean(isDirty);
+  if (typeof count === 'number') {
+    appUnsavedCount = Math.max(0, count);
+  } else if (!isAppDirty) {
+    appUnsavedCount = 0;
+  } else if (appUnsavedCount === 0) {
+    appUnsavedCount = 1;
+  }
+
   if (typeof window !== 'undefined') {
     window.__HAS_UNSAVED_CHANGES__ = isAppDirty;
+    window.__APP_UNSAVED_COUNT__ = appUnsavedCount;
   }
+
   const saveBtn = typeof document !== 'undefined' ? document.getElementById('save-btn') : null;
   if (saveBtn) {
-    if (isAppDirty) {
+    const badge = saveBtn.querySelector('.save-badge');
+    if (isAppDirty && appUnsavedCount > 0) {
       saveBtn.classList.add('has-unsaved');
-      saveBtn.title = 'SAVE APPLICATION (Unsaved Changes)';
+      if (badge) {
+        badge.textContent = appUnsavedCount > 99 ? '99+' : String(appUnsavedCount);
+        badge.style.display = 'flex';
+      }
+      const changeText = appUnsavedCount === 1 ? '1 unsaved block change' : `${appUnsavedCount} unsaved block changes`;
+      saveBtn.title = `SAVE APPLICATION (${changeText})`;
     } else {
       saveBtn.classList.remove('has-unsaved');
+      if (badge) {
+        badge.textContent = '';
+        badge.style.display = 'none';
+      }
       saveBtn.title = 'SAVE APPLICATION';
     }
   }
@@ -2731,170 +2787,13 @@ function MarkUnsavedChanges(isDirty = true) {
 
 if (typeof window !== 'undefined') {
   window.HasUnsavedChanges = HasUnsavedChanges;
+  window.GetUnsavedChangesCount = GetUnsavedChangesCount;
   window.MarkUnsavedChanges = MarkUnsavedChanges;
 }
 
-// Custom styled LocalHUB modal for in-page reload shortcuts (F5, Ctrl+R, Cmd+R)
+// Deprecated refresh modal (kept as safe no-op for backward compatibility)
 function ShowUnsavedRefreshModal() {
-  if (typeof document === 'undefined') return;
-  const existing = document.getElementById('unsaved-refresh-modal');
-  if (existing) existing.remove();
-
-  const modal = document.createElement('div');
-  modal.id = 'unsaved-refresh-modal';
-  modal.style.cssText = `
-    position: fixed;
-    inset: 0;
-    z-index: 99999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(0, 0, 0, 0.72);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
-    animation: unsavedFadeIn 0.15s ease-out;
-  `;
-
-  modal.innerHTML = `
-    <style>
-      @keyframes unsavedFadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-      }
-      .unsaved-card {
-        width: 100%;
-        max-width: 440px;
-        background: var(--surface, #181b27);
-        border: 1px solid var(--border, #2a2e40);
-        border-radius: 14px;
-        box-shadow: 0 20px 48px rgba(0, 0, 0, 0.65);
-        padding: 24px;
-        color: var(--text, #e8eaf2);
-        font-family: inherit;
-        box-sizing: border-box;
-      }
-      .unsaved-header {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin-bottom: 14px;
-      }
-      .unsaved-icon {
-        width: 38px;
-        height: 38px;
-        border-radius: 10px;
-        background: rgba(245, 158, 11, 0.15);
-        color: #f59e0b;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-      }
-      .unsaved-title {
-        font-size: 17px;
-        font-weight: 700;
-        letter-spacing: -0.01em;
-      }
-      .unsaved-body {
-        font-size: 13.5px;
-        line-height: 1.55;
-        color: var(--text-secondary, #a0a4b8);
-        margin-bottom: 22px;
-      }
-      .unsaved-actions {
-        display: flex;
-        align-items: center;
-        justify-content: flex-end;
-        gap: 10px;
-      }
-      .unsaved-btn-cancel {
-        height: 36px;
-        padding: 0 16px;
-        border-radius: 8px;
-        background: transparent;
-        border: 1px solid var(--border, #2a2e40);
-        color: var(--text, #e8eaf2);
-        font-size: 13px;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.15s ease;
-      }
-      .unsaved-btn-cancel:hover {
-        background: var(--card, #1c1f2e);
-        border-color: var(--border-light, #353a52);
-      }
-      .unsaved-btn-discard {
-        height: 36px;
-        padding: 0 16px;
-        border-radius: 8px;
-        background: #ef4444;
-        border: 1px solid transparent;
-        color: #ffffff;
-        font-size: 13px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.15s ease;
-      }
-      .unsaved-btn-discard:hover {
-        background: #dc2626;
-        box-shadow: 0 0 14px rgba(239, 68, 68, 0.4);
-      }
-    </style>
-    <div class="unsaved-card">
-      <div class="unsaved-header">
-        <div class="unsaved-icon">
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-            <line x1="12" y1="9" x2="12" y2="13"/>
-            <line x1="12" y1="17" x2="12.01" y2="17"/>
-          </svg>
-        </div>
-        <div class="unsaved-title">Unsaved Changes</div>
-      </div>
-      <div class="unsaved-body">
-        You have unsaved changes in your workspace. If you refresh, all unsaved changes will be permanently discarded and the workspace will reload the saved data from the HTML file.
-      </div>
-      <div class="unsaved-actions">
-        <button type="button" class="unsaved-btn-cancel" id="btn-unsaved-cancel">Cancel</button>
-        <button type="button" class="unsaved-btn-discard" id="btn-unsaved-discard">Discard & Refresh</button>
-      </div>
-    </div>
-  `;
-
-  document.body.appendChild(modal);
-
-  const cleanup = () => {
-    modal.remove();
-    document.removeEventListener('keydown', onKeyDown);
-  };
-
-  const onKeyDown = (e) => {
-    if (e.key === 'Escape') {
-      cleanup();
-    }
-  };
-  document.addEventListener('keydown', onKeyDown);
-
-  const btnCancel = modal.querySelector('#btn-unsaved-cancel');
-  if (btnCancel) {
-    btnCancel.addEventListener('click', (e) => {
-      e.preventDefault();
-      cleanup();
-    });
-  }
-
-  const btnDiscard = modal.querySelector('#btn-unsaved-discard');
-  if (btnDiscard) {
-    btnDiscard.addEventListener('click', (e) => {
-      e.preventDefault();
-      ClearAllLocalCaches();
-      MarkUnsavedChanges(false);
-      if (typeof window !== 'undefined') {
-        window.__SUPPRESS_BEFOREUNLOAD__ = true;
-        window.location.reload();
-      }
-    });
-  }
+  // Pure in-memory sessions rely on standard browser beforeunload navigation prompts
 }
 
 // Clears all unsaved local cache keys from browser localStorage
@@ -2939,14 +2838,25 @@ function ClearAllLocalCaches() {
     } catch (e) { }
   }
 
-  // 5. Reset unsaved changes flag
+  // 5. Reset unsaved changes flag and baseline
   isAppDirty = false;
+  appUnsavedCount = 0;
   if (typeof window !== 'undefined') {
     window.__HAS_UNSAVED_CHANGES__ = false;
+    window.__NOTES_UNSAVED__ = false;
+    window.__NOTES_UNSAVED_COUNT__ = 0;
+    if (typeof window.ClearNotesLocalCache === 'function') {
+      try { window.ClearNotesLocalCache(); } catch (e) { }
+    }
   }
   const saveBtn = typeof document !== 'undefined' ? document.getElementById('save-btn') : null;
   if (saveBtn) {
     saveBtn.classList.remove('has-unsaved');
+    const badge = saveBtn.querySelector('.save-badge');
+    if (badge) {
+      badge.textContent = '';
+      badge.style.display = 'none';
+    }
     saveBtn.title = 'SAVE APPLICATION';
   }
 
@@ -2960,6 +2870,13 @@ function InitSaveButtonLogic() {
     btn.addEventListener('click', () => {
       SaveAndDownloadApp();
     });
+  }
+
+  // Restore unsaved indicator & badge if changes exist in active session
+  if (HasUnsavedChanges()) {
+    MarkUnsavedChanges(true, GetUnsavedChangesCount());
+  } else {
+    MarkUnsavedChanges(false, 0);
   }
 
   // Install navigation guards once per window
@@ -2979,15 +2896,6 @@ function InitSaveButtonLogic() {
     // Immediately wipe localStorage cache when leaving or closing the page
     window.addEventListener('pagehide', () => {
       ClearAllLocalCaches();
-    });
-
-    // In-page keyboard reload interception (F5, Ctrl+R, Cmd+R)
-    window.addEventListener('keydown', (e) => {
-      const isReload = e.key === 'F5' || ((e.ctrlKey || e.metaKey) && (e.key === 'r' || e.key === 'R'));
-      if (isReload && HasUnsavedChanges()) {
-        e.preventDefault();
-        ShowUnsavedRefreshModal();
-      }
     });
 
     // Clean sweep on initial startup to ensure no stale cache from other files contaminates this session
@@ -3575,8 +3483,12 @@ function clearAllTabLocalCaches() {
   if (typeof window !== 'undefined') {
     window.__NOTES_UNSAVED__ = false;
     window.__HAS_UNSAVED_CHANGES__ = false;
+    window.__NOTES_UNSAVED_COUNT__ = 0;
+    if (typeof window.ClearNotesLocalCache === 'function') {
+      try { window.ClearNotesLocalCache(); } catch (e) { }
+    }
     if (typeof window.MarkUnsavedChanges === 'function') {
-      window.MarkUnsavedChanges(false);
+      window.MarkUnsavedChanges(false, 0);
     }
   }
 }
@@ -3816,8 +3728,10 @@ handlePageRoute();
     `;
     setTimeout(() => {
       saveBtn.style.background = originalBg;
-      saveBtn.title = 'SAVE APPLICATION';
       saveBtn.innerHTML = originalHTML;
+      if (typeof window.MarkUnsavedChanges === 'function') {
+        window.MarkUnsavedChanges(false, 0);
+      }
     }, 2000);
   }
 }
@@ -3837,40 +3751,38 @@ function InitTabSaveOverride() {
 
   // Provide MarkUnsavedChanges for standalone Notes tab
   if (typeof window !== 'undefined') {
-    window.MarkUnsavedChanges = function(dirty) {
+    window.MarkUnsavedChanges = function(dirty, count = null) {
       window.__HAS_UNSAVED_CHANGES__ = Boolean(dirty);
       window.__NOTES_UNSAVED__ = Boolean(dirty);
+      const unsavedCount = (typeof count === 'number') ? count : (typeof window.__NOTES_UNSAVED_COUNT__ === 'number' ? window.__NOTES_UNSAVED_COUNT__ : (dirty ? 1 : 0));
+      window.__NOTES_UNSAVED_COUNT__ = unsavedCount;
       const currentBtn = document.getElementById('save-btn');
       if (currentBtn) {
-        if (dirty) {
+        const badge = currentBtn.querySelector('.save-badge');
+        if (dirty && unsavedCount > 0) {
           currentBtn.classList.add('has-unsaved');
-          currentBtn.title = 'SAVE APPLICATION (Unsaved Changes)';
+          if (badge) {
+            badge.textContent = unsavedCount > 99 ? '99+' : String(unsavedCount);
+            badge.style.display = 'flex';
+          }
+          const changeText = unsavedCount === 1 ? '1 unsaved block change' : `${unsavedCount} unsaved block changes`;
+          currentBtn.title = `SAVE APPLICATION (${changeText})`;
         } else {
           currentBtn.classList.remove('has-unsaved');
+          if (badge) {
+            badge.textContent = '';
+            badge.style.display = 'none';
+          }
           currentBtn.title = 'SAVE APPLICATION';
         }
       }
     };
 
-    // Install in-page keyboard reload interception (F5, Ctrl+R, Cmd+R) for standalone Notes
-    if (!window.__NOTES_KEYBOARD_GUARD_INSTALLED__) {
-      window.__NOTES_KEYBOARD_GUARD_INSTALLED__ = true;
-      window.addEventListener('keydown', (e) => {
-        const isReload = e.key === 'F5' || ((e.ctrlKey || e.metaKey) && (e.key === 'r' || e.key === 'R'));
-        if (isReload && (window.__NOTES_UNSAVED__ || window.__HAS_UNSAVED_CHANGES__)) {
-          e.preventDefault();
-          if (typeof window.ShowUnsavedRefreshModal === 'function') {
-            window.ShowUnsavedRefreshModal();
-          } else {
-            if (confirm("You have unsaved changes in your workspace. If you refresh, all unsaved changes will be permanently discarded and the workspace will reload the saved data from the HTML file.\n\nDo you want to discard unsaved changes and refresh?")) {
-              clearAllTabLocalCaches();
-              window.MarkUnsavedChanges(false);
-              window.__SUPPRESS_BEFOREUNLOAD__ = true;
-              window.location.reload();
-            }
-          }
-        }
-      });
+    // Immediately restore badge count if unsaved changes exist upon mount
+    if (window.__NOTES_UNSAVED__ || window.__HAS_UNSAVED_CHANGES__) {
+      window.MarkUnsavedChanges(true, window.__NOTES_UNSAVED_COUNT__);
+    } else {
+      window.MarkUnsavedChanges(false, 0);
     }
   }
 }
@@ -3962,7 +3874,6 @@ function InitTabImportExportOverride() {
 /* ==========================================================================
    NOTES PAGE MODULE
    ========================================================================== */
-function LoadThisPage() {
 
 /* --- 03_Notes/00_State.js --- */
 const DEFAULT_GLOBAL_MACROS = {
@@ -4010,17 +3921,22 @@ const DEFAULT_GLOBAL_MACROS = {
 };
 
 // In-memory state holding notes, folders, tags, vault metadata, macros, custom templates, and the BibTeX library
-let NotesState = {
-  vaultMeta: { title: "Notes Vault", version: "1.0.0" },
-  globalMacros: { ...DEFAULT_GLOBAL_MACROS },
-  tableTemplates: [],
-  tikzTemplates: [],
-  bibliography: [],
-  citationStyle: 'numeric',
-  folders: [],
-  tags: [],
-  notes: []
-};
+let NotesState = (typeof window !== 'undefined' && window.NotesState && Array.isArray(window.NotesState.notes) && window.NotesState.notes.length > 0)
+  ? window.NotesState
+  : {
+      vaultMeta: { title: "Notes Vault", version: "1.0.0" },
+      globalMacros: { ...DEFAULT_GLOBAL_MACROS },
+      tableTemplates: [],
+      tikzTemplates: [],
+      bibliography: [],
+      citationStyle: 'numeric',
+      folders: [],
+      tags: [],
+      notes: []
+    };
+if (typeof window !== 'undefined') {
+  window.NotesState = NotesState;
+}
 
 // Preserves a manually curated order (e.g. drag-reordered folders) and only appends newly seen values.
 function mergeOrderedLists(existing, derived) {
@@ -4063,7 +3979,12 @@ function sanitizeNote(n, idx = 0) {
     })(),
     meta: n.meta || { created: new Date().toISOString().slice(0, 10), author: 'User' },
     flashcard: n.flashcard || null,
-    blocks: Array.isArray(n.blocks) ? n.blocks : [],
+    blocks: Array.isArray(n.blocks) ? n.blocks.map((b, bIdx) => {
+      if (b && typeof b === 'object' && !b.id) {
+        b.id = `b_${Date.now()}_${idx}_${bIdx}_${Math.random().toString(36).slice(2, 6)}`;
+      }
+      return b;
+    }) : [],
     autoNumbering: n.autoNumbering || { h1: 'numeric', h2: 'numeric', h3: 'numeric' },
     // Per-note numbering configs pass through untouched (objects or legacy strings):
     ...(n.equationNumbering !== undefined ? { equationNumbering: n.equationNumbering } : {}),
@@ -4121,7 +4042,13 @@ function migrateOrientationContainers(note) {
 // Loads notes from HTML vault (#NotesData) and optionally recovers uncommitted edits from localStorage
 function LoadNotesState(forceReload = false) {
   // Reuse in-memory state if already loaded to avoid multi-MB JSON parsing on every route change
-  if (!forceReload && NotesState.notes && NotesState.notes.length > 0) {
+  if (!forceReload && (
+    (NotesState.notes && NotesState.notes.length > 0) ||
+    (typeof window !== 'undefined' && window.NotesState && Array.isArray(window.NotesState.notes) && window.NotesState.notes.length > 0)
+  )) {
+    if (typeof window !== 'undefined' && window.NotesState && NotesState !== window.NotesState) {
+      Object.assign(NotesState, window.NotesState);
+    }
     return NotesState;
   }
 
@@ -4170,6 +4097,9 @@ function LoadNotesState(forceReload = false) {
       notes: domState.notes
     });
     if (typeof window !== 'undefined') window.NotesState = NotesState;
+    if (!isBaselineCaptured) {
+      CaptureNotesBaseline(NotesState);
+    }
     return NotesState;
   }
 
@@ -4186,20 +4116,191 @@ function LoadNotesState(forceReload = false) {
     notes: []
   });
   if (typeof window !== 'undefined') window.NotesState = NotesState;
+  if (!isBaselineCaptured) {
+    CaptureNotesBaseline(NotesState);
+  }
   return NotesState;
 }
 
 let notesSaveDebounceTimer = null;
-let hasUnsavedNotesChanges = false;
-function HasUnsavedNotesChanges() {
-  return hasUnsavedNotesChanges;
+let hasUnsavedNotesChanges = Boolean(typeof window !== 'undefined' && window.__NOTES_UNSAVED__);
+
+// Baseline snapshot of loaded or saved vault data
+let baselineBlocksMap = (typeof window !== 'undefined' && window.__NOTES_BASELINE_BLOCKS__)
+  ? window.__NOTES_BASELINE_BLOCKS__
+  : new Map(); // blockId -> { noteId, fingerprint }
+let baselineNotesMeta = (typeof window !== 'undefined' && window.__NOTES_BASELINE_META__)
+  ? window.__NOTES_BASELINE_META__
+  : new Map(); // noteId -> { title, folder, tagsString, description, blockIdsOrder }
+let isBaselineCaptured = Boolean(typeof window !== 'undefined' && window.__NOTES_BASELINE_CAPTURED__);
+
+if (typeof window !== 'undefined') {
+  window.__NOTES_BASELINE_BLOCKS__ = baselineBlocksMap;
+  window.__NOTES_BASELINE_META__ = baselineNotesMeta;
+  window.__NOTES_BASELINE_CAPTURED__ = isBaselineCaptured;
+  window.__NOTES_UNSAVED__ = hasUnsavedNotesChanges;
 }
+
+function getBlockFingerprint(block) {
+  if (!block || typeof block !== 'object') return '';
+  const copy = { ...block };
+  delete copy._isEditing;
+  delete copy._temp;
+  try {
+    return JSON.stringify(copy);
+  } catch (e) {
+    return String(block.id || '') + ':' + String(block.type || '') + ':' + String(block.content || '');
+  }
+}
+
+function CaptureNotesBaseline(state = NotesState) {
+  baselineBlocksMap.clear();
+  baselineNotesMeta.clear();
+  if (state && Array.isArray(state.notes)) {
+    state.notes.forEach(note => {
+      if (!note) return;
+      const blockIds = [];
+      if (Array.isArray(note.blocks)) {
+        note.blocks.forEach(b => {
+          if (!b || !b.id) return;
+          blockIds.push(b.id);
+          baselineBlocksMap.set(b.id, {
+            noteId: note.id,
+            fingerprint: getBlockFingerprint(b)
+          });
+        });
+      }
+      baselineNotesMeta.set(note.id, {
+        title: String(note.title || ''),
+        folder: String(note.folder || ''),
+        tagsString: (Array.isArray(note.tags) ? note.tags.slice().sort().join(',') : ''),
+        description: String(note.description || ''),
+        blockIdsOrder: blockIds.join(',')
+      });
+    });
+  }
+  isBaselineCaptured = true;
+  hasUnsavedNotesChanges = false;
+  if (typeof window !== 'undefined') {
+    window.__NOTES_BASELINE_BLOCKS__ = baselineBlocksMap;
+    window.__NOTES_BASELINE_META__ = baselineNotesMeta;
+    window.__NOTES_BASELINE_CAPTURED__ = true;
+    window.__NOTES_UNSAVED__ = false;
+    window.__NOTES_UNSAVED_COUNT__ = 0;
+    if (typeof window.MarkUnsavedChanges === 'function') {
+      window.MarkUnsavedChanges(false, 0);
+    }
+  }
+}
+
+function CalculateNotesBlockChanges() {
+  if (!isBaselineCaptured) {
+    return { count: 0, isDirty: false, modifiedCount: 0, addedCount: 0, deletedCount: 0, metadataChangesCount: 0 };
+  }
+
+  const currentBlockIds = new Set();
+  let modifiedCount = 0;
+  let addedCount = 0;
+  let deletedCount = 0;
+  let metadataChangesCount = 0;
+
+  if (Array.isArray(NotesState.notes)) {
+    NotesState.notes.forEach(note => {
+      if (!note) return;
+
+      const origMeta = baselineNotesMeta.get(note.id);
+      if (!origMeta) {
+        metadataChangesCount++;
+      } else {
+        const currentTagsStr = (Array.isArray(note.tags) ? note.tags.slice().sort().join(',') : '');
+        const currentBlockIdsOrder = (Array.isArray(note.blocks) ? note.blocks.map(b => b?.id).filter(Boolean).join(',') : '');
+        if (
+          origMeta.title !== String(note.title || '') ||
+          origMeta.folder !== String(note.folder || '') ||
+          origMeta.tagsString !== currentTagsStr ||
+          origMeta.description !== String(note.description || '') ||
+          origMeta.blockIdsOrder !== currentBlockIdsOrder
+        ) {
+          metadataChangesCount++;
+        }
+      }
+
+      if (Array.isArray(note.blocks)) {
+        note.blocks.forEach(b => {
+          if (!b || !b.id) return;
+          currentBlockIds.add(b.id);
+          const orig = baselineBlocksMap.get(b.id);
+          if (!orig) {
+            addedCount++;
+          } else {
+            const currentFp = getBlockFingerprint(b);
+            if (orig.fingerprint !== currentFp) {
+              modifiedCount++;
+            }
+          }
+        });
+      }
+    });
+  }
+
+  for (const [origBlockId] of baselineBlocksMap) {
+    if (!currentBlockIds.has(origBlockId)) {
+      deletedCount++;
+    }
+  }
+
+  for (const [origNoteId] of baselineNotesMeta) {
+    const stillExists = NotesState.notes.some(n => n && n.id === origNoteId);
+    if (!stillExists) {
+      metadataChangesCount++;
+    }
+  }
+
+  const blockChangesCount = modifiedCount + addedCount + deletedCount;
+  const totalCount = blockChangesCount + metadataChangesCount;
+  const isDirty = totalCount > 0;
+
+  return {
+    count: totalCount,
+    isDirty: isDirty,
+    modifiedCount,
+    addedCount,
+    deletedCount,
+    metadataChangesCount
+  };
+}
+
+function GetNotesUnsavedChangesCount() {
+  const diff = CalculateNotesBlockChanges();
+  return diff.count;
+}
+
+function HasUnsavedNotesChanges() {
+  if (!isBaselineCaptured) return hasUnsavedNotesChanges;
+  const diff = CalculateNotesBlockChanges();
+  return diff.isDirty;
+}
+
 function SetNotesUnsavedChanges(dirty = true) {
-  hasUnsavedNotesChanges = Boolean(dirty);
+  let isDirty = false;
+  let count = 0;
+  if (dirty === false) {
+    isDirty = false;
+    count = 0;
+  } else if (isBaselineCaptured) {
+    const diff = CalculateNotesBlockChanges();
+    isDirty = diff.isDirty;
+    count = diff.count;
+  } else {
+    isDirty = Boolean(dirty);
+    count = isDirty ? 1 : 0;
+  }
+  hasUnsavedNotesChanges = isDirty;
   if (typeof window !== 'undefined') {
     window.__NOTES_UNSAVED__ = hasUnsavedNotesChanges;
+    window.__NOTES_UNSAVED_COUNT__ = count;
     if (typeof window.MarkUnsavedChanges === 'function') {
-      window.MarkUnsavedChanges(hasUnsavedNotesChanges);
+      window.MarkUnsavedChanges(hasUnsavedNotesChanges, count);
     }
   }
 }
@@ -4226,7 +4327,14 @@ function flushNotesSave() {
 }
 
 if (typeof window !== 'undefined') {
+  window.SaveNotesState = SaveNotesState;
   window.flushNotesSave = flushNotesSave;
+  window.ClearNotesLocalCache = ClearNotesLocalCache;
+  window.CaptureNotesBaseline = CaptureNotesBaseline;
+  window.CalculateNotesBlockChanges = CalculateNotesBlockChanges;
+  window.GetNotesUnsavedChangesCount = GetNotesUnsavedChangesCount;
+  window.HasUnsavedNotesChanges = HasUnsavedNotesChanges;
+  window.SetNotesUnsavedChanges = SetNotesUnsavedChanges;
 }
 
 // Protect against accidental data loss: prompt user on browser close or refresh if there are unsaved edits
@@ -4275,7 +4383,7 @@ function ClearNotesLocalCache() {
     clearTimeout(notesSaveDebounceTimer);
     notesSaveDebounceTimer = null;
   }
-  SetNotesUnsavedChanges(false);
+  CaptureNotesBaseline(NotesState);
   try {
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem('NotesData_Local_Cache');
@@ -28864,6 +28972,7 @@ if (typeof window !== 'undefined') {
 
 
 
+function LoadThisPage() {
   if (typeof initNotesApp === 'function') initNotesApp();
   if (typeof InitTabSaveOverride === 'function') InitTabSaveOverride();
   if (typeof InitTabLogoOverride === 'function') InitTabLogoOverride();
