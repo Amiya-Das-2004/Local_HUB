@@ -560,7 +560,13 @@ function collectModalProperties() {
 
 // Opens the note modal prefilled with existing note data for editing or empty for creating a new note
 export function OpenNoteModal(note = null) {
-  EditingNoteId = note ? note.id : null;
+  // Support passing either a full note object or a note ID string directly
+  if (typeof note === 'string' && NotesState && Array.isArray(NotesState.notes)) {
+    const found = NotesState.notes.find(n => String(n.id) === String(note));
+    note = found || null;
+  }
+
+  EditingNoteId = note ? String(note.id) : null;
   const modal = document.getElementById('notes-add-edit-modal');
   const titleText = document.getElementById('notes-modal-title-text');
   const titleInput = document.getElementById('notes-modal-title-input');
@@ -568,6 +574,12 @@ export function OpenNoteModal(note = null) {
   const tagsInput = document.getElementById('notes-modal-tags-input');
 
   if (!modal) return;
+
+  // Explicitly track mode, target note ID, and original metadata on modal element
+  modal.dataset.editingNoteId = EditingNoteId || '';
+  modal.dataset.mode = EditingNoteId ? 'edit' : 'add';
+  modal.dataset.origTitle = note ? (note.title || '') : '';
+  modal.dataset.origFolder = note ? (note.folder || 'General') : 'General';
 
   ModalProperties = (note && Array.isArray(note.properties))
     ? JSON.parse(JSON.stringify(note.properties))
@@ -595,7 +607,13 @@ export function OpenNoteModal(note = null) {
 // Closes and hides the note add/edit modal and resets active editing ID
 export function CloseNoteModal() {
   const modal = document.getElementById('notes-add-edit-modal');
-  if (modal) modal.classList.add('hidden');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.dataset.editingNoteId = '';
+    modal.dataset.mode = '';
+    modal.dataset.origTitle = '';
+    modal.dataset.origFolder = '';
+  }
   const folderDropdown = document.getElementById('notes-modal-folder-dropdown');
   if (folderDropdown) folderDropdown.classList.add('hidden');
   document.querySelectorAll('#notes-text-floating-dock').forEach(el => {
@@ -616,6 +634,7 @@ function saveNoteFromModal() {
   const titleIn = document.getElementById('notes-modal-title-input');
   const folderIn = document.getElementById('notes-modal-folder-input');
   const tagsIn = document.getElementById('notes-modal-tags-input');
+  const titleText = document.getElementById('notes-modal-title-text');
 
   const title = titleIn ? titleIn.value.trim() : '';
   const folder = (folderIn && folderIn.value.trim()) ? folderIn.value.trim() : 'General';
@@ -638,9 +657,24 @@ function saveNoteFromModal() {
 
   if (!NotesState.notes) NotesState.notes = [];
 
-  if (EditingNoteId) {
-    // Update existing note (description is left untouched — edit properties instead)
-    const existing = NotesState.notes.find(n => n.id === EditingNoteId);
+  // Determine mode strictly: check module variable, dataset attributes, and modal header text
+  const targetNoteId = EditingNoteId || (modal.dataset ? modal.dataset.editingNoteId : null) || null;
+  const isEditMode = (modal.dataset && modal.dataset.mode === 'edit') ||
+                     Boolean(targetNoteId) ||
+                     (titleText && titleText.textContent.includes('Edit'));
+
+  if (isEditMode) {
+    // Locate existing note strictly by ID or fallback to original title and folder
+    let existing = targetNoteId
+      ? NotesState.notes.find(n => String(n.id) === String(targetNoteId))
+      : null;
+    if (!existing && modal.dataset && modal.dataset.origTitle) {
+      existing = NotesState.notes.find(n =>
+        n.title === modal.dataset.origTitle &&
+        (n.folder || 'General') === (modal.dataset.origFolder || 'General')
+      );
+    }
+
     if (existing) {
       existing.title = title;
       existing.folder = folder;
@@ -652,7 +686,9 @@ function saveNoteFromModal() {
       if (!existing.macros) existing.macros = { equation: '', tikz: '' };
       if (!existing.blocks) existing.blocks = [];
     }
+    // Strict safeguard: When editing, NEVER fall through to creating a new empty note!
   } else {
+    // Add Mode: Only genuine note creation creates a new note card
     const newId = 'note_' + Date.now();
     const newNote = {
       id: newId,
@@ -691,6 +727,17 @@ export function InitNoteModal(onUpdate) {
     }
 
     if (e.target.closest('#notes-modal-close-btn')) { CloseNoteModal(); return; }
+
+    const editBtn = e.target.closest('.note-card-action-btn.edit-btn');
+    if (editBtn) {
+      e.stopPropagation();
+      e.preventDefault();
+      const noteId = editBtn.dataset.noteId || editBtn.closest('.note-card')?.dataset?.id;
+      if (noteId) {
+        OpenNoteModal(noteId);
+      }
+      return;
+    }
 
     if (e.target.closest('#notes-modal-folder-input')) {
       if (folderInput) {
