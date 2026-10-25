@@ -6,7 +6,7 @@
    ==========================================================================
 */
 
-import { state, replaceState, sanitizeIds, persist, getProf } from '../00_State.js';
+import { state, replaceState, sanitizeIds, persist, getProf, MigrateLegacyPaper, MigratePapersToRegistry } from '../00_State.js';
 import { $, toast, norm, uid } from '../01_Utils.js';
 import { render } from '../Professors.js';
 
@@ -50,12 +50,15 @@ export function mergeLibrary(incoming) {
         var dup = (existing.papers || []).some(function (x) {
           return (pp.id && x.id === pp.id) || norm(x.title) === norm(pp.title);
         });
-        if (!dup) { (existing.papers = existing.papers || []).push(pp); papersAdded++; }
+        /* decorated professors expose papers through a getter — writes must go
+           through the registry op, never a raw array push */
+        if (!dup) { MigrateLegacyPaper(existing, pp); papersAdded++; }
       });
     }
   });
-  persist(); render();
   sanitizeIds();
+  MigratePapersToRegistry();
+  persist(); render();
   toast('Merged — ' + added + ' new professor' + (added === 1 ? '' : 's') + ', ' + updated + ' updated, ' + papersAdded + ' new paper' + (papersAdded === 1 ? '' : 's') + '.');
 }
 
@@ -96,6 +99,7 @@ export function InitImport() {
       if (!state.professors.length) {
         replaceState({ version: 1, updatedAt: new Date().toISOString(), theme: state.theme, professors: data.professors });
         sanitizeIds();
+        MigratePapersToRegistry();
         persist(); render();
         toast('Library imported — ' + data.professors.length + ' professor' + (data.professors.length === 1 ? '' : 's') + '.');
       } else {
@@ -166,7 +170,9 @@ export function InitImport() {
       if (!profs.length) { toast('No professors found in that CSV.', 'info'); return; }
       if (!state.professors.length) {
         replaceState({ version: 1, updatedAt: new Date().toISOString(), theme: state.theme, goal: state.goal, professors: profs });
-        sanitizeIds(); persist(); render();
+        sanitizeIds();
+        MigratePapersToRegistry();
+        persist(); render();
         toast('Library imported from CSV — ' + profs.length + ' professor' + (profs.length === 1 ? '' : 's') + '.');
       } else {
         mergeLibrary({ professors: profs });

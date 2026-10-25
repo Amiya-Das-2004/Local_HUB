@@ -34,19 +34,21 @@ Bookmark manager for Local_HUB. Features group/section categorization, responsiv
 
 | Import Location | Functions Imported | used in Functions |
 | :--- | :--- | :--- |
-| - | - | - |
+| `../00_Components/10_Recovery.js` | `OfferRecoverySnapshot`, `WriteRecoverySnapshot`, `ClearRecoverySnapshot`, `PurgeLegacyRecoveryKeys` | `LoadBookmarkState()`, `SaveBookmarkState()`, `RestoreBookmarksFromSnapshot()`, `ClearBookmarkLocalCache()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `BookmarkState` | 1 - 4 | Master reactive in-memory state object holding `bookmarks: []` and `sectionOrder: ['ALL']`. |
-| `CaptureBookmarkBaseline(state)` | 28 - 47 | Captures initial state fingerprint map of bookmarks (`id` -> serialized properties) and marks dirty count as 0. |
-| `CalculateBookmarkChanges()` | 49 - 91 | Compares live `BookmarkState.bookmarks` against captured baseline to count added, edited, and deleted bookmarks. |
-| `GetBookmarksUnsavedChangesCount()` | 93 - 96 | Returns total number of unsaved bookmark additions, edits, and deletions. |
-| `HasUnsavedBookmarkChanges()` | 98 - 102 | Returns true if any bookmarks have been added, edited, or deleted since baseline. |
-| `SetBookmarksUnsavedChanges(dirty = true)` | 104 - 129 | Evaluates change count, updates dirty flags, and synchronizes Save button badge and tooltip. |
-| `LoadBookmarkState()` | 131 - 182 | Reads bookmark JSON directly from DOM vault `#Bookmarks`, wipes leftover cache to prevent cross-file contamination, captures baseline, and synchronizes `window.BookmarkState`. |
-| `SaveBookmarkState(newState = null)` | 184 - 212 | Syncs state to `#Bookmarks` DOM script, calls `SetBookmarksUnsavedChanges(true)`, and writes active working buffer to `localStorage['Bookmarks_Local_Cache']`. |
-| `ClearBookmarkLocalCache()` | 215 - 225 | Clears unsaved `Bookmarks_Local_Cache` from `localStorage` upon file save/download and recaptures baseline. |
+| `BookmarkState` | 3 - 6 | Master reactive in-memory state object holding `bookmarks: []` and `sectionOrder: ['ALL']`. |
+| `getBookmarkFingerprint(b)` | 20 - 29 | Serializes a bookmark's name/url/group/icon/flag fields into a stable fingerprint string for baseline diffing. |
+| `CaptureBookmarkBaseline(state)` | 31 - 49 | Captures initial state fingerprint map of bookmarks (`id` -> serialized properties), mirrors it into `window.__BOOKMARKS_BASELINE__`, and marks dirty count as 0. |
+| `CalculateBookmarkChanges()` | 52 - 93 | Compares live `BookmarkState.bookmarks` against captured baseline to count added, edited, and deleted bookmarks. |
+| `GetBookmarksUnsavedChangesCount()` | 96 - 99 | Returns total number of unsaved bookmark additions, edits, and deletions. |
+| `HasUnsavedBookmarkChanges()` | 101 - 105 | Returns true if any bookmarks have been added, edited, or deleted since baseline. |
+| `SetBookmarksUnsavedChanges(dirty = true)` | 107 - 131 | Evaluates change count, updates dirty flags (including `window.__BOOKMARKS_*`), and synchronizes the aggregated Save button badge and tooltip. |
+| `LoadBookmarkState()` | 133 - 199 | Reuses in-memory state when already loaded (route changes and post-restore re-renders never clobber working state), then reads bookmark JSON directly from DOM vault `#Bookmarks`, purges legacy fixed-key caches, offers this file's path-scoped sessionStorage recovery snapshot (never auto-applied), captures baseline, and synchronizes `window.BookmarkState`. |
+| `SaveBookmarkState(newState = null)` | 202 - 220 | Syncs state to `#Bookmarks` DOM script, calls `SetBookmarksUnsavedChanges(true)`, and refreshes this file's path-scoped crash-recovery snapshot in sessionStorage (`WriteRecoverySnapshot` — replaced the old shared-origin localStorage write that contaminated other LocalHUB files). |
+| `RestoreBookmarksFromSnapshot(snapData)` | 223 - 241 | Applies a user-approved recovery snapshot: rebuilds `BookmarkState`, syncs the DOM vault and `window`, re-renders via `initBookmarksApp()`. The baseline is deliberately NOT recaptured so restored edits keep counting as unsaved until the next SAVE. |
+| `ClearBookmarkLocalCache()` | 243 - 252 | Clears the legacy `Bookmarks_Local_Cache` key and this file's recovery snapshot (`ClearRecoverySnapshot`) upon file save/download, then recaptures baseline. |
 
 ---
 

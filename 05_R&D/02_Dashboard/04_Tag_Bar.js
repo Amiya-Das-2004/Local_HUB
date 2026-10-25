@@ -56,6 +56,9 @@ export function RenderTagBar() {
 }
 
 export function InitTagBar() {
+  /* Once per page load — initRDApp re-runs on every tab re-entry. */
+  if (InitTagBar._docBound) return;
+  InitTagBar._docBound = true;
   document.addEventListener('click', (e) => {
     const clearBtn = e.target.closest && e.target.closest('[data-action="clear-tag-chip"]');
     if (clearBtn) {

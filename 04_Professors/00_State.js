@@ -47,9 +47,6 @@ function syncVault() {
   var el = document.getElementById('ProfessorsData') || document.getElementById('app-data');
   if (el) el.textContent = '\n' + JSON.stringify(state, null, 2).replace(/</g, '\\u003c') + '\n';
 }
-function isEmptyData(d) {
-  return !d || !Array.isArray(d.professors) || d.professors.length === 0;
-}
 export function loadState() {
   var embedded = null;
   var vaultEl = typeof document !== 'undefined'
@@ -67,14 +64,20 @@ export function loadState() {
   // 2. Pure load directly from embedded HTML data vault
   if (embedded && Array.isArray(embedded.professors)) {
     state = embedded;
-    decorateAllProfessors();
+    MigratePapersToRegistry(); /* legacy papers -> registry BEFORE the getter decorates */
     return;
   }
 
   // 3. Fallback to seed samples if no valid embedded state exists
   state = { version: 1, updatedAt: null, professors: seedSamples() };
-  syncVault();
-  decorateAllProfessors();
+  MigratePapersToRegistry();
+}
+
+/* "Load sample library" (empty state) — seeds through the same registry
+   pipeline as loadState so sample papers are born as registry items. */
+export function SeedSampleLibrary() {
+  state = { version: 1, updatedAt: null, professors: seedSamples() };
+  MigratePapersToRegistry();
 }
 
 export function ClearProfessorsLocalCache() {
@@ -153,9 +156,20 @@ function profPaperView(item, prof, ref) {
 }
 
 function decorateProf(p) {
-  if (!p) return;
+  if (!p) return false;
   var desc = Object.getOwnPropertyDescriptor(p, 'papers');
-  if (desc && desc.get) return; /* already decorated */
+  if (desc && desc.get) return false; /* already decorated */
+  /* Legacy embedded papers must become registry items BEFORE the getter
+     replaces the array — the getter reads paperRefs only, so decorating a
+     never-migrated professor orphans its papers and the next save would
+     erase them from the vault. */
+  var migrated = false;
+  if (Array.isArray(p.papers) && p.papers.length) {
+    var legacy = p.papers;
+    p.papers = [];
+    legacy.forEach(function (pp) { MigrateLegacyPaper(p, pp); migrated = true; });
+  }
+  delete p.papers;
   Object.defineProperty(p, 'papers', {
     configurable: true,
     get: function () {
@@ -166,48 +180,56 @@ function decorateProf(p) {
       }).filter(Boolean);
     }
   });
+  return migrated;
 }
 
 function decorateAllProfessors() { (state.professors || []).forEach(decorateProf); }
 
+/* Convert ONE legacy embedded paper into a registry item + journal-bearing
+   ref. Single canonical home for the conversion — used by the boot sweep,
+   the decorate-time safety net and library imports. Papers without a status
+   default to 'read' (statusOf/sanitizeIds convention). */
+export function MigrateLegacyPaper(prof, pp) {
+  var att = pp.attachment;
+  var res = RL_Upsert({
+    type: 'paper',
+    title: pp.title, authors: pp.authors || '', year: pp.year || null,
+    venue: pp.venue || '', url: pp.url || '',
+    status: STATUS_TO_RL[pp.status || 'read'] || 'unread',
+    startedOn: pp.startedOn || '', finishedOn: pp.finishedOn || pp.readDate || '',
+    rating: typeof pp.rating === 'number' ? pp.rating : null,
+    tags: pp.tags || [], summary: pp.summary || '', notes: pp.notes || '',
+    professorId: prof.id
+  }, { origin: 'professors' });
+  var item = res.item;
+  if (att && att.data) {
+    var key = 'blob_' + item.id;
+    BlobStore_PutDataUrl(key, att.data, { name: att.name || 'paper.pdf', type: att.type || 'application/pdf', size: att.size || 0 })
+      .then(function () {
+        RL_Upsert({ id: item.id, attachment: { name: att.name, type: att.type, size: att.size, blobKey: key } }, { origin: 'professors' });
+      })
+      .catch(function (e) { console.warn('[ProfessorTrack] attachment migration failed:', e); });
+  } else if (att) {
+    RL_Upsert({ id: item.id, attachment: { name: att.name, type: att.type, size: att.size } }, { origin: 'professors' });
+  }
+  prof.paperRefs = prof.paperRefs || [];
+  var hasRef = prof.paperRefs.some(function (r) { return r.paperId === item.id; });
+  if (!hasRef) prof.paperRefs.push({ paperId: item.id, journal: pp.journal || [], addedAt: pp.createdAt || new Date().toISOString() });
+  return item;
+}
+
 /* One-time migration: embedded legacy papers become registry items (base64
-   attachments move to IndexedDB); professors keep journal-bearing refs. */
+   attachments move to IndexedDB); professors keep journal-bearing refs.
+   Called from loadState()/SeedSampleLibrary(); decorateProf() also converts
+   as a safety net, so no decoration path can orphan legacy papers. */
 export function MigratePapersToRegistry() {
   var changed = false;
-  (state.professors || []).forEach(function (p) {
-    if (!Array.isArray(p.papers) || !p.papers.length) return;
-    p.paperRefs = p.paperRefs || [];
-    p.papers.slice().forEach(function (pp) {
-      var att = pp.attachment;
-      var res = RL_Upsert({
-        type: 'paper',
-        title: pp.title, authors: pp.authors || '', year: pp.year || null,
-        venue: pp.venue || '', url: pp.url || '',
-        status: STATUS_TO_RL[pp.status] || 'unread',
-        startedOn: pp.startedOn || '', finishedOn: pp.finishedOn || pp.readDate || '',
-        rating: typeof pp.rating === 'number' ? pp.rating : null,
-        tags: pp.tags || [], summary: pp.summary || '', notes: pp.notes || '',
-        professorId: p.id
-      }, { origin: 'professors' });
-      var item = res.item;
-      if (att && att.data) {
-        var key = 'blob_' + item.id;
-        BlobStore_PutDataUrl(key, att.data, { name: att.name || 'paper.pdf', type: att.type || 'application/pdf', size: att.size || 0 })
-          .then(function () {
-            RL_Upsert({ id: item.id, attachment: { name: att.name, type: att.type, size: att.size, blobKey: key } }, { origin: 'professors' });
-          })
-          .catch(function (e) { console.warn('[ProfessorTrack] attachment migration failed:', e); });
-      } else if (att) {
-        RL_Upsert({ id: item.id, attachment: { name: att.name, type: att.type, size: att.size } }, { origin: 'professors' });
-      }
-      var hasRef = p.paperRefs.some(function (r) { return r.paperId === item.id; });
-      if (!hasRef) p.paperRefs.push({ paperId: item.id, journal: pp.journal || [], addedAt: pp.createdAt || new Date().toISOString() });
-      changed = true;
-    });
-    delete p.papers;
-    decorateProf(p);
-  });
-  if (changed || !state.registryMigrated) { state.registryMigrated = true; persist(); }
+  (state.professors || []).forEach(function (p) { if (decorateProf(p)) changed = true; });
+  if (changed || ((state.professors || []).length && !state.registryMigrated)) {
+    state.registryMigrated = true;
+    persist();
+  }
+  return changed;
 }
 
 /* ============================== data ops ============================== */

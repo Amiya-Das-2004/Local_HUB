@@ -75,6 +75,9 @@ export function RenderResume() {
 }
 
 export function InitResumeSection() {
+  /* Once per page load — initRDApp re-runs on every tab re-entry. */
+  if (InitResumeSection._docBound) return;
+  InitResumeSection._docBound = true;
   document.addEventListener('click', (e) => {
     const pauseBtn = e.target.closest && e.target.closest('[data-action="resume-pause"]');
     if (pauseBtn) {

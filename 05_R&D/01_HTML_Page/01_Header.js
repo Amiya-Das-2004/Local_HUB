@@ -68,18 +68,21 @@ export function InitHeader(container) {
 
   const header = document.querySelector('.rd-header, .app-header');
   if (header) {
+    /* The header's height is itself driven by --header-height (set on
+       .rd-header-inner), while the border-bottom sits on .rd-header — so
+       offsetHeight is always var + 1px. Feeding the raw measurement back made
+       the ResizeObserver grow the bar ~1px per frame, unbounded while the tab
+       is open. Write the border-exclusive inner height instead: the write is
+       the fixed point of the loop, so it settles after one delivery. */
     const updateHeaderH = () => {
-      const h = header.offsetHeight;
+      const border = header.offsetHeight - header.clientHeight;
+      const h = header.offsetHeight - border;
       if (h > 0) document.documentElement.style.setProperty('--header-height', `${h}px`);
     };
     updateHeaderH();
-    if (window.ResizeObserver) {
-      new ResizeObserver(entries => {
-        for (const entry of entries) {
-          const h = entry.borderBoxSize ? entry.borderBoxSize[0].blockSize : header.offsetHeight;
-          if (h > 0) document.documentElement.style.setProperty('--header-height', `${h}px`);
-        }
-      }).observe(header);
+    if (window.ResizeObserver && !window.__RD_HEADER_RO__) {
+      window.__RD_HEADER_RO__ = new ResizeObserver(updateHeaderH);
+      window.__RD_HEADER_RO__.observe(header);
     }
   }
 }

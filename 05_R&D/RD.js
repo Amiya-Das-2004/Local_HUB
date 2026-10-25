@@ -19,15 +19,21 @@ import {
   UpdateGroup,
   DeleteGroup,
   GetGroup,
+  AddGroup,
   AddLink,
   DeleteLink,
   GetLinks,
   SetUI,
+  SetView,
   SetQueueSort,
   SeedDemoData,
   EnsureDefaults,
   ItemsBySection,
   ReplaceAll,
+  VisibleItems,
+  RelayoutAll,
+  ShortTitle,
+  SaveQuiet,
   DefaultState
 } from './00_State.js';
 import {
@@ -79,7 +85,6 @@ import {
   RenderToolbarLabels,
   RenderBulkBar,
   InitToolbar,
-  InitSectionsDropdown,
   SelectedIds,
   ClearSelection,
   SelectCard,
@@ -171,7 +176,8 @@ import {
   OpenDuplicatesModal,
   OpenHealthModal,
   OpenMergeModal,
-  ConfirmMerge
+  ConfirmMerge,
+  DropFromMerge
 } from './04_Modals/06_Health_Modal.js';
 import {
   ShowHelpPanel,
@@ -328,13 +334,26 @@ export function StartGroupInlineRename(groupId) {
 export async function CopyBibtexForItem(id) {
   const item = GetItem(id);
   if (!item) return;
-  const bib = ItemToBibtex(item);
+  /* Seed the key generator with the library's existing keys so a fresh key
+     for this item cannot collide with another item's key. */
+  const existingKeys = new Set(
+    GetAllItems().filter((i) => i.bibtexKey && i.id !== item.id).map((i) => i.bibtexKey)
+  );
+  const bib = ItemToBibtex(item, existingKeys);
   const ok = await CopyToClipboard(bib);
   if (ok) ShowToast('success', 'BibTeX copied', item.bibtexKey || item.title);
   else ShowToast('error', 'Copy failed', 'Browser blocked clipboard access.');
 }
 
+/* Document-level listeners are bound exactly once per page load: initRDApp
+   re-runs on every tab re-entry / in-tab hashchange, and re-adding these
+   made every delegated action fire N times. The flag lives on window because
+   the standalone bundles re-declare module lets inside LoadRDPage() on every
+   route change. */
 export function InitDelegatedEvents() {
+  if (typeof window === 'undefined') return;
+  if (window.__RD_DELEGATED_EVENTS_BOUND__) return;
+  window.__RD_DELEGATED_EVENTS_BOUND__ = true;
   document.addEventListener('click', async (e) => {
     const linkBadge = e.target.closest('.rd-link-badge');
     const linkPath = e.target.closest('.rd-link-path');
@@ -527,8 +546,7 @@ export function InitDelegatedEvents() {
           return;
         }
         case 'add-group': {
-          const g = state.rd.groupOrder.length ? GetGroup(state.rd.groupOrder[0]) : null;
-          const newG = window.RDState.AddGroup('');
+          AddGroup('');
           ShowToast('success', 'Group created', 'Double-click its name to rename it.');
           RenderAll(); return;
         }
@@ -549,16 +567,14 @@ export function InitDelegatedEvents() {
           return;
         }
         case 'relayout': {
-          if (window.RDState && typeof window.RDState.RelayoutAll === 'function') {
-            window.RDState.RelayoutAll(actionEl.dataset.view);
-          }
+          RelayoutAll(actionEl.dataset.view);
           RenderAll();
           ShowToast('info', 'Layout reset', 'Cards snapped back to default arrangement.');
           return;
         }
         case 'reset-view': {
           const view = actionEl.dataset.view;
-          if (window.RDState) window.RDState.SetView(view, { x: 0, y: 0, k: 1 });
+          SetView(view, { x: 0, y: 0, k: 1 });
           ApplyView(view); return;
         }
         case 'fit-view': FitView(actionEl.dataset.view); return;
@@ -596,12 +612,6 @@ export function InitDelegatedEvents() {
         case 'clear-search': {
           SetUI({ search: '' });
           RenderAll(); return;
-        }
-        case 'toggle-theme': {
-          const next = state.rd.ui.theme === 'light' ? 'dark' : 'light';
-          SetUI({ theme: next });
-          ApplyTheme();
-          return;
         }
         case 'toggle-starred-filter': {
           SetUI({ starredOnly: !state.rd.ui.starredOnly });
@@ -703,6 +713,7 @@ export function InitDelegatedEvents() {
           return;
         }
         case 'merge-confirm': ConfirmMerge(); return;
+        case 'merge-drop': DropFromMerge(id); return;
         case 'dup-dismiss-all': {
           if (window.RDHealthModal && window.RDHealthModal.DupCtx) {
             window.RDHealthModal.DupCtx.forEach((c) => window.RDHealthModal.DupDismissed.add(c.items.map((i) => i.id).sort().join('|')));
@@ -943,7 +954,6 @@ export function initRDApp(container) {
   InitDelegatedEvents();
   InitToolbar();
   InitTabbar();
-  InitSectionsDropdown();
   InitListDnD();
   InitQueueDnD();
   AttachCanvasEvents('timeline');
@@ -955,6 +965,13 @@ export function initRDApp(container) {
   InitGlobalKeys();
   InitLinkModal();
   ApplyTheme();
+  /* The shared theme toggle only flips <html data-theme>. Re-mirror R&D's
+     containers (#root, .rd-app) on every change — stale attributes on them
+     let higher-specificity token selectors pin the previous theme. */
+  if (typeof MutationObserver !== 'undefined' && !window.__RD_THEME_OBSERVER__) {
+    window.__RD_THEME_OBSERVER__ = new MutationObserver(() => ApplyTheme());
+    window.__RD_THEME_OBSERVER__.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  }
 
   const modalRoot = document.getElementById('rd-modal-root');
   if (modalRoot) {
@@ -991,6 +1008,10 @@ export function initRDApp(container) {
     openLinkPanel: (id) => OpenLinkFloatingPanel(id),
     onNotes: null
   };
+  /* Shared importer hook (00_Components/04_Import_Export.js): normalized
+     replace + persist + full re-render. Raw Object.assign on window.RDState
+     bypassed NormalizeState and left the UI stale. */
+  window.RD.ReplaceAll = (newRd) => { ReplaceAll(newRd); RenderAll(); };
 
   window.RDUI = {
     RenderAll,

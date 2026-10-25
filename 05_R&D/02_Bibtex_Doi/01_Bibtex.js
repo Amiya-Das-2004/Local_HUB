@@ -179,14 +179,18 @@ export function GenerateCitationKey(item, existingKeys) {
 
 function FieldLine(name, value) {
   if (value === undefined || value === null || String(value) === '') return '';
-  return '  ' + name.padEnd(10) + '= {' + value + '}';
+  let v = String(value);
+  /* A value containing } or , would break out of the braced field and produce
+     an unbalanced .bib — an extra brace pair keeps it parseable. */
+  if (/[},]/.test(v) && !(v.startsWith('{') && v.endsWith('}'))) v = '{' + v + '}';
+  return '  ' + name.padEnd(10) + '= {' + v + '}';
 }
 
-export function ItemToBibtex(item) {
+export function ItemToBibtex(item, existingKeys) {
   const itemType = item.type || 'paper';
   const lines = [];
   let key = item.bibtexKey;
-  if (!key) key = GenerateCitationKey(item);
+  if (!key) key = GenerateCitationKey(item, existingKeys);
   lines.push('@' + EntryTypeFor(itemType) + '{' + key + ',');
   const fields = [
     FieldLine('title', item.title),

@@ -57,7 +57,7 @@ export function PlayListFlip(panel, prev) {
 
 export function GetItemRowHTML(item) {
   const group = item.groupId ? GetGroup(item.groupId) : null;
-  const stripe = ItemStripeColor(item);
+  const stripe = ItemStripeColor(item, GetGroup);
   const q = (state.rd.ui && state.rd.ui.search) || '';
   const sel = SelectedIds.has(item.id);
   const tags = (item.tags || []).slice(0, 4).map((t) => `<span class="rd-tag-pill" data-action="filter-tag" data-tag="${esc(t)}" title="Filter by tag: ${esc(t)}">#${esc(t)}</span>`).join('');

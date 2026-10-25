@@ -1,3 +1,5 @@
+import { OfferRecoverySnapshot, WriteRecoverySnapshot, ClearRecoverySnapshot, PurgeLegacyRecoveryKeys } from '../00_Components/10_Recovery.js';
+
 export let BookmarkState = {
   bookmarks: [],
   sectionOrder: ['ALL']
@@ -129,6 +131,19 @@ export function SetBookmarksUnsavedChanges(dirty = true) {
 }
 
 export function LoadBookmarkState() {
+  // Reuse in-memory state if already loaded (mirrors LoadNotesState): avoids
+  // multi-KB re-parsing on route changes and never clobbers a user-approved
+  // recovery restore with the on-disk vault.
+  if (
+    typeof window !== 'undefined' &&
+    window.BookmarkState &&
+    window.BookmarkState === BookmarkState &&
+    Array.isArray(window.BookmarkState.bookmarks) &&
+    window.BookmarkState.bookmarks.length > 0
+  ) {
+    return BookmarkState;
+  }
+
   const dataBlock = typeof document !== 'undefined' ? document.getElementById('Bookmarks') : null;
   let domState = null;
 
@@ -150,14 +165,18 @@ export function LoadBookmarkState() {
     }
   }
 
-  // 1. Wipe any stale leftover cache from previous files or sessions
-  try {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem('Bookmarks_Local_Cache');
-    }
-  } catch (e) { }
+  // 1. Purge legacy fixed-key caches (older builds shared them across files)
+  PurgeLegacyRecoveryKeys();
 
-  // 2. Pure, clean load directly from HTML data vault (#Bookmarks)
+  // 2. Offer this file's crash-recovery snapshot (sessionStorage, path-scoped).
+  //    Never auto-applies — the user picks Restore or Discard in the banner.
+  OfferRecoverySnapshot({
+    baseKey: 'Bookmarks',
+    label: 'bookmarks',
+    onRestore: (snapData) => RestoreBookmarksFromSnapshot(snapData)
+  });
+
+  // 3. Pure, clean load directly from HTML data vault (#Bookmarks)
   if (domState) {
     BookmarkState = {
       bookmarks: domState.bookmarks,
@@ -191,18 +210,32 @@ export function SaveBookmarkState(newState = null) {
     SetBookmarksUnsavedChanges(true);
   }
 
-  // Persist to browser Local Storage as active unsaved working buffer
-  try {
-    if (typeof localStorage !== 'undefined') {
-      const cachePayload = {
-        ...BookmarkState,
-        _unsaved: true,
-        _savedAt: Date.now()
-      };
-      localStorage.setItem('Bookmarks_Local_Cache', JSON.stringify(cachePayload));
-    }
-  } catch (e) {
-    console.warn('Failed to save Bookmarks to localStorage:', e);
+  // Path-scoped crash-recovery snapshot (sessionStorage): per-tab, survives
+  // reloads, never leaks into other files. Replaces the old shared-origin
+  // localStorage write that contaminated other LocalHUB files.
+  WriteRecoverySnapshot('Bookmarks', BookmarkState);
+}
+
+// Applies a user-approved recovery snapshot (Restore banner) to the live state
+// and re-renders. The baseline is deliberately NOT recaptured — it still
+// reflects the on-disk vault, so restored edits keep counting as unsaved
+// until the next SAVE.
+function RestoreBookmarksFromSnapshot(snapData) {
+  if (!snapData || typeof snapData !== 'object') return;
+  BookmarkState = {
+    bookmarks: Array.isArray(snapData.bookmarks) ? snapData.bookmarks : [],
+    sectionOrder: Array.isArray(snapData.sectionOrder) ? snapData.sectionOrder : ['ALL'],
+    _lastSaved: snapData._lastSaved || 0
+  };
+  if (!BookmarkState.sectionOrder.includes('ALL')) BookmarkState.sectionOrder.unshift('ALL');
+  if (typeof window !== 'undefined') window.BookmarkState = BookmarkState;
+  // Sync the DOM vault so a subsequent initBookmarksApp() re-load parses the
+  // restored state (with the reuse branch it re-enters in-memory anyway).
+  const dataBlock = typeof document !== 'undefined' ? document.getElementById('Bookmarks') : null;
+  if (dataBlock) dataBlock.textContent = JSON.stringify(BookmarkState, null, 2);
+  SetBookmarksUnsavedChanges(true);
+  if (typeof window !== 'undefined' && typeof window.initBookmarksApp === 'function') {
+    window.initBookmarksApp();
   }
 }
 
@@ -215,6 +248,7 @@ export function ClearBookmarkLocalCache() {
   } catch (e) {
     console.warn('Failed to clear Bookmarks_Local_Cache:', e);
   }
+  ClearRecoverySnapshot('Bookmarks');
   CaptureBookmarkBaseline(BookmarkState);
 }
 

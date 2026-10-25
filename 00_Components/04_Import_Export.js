@@ -345,6 +345,12 @@ export function TriggerImport(onSuccess = null) {
           masterBlocks['ProfessorsData'] = importedData;
         } else if (Array.isArray(importedData.items) || importedData.groupOrder || importedData.links) {
           masterBlocks['RDData'] = importedData;
+        } else if (importedData.rd && typeof importedData.rd === 'object' &&
+                   (Array.isArray(importedData.rd.items) || importedData.rd.groupOrder || importedData.rd.links)) {
+          /* R&D's own backup shape ({ rd: <library> } — RD_DATA.json /
+             rd-library-backup-*.json). Without this branch it fell through to
+             the generic loop, wrote a dead `#rd` script block and was lost. */
+          masterBlocks['RDData'] = importedData.rd;
         } else if (Array.isArray(importedData.tabs)) {
           masterBlocks['LandingPageData'] = importedData;
         } else {
@@ -441,8 +447,14 @@ export function TriggerImport(onSuccess = null) {
               if (typeof window.replaceState === 'function') window.replaceState(cleanData);
             }
             if (id === 'RDData') {
-              if (window.RDState) Object.assign(window.RDState, { rd: cleanData });
-              if (window.RD && typeof window.RD.replaceState === 'function') window.RD.replaceState(cleanData);
+              /* Route through the R&D module hook: NormalizeState + persist +
+                 full re-render. A raw Object.assign bypassed normalization and
+                 left the running UI showing stale data. */
+              if (window.RD && typeof window.RD.ReplaceAll === 'function') {
+                window.RD.ReplaceAll(cleanData);
+              } else if (window.RDState) {
+                Object.assign(window.RDState, { rd: cleanData });
+              }
             }
             if (window[id + 'State']) Object.assign(window[id + 'State'], cleanData);
             if (window[id]) Object.assign(window[id], cleanData);

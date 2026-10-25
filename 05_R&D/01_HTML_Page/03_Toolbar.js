@@ -17,6 +17,7 @@ import {
   ReplaceAll,
   ITEM_PALETTE
 } from '../00_State.js';
+import { EnsureIconButtonStyles } from '../../00_Components/09_Icon_Button.js';
 import { ConfirmAction, ShowToast } from '../04_Modals/01_Modal_Core.js';
 
 export let SelectedIds = new Set();
@@ -100,7 +101,10 @@ export function RenderBulkBar() {
 
 export function SelectAllVisible() {
   const ids = VisibleItems().map((i) => i.id);
-  SelectedIds = new Set(ids);
+  /* Mutate the existing Set in place — reassigning would stale every captured
+     mirror (window.RDToolbar.SelectedIds, window.RDUI.SelectedIds). */
+  SelectedIds.clear();
+  ids.forEach((id) => SelectedIds.add(id));
   ids.forEach(SyncSelectionClasses);
   document.querySelectorAll('.rd-node-card, .rd-item-card').forEach((el) => {
     el.classList.toggle('selected', SelectedIds.has(el.dataset.itemId));
@@ -241,31 +245,17 @@ export function RenderSectionsDropdownGrid() {
         const srcIdx = SectionTmpOrder.findIndex((t) => t.key === SectionDraggingKey);
         const tgtIdx = SectionTmpOrder.findIndex((t) => t.key === key);
         if (srcIdx !== -1 && tgtIdx !== -1 && srcIdx !== tgtIdx) {
-          const oldPositions = new Map();
-          grid.querySelectorAll('.section-grid-tile').forEach((el) => {
-            oldPositions.set(el.dataset.section, el.getBoundingClientRect());
-          });
           const [item] = SectionTmpOrder.splice(srcIdx, 1);
           SectionTmpOrder.splice(tgtIdx, 0, item);
-          RenderSectionsDropdownGrid();
-          grid.querySelectorAll('.section-grid-tile').forEach((el) => {
-            const sec = el.dataset.section;
-            if (sec === SectionDraggingKey) return;
-            const oldPos = oldPositions.get(sec);
-            if (oldPos) {
-              const newPos = el.getBoundingClientRect();
-              const dx = oldPos.left - newPos.left;
-              const dy = oldPos.top - newPos.top;
-              if (dx !== 0 || dy !== 0) {
-                el.style.transform = `translate(${dx}px, ${dy}px)`;
-                el.style.transition = 'none';
-                requestAnimationFrame(() => {
-                  el.style.transition = 'transform 0.24s cubic-bezier(0.2, 0, 0, 1)';
-                  el.style.transform = '';
-                });
-              }
-            }
-          });
+          /* Move the dragged tile's node directly instead of re-rendering the
+             grid: a re-render destroys the drag source mid-drag, Chrome then
+             cancels the drag and dragend never commits the new order. */
+          const draggingTile = grid.querySelector(`.section-grid-tile[data-section="${SectionDraggingKey}"]`);
+          if (draggingTile && draggingTile !== tile) {
+            const rect = tile.getBoundingClientRect();
+            const after = (e.clientX > rect.left + rect.width / 2) || (e.clientY > rect.top + rect.height / 2);
+            tile.parentNode.insertBefore(draggingTile, after ? tile.nextSibling : tile);
+          }
         }
       });
       tile.addEventListener('dragend', () => {
@@ -462,6 +452,10 @@ export function RenderToolbarLabels() {
   }
 }
 
+/* Document/window listeners live once per page load (initRDApp re-runs on
+   every tab re-entry); they resolve their elements at event time so they
+   keep working after #root is re-rendered. The flag lives on window because
+   standalone bundles re-declare module lets on every route change. */
 export function InitSectionsDropdown() {
   const RD = state.rd;
   DropdownColumns = Math.min(4, Math.max(1, RD.ui.columnCount || 2));
@@ -485,12 +479,6 @@ export function InitSectionsDropdown() {
   if (closeBtn && dropdownWindow) {
     closeBtn.addEventListener('click', () => dropdownWindow.classList.add('hidden'));
   }
-  document.addEventListener('click', (e) => {
-    if (dropdownWindow && !dropdownWindow.classList.contains('hidden') &&
-        !dropdownWindow.contains(e.target) && toggleBtn && !toggleBtn.contains(e.target)) {
-      dropdownWindow.classList.add('hidden');
-    }
-  });
   if (searchInput) {
     searchInput.addEventListener('input', () => RenderSectionsDropdownGrid());
   }
@@ -517,12 +505,24 @@ export function InitSectionsDropdown() {
       }
     });
   }
+  if (typeof window === 'undefined' || window.__RD_SECTIONS_GLOBAL_BOUND__) return;
+  window.__RD_SECTIONS_GLOBAL_BOUND__ = true;
+  document.addEventListener('click', (e) => {
+    const win = document.getElementById('sections-dropdown-window');
+    const tog = document.getElementById('sections-dropdown-toggle');
+    if (win && !win.classList.contains('hidden') &&
+        !win.contains(e.target) && tog && !tog.contains(e.target)) {
+      win.classList.add('hidden');
+    }
+  });
   window.addEventListener('resize', () => {
-    if (dropdownWindow && !dropdownWindow.classList.contains('hidden')) RenderSectionsDropdownGrid();
+    const win = document.getElementById('sections-dropdown-window');
+    if (win && !win.classList.contains('hidden')) RenderSectionsDropdownGrid();
   });
 }
 
 export function InitToolbar() {
+  EnsureIconButtonStyles();
   InitSectionsDropdown();
 }
 

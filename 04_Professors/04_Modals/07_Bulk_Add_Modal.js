@@ -6,8 +6,8 @@
    ==========================================================================
 */
 
-import { state, ui, persist, sanitizeIds, getProf } from '../00_State.js';
-import { $, toast, norm, uid, todayISO } from '../01_Utils.js';
+import { state, ui, persist, sanitizeIds, getProf, upsertPaper } from '../00_State.js';
+import { $, toast, norm, todayISO } from '../01_Utils.js';
 import { openModal, closeModal } from './01_Modal_Core.js';
 import { render } from '../Professors.js';
 
@@ -93,8 +93,10 @@ export function InitBulkModal() {
       var key = norm(parsed.title);
       if (existing[key]) { dups++; return; }
       existing[key] = 1;
-      (prof.papers = prof.papers || []).push({
-        id: uid('pp'), title: parsed.title, authors: '', year: parsed.year,
+      /* papers are registry items — route through upsertPaper so the write
+         works on decorated professors (raw `.papers` pushes would throw) */
+      upsertPaper(bulkProfId, {
+        title: parsed.title, authors: '', year: parsed.year,
         venue: '', url: parsed.url, status: st,
         startedOn: st === 'reading' ? todayISO() : null,
         finishedOn: st === 'read' ? todayISO() : null,

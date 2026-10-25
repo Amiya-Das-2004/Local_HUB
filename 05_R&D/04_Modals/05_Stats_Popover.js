@@ -66,7 +66,13 @@ export function GetStatsPopoverHTML() {
     const y = it.year || '????';
     yearCount.set(y, (yearCount.get(y) || 0) + 1);
   });
-  const years = Array.from(yearCount.entries()).sort((a, b) => String(a[0]).localeCompare(String(b[0]))).slice(-12);
+  const years = Array.from(yearCount.entries()).sort((a, b) => {
+    /* Unknown-year bucket ('????') sorts last so it can neither appear as the
+       newest year nor displace a real year from the recent-12 window. */
+    const ya = a[0] === '????' ? Infinity : Number(a[0]);
+    const yb = b[0] === '????' ? Infinity : Number(b[0]);
+    return (ya - yb) || String(a[0]).localeCompare(String(b[0]));
+  }).slice(-12);
   const maxY = Math.max(1, ...years.map(([, n]) => n));
   const histogram = years.map(([y, n]) =>
     `<div class="rd-stats-year" title="${y}: ${n} item(s)">

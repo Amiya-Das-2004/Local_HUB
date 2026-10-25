@@ -193,6 +193,15 @@ export function CloseGoalModal() {
 }
 
 export function InitStatsBar() {
+  /* Document-level listener once per page load; element listeners below must
+     re-bind on every initRDApp (the shell — including this modal — is rebuilt).
+     The flag lives on window: standalone bundles re-declare module state on
+     every route change. */
+  if (typeof window === 'undefined' || window.__RD_STATS_DOC_BOUND__) {
+    initGoalButtons();
+    return;
+  }
+  window.__RD_STATS_DOC_BOUND__ = true;
   document.addEventListener('click', (e) => {
     if (e.target.closest && e.target.closest('#rdGoalSetBtn')) {
       OpenGoalModal();
@@ -200,8 +209,12 @@ export function InitStatsBar() {
     if (e.target.closest && e.target.closest('#close-goal-modal, #rdGoalCancelBtn')) {
       CloseGoalModal();
     }
+    if (e.target.id === 'rd-goal-modal') CloseGoalModal(); // backdrop click
   });
+  initGoalButtons();
+}
 
+function initGoalButtons() {
   const saveBtn = document.getElementById('rdGoalSaveBtn');
   if (saveBtn) {
     saveBtn.addEventListener('click', () => {
@@ -225,8 +238,10 @@ export function InitStatsBar() {
   const clearBtn = document.getElementById('rdGoalClearBtn');
   if (clearBtn) {
     clearBtn.addEventListener('click', () => {
-      delete state.rd.goal;
-      delete state.rd.goalStart;
+      /* goal: 0 is the persistent "removed" state — `delete state.rd.goal`
+         resurrected the default 24 on every reload via NormalizeState. */
+      state.rd.goal = 0;
+      state.rd.goalStart = 0;
       persist();
       CloseGoalModal();
       RenderStats();

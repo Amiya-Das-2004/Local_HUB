@@ -244,9 +244,11 @@ body {
   box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
-/* ===== HEADER (Aligned with Local_HUB & Bookmarks Architecture) ===== */
+/* ===== HEADER (Aligned with Local_HUB & Bookmarks Architecture) =====
+   Bare (non rd-prefixed) selectors are scoped with :where(...) so they cannot
+   leak into other tabs in the master shell — :where() adds no specificity. */
 .rd-header,
-.app-header {
+:where(.rd-app) .app-header {
   position: sticky;
   top: 0;
   left: 0;
@@ -261,7 +263,7 @@ body {
   transition: background-color var(--transition, 0.2s), border-color var(--transition, 0.2s);
 }
 .rd-header-inner,
-.header-inner {
+:where(.rd-app) .header-inner {
   max-width: 1600px;
   width: 100%;
   margin: 0 auto;
@@ -275,13 +277,13 @@ body {
   transition: height var(--transition, 0.2s), padding var(--transition, 0.2s);
 }
 .rd-header .header-left,
-.header-left {
+:where(.rd-app) .header-left {
   display: flex;
   align-items: center;
   flex-shrink: 0;
 }
 .rd-header .header-center,
-.header-center {
+:where(.rd-app) .header-center {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -290,7 +292,7 @@ body {
   min-width: 0;
 }
 .rd-header .header-right,
-.header-right {
+:where(.rd-app) .header-right {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -299,7 +301,7 @@ body {
 
 @media (max-width: 768px) {
   .rd-header-inner,
-  .header-inner {
+  :where(.rd-app) .header-inner {
     height: var(--header-height, 66px);
     padding: 0 12px;
     gap: 8px;
@@ -308,12 +310,12 @@ body {
 }
 @media (max-width: 480px) {
   .rd-header-inner,
-  .header-inner {
+  :where(.rd-app) .header-inner {
     height: var(--header-height, 60px);
     padding: 0 8px;
     gap: 6px;
   }
-  .header-right {
+  :where(.rd-app) .header-right {
     gap: 6px;
   }
 }
@@ -375,19 +377,19 @@ body {
 .rd-progress-fill.reading { background: linear-gradient(90deg, #f59e0b, var(--yellow)); }
 .rd-progress-fill.unread { background: var(--text-dim); }
 
-.progress-ring { flex-shrink: 0; display: block; }
-.progress-ring .bg {
+:where(.rd-app,#rd-queue-root,#rd-drawer-root) .progress-ring { flex-shrink: 0; display: block; }
+:where(.rd-app,#rd-queue-root,#rd-drawer-root) .progress-ring .bg {
   fill: none;
   stroke: var(--surface);
   stroke-width: 3;
 }
-.progress-ring .meter {
+:where(.rd-app,#rd-queue-root,#rd-drawer-root) .progress-ring .meter {
   fill: none;
   stroke-width: 3;
   stroke-linecap: round;
   transition: stroke-dasharray 0.3s;
 }
-.progress-ring .ring-label {
+:where(.rd-app,#rd-queue-root,#rd-drawer-root) .progress-ring .ring-label {
   font-size: 7px;
   font-weight: 800;
   fill: var(--text-secondary);
@@ -439,8 +441,12 @@ body {
 }
 .rd-item-card:hover::after { left: 120%; }
 
-/* ===== BUTTONS ===== */
-.ghost-btn, .primary-btn {
+/* ===== BUTTONS =====
+   Scoped with :where(...) — these names collide with Notes/Bookmarks styling
+   in the master shell. RDScope covers .rd-app plus every overlay root, and
+   :where() adds no specificity, so all internal overrides keep winning. */
+:where(.rd-app,#rd-modal-root,#rd-confirm-root,#rd-bulk-bar,#rd-drawer-root,#rd-queue-root,#rd-stats-root,#rd-help-root,#rd-palette-root,#rd-goal-modal,#rdLinkFloatingWindow) .ghost-btn,
+:where(.rd-app,#rd-modal-root,#rd-confirm-root,#rd-bulk-bar,#rd-drawer-root,#rd-queue-root,#rd-stats-root,#rd-help-root,#rd-palette-root,#rd-goal-modal,#rdLinkFloatingWindow) .primary-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -455,41 +461,43 @@ body {
   white-space: nowrap;
   user-select: none;
 }
-.ghost-btn svg, .primary-btn svg { width: 13px; height: 13px; flex-shrink: 0; }
-.ghost-btn {
+:where(.rd-app,#rd-modal-root,#rd-confirm-root,#rd-bulk-bar,#rd-drawer-root,#rd-queue-root,#rd-stats-root,#rd-help-root,#rd-palette-root,#rd-goal-modal,#rdLinkFloatingWindow) .ghost-btn svg,
+:where(.rd-app,#rd-modal-root,#rd-confirm-root,#rd-bulk-bar,#rd-drawer-root,#rd-queue-root,#rd-stats-root,#rd-help-root,#rd-palette-root,#rd-goal-modal,#rdLinkFloatingWindow) .primary-btn svg { width: 13px; height: 13px; flex-shrink: 0; }
+:where(.rd-app,#rd-modal-root,#rd-confirm-root,#rd-bulk-bar,#rd-drawer-root,#rd-queue-root,#rd-stats-root,#rd-help-root,#rd-palette-root,#rd-goal-modal,#rdLinkFloatingWindow) .ghost-btn {
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text);
 }
-.ghost-btn:hover {
+:where(.rd-app,#rd-modal-root,#rd-confirm-root,#rd-bulk-bar,#rd-drawer-root,#rd-queue-root,#rd-stats-root,#rd-help-root,#rd-palette-root,#rd-goal-modal,#rdLinkFloatingWindow) .ghost-btn:hover {
   border-color: var(--accent);
   color: var(--accent);
 }
-.ghost-btn.active {
+:where(.rd-app,#rd-modal-root,#rd-confirm-root,#rd-bulk-bar,#rd-drawer-root,#rd-queue-root,#rd-stats-root,#rd-help-root,#rd-palette-root,#rd-goal-modal,#rdLinkFloatingWindow) .ghost-btn.active {
   background: var(--accent);
   color: #ffffff;
   border-color: var(--accent);
 }
-.primary-btn {
+:where(.rd-app,#rd-modal-root,#rd-confirm-root,#rd-bulk-bar,#rd-drawer-root,#rd-queue-root,#rd-stats-root,#rd-help-root,#rd-palette-root,#rd-goal-modal,#rdLinkFloatingWindow) .primary-btn {
   border: none;
   background: var(--accent);
   color: #fff;
   font-weight: 600;
   box-shadow: 0 4px 14px rgba(139, 109, 255, 0.25);
 }
-.primary-btn:hover { background: var(--accent-hover); }
-.ghost-btn.sm, .primary-btn.sm {
+:where(.rd-app,#rd-modal-root,#rd-confirm-root,#rd-bulk-bar,#rd-drawer-root,#rd-queue-root,#rd-stats-root,#rd-help-root,#rd-palette-root,#rd-goal-modal,#rdLinkFloatingWindow) .primary-btn:hover { background: var(--accent-hover); }
+:where(.rd-app,#rd-modal-root,#rd-confirm-root,#rd-bulk-bar,#rd-drawer-root,#rd-queue-root,#rd-stats-root,#rd-help-root,#rd-palette-root,#rd-goal-modal,#rdLinkFloatingWindow) .ghost-btn.sm,
+:where(.rd-app,#rd-modal-root,#rd-confirm-root,#rd-bulk-bar,#rd-drawer-root,#rd-queue-root,#rd-stats-root,#rd-help-root,#rd-palette-root,#rd-goal-modal,#rdLinkFloatingWindow) .primary-btn.sm {
   height: 28px;
   padding: 0 10px;
   font-size: 11px;
   border-radius: 7px;
 }
-.ghost-btn.danger:hover {
-  border-color: #ef4444;
-  color: #ef4444;
-  background: rgba(239, 68, 68, 0.08);
+:where(.rd-app,#rd-modal-root,#rd-confirm-root,#rd-bulk-bar,#rd-drawer-root,#rd-queue-root,#rd-stats-root,#rd-help-root,#rd-palette-root,#rd-goal-modal,#rdLinkFloatingWindow) .ghost-btn.danger:hover {
+  border-color: var(--red, #ef4444);
+  color: var(--red, #ef4444);
+  background: color-mix(in srgb, var(--red, #ef4444) 8%, transparent);
 }
-.icon-btn {
+:where(.rd-app,#rd-modal-root,#rd-confirm-root,#rd-stats-root,#rd-help-root) .icon-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -503,12 +511,25 @@ body {
   transition: var(--transition);
   flex-shrink: 0;
 }
-.icon-btn:hover {
+:where(.rd-app,#rd-modal-root,#rd-confirm-root,#rd-stats-root,#rd-help-root) .icon-btn:hover {
   color: var(--text);
   border-color: var(--accent);
   background: var(--card);
 }
-.icon-btn svg { width: 15px; height: 15px; }
+:where(.rd-app,#rd-modal-root,#rd-confirm-root,#rd-stats-root,#rd-help-root) .icon-btn svg { width: 15px; height: 15px; }
+/* R&D's .icon-btn is 32px; the shared theme toggle injects its own global
+   36px .icon-btn later in the head. :where() can't outrank it (no
+   specificity), so anchor R&D's size to IDs — this cannot leak: the ids
+   exist only inside R&D containers. */
+#rd-modal-root .icon-btn, #rd-confirm-root .icon-btn, #rd-help-root .icon-btn,
+#rd-stats-root .icon-btn {
+  width: 32px;
+  height: 32px;
+}
+.rd-app .icon-btn {
+  width: 32px;
+  height: 32px;
+}
 .spin { animation: rd-spin 0.8s linear infinite; }
 
 /* ===== SUB-TAB BAR ===== */
@@ -544,7 +565,7 @@ body {
   white-space: nowrap;
 }
 .rd-tab svg { width: 15px; height: 15px; }
-.rd-tab:hover { color: var(--text); background: rgba(255, 255, 255, 0.03); }
+.rd-tab:hover { color: var(--text); background: color-mix(in srgb, var(--text) 4%, transparent); }
 .rd-tab.active {
   color: var(--accent);
   border-bottom-color: var(--accent);
@@ -682,7 +703,7 @@ body {
   -webkit-backdrop-filter: blur(20px);
   overflow: hidden;
 }
-.dropdown-header {
+:where(.rd-app) .dropdown-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -692,8 +713,8 @@ body {
   border-bottom: 1px solid var(--border);
   width: 100%;
 }
-.dropdown-search-box { position: relative; flex: 1; min-width: 0; }
-.dropdown-search-box .search-icon {
+:where(.rd-app) .dropdown-search-box { position: relative; flex: 1; min-width: 0; }
+:where(.rd-app) .dropdown-search-box .search-icon {
   position: absolute;
   left: 8px;
   top: 50%;
@@ -702,7 +723,7 @@ body {
   height: 13px;
   color: var(--text-secondary);
 }
-.dropdown-search-input {
+:where(.rd-app) .dropdown-search-input {
   width: 100%;
   height: 30px;
   padding: 0 8px 0 28px;
@@ -713,8 +734,8 @@ body {
   font-size: 11.5px;
   outline: none;
 }
-.dropdown-search-input:focus { border-color: var(--accent); }
-.col-stepper {
+:where(.rd-app) .dropdown-search-input:focus { border-color: var(--accent); }
+:where(.rd-app) .col-stepper {
   display: flex;
   align-items: center;
   gap: 2px;
@@ -725,7 +746,7 @@ body {
   flex-shrink: 0;
   user-select: none;
 }
-.stepper-btn {
+:where(.rd-app) .stepper-btn {
   background: none;
   border: none;
   color: var(--text);
@@ -736,16 +757,16 @@ body {
   transition: color 0.15s;
   line-height: 1;
 }
-.stepper-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-.stepper-btn:not(:disabled):hover { color: var(--accent); }
-.stepper-val {
+:where(.rd-app) .stepper-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+:where(.rd-app) .stepper-btn:not(:disabled):hover { color: var(--accent); }
+:where(.rd-app) .stepper-val {
   font-size: 11px;
   font-weight: 700;
   color: var(--accent);
   min-width: 14px;
   text-align: center;
 }
-.close-dropdown-btn {
+:where(.rd-app) .close-dropdown-btn {
   background: none;
   border: none;
   color: var(--text-secondary);
@@ -755,7 +776,7 @@ body {
   padding: 0 2px;
   flex-shrink: 0;
 }
-.close-dropdown-btn:hover { color: var(--text); }
+:where(.rd-app) .close-dropdown-btn:hover { color: var(--text); }
 .sections-grid-container {
   display: grid;
   gap: 8px;
@@ -1078,6 +1099,50 @@ body {
   padding: 2px 8px;
   border-radius: 10px;
 }
+.rd-item-chips-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+  min-width: 0;
+}
+.rd-item-chips-row > * { min-width: 0; }
+.rd-doi-badge {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 2px 7px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  cursor: help;
+}
+.rd-local-path-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 2px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+.rd-local-path-badge svg { width: 11px; height: 11px; flex-shrink: 0; }
+.rd-local-path-badge span { overflow: hidden; text-overflow: ellipsis; }
+.rd-local-path-badge:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
 .rd-item-actions {
   position: absolute;
   top: 8px;
@@ -1161,7 +1226,7 @@ body {
   pointer-events: none;
 }
 .rd-canvas-legend svg { width: 12px; height: 12px; }
-.zoom-stepper {
+:where(.rd-app) .zoom-stepper {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -1170,7 +1235,7 @@ body {
   padding: 2px 8px;
   border-radius: 8px;
 }
-.zoom-stepper .stepper-btn { width: 22px; height: 24px; }
+:where(.rd-app) .zoom-stepper .stepper-btn { width: 22px; height: 24px; }
 .rd-zoom-val {
   font-size: 12px;
   font-weight: 700;
@@ -1296,6 +1361,14 @@ body {
 .rd-node-card .node-meta {
   font-size: 0.64rem;
   color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rd-node-card .node-authors {
+  font-size: 0.62rem;
+  color: var(--text-secondary);
+  opacity: 0.85;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1776,8 +1849,9 @@ body {
 }
 .rd-canvas-empty-hint svg { width: 40px; height: 40px; opacity: 0.5; }
 
-/* ===== MODALS ===== */
-.modal-overlay {
+/* ===== MODALS =====
+   Modal classes are shared with other tabs' shells — scoped via :where(...) */
+:where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .modal-overlay {
   position: fixed;
   inset: 0;
   z-index: 900;
@@ -1791,7 +1865,7 @@ body {
   animation: rd-fade 0.18s ease;
 }
 @keyframes rd-fade { from { opacity: 0; } to { opacity: 1; } }
-.modal-card {
+:where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .modal-card {
   width: min(680px, 100%);
   max-height: calc(100vh - 40px);
   display: flex;
@@ -1799,19 +1873,19 @@ body {
   background: var(--surface);
   border: 1px solid var(--border-light);
   border-radius: 16px;
-  box-shadow: var(--shadow-lg), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  box-shadow: var(--shadow-lg), 0 0 0 1px var(--border-light);
   animation: rd-pop 0.2s cubic-bezier(0.34, 1.3, 0.64, 1);
   overflow: hidden;
 }
 @keyframes rd-pop { from { transform: scale(0.96) translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
-.modal-header {
+:where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
   border-bottom: 1px solid var(--border);
 }
-.modal-header h3 {
+:where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .modal-header h3 {
   font-size: 15px;
   font-weight: 800;
   color: var(--text);
@@ -1819,8 +1893,8 @@ body {
   align-items: center;
   gap: 8px;
 }
-.modal-header h3 svg { width: 16px; height: 16px; color: var(--accent); }
-.modal-body {
+:where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .modal-header h3 svg { width: 16px; height: 16px; color: var(--accent); }
+:where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .modal-body {
   padding: 18px 20px;
   overflow-y: auto;
   display: flex;
@@ -1829,9 +1903,9 @@ body {
   scrollbar-width: thin;
   scrollbar-color: var(--border-light) transparent;
 }
-.modal-body::-webkit-scrollbar { width: 6px; }
-.modal-body::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 8px; }
-.modal-footer {
+:where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .modal-body::-webkit-scrollbar { width: 6px; }
+:where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .modal-body::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 8px; }
+:where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .modal-footer {
   padding: 14px 20px;
   border-top: 1px solid var(--border);
   display: flex;
@@ -1839,18 +1913,18 @@ body {
   justify-content: flex-end;
   gap: 8px;
 }
-.modal-footer .spacer { margin-right: auto; }
+:where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .modal-footer .spacer { margin-right: auto; }
 
-.form-group { display: flex; flex-direction: column; gap: 5px; }
-.form-group label {
+:where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .form-group { display: flex; flex-direction: column; gap: 5px; }
+:where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .form-group label {
   font-size: 11px;
   font-weight: 700;
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
-.form-group label .req { color: var(--accent); }
-.form-control {
+:where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .form-group label .req { color: var(--accent); }
+:where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .form-control {
   width: 100%;
   height: 36px;
   padding: 0 11px;
@@ -1862,7 +1936,7 @@ body {
   outline: none;
   transition: var(--transition);
 }
-textarea.form-control {
+:where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) textarea.form-control {
   height: auto;
   min-height: 84px;
   padding: 9px 11px;
@@ -1871,22 +1945,22 @@ textarea.form-control {
   font-size: 12px;
   line-height: 1.5;
 }
-.form-control:focus {
+:where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .form-control:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
-.form-control.error {
-  border-color: #ef4444;
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+:where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .form-control.error {
+  border-color: var(--red, #ef4444);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--red, #ef4444) 12%, transparent);
 }
-.form-row { display: flex; gap: 10px; }
-.form-row .form-group { flex: 1; min-width: 0; }
-.form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
-.form-grid-2 .span-2 { grid-column: span 2; }
+:where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .form-row { display: flex; gap: 10px; }
+:where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .form-row .form-group { flex: 1; min-width: 0; }
+:where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
+:where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .form-grid-2 .span-2 { grid-column: span 2; }
 @media (max-width: 560px) {
-  .form-grid-2 { grid-template-columns: 1fr; }
-  .form-grid-2 .span-2 { grid-column: span 1; }
-  .form-row { flex-direction: column; }
+  :where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .form-grid-2 { grid-template-columns: 1fr; }
+  :where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .form-grid-2 .span-2 { grid-column: span 1; }
+  :where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .form-row { flex-direction: column; }
 }
 
 .rd-divider {
@@ -2375,13 +2449,6 @@ textarea.form-control {
   height: 1px;
   background: linear-gradient(90deg, var(--border), transparent);
 }
-.rd-stats-grid {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 18px;
-  align-items: center;
-  margin-bottom: 12px;
-}
 .rd-stats-cell { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .rd-stats-cell:first-child { align-items: center; }
 .rd-stats-donut .donut-num {
@@ -2447,7 +2514,7 @@ textarea.form-control {
   height: 100%;
   border-radius: 6px;
   background: linear-gradient(90deg, var(--accent), var(--accent-soft, #a78bfa));
-  box-shadow: 0 0 8px rgba(139, 109, 255, 0.4);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 40%, transparent);
   transition: width 0.5s cubic-bezier(0.2, 0, 0, 1);
 }
 .rd-stats-bar-fill.avg { background: linear-gradient(90deg, var(--yellow), var(--green)); }
@@ -2594,7 +2661,7 @@ button.rd-footer-stats[aria-expanded="true"] {
 .rd-help-steps b { display: block; font-size: 0.8rem; color: var(--text); margin-bottom: 2px; }
 .rd-help-steps span:not(.rd-help-step-n) { font-size: 0.73rem; color: var(--text-secondary); line-height: 1.5; }
 .rd-help-steps em { color: var(--accent); font-style: normal; font-weight: 700; }
-.keycap {
+:where(.rd-app,#rd-help-root) .keycap {
   display: inline-block;
   min-width: 17px;
   padding: 1px 5px;

@@ -6,9 +6,8 @@
    ==========================================================================
 */
 
-import { state, ui, paperPasses, collegeKey, collegeBestRank, filteredSorted, persist } from '../00_State.js';
+import { state, ui, paperPasses, collegeKey, collegeBestRank, filteredSorted, SeedSampleLibrary } from '../00_State.js';
 import { $, esc, fmtDate, stars, fmtSize, avatarColor, initials, toast, ICONS, STATUS_META, statusOf, statusPill } from '../01_Utils.js';
-import { seedSamples } from '../03_Seed_Data.js';
 import { openProfModal } from '../04_Modals/02_Professor_Modal.js';
 import { openBulkModal } from '../04_Modals/07_Bulk_Add_Modal.js';
 import { render } from '../Professors.js';
@@ -231,8 +230,7 @@ export function renderEmptyState() {
     '</div>';
   $('#emptyAddBtn').addEventListener('click', function () { openProfModal(null); });
   $('#emptySeedBtn').addEventListener('click', function () {
-    state.professors = seedSamples();
-    persist(); render(); toast('Sample library loaded — explore, then make it yours.');
+    SeedSampleLibrary(); render(); toast('Sample library loaded — explore, then make it yours.');
   });
 }
 export function renderList() {

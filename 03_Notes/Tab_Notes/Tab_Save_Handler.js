@@ -179,7 +179,8 @@ const sharedComponentFiles = [
   '00_Components/04_Import_Export.js',
   '00_Components/05_Save_Button.js',
   '00_Components/06_Color_Selector.js',
-  '00_Components/09_Icon_Button.js'
+  '00_Components/09_Icon_Button.js',
+  '00_Components/10_Recovery.js'
 ];
 
 const tabHandlerFiles = [

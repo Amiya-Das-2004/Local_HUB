@@ -79,6 +79,9 @@ export function OpenDuplicatesModal() {
   `;
   root.dataset.dupCount = String(clusters.length);
   DupCtx = clusters;
+  /* window.RDHealthModal captured the initial [] at module-eval; reassigning
+     the let binding alone left every window consumer reading a dead array. */
+  if (window.RDHealthModal) window.RDHealthModal.DupCtx = DupCtx;
 }
 
 export function GetMergeHTML() {
@@ -180,9 +183,26 @@ export function OpenMergeModal(primaryId, secondaryIds) {
   const secs = (Array.isArray(secondaryIds) ? secondaryIds : [secondaryIds]).map((id) => GetItem(id)).filter(Boolean);
   if (!p || !secs.length) return;
   MergeCtx = { primaryId: p.id, secondaryIds: secs.map((s) => s.id) };
+  if (window.RDHealthModal) window.RDHealthModal.MergeCtx = MergeCtx;
   const root = document.getElementById('rd-modal-root');
   if (!root) return;
   root.innerHTML = GetMergeHTML();
+}
+
+/* 'merge-drop' (× on a merge chip): keep one participant out of the pending
+   merge and rebuild the dialog. With only the survivor left, close instead. */
+export function DropFromMerge(itemId) {
+  if (!MergeCtx) return;
+  MergeCtx.secondaryIds = MergeCtx.secondaryIds.filter((sid) => sid !== itemId);
+  const root = document.getElementById('rd-modal-root');
+  if (!MergeCtx.secondaryIds.length) {
+    MergeCtx = null;
+    if (window.RDHealthModal) window.RDHealthModal.MergeCtx = null;
+    if (root) root.innerHTML = '';
+    return;
+  }
+  if (window.RDHealthModal) window.RDHealthModal.MergeCtx = MergeCtx;
+  if (root) root.innerHTML = GetMergeHTML();
 }
 
 export function ConfirmMerge() {
@@ -200,6 +220,7 @@ export function ConfirmMerge() {
     fields, status, appendNotes: appendNotesFrom.length > 0, appendNotesFrom
   });
   MergeCtx = null;
+  if (window.RDHealthModal) window.RDHealthModal.MergeCtx = null;
   const root = document.getElementById('rd-modal-root');
   if (root) root.innerHTML = '';
   if (window.RDUI && typeof window.RDUI.RenderAll === 'function') window.RDUI.RenderAll();
@@ -306,6 +327,7 @@ export function GetHealthHTML() {
 
 export function OpenHealthModal(filter) {
   if (typeof filter === 'string') HealthFilter = filter;
+  if (window.RDHealthModal) window.RDHealthModal.HealthFilter = HealthFilter;
   const root = document.getElementById('rd-modal-root');
   if (!root) return;
   root.innerHTML = GetHealthHTML();
@@ -328,6 +350,7 @@ if (typeof window !== 'undefined') {
     OpenDuplicatesModal,
     GetMergeHTML,
     OpenMergeModal,
+    DropFromMerge,
     ConfirmMerge,
     GetHealthHTML,
     OpenHealthModal

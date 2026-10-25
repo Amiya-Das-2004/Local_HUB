@@ -97,7 +97,11 @@ export function heatSectionHTML() {
 
   for (let wk = 0; wk < weeks; wk++) {
     for (let dow = 0; dow < 7; dow++) {
-      const d = new Date(start.getTime() + (wk * 7 + dow) * 86400000);
+      /* Local-time date arithmetic: exact-ms steps (start + k*86400000)
+         drifted an hour across DST, pushing today's cell past `end` and
+         silently hiding it from March–October. */
+      const d = new Date(start);
+      d.setDate(d.getDate() + wk * 7 + dow);
       if (d > end) continue;
       const iso = isoDay(d);
       const inYear = rolling || d.getFullYear() === heatYear;
@@ -186,10 +190,11 @@ export function RenderHeat() {
   el.innerHTML = heatSectionHTML();
 }
 
-let heatEventsBound = false;
+/* Once per page load (flag on window — standalone bundles re-declare module
+   lets inside their page function on every route change). */
 export function InitHeatmap() {
-  if (heatEventsBound) return;
-  heatEventsBound = true;
+  if (typeof window === 'undefined' || window.__RD_HEAT_BOUND__) return;
+  window.__RD_HEAT_BOUND__ = true;
 
   document.addEventListener('click', (e) => {
     const mnu = document.getElementById('rd-heat-menu');

@@ -203,6 +203,7 @@ export function OpenDrawer(id) {
   const item = GetItem(id);
   if (!item) return;
   DrawerItemId = id;
+  if (window.RDDrawer) window.RDDrawer.DrawerItemId = DrawerItemId;
   const root = document.getElementById('rd-drawer-root');
   if (!root) return;
   root.innerHTML = GetDrawerHTML(item);
@@ -217,6 +218,7 @@ export function OpenDrawer(id) {
 
 export function CloseDrawer() {
   DrawerItemId = null;
+  if (window.RDDrawer) window.RDDrawer.DrawerItemId = null;
   const root = document.getElementById('rd-drawer-root');
   if (!root || !root.innerHTML) return;
   const backdrop = root.querySelector('.rd-drawer-backdrop');
@@ -232,6 +234,7 @@ export function RefreshDrawer() {
   const root = document.getElementById('rd-drawer-root');
   if (!item || !root) {
     DrawerItemId = null;
+    if (window.RDDrawer) window.RDDrawer.DrawerItemId = null;
     if (root) root.innerHTML = '';
     return;
   }

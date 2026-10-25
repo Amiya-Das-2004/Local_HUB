@@ -344,7 +344,9 @@ export function ReyearItemFromTimeline(id, year) {
       const it = GetItem(id);
       if (!it) return;
       it.year = oldYear;
-      it.positions.timeline = oldPos || { ...it.positions.timeline };
+      /* oldPos is null when the card had no prior timeline slot — leave null
+         so the render pipeline re-defaults it (spreading null produced {}). */
+      it.positions.timeline = oldPos || null;
       Commit();
       if (window.RDUI && typeof window.RDUI.RenderAll === 'function') window.RDUI.RenderAll();
     }
@@ -466,7 +468,9 @@ export function StartMarquee(view, wrap, e) {
 
   function onMove(ev) {
     const cx = ev.clientX - rect.left, cy = ev.clientY - rect.top;
-    if (!moved && Math.abs(cx - sx) * Math.abs(cy - sy) < 24) return;
+    /* per-axis threshold — an area product never triggers for a perfectly
+       straight horizontal/vertical shift-drag */
+    if (!moved && Math.abs(cx - sx) < 8 && Math.abs(cy - sy) < 8) return;
     moved = true;
     paintRect(cx, cy);
     lastHits = hitTest(cx, cy, sx, sy);
@@ -553,7 +557,7 @@ export function AttachCanvasEvents(view) {
 export function GetNodeCardHTML(item, view) {
   const pos = (item.positions && item.positions[view]) || { x: 0, y: 0 };
   const group = item.groupId ? GetGroup(item.groupId) : null;
-  const stripe = ItemStripeColor(item);
+  const stripe = ItemStripeColor(item, GetGroup);
   const q = (state.rd.ui && state.rd.ui.search) || '';
   const isBook = item.type === 'book';
   const isThesis = item.type === 'thesis';
@@ -619,7 +623,7 @@ const TL_CARD_SIZE = {
   book: { w: 170, h: 232 },
   card: { w: 224, h: 205 }
 };
-function TlCardSize(it) {
+export function TlCardSize(it) {
   return (it && it.type === 'book') ? TL_CARD_SIZE.book : TL_CARD_SIZE.card;
 }
 

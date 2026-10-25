@@ -72,27 +72,15 @@ function syncTabStatesToDOM(doc) {
   });
 }
 
-// Clears all unsaved local cache keys from browser localStorage (local copy),
-// including R&D's own store key, so a saved standalone reopens from its
-// embedded vault instead of a stale machine-local copy.
+// Clears the LOCAL caches THIS tab owns, so a saved standalone reopens from
+// its embedded vault instead of a stale machine-local copy. The earlier
+// blanket sweep (`_Local_Cache` / `_Cache` suffix match) also wiped unsaved
+// data belonging to other tabs on the same origin — narrowed to R&D keys.
 function clearAllTabLocalCaches() {
   if (typeof localStorage === 'undefined') return;
   try {
-    localStorage.removeItem('profftrack:v1');
     localStorage.removeItem('rd_library_v1');
     localStorage.removeItem('PapersData_Local_Cache');
-    localStorage.removeItem('NotesData_Local_Cache');
-    localStorage.removeItem('Bookmarks_Local_Cache');
-    localStorage.removeItem('LandingPageData_Local_Cache');
-  } catch (e) { }
-
-  try {
-    for (let i = localStorage.length - 1; i >= 0; i--) {
-      const key = localStorage.key(i);
-      if (key && (key.endsWith('_Local_Cache') || key.includes('_Cache'))) {
-        localStorage.removeItem(key);
-      }
-    }
   } catch (e) { }
 
   if (typeof window !== 'undefined' && typeof window.MarkUnsavedChanges === 'function') {
@@ -135,9 +123,15 @@ async function bundleTabGroup(files) {
   return out;
 }
 
-// R&D's only 00_Components import (verified): the shared icon-button module.
+// Every 00_Components module imported by R&D runtime files (verified):
+// 01_Header.js imports the first four; 03_Toolbar.js imports 09_Icon_Button
+// (EnsureIconButtonStyles). None of them import further 00_Components files.
 const sharedComponentFiles = [
-  '00_Components/09_Icon_Button.js'
+  '00_Components/09_Icon_Button.js',
+  '00_Components/01_Local_HUB_Logo.js',
+  '00_Components/02_Theme_Toggle.js',
+  '00_Components/04_Import_Export.js',
+  '00_Components/05_Save_Button.js'
 ];
 
 const tabHandlerFiles = [

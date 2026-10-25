@@ -91,7 +91,7 @@
       "Color": 9137663
     }
   ],
-  "_lastSaved": 1792654359501
+  "_lastSaved": 1792918924279
 }</script>
   <script type="application/json" id="Bookmarks">
     {
@@ -1645,6 +1645,12 @@ function TriggerImport(onSuccess = null) {
           masterBlocks['ProfessorsData'] = importedData;
         } else if (Array.isArray(importedData.items) || importedData.groupOrder || importedData.links) {
           masterBlocks['RDData'] = importedData;
+        } else if (importedData.rd && typeof importedData.rd === 'object' &&
+                   (Array.isArray(importedData.rd.items) || importedData.rd.groupOrder || importedData.rd.links)) {
+          /* R&D's own backup shape ({ rd: <library> } — RD_DATA.json /
+             rd-library-backup-*.json). Without this branch it fell through to
+             the generic loop, wrote a dead `#rd` script block and was lost. */
+          masterBlocks['RDData'] = importedData.rd;
         } else if (Array.isArray(importedData.tabs)) {
           masterBlocks['LandingPageData'] = importedData;
         } else {
@@ -1741,8 +1747,14 @@ function TriggerImport(onSuccess = null) {
               if (typeof window.replaceState === 'function') window.replaceState(cleanData);
             }
             if (id === 'RDData') {
-              if (window.RDState) Object.assign(window.RDState, { rd: cleanData });
-              if (window.RD && typeof window.RD.replaceState === 'function') window.RD.replaceState(cleanData);
+              /* Route through the R&D module hook: NormalizeState + persist +
+                 full re-render. A raw Object.assign bypassed normalization and
+                 left the running UI showing stale data. */
+              if (window.RD && typeof window.RD.ReplaceAll === 'function') {
+                window.RD.ReplaceAll(cleanData);
+              } else if (window.RDState) {
+                Object.assign(window.RDState, { rd: cleanData });
+              }
             }
             if (window[id + 'State']) Object.assign(window[id + 'State'], cleanData);
             if (window[id]) Object.assign(window[id], cleanData);
@@ -2109,6 +2121,7 @@ function InitImportExport(onImportSuccess = null) {
 }
 
 /* --- 00_Components/05_Save_Button.js --- */
+
 // Save button svg logo
 function GetSaveButtonHTML() {
   return `
@@ -2287,18 +2300,22 @@ function syncAllStatesToDOM(doc) {
       }
     }
 
-    // 2. Check localStorage cache for latest edits only if not found in live window state
+    // 2. Fallback to this file's path-scoped recovery snapshot (sessionStorage)
+    //    only if not found in live window state. The old shared localStorage
+    //    keys are NOT read here anymore — they leaked data between different
+    //    LocalHUB files sharing one origin.
     if (!foundData) {
-      const cacheKeys = [id + '_Local_Cache', id.replace(/Data$/, '') + '_Local_Cache', id];
-      if (id === 'RDData') cacheKeys.push('rd_library_v1');
-      for (const ck of cacheKeys) {
+      const snap = ReadRecoverySnapshot(id);
+      if (snap && snap.data && typeof snap.data === 'object') {
+        foundData = (id === 'RDData' && snap.data.rd) ? snap.data.rd : snap.data;
+      }
+      if (!foundData && id === 'RDData') {
         try {
-          const cached = localStorage.getItem(ck);
-          if (cached) {
-            const parsed = JSON.parse(cached);
+          const rdRaw = localStorage.getItem('rd_library_v1');
+          if (rdRaw) {
+            const parsed = JSON.parse(rdRaw);
             if (parsed && typeof parsed === 'object') {
-              foundData = (id === 'RDData' && parsed.rd) ? parsed.rd : parsed;
-              break;
+              foundData = parsed.rd ? parsed.rd : parsed;
             }
           }
         } catch (e) { }
@@ -2400,7 +2417,8 @@ async function SaveAndDownloadApp() {
       '00_Components/06_Color_Selector.js',
       '00_Components/07_Blob_Store.js',
       '00_Components/08_Research_Library.js',
-      '00_Components/09_Icon_Button.js'
+      '00_Components/09_Icon_Button.js',
+      '00_Components/10_Recovery.js'
     ];
 
     const landingFiles = [
@@ -2845,8 +2863,12 @@ function ShowUnsavedRefreshModal() {
   // Pure in-memory sessions rely on standard browser beforeunload navigation prompts
 }
 
-// Clears all unsaved local cache keys from browser localStorage
-function ClearAllLocalCaches() {
+// Clears all unsaved local cache keys from browser localStorage.
+// preserveRecovery=true (boot sweep only) keeps the path-scoped sessionStorage
+// recovery snapshots alive — they must survive exits/reloads to be offerable;
+// the save flow (preserveRecovery=false default) clears them because the
+// edits are now permanent inside the downloaded file.
+function ClearAllLocalCaches(preserveRecovery = false) {
   if (typeof localStorage === 'undefined') return;
   // 1. Clear known tab cache keys based on DOM data blocks
   if (typeof document !== 'undefined') {
@@ -2895,11 +2917,16 @@ function ClearAllLocalCaches() {
     window.__NOTES_UNSAVED__ = false;
     window.__BOOKMARKS_UNSAVED__ = false;
     window.__BOOKMARKS_UNSAVED_COUNT__ = 0;
-    if (typeof window.ClearNotesLocalCache === 'function') {
-      try { window.ClearNotesLocalCache(); } catch (e) { }
-    }
-    if (typeof window.ClearBookmarkLocalCache === 'function') {
-      try { window.ClearBookmarkLocalCache(); } catch (e) { }
+    if (!preserveRecovery) {
+      // Full clear (post-save): recovery snapshots die too — the downloaded
+      // file now contains the edits. The boot sweep (preserveRecovery=true)
+      // must NOT touch them.
+      if (typeof window.ClearNotesLocalCache === 'function') {
+        try { window.ClearNotesLocalCache(); } catch (e) { }
+      }
+      if (typeof window.ClearBookmarkLocalCache === 'function') {
+        try { window.ClearBookmarkLocalCache(); } catch (e) { }
+      }
     }
   }
   const saveBtn = typeof document !== 'undefined' ? document.getElementById('save-btn') : null;
@@ -2946,13 +2973,14 @@ function InitSaveButtonLogic() {
       }
     });
 
-    // Immediately wipe localStorage cache when leaving or closing the page
-    window.addEventListener('pagehide', () => {
-      ClearAllLocalCaches();
-    });
+    // NOTE: no pagehide wipe — sessionStorage recovery snapshots are per-tab
+    // and path-scoped, so they can never leak into another file, and wiping
+    // on exit destroyed the crash-recovery data right when it was needed.
+    // Legacy localStorage keys are purged on load by each tab's state module.
 
-    // Clean sweep on initial startup to ensure no stale cache from other files contaminates this session
-    ClearAllLocalCaches();
+    // Clean sweep on initial startup to ensure no stale cache from other files
+    // contaminates this session (recovery snapshots preserved)
+    ClearAllLocalCaches(true);
   }
 }
 
@@ -3976,6 +4004,228 @@ function GlobalNavHTML(opts = {}) {
 
 if (typeof window !== 'undefined') {
   window.ICB = { GetIconButtonHTML, GlobalNavHTML, GlobalNavHref, EnsureIconButtonStyles };
+}
+
+
+/* --- 00_Components/10_Recovery.js --- */
+// 00_Components/10_Recovery.js
+//
+// Path-scoped crash-recovery snapshots + legacy cache purge.
+//
+// WHY THIS EXISTS: localStorage is scoped by ORIGIN, not by file — every
+// standalone HTML opened from disk (file://) or from one localhost server
+// shares a single localStorage namespace. The old fixed keys
+// (`NotesData_Local_Cache`, `Bookmarks_Local_Cache`, …) therefore bled data
+// between DIFFERENT .html files ("opened another file and it showed the
+// previous file's notes"). Recovery snapshots here are:
+//   1. Scoped to THIS file: key = prefix + vaultId + '::' + location.pathname
+//   2. Stored in sessionStorage: per-tab, survives reloads (and Chrome tab
+//      restore after a browser crash), dies with the tab — so a snapshot can
+//      never leak into a different file or even a different tab.
+//   3. NEVER applied silently: on load the shell calls OfferRecoverySnapshot()
+//      which shows a Restore / Discard banner; nothing touches vault state
+//      until the user picks.
+// A successful SAVE (download of the standalone HTML) must clear the vault's
+// snapshot — the edits are now permanent inside the downloaded file.
+const LOCALHUB_RECOVERY_PREFIX = 'LocalHub_Recovery::';
+
+// Legacy fixed-key caches (pre-scoping era). They are only ever wiped these
+// days — no load path reads them — so purging on load removes any data left
+// behind by older builds of the app.
+const LOCALHUB_RECOVERY_LEGACY_KEYS = [
+  'NotesData_Local_Cache',
+  'Bookmarks_Local_Cache',
+  'LandingPageData_Local_Cache',
+  'PapersData_Local_Cache'
+];
+
+const localhubRecoveryOffered = new Set(); // baseKeys already offered this page session
+let localhubRecoveryBannerCount = 0;       // stacks multiple banners vertically
+let localhubRecoveryWarnedQuota = false;
+let localhubRecoveryStyleInjected = false;
+
+// Returns the file-scoped sessionStorage key for a vault id (e.g. 'NotesData')
+function GetRecoveryScopeKey(baseKey) {
+  let path = '';
+  try {
+    path = (typeof location !== 'undefined' && location.pathname) ? location.pathname : '';
+  } catch (e) { }
+  return LOCALHUB_RECOVERY_PREFIX + baseKey + '::' + path;
+}
+
+// Reads { data, savedAt } for this file's snapshot of a vault; null when absent.
+// Corrupt payloads are removed instead of retried forever.
+function ReadRecoverySnapshot(baseKey) {
+  if (typeof sessionStorage === 'undefined') return null;
+  try {
+    const raw = sessionStorage.getItem(GetRecoveryScopeKey(baseKey));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || !parsed.data || typeof parsed.data !== 'object') {
+      sessionStorage.removeItem(GetRecoveryScopeKey(baseKey));
+      return null;
+    }
+    return { data: parsed.data, savedAt: Number(parsed.savedAt) || 0 };
+  } catch (e) {
+    try { sessionStorage.removeItem(GetRecoveryScopeKey(baseKey)); } catch (e2) { }
+    return null;
+  }
+}
+
+// Best-effort snapshot write. On quota exhaustion (multi-MB vaults with
+// base64 images) it degrades silently — recovery is insurance, not storage.
+function WriteRecoverySnapshot(baseKey, data) {
+  if (typeof sessionStorage === 'undefined' || !data || typeof data !== 'object') return;
+  try {
+    sessionStorage.setItem(GetRecoveryScopeKey(baseKey), JSON.stringify({ data, savedAt: Date.now() }));
+  } catch (e) {
+    if (!localhubRecoveryWarnedQuota) {
+      localhubRecoveryWarnedQuota = true;
+      console.warn(`[Recovery] Snapshot for "${baseKey}" not stored (quota):`, e);
+    }
+  }
+}
+
+// Removes this file's snapshot for a vault (call after a successful Save/Export).
+function ClearRecoverySnapshot(baseKey) {
+  if (typeof sessionStorage === 'undefined') return;
+  try {
+    sessionStorage.removeItem(GetRecoveryScopeKey(baseKey));
+  } catch (e) { }
+}
+
+// One-time-per-load cleanup of the old shared-origin fixed keys.
+function PurgeLegacyRecoveryKeys() {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    LOCALHUB_RECOVERY_LEGACY_KEYS.forEach((k) => localStorage.removeItem(k));
+  } catch (e) { }
+}
+
+function ensureRecoveryBannerStyles() {
+  if (localhubRecoveryStyleInjected || typeof document === 'undefined') return;
+  localhubRecoveryStyleInjected = true;
+  const style = document.createElement('style');
+  style.id = 'localhub-recovery-styles';
+  style.textContent = `
+    .localhub-recovery-banner {
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 9500;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      max-width: min(92vw, 640px);
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border, #2a2e40);
+      background: var(--surface, #181b27);
+      color: var(--text, #e8eaf2);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+      font-size: 12.5px;
+      line-height: 1.4;
+      font-family: inherit;
+    }
+    .localhub-recovery-banner .localhub-recovery-text { min-width: 0; }
+    .localhub-recovery-banner .localhub-recovery-title { font-weight: 700; margin-bottom: 2px; }
+    .localhub-recovery-banner .localhub-recovery-sub { color: var(--text-secondary, #a0a4b8); }
+    .localhub-recovery-banner .localhub-recovery-actions { display: flex; gap: 6px; flex-shrink: 0; }
+    .localhub-recovery-banner button {
+      font: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 7px;
+      cursor: pointer;
+      border: 1px solid var(--border, #2a2e40);
+      background: transparent;
+      color: var(--text, #e8eaf2);
+      transition: filter 0.15s ease, background 0.15s ease;
+      white-space: nowrap;
+    }
+    .localhub-recovery-banner .localhub-recovery-restore {
+      background: var(--accent, #8b6dff);
+      border-color: transparent;
+      color: #ffffff;
+    }
+    .localhub-recovery-banner button:hover { filter: brightness(1.12); }
+  `;
+  document.head.appendChild(style);
+}
+
+// Offers a found snapshot via a non-blocking banner. Never auto-applies.
+// - onRestore(data): apply the snapshot to the caller's state, persist it and
+//   re-render. Exceptions keep the snapshot for a later attempt.
+// - Auto-hides after 45s WITHOUT discarding (the next load offers again).
+// - Restore/Discard always clear the snapshot.
+function OfferRecoverySnapshot({ baseKey, label = 'unsaved edits', onRestore = null } = {}) {
+  if (typeof document === 'undefined' || typeof sessionStorage === 'undefined' || !baseKey) return;
+  if (localhubRecoveryOffered.has(baseKey)) return;
+  const snap = ReadRecoverySnapshot(baseKey);
+  if (!snap) return;
+  localhubRecoveryOffered.add(baseKey);
+
+  const mount = () => {
+    ensureRecoveryBannerStyles();
+    const banner = document.createElement('div');
+    banner.className = 'localhub-recovery-banner';
+    banner.style.top = `calc(var(--notes-header-height, var(--header-height, 74px)) + ${12 + localhubRecoveryBannerCount * 70}px)`;
+    localhubRecoveryBannerCount++;
+
+    const when = snap.savedAt ? new Date(snap.savedAt).toLocaleString() : '';
+    banner.innerHTML = `
+      <div class="localhub-recovery-text">
+        <div class="localhub-recovery-title">Recover unsaved ${label}?</div>
+        <div class="localhub-recovery-sub">Found a snapshot from your last session on this file${when ? ` (${when})` : ''}.</div>
+      </div>
+      <div class="localhub-recovery-actions">
+        <button type="button" class="localhub-recovery-restore">Restore</button>
+        <button type="button" class="localhub-recovery-discard">Discard</button>
+      </div>
+    `;
+
+    const close = () => {
+      if (banner.parentNode) banner.parentNode.removeChild(banner);
+      localhubRecoveryBannerCount = Math.max(0, localhubRecoveryBannerCount - 1);
+      clearTimeout(autoHideTimer);
+    };
+
+    banner.querySelector('.localhub-recovery-restore').addEventListener('click', () => {
+      try {
+        if (typeof onRestore === 'function') onRestore(snap.data);
+        ClearRecoverySnapshot(baseKey);
+      } catch (e) {
+        console.warn('[Recovery] Restore failed; snapshot kept:', e);
+        return;
+      }
+      close();
+    });
+    banner.querySelector('.localhub-recovery-discard').addEventListener('click', () => {
+      ClearRecoverySnapshot(baseKey);
+      close();
+    });
+
+    const autoHideTimer = setTimeout(close, 45000);
+    document.body.appendChild(banner);
+  };
+
+  if (document.body) {
+    mount();
+  } else {
+    document.addEventListener('DOMContentLoaded', mount, { once: true });
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.LocalHubRecovery = {
+    GetRecoveryScopeKey,
+    ReadRecoverySnapshot,
+    WriteRecoverySnapshot,
+    ClearRecoverySnapshot,
+    PurgeLegacyRecoveryKeys,
+    OfferRecoverySnapshot
+  };
 }
 
 
@@ -5004,6 +5254,19 @@ function SetBookmarksUnsavedChanges(dirty = true) {
   }
 }
 function LoadBookmarkState() {
+  // Reuse in-memory state if already loaded (mirrors LoadNotesState): avoids
+  // multi-KB re-parsing on route changes and never clobbers a user-approved
+  // recovery restore with the on-disk vault.
+  if (
+    typeof window !== 'undefined' &&
+    window.BookmarkState &&
+    window.BookmarkState === BookmarkState &&
+    Array.isArray(window.BookmarkState.bookmarks) &&
+    window.BookmarkState.bookmarks.length > 0
+  ) {
+    return BookmarkState;
+  }
+
   const dataBlock = typeof document !== 'undefined' ? document.getElementById('Bookmarks') : null;
   let domState = null;
 
@@ -5025,14 +5288,18 @@ function LoadBookmarkState() {
     }
   }
 
-  // 1. Wipe any stale leftover cache from previous files or sessions
-  try {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem('Bookmarks_Local_Cache');
-    }
-  } catch (e) { }
+  // 1. Purge legacy fixed-key caches (older builds shared them across files)
+  PurgeLegacyRecoveryKeys();
 
-  // 2. Pure, clean load directly from HTML data vault (#Bookmarks)
+  // 2. Offer this file's crash-recovery snapshot (sessionStorage, path-scoped).
+  //    Never auto-applies — the user picks Restore or Discard in the banner.
+  OfferRecoverySnapshot({
+    baseKey: 'Bookmarks',
+    label: 'bookmarks',
+    onRestore: (snapData) => RestoreBookmarksFromSnapshot(snapData)
+  });
+
+  // 3. Pure, clean load directly from HTML data vault (#Bookmarks)
   if (domState) {
     BookmarkState = {
       bookmarks: domState.bookmarks,
@@ -5065,18 +5332,32 @@ function SaveBookmarkState(newState = null) {
     SetBookmarksUnsavedChanges(true);
   }
 
-  // Persist to browser Local Storage as active unsaved working buffer
-  try {
-    if (typeof localStorage !== 'undefined') {
-      const cachePayload = {
-        ...BookmarkState,
-        _unsaved: true,
-        _savedAt: Date.now()
-      };
-      localStorage.setItem('Bookmarks_Local_Cache', JSON.stringify(cachePayload));
-    }
-  } catch (e) {
-    console.warn('Failed to save Bookmarks to localStorage:', e);
+  // Path-scoped crash-recovery snapshot (sessionStorage): per-tab, survives
+  // reloads, never leaks into other files. Replaces the old shared-origin
+  // localStorage write that contaminated other LocalHUB files.
+  WriteRecoverySnapshot('Bookmarks', BookmarkState);
+}
+
+// Applies a user-approved recovery snapshot (Restore banner) to the live state
+// and re-renders. The baseline is deliberately NOT recaptured — it still
+// reflects the on-disk vault, so restored edits keep counting as unsaved
+// until the next SAVE.
+function RestoreBookmarksFromSnapshot(snapData) {
+  if (!snapData || typeof snapData !== 'object') return;
+  BookmarkState = {
+    bookmarks: Array.isArray(snapData.bookmarks) ? snapData.bookmarks : [],
+    sectionOrder: Array.isArray(snapData.sectionOrder) ? snapData.sectionOrder : ['ALL'],
+    _lastSaved: snapData._lastSaved || 0
+  };
+  if (!BookmarkState.sectionOrder.includes('ALL')) BookmarkState.sectionOrder.unshift('ALL');
+  if (typeof window !== 'undefined') window.BookmarkState = BookmarkState;
+  // Sync the DOM vault so a subsequent initBookmarksApp() re-load parses the
+  // restored state (with the reuse branch it re-enters in-memory anyway).
+  const dataBlock = typeof document !== 'undefined' ? document.getElementById('Bookmarks') : null;
+  if (dataBlock) dataBlock.textContent = JSON.stringify(BookmarkState, null, 2);
+  SetBookmarksUnsavedChanges(true);
+  if (typeof window !== 'undefined' && typeof window.initBookmarksApp === 'function') {
+    window.initBookmarksApp();
   }
 }
 
@@ -5089,6 +5370,7 @@ function ClearBookmarkLocalCache() {
   } catch (e) {
     console.warn('Failed to clear Bookmarks_Local_Cache:', e);
   }
+  ClearRecoverySnapshot('Bookmarks');
   CaptureBookmarkBaseline(BookmarkState);
 }
 
@@ -8286,14 +8568,18 @@ function LoadNotesState(forceReload = false) {
     }
   }
 
-  // 1. Wipe any stale leftover cache from previous files or sessions
-  try {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem('NotesData_Local_Cache');
-    }
-  } catch (e) { }
+  // 1. Purge legacy fixed-key caches (older builds shared them across files)
+  PurgeLegacyRecoveryKeys();
 
-  // 2. Pure, clean load directly from HTML data vault (#NotesData)
+  // 2. Offer this file's crash-recovery snapshot (sessionStorage, path-scoped).
+  //    Never auto-applies — the user picks Restore or Discard in the banner.
+  OfferRecoverySnapshot({
+    baseKey: 'NotesData',
+    label: 'notes',
+    onRestore: (snapData) => RestoreNotesFromSnapshot(snapData)
+  });
+
+  // 3. Pure, clean load directly from HTML data vault (#NotesData)
   if (domState) {
     Object.assign(NotesState, {
       vaultMeta: domState.vaultMeta,
@@ -8524,8 +8810,38 @@ function persistNotesToStorageImmediate() {
     dataBlock.textContent = JSON.stringify(NotesState, null, 2);
   }
 
+  // 2. Keep this file's path-scoped crash-recovery snapshot in sessionStorage
+  //    in sync with the working buffer (survives reloads/crashes, never leaks
+  //    into other files or tabs).
+  WriteRecoverySnapshot('NotesData', NotesState);
+
   // Pure in-memory session: do NOT persist unsaved working notes buffer to browser localStorage.
   // This ensures zero cross-file cache contamination between different standalone LocalHUB files.
+}
+
+// Applies a user-approved recovery snapshot (Restore banner) to the live state:
+// sanitizes notes, persists to the DOM vault and re-renders. The baseline is
+// deliberately NOT recaptured — it still reflects the on-disk vault, so the
+// restored edits keep counting as unsaved until the next SAVE.
+function RestoreNotesFromSnapshot(snapData) {
+  if (!snapData || typeof snapData !== 'object') return;
+  Object.assign(NotesState, {
+    vaultMeta: snapData.vaultMeta || NotesState.vaultMeta,
+    globalMacros: snapData.globalMacros || NotesState.globalMacros,
+    tableTemplates: Array.isArray(snapData.tableTemplates) ? snapData.tableTemplates : NotesState.tableTemplates,
+    tikzTemplates: Array.isArray(snapData.tikzTemplates) ? snapData.tikzTemplates : NotesState.tikzTemplates,
+    bibliography: Array.isArray(snapData.bibliography) ? snapData.bibliography : NotesState.bibliography,
+    citationStyle: typeof snapData.citationStyle === 'string' ? snapData.citationStyle : NotesState.citationStyle,
+    folders: Array.isArray(snapData.folders) ? snapData.folders : NotesState.folders,
+    tags: Array.isArray(snapData.tags) ? snapData.tags : NotesState.tags,
+    notes: Array.isArray(snapData.notes) ? snapData.notes.map(sanitizeNote) : NotesState.notes
+  });
+  if (typeof window !== 'undefined') window.NotesState = NotesState;
+  persistNotesToStorageImmediate();
+  SetNotesUnsavedChanges(true);
+  if (typeof window !== 'undefined' && typeof window.initNotesApp === 'function') {
+    window.initNotesApp();
+  }
 }
 
 // Immediately flushes any pending debounced state writes to the DOM vault
@@ -8598,6 +8914,7 @@ function ClearNotesLocalCache() {
   } catch (e) {
     console.warn('Failed to clear NotesData_Local_Cache:', e);
   }
+  ClearRecoverySnapshot('NotesData');
   if (typeof clearAllBlockHistory === 'function') {
     clearAllBlockHistory();
   }
@@ -38553,7 +38870,6 @@ function NormalizeState(raw) {
   out.meta = Object.assign(DefaultState().rd.meta, out.meta || {});
 
   const now = new Date().toISOString();
-  const today = now.slice(0, 10);
   out.items = out.items.map((it) => ({
     id: it.id || uid('it'),
     type: ['paper', 'book', 'thesis'].includes(it.type) ? it.type : 'paper',
@@ -38581,8 +38897,8 @@ function NormalizeState(raw) {
     tags: Array.isArray(it.tags) ? it.tags : [],
     groupId: it.groupId || null,
     localPath: typeof it.localPath === 'string' ? it.localPath.trim() : '',
-    startedOn: it.startedOn || (it.status === 'reading' ? today : null),
-    finishedOn: it.finishedOn || (it.status === 'read' ? today : null),
+    startedOn: it.startedOn || null,
+    finishedOn: it.finishedOn || null,
     institution: typeof it.institution === 'string' ? it.institution.trim() : '',
     advisor: typeof it.advisor === 'string' ? it.advisor.trim() : '',
     degree: typeof it.degree === 'string' ? it.degree.trim() : '',
@@ -38732,6 +39048,12 @@ function CreateItem(fields) {
     color: typeof fields.color === 'string' ? fields.color : '',
     tags: Array.isArray(fields.tags) ? fields.tags : [],
     groupId: fields.groupId || null,
+    localPath: typeof fields.localPath === 'string' ? fields.localPath.trim() : '',
+    startedOn: fields.startedOn || null,
+    finishedOn: fields.finishedOn || null,
+    institution: typeof fields.institution === 'string' ? fields.institution.trim() : '',
+    advisor: typeof fields.advisor === 'string' ? fields.advisor.trim() : '',
+    degree: typeof fields.degree === 'string' ? fields.degree.trim() : '',
     positions: { timeline: null, map: null, group: null },
     createdAt: now,
     updatedAt: now
@@ -38758,7 +39080,7 @@ function UpdateItem(id, patch, opts) {
   if (!item) return null;
   const allowed = ['type', 'title', 'authors', 'journal', 'volume', 'issue', 'pages',
     'year', 'publisher', 'doi', 'url', 'bibtexKey', 'status', 'starred', 'important',
-    'notes', 'color', 'tags', 'groupId', 'progress'];
+    'notes', 'color', 'tags', 'groupId', 'progress', 'institution', 'advisor', 'degree', 'localPath'];
   allowed.forEach((k) => {
     if (patch[k] !== undefined) item[k] = patch[k];
   });
@@ -39063,6 +39385,7 @@ function GetLinks() {
 function MatchesFilters(item) {
   const u = state.rd.ui;
   if (u.starredOnly && !item.starred) return false;
+  if (u.tagFilter && !(item.tags || []).some((t) => String(t).toLowerCase() === String(u.tagFilter).toLowerCase())) return false;
   if (u.typeFilter !== 'ALL' && item.type !== u.typeFilter) return false;
   if (u.statusFilter !== 'ALL' && item.status !== u.statusFilter) return false;
   if (u.yearFilter && String(item.year || '????') !== String(u.yearFilter)) return false;
@@ -39217,14 +39540,20 @@ function Stats() {
 function NormKey(s) {
   return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
 }
+
+/* One canonical DOI key normalizer for every duplicate detector: strips
+   https://(dx.)doi.org/ prefixes (URL form) and bare `doi:` prefixes. */
+function NormalizeDoiKey(raw) {
+  return NormKey(String(raw || '').replace(/^https?:\/\/((dx\.)?doi\.org)\//i, '').replace(/^doi:/i, ''));
+}
 function FindDuplicates(fields, excludeId) {
-  const doi = NormKey(String(fields.doi || '').replace(/^https?:\/(dx\.)?doi\.org\//i, '').replace(/^doi:/i, ''));
+  const doi = NormalizeDoiKey(fields.doi);
   const title = NormKey(fields.title);
   const bib = NormKey(fields.bibtexKey);
   if (!doi && !title && !bib) return [];
   return state.rd.items.filter((it) => {
     if (excludeId && it.id === excludeId) return false;
-    if (doi && it.doi && NormKey(it.doi) === doi) return true;
+    if (doi && it.doi && NormalizeDoiKey(it.doi) === doi) return true;
     if (title && NormKey(it.title) === title) return true;
     if (bib && it.bibtexKey && NormKey(it.bibtexKey) === bib) return true;
     return false;
@@ -39241,7 +39570,7 @@ function FindDuplicateClusters() {
   const byDoi = new Map(), byTitle = new Map();
   const reasons = new Map();
   state.rd.items.forEach((it) => {
-    const d = NormKey(String(it.doi || '').replace(/^https?:\/\/((dx\.)?doi\.org)\//i, '').replace(/^doi:/i, ''));
+    const d = NormalizeDoiKey(it.doi);
     const t = NormKey(it.title);
     if (d) {
       if (byDoi.has(d)) { union(byDoi.get(d), it.id); reasons.set(find(it.id), (reasons.get(find(it.id)) === 'title' ? 'doi+title' : 'doi')); }
@@ -39292,7 +39621,8 @@ function MergeItems(primaryId, secondaryIds, choices) {
     return pv;
   };
 
-  ['title', 'journal', 'volume', 'issue', 'pages', 'year', 'publisher', 'doi', 'url', 'bibtexKey', 'type']
+  ['title', 'journal', 'volume', 'issue', 'pages', 'year', 'publisher', 'doi', 'url', 'bibtexKey', 'type',
+    'institution', 'advisor', 'degree', 'localPath']
     .forEach((f) => { primary[f] = pickField(f); });
   primary.authors = pickField('authors') || [];
 
@@ -39824,9 +40154,11 @@ body {
   box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
-/* ===== HEADER (Aligned with Local_HUB & Bookmarks Architecture) ===== */
+/* ===== HEADER (Aligned with Local_HUB & Bookmarks Architecture) =====
+   Bare (non rd-prefixed) selectors are scoped with :where(...) so they cannot
+   leak into other tabs in the master shell — :where() adds no specificity. */
 .rd-header,
-.app-header {
+:where(.rd-app) .app-header {
   position: sticky;
   top: 0;
   left: 0;
@@ -39841,7 +40173,7 @@ body {
   transition: background-color var(--transition, 0.2s), border-color var(--transition, 0.2s);
 }
 .rd-header-inner,
-.header-inner {
+:where(.rd-app) .header-inner {
   max-width: 1600px;
   width: 100%;
   margin: 0 auto;
@@ -39855,13 +40187,13 @@ body {
   transition: height var(--transition, 0.2s), padding var(--transition, 0.2s);
 }
 .rd-header .header-left,
-.header-left {
+:where(.rd-app) .header-left {
   display: flex;
   align-items: center;
   flex-shrink: 0;
 }
 .rd-header .header-center,
-.header-center {
+:where(.rd-app) .header-center {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -39870,7 +40202,7 @@ body {
   min-width: 0;
 }
 .rd-header .header-right,
-.header-right {
+:where(.rd-app) .header-right {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -39879,7 +40211,7 @@ body {
 
 @media (max-width: 768px) {
   .rd-header-inner,
-  .header-inner {
+  :where(.rd-app) .header-inner {
     height: var(--header-height, 66px);
     padding: 0 12px;
     gap: 8px;
@@ -39888,12 +40220,12 @@ body {
 }
 @media (max-width: 480px) {
   .rd-header-inner,
-  .header-inner {
+  :where(.rd-app) .header-inner {
     height: var(--header-height, 60px);
     padding: 0 8px;
     gap: 6px;
   }
-  .header-right {
+  :where(.rd-app) .header-right {
     gap: 6px;
   }
 }
@@ -39955,19 +40287,19 @@ body {
 .rd-progress-fill.reading { background: linear-gradient(90deg, #f59e0b, var(--yellow)); }
 .rd-progress-fill.unread { background: var(--text-dim); }
 
-.progress-ring { flex-shrink: 0; display: block; }
-.progress-ring .bg {
+:where(.rd-app,#rd-queue-root,#rd-drawer-root) .progress-ring { flex-shrink: 0; display: block; }
+:where(.rd-app,#rd-queue-root,#rd-drawer-root) .progress-ring .bg {
   fill: none;
   stroke: var(--surface);
   stroke-width: 3;
 }
-.progress-ring .meter {
+:where(.rd-app,#rd-queue-root,#rd-drawer-root) .progress-ring .meter {
   fill: none;
   stroke-width: 3;
   stroke-linecap: round;
   transition: stroke-dasharray 0.3s;
 }
-.progress-ring .ring-label {
+:where(.rd-app,#rd-queue-root,#rd-drawer-root) .progress-ring .ring-label {
   font-size: 7px;
   font-weight: 800;
   fill: var(--text-secondary);
@@ -40019,8 +40351,12 @@ body {
 }
 .rd-item-card:hover::after { left: 120%; }
 
-/* ===== BUTTONS ===== */
-.ghost-btn, .primary-btn {
+/* ===== BUTTONS =====
+   Scoped with :where(...) — these names collide with Notes/Bookmarks styling
+   in the master shell. RDScope covers .rd-app plus every overlay root, and
+   :where() adds no specificity, so all internal overrides keep winning. */
+:where(.rd-app,#rd-modal-root,#rd-confirm-root,#rd-bulk-bar,#rd-drawer-root,#rd-queue-root,#rd-stats-root,#rd-help-root,#rd-palette-root,#rd-goal-modal,#rdLinkFloatingWindow) .ghost-btn,
+:where(.rd-app,#rd-modal-root,#rd-confirm-root,#rd-bulk-bar,#rd-drawer-root,#rd-queue-root,#rd-stats-root,#rd-help-root,#rd-palette-root,#rd-goal-modal,#rdLinkFloatingWindow) .primary-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -40035,41 +40371,43 @@ body {
   white-space: nowrap;
   user-select: none;
 }
-.ghost-btn svg, .primary-btn svg { width: 13px; height: 13px; flex-shrink: 0; }
-.ghost-btn {
+:where(.rd-app,#rd-modal-root,#rd-confirm-root,#rd-bulk-bar,#rd-drawer-root,#rd-queue-root,#rd-stats-root,#rd-help-root,#rd-palette-root,#rd-goal-modal,#rdLinkFloatingWindow) .ghost-btn svg,
+:where(.rd-app,#rd-modal-root,#rd-confirm-root,#rd-bulk-bar,#rd-drawer-root,#rd-queue-root,#rd-stats-root,#rd-help-root,#rd-palette-root,#rd-goal-modal,#rdLinkFloatingWindow) .primary-btn svg { width: 13px; height: 13px; flex-shrink: 0; }
+:where(.rd-app,#rd-modal-root,#rd-confirm-root,#rd-bulk-bar,#rd-drawer-root,#rd-queue-root,#rd-stats-root,#rd-help-root,#rd-palette-root,#rd-goal-modal,#rdLinkFloatingWindow) .ghost-btn {
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text);
 }
-.ghost-btn:hover {
+:where(.rd-app,#rd-modal-root,#rd-confirm-root,#rd-bulk-bar,#rd-drawer-root,#rd-queue-root,#rd-stats-root,#rd-help-root,#rd-palette-root,#rd-goal-modal,#rdLinkFloatingWindow) .ghost-btn:hover {
   border-color: var(--accent);
   color: var(--accent);
 }
-.ghost-btn.active {
+:where(.rd-app,#rd-modal-root,#rd-confirm-root,#rd-bulk-bar,#rd-drawer-root,#rd-queue-root,#rd-stats-root,#rd-help-root,#rd-palette-root,#rd-goal-modal,#rdLinkFloatingWindow) .ghost-btn.active {
   background: var(--accent);
   color: #ffffff;
   border-color: var(--accent);
 }
-.primary-btn {
+:where(.rd-app,#rd-modal-root,#rd-confirm-root,#rd-bulk-bar,#rd-drawer-root,#rd-queue-root,#rd-stats-root,#rd-help-root,#rd-palette-root,#rd-goal-modal,#rdLinkFloatingWindow) .primary-btn {
   border: none;
   background: var(--accent);
   color: #fff;
   font-weight: 600;
   box-shadow: 0 4px 14px rgba(139, 109, 255, 0.25);
 }
-.primary-btn:hover { background: var(--accent-hover); }
-.ghost-btn.sm, .primary-btn.sm {
+:where(.rd-app,#rd-modal-root,#rd-confirm-root,#rd-bulk-bar,#rd-drawer-root,#rd-queue-root,#rd-stats-root,#rd-help-root,#rd-palette-root,#rd-goal-modal,#rdLinkFloatingWindow) .primary-btn:hover { background: var(--accent-hover); }
+:where(.rd-app,#rd-modal-root,#rd-confirm-root,#rd-bulk-bar,#rd-drawer-root,#rd-queue-root,#rd-stats-root,#rd-help-root,#rd-palette-root,#rd-goal-modal,#rdLinkFloatingWindow) .ghost-btn.sm,
+:where(.rd-app,#rd-modal-root,#rd-confirm-root,#rd-bulk-bar,#rd-drawer-root,#rd-queue-root,#rd-stats-root,#rd-help-root,#rd-palette-root,#rd-goal-modal,#rdLinkFloatingWindow) .primary-btn.sm {
   height: 28px;
   padding: 0 10px;
   font-size: 11px;
   border-radius: 7px;
 }
-.ghost-btn.danger:hover {
-  border-color: #ef4444;
-  color: #ef4444;
-  background: rgba(239, 68, 68, 0.08);
+:where(.rd-app,#rd-modal-root,#rd-confirm-root,#rd-bulk-bar,#rd-drawer-root,#rd-queue-root,#rd-stats-root,#rd-help-root,#rd-palette-root,#rd-goal-modal,#rdLinkFloatingWindow) .ghost-btn.danger:hover {
+  border-color: var(--red, #ef4444);
+  color: var(--red, #ef4444);
+  background: color-mix(in srgb, var(--red, #ef4444) 8%, transparent);
 }
-.icon-btn {
+:where(.rd-app,#rd-modal-root,#rd-confirm-root,#rd-stats-root,#rd-help-root) .icon-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -40083,12 +40421,25 @@ body {
   transition: var(--transition);
   flex-shrink: 0;
 }
-.icon-btn:hover {
+:where(.rd-app,#rd-modal-root,#rd-confirm-root,#rd-stats-root,#rd-help-root) .icon-btn:hover {
   color: var(--text);
   border-color: var(--accent);
   background: var(--card);
 }
-.icon-btn svg { width: 15px; height: 15px; }
+:where(.rd-app,#rd-modal-root,#rd-confirm-root,#rd-stats-root,#rd-help-root) .icon-btn svg { width: 15px; height: 15px; }
+/* R&D's .icon-btn is 32px; the shared theme toggle injects its own global
+   36px .icon-btn later in the head. :where() can't outrank it (no
+   specificity), so anchor R&D's size to IDs — this cannot leak: the ids
+   exist only inside R&D containers. */
+#rd-modal-root .icon-btn, #rd-confirm-root .icon-btn, #rd-help-root .icon-btn,
+#rd-stats-root .icon-btn {
+  width: 32px;
+  height: 32px;
+}
+.rd-app .icon-btn {
+  width: 32px;
+  height: 32px;
+}
 .spin { animation: rd-spin 0.8s linear infinite; }
 
 /* ===== SUB-TAB BAR ===== */
@@ -40124,7 +40475,7 @@ body {
   white-space: nowrap;
 }
 .rd-tab svg { width: 15px; height: 15px; }
-.rd-tab:hover { color: var(--text); background: rgba(255, 255, 255, 0.03); }
+.rd-tab:hover { color: var(--text); background: color-mix(in srgb, var(--text) 4%, transparent); }
 .rd-tab.active {
   color: var(--accent);
   border-bottom-color: var(--accent);
@@ -40262,7 +40613,7 @@ body {
   -webkit-backdrop-filter: blur(20px);
   overflow: hidden;
 }
-.dropdown-header {
+:where(.rd-app) .dropdown-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -40272,8 +40623,8 @@ body {
   border-bottom: 1px solid var(--border);
   width: 100%;
 }
-.dropdown-search-box { position: relative; flex: 1; min-width: 0; }
-.dropdown-search-box .search-icon {
+:where(.rd-app) .dropdown-search-box { position: relative; flex: 1; min-width: 0; }
+:where(.rd-app) .dropdown-search-box .search-icon {
   position: absolute;
   left: 8px;
   top: 50%;
@@ -40282,7 +40633,7 @@ body {
   height: 13px;
   color: var(--text-secondary);
 }
-.dropdown-search-input {
+:where(.rd-app) .dropdown-search-input {
   width: 100%;
   height: 30px;
   padding: 0 8px 0 28px;
@@ -40293,8 +40644,8 @@ body {
   font-size: 11.5px;
   outline: none;
 }
-.dropdown-search-input:focus { border-color: var(--accent); }
-.col-stepper {
+:where(.rd-app) .dropdown-search-input:focus { border-color: var(--accent); }
+:where(.rd-app) .col-stepper {
   display: flex;
   align-items: center;
   gap: 2px;
@@ -40305,7 +40656,7 @@ body {
   flex-shrink: 0;
   user-select: none;
 }
-.stepper-btn {
+:where(.rd-app) .stepper-btn {
   background: none;
   border: none;
   color: var(--text);
@@ -40316,16 +40667,16 @@ body {
   transition: color 0.15s;
   line-height: 1;
 }
-.stepper-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-.stepper-btn:not(:disabled):hover { color: var(--accent); }
-.stepper-val {
+:where(.rd-app) .stepper-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+:where(.rd-app) .stepper-btn:not(:disabled):hover { color: var(--accent); }
+:where(.rd-app) .stepper-val {
   font-size: 11px;
   font-weight: 700;
   color: var(--accent);
   min-width: 14px;
   text-align: center;
 }
-.close-dropdown-btn {
+:where(.rd-app) .close-dropdown-btn {
   background: none;
   border: none;
   color: var(--text-secondary);
@@ -40335,7 +40686,7 @@ body {
   padding: 0 2px;
   flex-shrink: 0;
 }
-.close-dropdown-btn:hover { color: var(--text); }
+:where(.rd-app) .close-dropdown-btn:hover { color: var(--text); }
 .sections-grid-container {
   display: grid;
   gap: 8px;
@@ -40658,6 +41009,50 @@ body {
   padding: 2px 8px;
   border-radius: 10px;
 }
+.rd-item-chips-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+  min-width: 0;
+}
+.rd-item-chips-row > * { min-width: 0; }
+.rd-doi-badge {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 2px 7px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  cursor: help;
+}
+.rd-local-path-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 2px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+.rd-local-path-badge svg { width: 11px; height: 11px; flex-shrink: 0; }
+.rd-local-path-badge span { overflow: hidden; text-overflow: ellipsis; }
+.rd-local-path-badge:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
 .rd-item-actions {
   position: absolute;
   top: 8px;
@@ -40741,7 +41136,7 @@ body {
   pointer-events: none;
 }
 .rd-canvas-legend svg { width: 12px; height: 12px; }
-.zoom-stepper {
+:where(.rd-app) .zoom-stepper {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -40750,7 +41145,7 @@ body {
   padding: 2px 8px;
   border-radius: 8px;
 }
-.zoom-stepper .stepper-btn { width: 22px; height: 24px; }
+:where(.rd-app) .zoom-stepper .stepper-btn { width: 22px; height: 24px; }
 .rd-zoom-val {
   font-size: 12px;
   font-weight: 700;
@@ -40876,6 +41271,14 @@ body {
 .rd-node-card .node-meta {
   font-size: 0.64rem;
   color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rd-node-card .node-authors {
+  font-size: 0.62rem;
+  color: var(--text-secondary);
+  opacity: 0.85;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -41356,8 +41759,9 @@ body {
 }
 .rd-canvas-empty-hint svg { width: 40px; height: 40px; opacity: 0.5; }
 
-/* ===== MODALS ===== */
-.modal-overlay {
+/* ===== MODALS =====
+   Modal classes are shared with other tabs' shells — scoped via :where(...) */
+:where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .modal-overlay {
   position: fixed;
   inset: 0;
   z-index: 900;
@@ -41371,7 +41775,7 @@ body {
   animation: rd-fade 0.18s ease;
 }
 @keyframes rd-fade { from { opacity: 0; } to { opacity: 1; } }
-.modal-card {
+:where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .modal-card {
   width: min(680px, 100%);
   max-height: calc(100vh - 40px);
   display: flex;
@@ -41379,19 +41783,19 @@ body {
   background: var(--surface);
   border: 1px solid var(--border-light);
   border-radius: 16px;
-  box-shadow: var(--shadow-lg), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  box-shadow: var(--shadow-lg), 0 0 0 1px var(--border-light);
   animation: rd-pop 0.2s cubic-bezier(0.34, 1.3, 0.64, 1);
   overflow: hidden;
 }
 @keyframes rd-pop { from { transform: scale(0.96) translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
-.modal-header {
+:where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
   border-bottom: 1px solid var(--border);
 }
-.modal-header h3 {
+:where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .modal-header h3 {
   font-size: 15px;
   font-weight: 800;
   color: var(--text);
@@ -41399,8 +41803,8 @@ body {
   align-items: center;
   gap: 8px;
 }
-.modal-header h3 svg { width: 16px; height: 16px; color: var(--accent); }
-.modal-body {
+:where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .modal-header h3 svg { width: 16px; height: 16px; color: var(--accent); }
+:where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .modal-body {
   padding: 18px 20px;
   overflow-y: auto;
   display: flex;
@@ -41409,9 +41813,9 @@ body {
   scrollbar-width: thin;
   scrollbar-color: var(--border-light) transparent;
 }
-.modal-body::-webkit-scrollbar { width: 6px; }
-.modal-body::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 8px; }
-.modal-footer {
+:where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .modal-body::-webkit-scrollbar { width: 6px; }
+:where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .modal-body::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 8px; }
+:where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .modal-footer {
   padding: 14px 20px;
   border-top: 1px solid var(--border);
   display: flex;
@@ -41419,18 +41823,18 @@ body {
   justify-content: flex-end;
   gap: 8px;
 }
-.modal-footer .spacer { margin-right: auto; }
+:where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .modal-footer .spacer { margin-right: auto; }
 
-.form-group { display: flex; flex-direction: column; gap: 5px; }
-.form-group label {
+:where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .form-group { display: flex; flex-direction: column; gap: 5px; }
+:where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .form-group label {
   font-size: 11px;
   font-weight: 700;
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
-.form-group label .req { color: var(--accent); }
-.form-control {
+:where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .form-group label .req { color: var(--accent); }
+:where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .form-control {
   width: 100%;
   height: 36px;
   padding: 0 11px;
@@ -41442,7 +41846,7 @@ body {
   outline: none;
   transition: var(--transition);
 }
-textarea.form-control {
+:where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) textarea.form-control {
   height: auto;
   min-height: 84px;
   padding: 9px 11px;
@@ -41451,22 +41855,22 @@ textarea.form-control {
   font-size: 12px;
   line-height: 1.5;
 }
-.form-control:focus {
+:where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .form-control:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
-.form-control.error {
-  border-color: #ef4444;
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+:where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .form-control.error {
+  border-color: var(--red, #ef4444);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--red, #ef4444) 12%, transparent);
 }
-.form-row { display: flex; gap: 10px; }
-.form-row .form-group { flex: 1; min-width: 0; }
-.form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
-.form-grid-2 .span-2 { grid-column: span 2; }
+:where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .form-row { display: flex; gap: 10px; }
+:where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .form-row .form-group { flex: 1; min-width: 0; }
+:where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
+:where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .form-grid-2 .span-2 { grid-column: span 2; }
 @media (max-width: 560px) {
-  .form-grid-2 { grid-template-columns: 1fr; }
-  .form-grid-2 .span-2 { grid-column: span 1; }
-  .form-row { flex-direction: column; }
+  :where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .form-grid-2 { grid-template-columns: 1fr; }
+  :where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .form-grid-2 .span-2 { grid-column: span 1; }
+  :where(#rd-modal-root,#rd-confirm-root,#rd-goal-modal) .form-row { flex-direction: column; }
 }
 
 .rd-divider {
@@ -41955,13 +42359,6 @@ textarea.form-control {
   height: 1px;
   background: linear-gradient(90deg, var(--border), transparent);
 }
-.rd-stats-grid {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 18px;
-  align-items: center;
-  margin-bottom: 12px;
-}
 .rd-stats-cell { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .rd-stats-cell:first-child { align-items: center; }
 .rd-stats-donut .donut-num {
@@ -42027,7 +42424,7 @@ textarea.form-control {
   height: 100%;
   border-radius: 6px;
   background: linear-gradient(90deg, var(--accent), var(--accent-soft, #a78bfa));
-  box-shadow: 0 0 8px rgba(139, 109, 255, 0.4);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 40%, transparent);
   transition: width 0.5s cubic-bezier(0.2, 0, 0, 1);
 }
 .rd-stats-bar-fill.avg { background: linear-gradient(90deg, var(--yellow), var(--green)); }
@@ -42174,7 +42571,7 @@ button.rd-footer-stats[aria-expanded="true"] {
 .rd-help-steps b { display: block; font-size: 0.8rem; color: var(--text); margin-bottom: 2px; }
 .rd-help-steps span:not(.rd-help-step-n) { font-size: 0.73rem; color: var(--text-secondary); line-height: 1.5; }
 .rd-help-steps em { color: var(--accent); font-style: normal; font-weight: 700; }
-.keycap {
+:where(.rd-app,#rd-help-root) .keycap {
   display: inline-block;
   min-width: 17px;
   padding: 1px 5px;
@@ -44553,18 +44950,21 @@ function InitHeader(container) {
 
   const header = document.querySelector('.rd-header, .app-header');
   if (header) {
+    /* The header's height is itself driven by --header-height (set on
+       .rd-header-inner), while the border-bottom sits on .rd-header — so
+       offsetHeight is always var + 1px. Feeding the raw measurement back made
+       the ResizeObserver grow the bar ~1px per frame, unbounded while the tab
+       is open. Write the border-exclusive inner height instead: the write is
+       the fixed point of the loop, so it settles after one delivery. */
     const updateHeaderH = () => {
-      const h = header.offsetHeight;
+      const border = header.offsetHeight - header.clientHeight;
+      const h = header.offsetHeight - border;
       if (h > 0) document.documentElement.style.setProperty('--header-height', `${h}px`);
     };
     updateHeaderH();
-    if (window.ResizeObserver) {
-      new ResizeObserver(entries => {
-        for (const entry of entries) {
-          const h = entry.borderBoxSize ? entry.borderBoxSize[0].blockSize : header.offsetHeight;
-          if (h > 0) document.documentElement.style.setProperty('--header-height', `${h}px`);
-        }
-      }).observe(header);
+    if (window.ResizeObserver && !window.__RD_HEADER_RO__) {
+      window.__RD_HEADER_RO__ = new ResizeObserver(updateHeaderH);
+      window.__RD_HEADER_RO__.observe(header);
     }
   }
 }
@@ -44717,7 +45117,10 @@ function RenderBulkBar() {
 }
 function SelectAllVisible() {
   const ids = VisibleItems().map((i) => i.id);
-  SelectedIds = new Set(ids);
+  /* Mutate the existing Set in place — reassigning would stale every captured
+     mirror (window.RDToolbar.SelectedIds, window.RDUI.SelectedIds). */
+  SelectedIds.clear();
+  ids.forEach((id) => SelectedIds.add(id));
   ids.forEach(SyncSelectionClasses);
   document.querySelectorAll('.rd-node-card, .rd-item-card').forEach((el) => {
     el.classList.toggle('selected', SelectedIds.has(el.dataset.itemId));
@@ -44852,31 +45255,17 @@ function RenderSectionsDropdownGrid() {
         const srcIdx = SectionTmpOrder.findIndex((t) => t.key === SectionDraggingKey);
         const tgtIdx = SectionTmpOrder.findIndex((t) => t.key === key);
         if (srcIdx !== -1 && tgtIdx !== -1 && srcIdx !== tgtIdx) {
-          const oldPositions = new Map();
-          grid.querySelectorAll('.section-grid-tile').forEach((el) => {
-            oldPositions.set(el.dataset.section, el.getBoundingClientRect());
-          });
           const [item] = SectionTmpOrder.splice(srcIdx, 1);
           SectionTmpOrder.splice(tgtIdx, 0, item);
-          RenderSectionsDropdownGrid();
-          grid.querySelectorAll('.section-grid-tile').forEach((el) => {
-            const sec = el.dataset.section;
-            if (sec === SectionDraggingKey) return;
-            const oldPos = oldPositions.get(sec);
-            if (oldPos) {
-              const newPos = el.getBoundingClientRect();
-              const dx = oldPos.left - newPos.left;
-              const dy = oldPos.top - newPos.top;
-              if (dx !== 0 || dy !== 0) {
-                el.style.transform = `translate(${dx}px, ${dy}px)`;
-                el.style.transition = 'none';
-                requestAnimationFrame(() => {
-                  el.style.transition = 'transform 0.24s cubic-bezier(0.2, 0, 0, 1)';
-                  el.style.transform = '';
-                });
-              }
-            }
-          });
+          /* Move the dragged tile's node directly instead of re-rendering the
+             grid: a re-render destroys the drag source mid-drag, Chrome then
+             cancels the drag and dragend never commits the new order. */
+          const draggingTile = grid.querySelector(`.section-grid-tile[data-section="${SectionDraggingKey}"]`);
+          if (draggingTile && draggingTile !== tile) {
+            const rect = tile.getBoundingClientRect();
+            const after = (e.clientX > rect.left + rect.width / 2) || (e.clientY > rect.top + rect.height / 2);
+            tile.parentNode.insertBefore(draggingTile, after ? tile.nextSibling : tile);
+          }
         }
       });
       tile.addEventListener('dragend', () => {
@@ -45068,6 +45457,11 @@ function RenderToolbarLabels() {
     queueBadge.hidden = qCount === 0;
   }
 }
+
+/* Document/window listeners live once per page load (initRDApp re-runs on
+   every tab re-entry); they resolve their elements at event time so they
+   keep working after #root is re-rendered. The flag lives on window because
+   standalone bundles re-declare module lets on every route change. */
 function InitSectionsDropdown() {
   const RD = state.rd;
   DropdownColumns = Math.min(4, Math.max(1, RD.ui.columnCount || 2));
@@ -45091,12 +45485,6 @@ function InitSectionsDropdown() {
   if (closeBtn && dropdownWindow) {
     closeBtn.addEventListener('click', () => dropdownWindow.classList.add('hidden'));
   }
-  document.addEventListener('click', (e) => {
-    if (dropdownWindow && !dropdownWindow.classList.contains('hidden') &&
-        !dropdownWindow.contains(e.target) && toggleBtn && !toggleBtn.contains(e.target)) {
-      dropdownWindow.classList.add('hidden');
-    }
-  });
   if (searchInput) {
     searchInput.addEventListener('input', () => RenderSectionsDropdownGrid());
   }
@@ -45123,11 +45511,23 @@ function InitSectionsDropdown() {
       }
     });
   }
+  if (typeof window === 'undefined' || window.__RD_SECTIONS_GLOBAL_BOUND__) return;
+  window.__RD_SECTIONS_GLOBAL_BOUND__ = true;
+  document.addEventListener('click', (e) => {
+    const win = document.getElementById('sections-dropdown-window');
+    const tog = document.getElementById('sections-dropdown-toggle');
+    if (win && !win.classList.contains('hidden') &&
+        !win.contains(e.target) && tog && !tog.contains(e.target)) {
+      win.classList.add('hidden');
+    }
+  });
   window.addEventListener('resize', () => {
-    if (dropdownWindow && !dropdownWindow.classList.contains('hidden')) RenderSectionsDropdownGrid();
+    const win = document.getElementById('sections-dropdown-window');
+    if (win && !win.classList.contains('hidden')) RenderSectionsDropdownGrid();
   });
 }
 function InitToolbar() {
+  EnsureIconButtonStyles();
   InitSectionsDropdown();
 }
 
@@ -45389,13 +45789,17 @@ function GenerateCitationKey(item, existingKeys) {
 
 function FieldLine(name, value) {
   if (value === undefined || value === null || String(value) === '') return '';
-  return '  ' + name.padEnd(10) + '= {' + value + '}';
+  let v = String(value);
+  /* A value containing } or , would break out of the braced field and produce
+     an unbalanced .bib — an extra brace pair keeps it parseable. */
+  if (/[},]/.test(v) && !(v.startsWith('{') && v.endsWith('}'))) v = '{' + v + '}';
+  return '  ' + name.padEnd(10) + '= {' + v + '}';
 }
-function ItemToBibtex(item) {
+function ItemToBibtex(item, existingKeys) {
   const itemType = item.type || 'paper';
   const lines = [];
   let key = item.bibtexKey;
-  if (!key) key = GenerateCitationKey(item);
+  if (!key) key = GenerateCitationKey(item, existingKeys);
   lines.push('@' + EntryTypeFor(itemType) + '{' + key + ',');
   const fields = [
     FieldLine('title', item.title),
@@ -45528,8 +45932,9 @@ function MapOpenAlex(rec, doi) {
   ));
   const bib = rec.biblio || {};
   const pages = [bib.first_page, bib.last_page].filter(Boolean).join('-');
+  const bookish = rec.type === 'book' || rec.type === 'book-chapter' || rec.type === 'monograph';
   return {
-    type: rec.type === 'book' ? 'book' : 'paper',
+    type: bookish ? 'book' : 'paper',
     title: String(rec.title || rec.display_name || '').trim(),
     authors,
     journal: rec.primary_location && rec.primary_location.source
@@ -45617,7 +46022,7 @@ function PlayListFlip(panel, prev) {
 }
 function GetItemRowHTML(item) {
   const group = item.groupId ? GetGroup(item.groupId) : null;
-  const stripe = ItemStripeColor(item);
+  const stripe = ItemStripeColor(item, GetGroup);
   const q = (state.rd.ui && state.rd.ui.search) || '';
   const sel = SelectedIds.has(item.id);
   const tags = (item.tags || []).slice(0, 4).map((t) => `<span class="rd-tag-pill" data-action="filter-tag" data-tag="${esc(t)}" title="Filter by tag: ${esc(t)}">#${esc(t)}</span>`).join('');
@@ -46153,7 +46558,9 @@ function ReyearItemFromTimeline(id, year) {
       const it = GetItem(id);
       if (!it) return;
       it.year = oldYear;
-      it.positions.timeline = oldPos || { ...it.positions.timeline };
+      /* oldPos is null when the card had no prior timeline slot — leave null
+         so the render pipeline re-defaults it (spreading null produced {}). */
+      it.positions.timeline = oldPos || null;
       Commit();
       if (window.RDUI && typeof window.RDUI.RenderAll === 'function') window.RDUI.RenderAll();
     }
@@ -46273,7 +46680,9 @@ function StartMarquee(view, wrap, e) {
 
   function onMove(ev) {
     const cx = ev.clientX - rect.left, cy = ev.clientY - rect.top;
-    if (!moved && Math.abs(cx - sx) * Math.abs(cy - sy) < 24) return;
+    /* per-axis threshold — an area product never triggers for a perfectly
+       straight horizontal/vertical shift-drag */
+    if (!moved && Math.abs(cx - sx) < 8 && Math.abs(cy - sy) < 8) return;
     moved = true;
     paintRect(cx, cy);
     lastHits = hitTest(cx, cy, sx, sy);
@@ -46358,7 +46767,7 @@ function AttachCanvasEvents(view) {
 function GetNodeCardHTML(item, view) {
   const pos = (item.positions && item.positions[view]) || { x: 0, y: 0 };
   const group = item.groupId ? GetGroup(item.groupId) : null;
-  const stripe = ItemStripeColor(item);
+  const stripe = ItemStripeColor(item, GetGroup);
   const q = (state.rd.ui && state.rd.ui.search) || '';
   const isBook = item.type === 'book';
   const isThesis = item.type === 'thesis';
@@ -46763,15 +47172,17 @@ function RepelMapNodes(items, PAD_X = 260, PAD_Y = 160) {
       const a = items[i];
       if (!a.positions || !a.positions.map) continue;
       const pa = a.positions.map;
-      const wa = a.type === 'book' ? 170 : 240;
-      const ha = a.type === 'book' ? 220 : 140;
+      /* Real card boxes (TL_CARD_SIZE) — the old 240×140 / 170×220 guesses
+         under-separated cards vertically. */
+      const wa = TlCardSize(a).w;
+      const ha = TlCardSize(a).h;
 
       for (let j = i + 1; j < items.length; j++) {
         const b = items[j];
         if (!b.positions || !b.positions.map) continue;
         const pb = b.positions.map;
-        const wb = b.type === 'book' ? 170 : 240;
-        const hb = b.type === 'book' ? 220 : 140;
+        const wb = TlCardSize(b).w;
+        const hb = TlCardSize(b).h;
 
         const reqX = (wa + wb) / 2 + 25;
         const reqY = (ha + hb) / 2 + 25;
@@ -47460,7 +47871,11 @@ function heatSectionHTML() {
 
   for (let wk = 0; wk < weeks; wk++) {
     for (let dow = 0; dow < 7; dow++) {
-      const d = new Date(start.getTime() + (wk * 7 + dow) * 86400000);
+      /* Local-time date arithmetic: exact-ms steps (start + k*86400000)
+         drifted an hour across DST, pushing today's cell past `end` and
+         silently hiding it from March–October. */
+      const d = new Date(start);
+      d.setDate(d.getDate() + wk * 7 + dow);
       if (d > end) continue;
       const iso = isoDay(d);
       const inYear = rolling || d.getFullYear() === heatYear;
@@ -47547,10 +47962,11 @@ function RenderHeat() {
   el.innerHTML = heatSectionHTML();
 }
 
-let heatEventsBound = false;
+/* Once per page load (flag on window — standalone bundles re-declare module
+   lets inside their page function on every route change). */
 function InitHeatmap() {
-  if (heatEventsBound) return;
-  heatEventsBound = true;
+  if (typeof window === 'undefined' || window.__RD_HEAT_BOUND__) return;
+  window.__RD_HEAT_BOUND__ = true;
 
   document.addEventListener('click', (e) => {
     const mnu = document.getElementById('rd-heat-menu');
@@ -47781,6 +48197,15 @@ function CloseGoalModal() {
   if (modal) modal.classList.add('hidden');
 }
 function InitStatsBar() {
+  /* Document-level listener once per page load; element listeners below must
+     re-bind on every initRDApp (the shell — including this modal — is rebuilt).
+     The flag lives on window: standalone bundles re-declare module state on
+     every route change. */
+  if (typeof window === 'undefined' || window.__RD_STATS_DOC_BOUND__) {
+    initGoalButtons();
+    return;
+  }
+  window.__RD_STATS_DOC_BOUND__ = true;
   document.addEventListener('click', (e) => {
     if (e.target.closest && e.target.closest('#rdGoalSetBtn')) {
       OpenGoalModal();
@@ -47788,8 +48213,12 @@ function InitStatsBar() {
     if (e.target.closest && e.target.closest('#close-goal-modal, #rdGoalCancelBtn')) {
       CloseGoalModal();
     }
+    if (e.target.id === 'rd-goal-modal') CloseGoalModal(); // backdrop click
   });
+  initGoalButtons();
+}
 
+function initGoalButtons() {
   const saveBtn = document.getElementById('rdGoalSaveBtn');
   if (saveBtn) {
     saveBtn.addEventListener('click', () => {
@@ -47813,8 +48242,10 @@ function InitStatsBar() {
   const clearBtn = document.getElementById('rdGoalClearBtn');
   if (clearBtn) {
     clearBtn.addEventListener('click', () => {
-      delete state.rd.goal;
-      delete state.rd.goalStart;
+      /* goal: 0 is the persistent "removed" state — `delete state.rd.goal`
+         resurrected the default 24 on every reload via NormalizeState. */
+      state.rd.goal = 0;
+      state.rd.goalStart = 0;
       persist();
       CloseGoalModal();
       RenderStats();
@@ -47894,6 +48325,9 @@ function RenderResume() {
   el.innerHTML = resumeSectionHTML(items);
 }
 function InitResumeSection() {
+  /* Once per page load — initRDApp re-runs on every tab re-entry. */
+  if (InitResumeSection._docBound) return;
+  InitResumeSection._docBound = true;
   document.addEventListener('click', (e) => {
     const pauseBtn = e.target.closest && e.target.closest('[data-action="resume-pause"]');
     if (pauseBtn) {
@@ -47981,6 +48415,9 @@ function RenderTagBar() {
   el.innerHTML = tagBarHTML();
 }
 function InitTagBar() {
+  /* Once per page load — initRDApp re-runs on every tab re-entry. */
+  if (InitTagBar._docBound) return;
+  InitTagBar._docBound = true;
   document.addEventListener('click', (e) => {
     const clearBtn = e.target.closest && e.target.closest('[data-action="clear-tag-chip"]');
     if (clearBtn) {
@@ -48731,6 +49168,7 @@ function OpenDrawer(id) {
   const item = GetItem(id);
   if (!item) return;
   DrawerItemId = id;
+  if (window.RDDrawer) window.RDDrawer.DrawerItemId = DrawerItemId;
   const root = document.getElementById('rd-drawer-root');
   if (!root) return;
   root.innerHTML = GetDrawerHTML(item);
@@ -48744,6 +49182,7 @@ function OpenDrawer(id) {
 }
 function CloseDrawer() {
   DrawerItemId = null;
+  if (window.RDDrawer) window.RDDrawer.DrawerItemId = null;
   const root = document.getElementById('rd-drawer-root');
   if (!root || !root.innerHTML) return;
   const backdrop = root.querySelector('.rd-drawer-backdrop');
@@ -48758,6 +49197,7 @@ function RefreshDrawer() {
   const root = document.getElementById('rd-drawer-root');
   if (!item || !root) {
     DrawerItemId = null;
+    if (window.RDDrawer) window.RDDrawer.DrawerItemId = null;
     if (root) root.innerHTML = '';
     return;
   }
@@ -49077,7 +49517,13 @@ function GetStatsPopoverHTML() {
     const y = it.year || '????';
     yearCount.set(y, (yearCount.get(y) || 0) + 1);
   });
-  const years = Array.from(yearCount.entries()).sort((a, b) => String(a[0]).localeCompare(String(b[0]))).slice(-12);
+  const years = Array.from(yearCount.entries()).sort((a, b) => {
+    /* Unknown-year bucket ('????') sorts last so it can neither appear as the
+       newest year nor displace a real year from the recent-12 window. */
+    const ya = a[0] === '????' ? Infinity : Number(a[0]);
+    const yb = b[0] === '????' ? Infinity : Number(b[0]);
+    return (ya - yb) || String(a[0]).localeCompare(String(b[0]));
+  }).slice(-12);
   const maxY = Math.max(1, ...years.map(([, n]) => n));
   const histogram = years.map(([y, n]) =>
     `<div class="rd-stats-year" title="${y}: ${n} item(s)">
@@ -49202,6 +49648,9 @@ function OpenDuplicatesModal() {
   `;
   root.dataset.dupCount = String(clusters.length);
   DupCtx = clusters;
+  /* window.RDHealthModal captured the initial [] at module-eval; reassigning
+     the let binding alone left every window consumer reading a dead array. */
+  if (window.RDHealthModal) window.RDHealthModal.DupCtx = DupCtx;
 }
 function GetMergeHTML() {
   const FIELDS = [
@@ -49301,9 +49750,26 @@ function OpenMergeModal(primaryId, secondaryIds) {
   const secs = (Array.isArray(secondaryIds) ? secondaryIds : [secondaryIds]).map((id) => GetItem(id)).filter(Boolean);
   if (!p || !secs.length) return;
   MergeCtx = { primaryId: p.id, secondaryIds: secs.map((s) => s.id) };
+  if (window.RDHealthModal) window.RDHealthModal.MergeCtx = MergeCtx;
   const root = document.getElementById('rd-modal-root');
   if (!root) return;
   root.innerHTML = GetMergeHTML();
+}
+
+/* 'merge-drop' (× on a merge chip): keep one participant out of the pending
+   merge and rebuild the dialog. With only the survivor left, close instead. */
+function DropFromMerge(itemId) {
+  if (!MergeCtx) return;
+  MergeCtx.secondaryIds = MergeCtx.secondaryIds.filter((sid) => sid !== itemId);
+  const root = document.getElementById('rd-modal-root');
+  if (!MergeCtx.secondaryIds.length) {
+    MergeCtx = null;
+    if (window.RDHealthModal) window.RDHealthModal.MergeCtx = null;
+    if (root) root.innerHTML = '';
+    return;
+  }
+  if (window.RDHealthModal) window.RDHealthModal.MergeCtx = MergeCtx;
+  if (root) root.innerHTML = GetMergeHTML();
 }
 function ConfirmMerge() {
   if (!MergeCtx) return;
@@ -49320,6 +49786,7 @@ function ConfirmMerge() {
     fields, status, appendNotes: appendNotesFrom.length > 0, appendNotesFrom
   });
   MergeCtx = null;
+  if (window.RDHealthModal) window.RDHealthModal.MergeCtx = null;
   const root = document.getElementById('rd-modal-root');
   if (root) root.innerHTML = '';
   if (window.RDUI && typeof window.RDUI.RenderAll === 'function') window.RDUI.RenderAll();
@@ -49424,6 +49891,7 @@ function GetHealthHTML() {
 }
 function OpenHealthModal(filter) {
   if (typeof filter === 'string') HealthFilter = filter;
+  if (window.RDHealthModal) window.RDHealthModal.HealthFilter = HealthFilter;
   const root = document.getElementById('rd-modal-root');
   if (!root) return;
   root.innerHTML = GetHealthHTML();
@@ -49446,6 +49914,7 @@ if (typeof window !== 'undefined') {
     OpenDuplicatesModal,
     GetMergeHTML,
     OpenMergeModal,
+    DropFromMerge,
     ConfirmMerge,
     GetHealthHTML,
     OpenHealthModal
@@ -49549,10 +50018,10 @@ function PaletteActions() {
     { icon: 'alert', label: 'Find duplicate papers', hint: 'footer chip', run: () => OpenDuplicatesModal() },
     { icon: 'download', label: 'Save standalone HTML', hint: 'one-file export', run: () => { const b = document.querySelector('[data-action="export-standalone"]'); if (b) b.click(); } },
     { icon: 'copy', label: 'Export library as .bib', hint: 'BibTeX file', run: () => { const b = document.querySelector('[data-action="export-bibtex"]'); if (b) b.click(); } },
-    { icon: 'copy', label: 'Export .bib — current filters (' + VisibleItems().length + ' items)', hint: 'subset export', run: () => { if (window.RDExport) window.RDExport.DownloadBibtexFile({ mode: 'visible' }); } },
+    { icon: 'copy', label: 'Export .bib — current filters (' + VisibleItems().length + ' items)', hint: 'subset export', run: () => DownloadBibtexFile({ mode: 'visible' }) },
     { icon: 'download', label: 'Export library as JSON', hint: 'backup', run: () => { const b = document.querySelector('[data-action="export-json"]'); if (b) b.click(); } },
     { icon: 'upload', label: 'Import a .bib file…', hint: 'bulk import', run: () => { const b = document.querySelector('[data-action="import-bibtex-file"]'); if (b) b.click(); } },
-    { icon: 'spark', label: 'Toggle light / dark theme', hint: 'appearance', run: () => { const b = document.getElementById('rd-theme-btn'); if (b) b.click(); } },
+    { icon: 'spark', label: 'Toggle light / dark theme', hint: 'appearance', run: () => { const b = document.getElementById('theme-toggle-btn') || document.getElementById('rd-theme-btn'); if (b) b.click(); } },
     { icon: 'help', label: 'Help & keyboard shortcuts', hint: '?', kbd: '?', run: () => ShowHelpPanel() }
   ];
   if (tab === 'timeline' || tab === 'map' || tab === 'group') {
@@ -49568,7 +50037,7 @@ function PaletteActions() {
         icon: 'network',
         label: 'Auto-arrange map',
         hint: 'layout',
-        run: () => { const b = document.querySelector('#panel-map [data-action="auto-arrange"]'); if (b) b.click(); }
+        run: () => { const b = document.querySelector('#panel-map [data-action="relayout"]'); if (b) b.click(); }
       });
     }
   }
@@ -49695,6 +50164,7 @@ function PaletteRun(idx) {
 }
 function OpenPalette() {
   PaletteState = { open: true, query: '', active: 0, entries: [] };
+  if (window.RDHelpModal) window.RDHelpModal.PaletteState = PaletteState;
   RenderPalette();
 }
 function ClosePalette() {
@@ -49702,7 +50172,13 @@ function ClosePalette() {
   PaletteState.open = false;
   RenderPalette();
 }
+
+/* Global keydown binds once per page load — initRDApp re-runs on every tab
+   re-entry, and duplicated handlers made Ctrl+K open-then-close the palette.
+   Flag on window: standalone bundles re-declare module lets per route change. */
 function InitGlobalKeys() {
+  if (typeof window === 'undefined' || window.__RD_GLOBAL_KEYS_BOUND__) return;
+  window.__RD_GLOBAL_KEYS_BOUND__ = true;
   document.addEventListener('keydown', (e) => {
     if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
       e.preventDefault();
@@ -49726,6 +50202,8 @@ function InitGlobalKeys() {
       CloseQueue();
       CloseStatsPopover();
       CloseHelpPanel(false);
+      CloseGoalModal();
+      CloseLinkFloatingPanel();
       const dd = document.getElementById('sections-dropdown-window');
       if (dd) dd.classList.add('hidden');
       return;
@@ -50296,7 +50774,7 @@ async function FetchBundle(files) {
 }
 
 function EscapeJsonForScript(dataJson) {
-  return dataJson.replace(/</g, '\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
+  return dataJson.replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
 }
 async function buildSaveHtml(stateData) {
   const dataJson = EscapeJsonForScript(JSON.stringify({ rd: stateData }, null, 2));
@@ -50840,12 +51318,26 @@ function StartGroupInlineRename(groupId) {
 async function CopyBibtexForItem(id) {
   const item = GetItem(id);
   if (!item) return;
-  const bib = ItemToBibtex(item);
+  /* Seed the key generator with the library's existing keys so a fresh key
+     for this item cannot collide with another item's key. */
+  const existingKeys = new Set(
+    GetAllItems().filter((i) => i.bibtexKey && i.id !== item.id).map((i) => i.bibtexKey)
+  );
+  const bib = ItemToBibtex(item, existingKeys);
   const ok = await CopyToClipboard(bib);
   if (ok) ShowToast('success', 'BibTeX copied', item.bibtexKey || item.title);
   else ShowToast('error', 'Copy failed', 'Browser blocked clipboard access.');
 }
+
+/* Document-level listeners are bound exactly once per page load: initRDApp
+   re-runs on every tab re-entry / in-tab hashchange, and re-adding these
+   made every delegated action fire N times. The flag lives on window because
+   the standalone bundles re-declare module lets inside LoadRDPage() on every
+   route change. */
 function InitDelegatedEvents() {
+  if (typeof window === 'undefined') return;
+  if (window.__RD_DELEGATED_EVENTS_BOUND__) return;
+  window.__RD_DELEGATED_EVENTS_BOUND__ = true;
   document.addEventListener('click', async (e) => {
     const linkBadge = e.target.closest('.rd-link-badge');
     const linkPath = e.target.closest('.rd-link-path');
@@ -51038,8 +51530,7 @@ function InitDelegatedEvents() {
           return;
         }
         case 'add-group': {
-          const g = state.rd.groupOrder.length ? GetGroup(state.rd.groupOrder[0]) : null;
-          const newG = window.RDState.AddGroup('');
+          AddGroup('');
           ShowToast('success', 'Group created', 'Double-click its name to rename it.');
           RenderAll(); return;
         }
@@ -51060,16 +51551,14 @@ function InitDelegatedEvents() {
           return;
         }
         case 'relayout': {
-          if (window.RDState && typeof window.RDState.RelayoutAll === 'function') {
-            window.RDState.RelayoutAll(actionEl.dataset.view);
-          }
+          RelayoutAll(actionEl.dataset.view);
           RenderAll();
           ShowToast('info', 'Layout reset', 'Cards snapped back to default arrangement.');
           return;
         }
         case 'reset-view': {
           const view = actionEl.dataset.view;
-          if (window.RDState) window.RDState.SetView(view, { x: 0, y: 0, k: 1 });
+          SetView(view, { x: 0, y: 0, k: 1 });
           ApplyView(view); return;
         }
         case 'fit-view': FitView(actionEl.dataset.view); return;
@@ -51107,12 +51596,6 @@ function InitDelegatedEvents() {
         case 'clear-search': {
           SetUI({ search: '' });
           RenderAll(); return;
-        }
-        case 'toggle-theme': {
-          const next = state.rd.ui.theme === 'light' ? 'dark' : 'light';
-          SetUI({ theme: next });
-          ApplyTheme();
-          return;
         }
         case 'toggle-starred-filter': {
           SetUI({ starredOnly: !state.rd.ui.starredOnly });
@@ -51214,6 +51697,7 @@ function InitDelegatedEvents() {
           return;
         }
         case 'merge-confirm': ConfirmMerge(); return;
+        case 'merge-drop': DropFromMerge(id); return;
         case 'dup-dismiss-all': {
           if (window.RDHealthModal && window.RDHealthModal.DupCtx) {
             window.RDHealthModal.DupCtx.forEach((c) => window.RDHealthModal.DupDismissed.add(c.items.map((i) => i.id).sort().join('|')));
@@ -51453,7 +51937,6 @@ function initRDApp(container) {
   InitDelegatedEvents();
   InitToolbar();
   InitTabbar();
-  InitSectionsDropdown();
   InitListDnD();
   InitQueueDnD();
   AttachCanvasEvents('timeline');
@@ -51465,6 +51948,13 @@ function initRDApp(container) {
   InitGlobalKeys();
   InitLinkModal();
   ApplyTheme();
+  /* The shared theme toggle only flips <html data-theme>. Re-mirror R&D's
+     containers (#root, .rd-app) on every change — stale attributes on them
+     let higher-specificity token selectors pin the previous theme. */
+  if (typeof MutationObserver !== 'undefined' && !window.__RD_THEME_OBSERVER__) {
+    window.__RD_THEME_OBSERVER__ = new MutationObserver(() => ApplyTheme());
+    window.__RD_THEME_OBSERVER__.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  }
 
   const modalRoot = document.getElementById('rd-modal-root');
   if (modalRoot) {
@@ -51501,6 +51991,10 @@ function initRDApp(container) {
     openLinkPanel: (id) => OpenLinkFloatingPanel(id),
     onNotes: null
   };
+  /* Shared importer hook (00_Components/04_Import_Export.js): normalized
+     replace + persist + full re-render. Raw Object.assign on window.RDState
+     bypassed NormalizeState and left the UI stale. */
+  window.RD.ReplaceAll = (newRd) => { ReplaceAll(newRd); RenderAll(); };
 
   window.RDUI = {
     RenderAll,

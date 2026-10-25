@@ -17,7 +17,8 @@ import {
   ApplyView,
   EnsureMinimap,
   ScreenToWorld,
-  MarkDragMoved
+  MarkDragMoved,
+  TlCardSize
 } from './02_Timeline_View.js';
 import { ShowToast } from '../04_Modals/01_Modal_Core.js';
 import { renderMathPreview } from '../04_Modals/08_Link_Modal.js';
@@ -141,15 +142,17 @@ export function RepelMapNodes(items, PAD_X = 260, PAD_Y = 160) {
       const a = items[i];
       if (!a.positions || !a.positions.map) continue;
       const pa = a.positions.map;
-      const wa = a.type === 'book' ? 170 : 240;
-      const ha = a.type === 'book' ? 220 : 140;
+      /* Real card boxes (TL_CARD_SIZE) — the old 240×140 / 170×220 guesses
+         under-separated cards vertically. */
+      const wa = TlCardSize(a).w;
+      const ha = TlCardSize(a).h;
 
       for (let j = i + 1; j < items.length; j++) {
         const b = items[j];
         if (!b.positions || !b.positions.map) continue;
         const pb = b.positions.map;
-        const wb = b.type === 'book' ? 170 : 240;
-        const hb = b.type === 'book' ? 220 : 140;
+        const wb = TlCardSize(b).w;
+        const hb = TlCardSize(b).h;
 
         const reqX = (wa + wb) / 2 + 25;
         const reqY = (ha + hb) / 2 + 25;

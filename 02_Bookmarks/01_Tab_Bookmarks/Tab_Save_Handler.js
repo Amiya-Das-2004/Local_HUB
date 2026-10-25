@@ -48,7 +48,9 @@ function syncTabStatesToDOM(doc) {
       }
     }
 
-    if (!foundData) {
+    // Bookmarks is excluded: this shell always has window.BookmarkState loaded,
+    // and the old shared localStorage keys leaked data between different files.
+    if (!foundData && id !== 'Bookmarks') {
       const cacheKeys = [id + '_Local_Cache', id.replace(/Data$/, '') + '_Local_Cache', id];
       for (const ck of cacheKeys) {
         try {
@@ -171,7 +173,8 @@ const sharedComponentFiles = [
   '00_Components/04_Import_Export.js',
   '00_Components/05_Save_Button.js',
   '00_Components/06_Color_Selector.js',
-  '00_Components/09_Icon_Button.js'
+  '00_Components/09_Icon_Button.js',
+  '00_Components/10_Recovery.js'
 ];
 
 const tabHandlerFiles = [

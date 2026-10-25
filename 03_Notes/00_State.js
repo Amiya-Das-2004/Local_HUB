@@ -1,4 +1,5 @@
 import { clearAllBlockHistory } from './Writing_Engine/Block_History.js';
+import { OfferRecoverySnapshot, WriteRecoverySnapshot, ClearRecoverySnapshot, PurgeLegacyRecoveryKeys } from '../00_Components/10_Recovery.js';
 
 export const DEFAULT_GLOBAL_MACROS = {
   equation: `\\newcommand{\\mb}[1]{\\mathbf{#1}}
@@ -198,14 +199,18 @@ export function LoadNotesState(forceReload = false) {
     }
   }
 
-  // 1. Wipe any stale leftover cache from previous files or sessions
-  try {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem('NotesData_Local_Cache');
-    }
-  } catch (e) { }
+  // 1. Purge legacy fixed-key caches (older builds shared them across files)
+  PurgeLegacyRecoveryKeys();
 
-  // 2. Pure, clean load directly from HTML data vault (#NotesData)
+  // 2. Offer this file's crash-recovery snapshot (sessionStorage, path-scoped).
+  //    Never auto-applies — the user picks Restore or Discard in the banner.
+  OfferRecoverySnapshot({
+    baseKey: 'NotesData',
+    label: 'notes',
+    onRestore: (snapData) => RestoreNotesFromSnapshot(snapData)
+  });
+
+  // 3. Pure, clean load directly from HTML data vault (#NotesData)
   if (domState) {
     Object.assign(NotesState, {
       vaultMeta: domState.vaultMeta,
@@ -441,8 +446,38 @@ function persistNotesToStorageImmediate() {
     dataBlock.textContent = JSON.stringify(NotesState, null, 2);
   }
 
+  // 2. Keep this file's path-scoped crash-recovery snapshot in sessionStorage
+  //    in sync with the working buffer (survives reloads/crashes, never leaks
+  //    into other files or tabs).
+  WriteRecoverySnapshot('NotesData', NotesState);
+
   // Pure in-memory session: do NOT persist unsaved working notes buffer to browser localStorage.
   // This ensures zero cross-file cache contamination between different standalone LocalHUB files.
+}
+
+// Applies a user-approved recovery snapshot (Restore banner) to the live state:
+// sanitizes notes, persists to the DOM vault and re-renders. The baseline is
+// deliberately NOT recaptured — it still reflects the on-disk vault, so the
+// restored edits keep counting as unsaved until the next SAVE.
+function RestoreNotesFromSnapshot(snapData) {
+  if (!snapData || typeof snapData !== 'object') return;
+  Object.assign(NotesState, {
+    vaultMeta: snapData.vaultMeta || NotesState.vaultMeta,
+    globalMacros: snapData.globalMacros || NotesState.globalMacros,
+    tableTemplates: Array.isArray(snapData.tableTemplates) ? snapData.tableTemplates : NotesState.tableTemplates,
+    tikzTemplates: Array.isArray(snapData.tikzTemplates) ? snapData.tikzTemplates : NotesState.tikzTemplates,
+    bibliography: Array.isArray(snapData.bibliography) ? snapData.bibliography : NotesState.bibliography,
+    citationStyle: typeof snapData.citationStyle === 'string' ? snapData.citationStyle : NotesState.citationStyle,
+    folders: Array.isArray(snapData.folders) ? snapData.folders : NotesState.folders,
+    tags: Array.isArray(snapData.tags) ? snapData.tags : NotesState.tags,
+    notes: Array.isArray(snapData.notes) ? snapData.notes.map(sanitizeNote) : NotesState.notes
+  });
+  if (typeof window !== 'undefined') window.NotesState = NotesState;
+  persistNotesToStorageImmediate();
+  SetNotesUnsavedChanges(true);
+  if (typeof window !== 'undefined' && typeof window.initNotesApp === 'function') {
+    window.initNotesApp();
+  }
 }
 
 // Immediately flushes any pending debounced state writes to the DOM vault
@@ -515,6 +550,7 @@ export function ClearNotesLocalCache() {
   } catch (e) {
     console.warn('Failed to clear NotesData_Local_Cache:', e);
   }
+  ClearRecoverySnapshot('NotesData');
   if (typeof clearAllBlockHistory === 'function') {
     clearAllBlockHistory();
   }

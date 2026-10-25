@@ -1,3 +1,5 @@
+import { ReadRecoverySnapshot } from './10_Recovery.js';
+
 // Save button svg logo
 export function GetSaveButtonHTML() {
   return `
@@ -176,18 +178,22 @@ function syncAllStatesToDOM(doc) {
       }
     }
 
-    // 2. Check localStorage cache for latest edits only if not found in live window state
+    // 2. Fallback to this file's path-scoped recovery snapshot (sessionStorage)
+    //    only if not found in live window state. The old shared localStorage
+    //    keys are NOT read here anymore — they leaked data between different
+    //    LocalHUB files sharing one origin.
     if (!foundData) {
-      const cacheKeys = [id + '_Local_Cache', id.replace(/Data$/, '') + '_Local_Cache', id];
-      if (id === 'RDData') cacheKeys.push('rd_library_v1');
-      for (const ck of cacheKeys) {
+      const snap = ReadRecoverySnapshot(id);
+      if (snap && snap.data && typeof snap.data === 'object') {
+        foundData = (id === 'RDData' && snap.data.rd) ? snap.data.rd : snap.data;
+      }
+      if (!foundData && id === 'RDData') {
         try {
-          const cached = localStorage.getItem(ck);
-          if (cached) {
-            const parsed = JSON.parse(cached);
+          const rdRaw = localStorage.getItem('rd_library_v1');
+          if (rdRaw) {
+            const parsed = JSON.parse(rdRaw);
             if (parsed && typeof parsed === 'object') {
-              foundData = (id === 'RDData' && parsed.rd) ? parsed.rd : parsed;
-              break;
+              foundData = parsed.rd ? parsed.rd : parsed;
             }
           }
         } catch (e) { }
@@ -289,7 +295,8 @@ export async function SaveAndDownloadApp() {
       '00_Components/06_Color_Selector.js',
       '00_Components/07_Blob_Store.js',
       '00_Components/08_Research_Library.js',
-      '00_Components/09_Icon_Button.js'
+      '00_Components/09_Icon_Button.js',
+      '00_Components/10_Recovery.js'
     ];
 
     const landingFiles = [
@@ -737,8 +744,12 @@ export function ShowUnsavedRefreshModal() {
   // Pure in-memory sessions rely on standard browser beforeunload navigation prompts
 }
 
-// Clears all unsaved local cache keys from browser localStorage
-export function ClearAllLocalCaches() {
+// Clears all unsaved local cache keys from browser localStorage.
+// preserveRecovery=true (boot sweep only) keeps the path-scoped sessionStorage
+// recovery snapshots alive — they must survive exits/reloads to be offerable;
+// the save flow (preserveRecovery=false default) clears them because the
+// edits are now permanent inside the downloaded file.
+export function ClearAllLocalCaches(preserveRecovery = false) {
   if (typeof localStorage === 'undefined') return;
   // 1. Clear known tab cache keys based on DOM data blocks
   if (typeof document !== 'undefined') {
@@ -787,11 +798,16 @@ export function ClearAllLocalCaches() {
     window.__NOTES_UNSAVED__ = false;
     window.__BOOKMARKS_UNSAVED__ = false;
     window.__BOOKMARKS_UNSAVED_COUNT__ = 0;
-    if (typeof window.ClearNotesLocalCache === 'function') {
-      try { window.ClearNotesLocalCache(); } catch (e) { }
-    }
-    if (typeof window.ClearBookmarkLocalCache === 'function') {
-      try { window.ClearBookmarkLocalCache(); } catch (e) { }
+    if (!preserveRecovery) {
+      // Full clear (post-save): recovery snapshots die too — the downloaded
+      // file now contains the edits. The boot sweep (preserveRecovery=true)
+      // must NOT touch them.
+      if (typeof window.ClearNotesLocalCache === 'function') {
+        try { window.ClearNotesLocalCache(); } catch (e) { }
+      }
+      if (typeof window.ClearBookmarkLocalCache === 'function') {
+        try { window.ClearBookmarkLocalCache(); } catch (e) { }
+      }
     }
   }
   const saveBtn = typeof document !== 'undefined' ? document.getElementById('save-btn') : null;
@@ -838,12 +854,13 @@ export function InitSaveButtonLogic() {
       }
     });
 
-    // Immediately wipe localStorage cache when leaving or closing the page
-    window.addEventListener('pagehide', () => {
-      ClearAllLocalCaches();
-    });
+    // NOTE: no pagehide wipe — sessionStorage recovery snapshots are per-tab
+    // and path-scoped, so they can never leak into another file, and wiping
+    // on exit destroyed the crash-recovery data right when it was needed.
+    // Legacy localStorage keys are purged on load by each tab's state module.
 
-    // Clean sweep on initial startup to ensure no stale cache from other files contaminates this session
-    ClearAllLocalCaches();
+    // Clean sweep on initial startup to ensure no stale cache from other files
+    // contaminates this session (recovery snapshots preserved)
+    ClearAllLocalCaches(true);
   }
 }

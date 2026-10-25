@@ -80,8 +80,9 @@ function MapOpenAlex(rec, doi) {
   ));
   const bib = rec.biblio || {};
   const pages = [bib.first_page, bib.last_page].filter(Boolean).join('-');
+  const bookish = rec.type === 'book' || rec.type === 'book-chapter' || rec.type === 'monograph';
   return {
-    type: rec.type === 'book' ? 'book' : 'paper',
+    type: bookish ? 'book' : 'paper',
     title: String(rec.title || rec.display_name || '').trim(),
     authors,
     journal: rec.primary_location && rec.primary_location.source

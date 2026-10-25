@@ -59,8 +59,9 @@ export function TriggerTabExport() {
 }
 
 // Dedicated R&D tab import with multi-tab envelope resilience.
-// Accepted shapes: { RD: {...} } slice of Local_HUB_DATA.json, { rd: {...} }
-// core snapshot, or a bare library object with an items array.
+// Accepted shapes: { RDData: {...} } slice of Local_HUB_DATA.json (the key
+// 00_Components/04_Import_Export.js actually writes), legacy { RD: {...} },
+// { rd: {...} } core snapshot, or a bare library object with an items array.
 export function TriggerTabImport(onSuccess = null) {
   const input = document.createElement('input');
   input.type = 'file';
@@ -78,8 +79,11 @@ export function TriggerTabImport(onSuccess = null) {
 
         // Resilient extraction: envelope slice → core snapshot → bare library
         let targetData = null;
-        if (importedData.RD && typeof importedData.RD === 'object') {
-          targetData = importedData.RD.rd || importedData.RD;
+        const envelopeSlice = (importedData.RDData && typeof importedData.RDData === 'object')
+          ? importedData.RDData
+          : ((importedData.RD && typeof importedData.RD === 'object') ? importedData.RD : null);
+        if (envelopeSlice) {
+          targetData = envelopeSlice.rd || envelopeSlice;
         } else if (importedData.rd && typeof importedData.rd === 'object') {
           targetData = importedData.rd;
         } else if (Array.isArray(importedData.items)) {
@@ -113,8 +117,9 @@ export function TriggerTabImport(onSuccess = null) {
           }
         }
 
-        // 3. Save to R&D's localStorage store (persist() shape: { rd: … });
-        //    loadState picks the newest candidate on reload
+        // 3. Save to R&D's localStorage store (persist() shape: { rd: … }).
+        //    loadState() deletes this key at boot (vault-first), but the three
+        //    save/export handlers read it as a fallback data source.
         try {
           if (typeof localStorage !== 'undefined') {
             localStorage.setItem('rd_library_v1', JSON.stringify({ rd: cleanData }));
@@ -145,6 +150,13 @@ export function TriggerTabImport(onSuccess = null) {
 // them; every other data-action passes through untouched.
 export function InitTabImportExportOverride() {
   if (typeof document === 'undefined') return;
+  /* Once per page load — the tab page re-runs the whole bundle (and this init)
+     on every in-tab hashchange. Flag on window: the flat bundle re-declares
+     module lets inside LoadThisPage() on every call. */
+  if (typeof window !== 'undefined') {
+    if (window.__RD_TAB_IO_BOUND__) return;
+    window.__RD_TAB_IO_BOUND__ = true;
+  }
   document.addEventListener('click', (e) => {
     const el = e.target && e.target.closest ? (e.target.closest('[data-action]') || e.target.closest('#btn-import, #btn-export')) : null;
     if (!el) return;

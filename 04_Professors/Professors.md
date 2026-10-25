@@ -25,12 +25,6 @@ Professors/
 │   ├── 03_Theme_Toggle.js
 │   └── 04_Footer.js
 │
-├── 06_Tab_Professors/                ← isolated tab shell (blueprint pattern, 2026-10-03)
-│   ├── Professor.html                ← tab shell moved here from the module root
-│   ├── Tab_Save_Handler.js           ← header Save → compiles this tab into one standalone HTML
-│   ├── Tab_Logo_Handler.js           ← brand click stays inside the isolated tab
-│   └── Tab_Import_Export_Handler.js  ← header Import/Export → Professors_DATA.json (envelope-resilient)
-│
 ├── 02_Dashboard/                     ← widgets above the list
 │   ├── 01_Stats_Bar.js
 │   ├── 02_Resume_Section.js
@@ -92,7 +86,7 @@ Professors/
 
 - **Data vault**: `00_State.loadState()` reads `<script type="application/json" id="ProfessorsData">` first, then falls back to the original `#app-data` id, then compares against `localStorage['profftrack:v1']` (same store key as proff.html) and keeps whichever is newer. `persist()` writes localStorage, mirrors the live library to `window.ProfessorsState` (the LocalHUB Save button's vault-sync candidate key), and syncs the vault tag when present.
 - **Entry**: `Professors.js → initProfessorsApp()` mounts `<div id="ProfessorsApp">` — inside the shell's `#root` when present, else on `<body>` — with the full page skeleton (header + 5 content sections + footer + 9 modals + toast + back-to-top), runs every `Init*` binder, then boots exactly like proff.html (loadState → sanitizeIds → theme → `ui.sort` from select → render).
-- **Index.html (DONE)**: three touch points —
+- **Index.html (DONE, re-verified 2026-10-25)**: three touch points —
   1. `LandingPageData` orb: `{ "Name": "PROFESSORS", "Url": "#Professors", "PageUrl": "04_Professors/06_Tab_Professors/Professor.html", "Color": 1013358 }` (clicking the orb opens the tab shell directly, same as BOOKMARK/NOTES; `01_Landing_Page/03_Orbs.js` handles that via `PageUrl`)
   2. Vault tag `<script type="application/json" id="ProfessorsData">` in `<head>`
   3. Route in `handleRoute()`: `#professors` → `import('./04_Professors/Professors.js')` → `mod.initProfessorsApp()`
@@ -110,8 +104,9 @@ Professors/
 | | `replaceState(next)` | — (ESM adapter) | Only 00_State may reassign `state`; import handlers/clear-all call this (ES module bindings are read-only for importers). |
 | | `paperPasses(pp)` | 1392 - 1396 | Status-filter + tag-filter gate shared by every renderer. |
 | | `persist()` | 1505 - 1508 | Writes `state` to localStorage, calls `window.MarkUnsavedChanges(true)`, and syncs the `#ProfessorsData`/`#app-data` vault tag when present. |
-| | `isEmptyData(d)` (private) | 1509 - 1511 | True when a data candidate has no professors array content. |
-| | `loadState()` | 1512 - 1536 | Loads state strictly from the embedded `#ProfessorsData` HTML vault, wiping any leftover machine-local cache to eliminate cross-file contamination; seeds sample library on clean first run. |
+| | `isEmptyData(d)` | — | REMOVED 2026-10-25 (dead code — nothing compared data candidates anymore). |
+| | `loadState()` | 1512 - 1536 | Loads state strictly from the embedded `#ProfessorsData` HTML vault, wiping any leftover machine-local cache to eliminate cross-file contamination; seeds sample library on clean first run. **2026-10-25:** both branches now end with `MigratePapersToRegistry()` so legacy embedded `papers` arrays become registry items BEFORE any decoration (previously the decoration orphaned them and the next save erased them — see Registry bridge below). |
+| | `SeedSampleLibrary()` | — (added 2026-10-25) | "Load sample library" state op: resets `state` to fresh `seedSamples()` output, then runs `MigratePapersToRegistry()` — sample papers are born as registry items with `paperRefs`, never as legacy arrays. Used by the empty-state seed button (`01_Prof_Cards.js`). |
 | | `ClearProfessorsLocalCache()` | — | Purges `profftrack:v1` from browser `localStorage`. |
 | | `sanitizeIds()` | 1587 - 1599 | Repairs records saved by older builds (missing ids/status, malformed rereads/journal arrays). |
 | | `getProf(id)` | 1635 - 1638 | Finds a professor by id. |
@@ -122,6 +117,18 @@ Professors/
 | | `collegeKey(p)` | 1685 | Normalized college grouping key. |
 | | `collegeBestRank(profs)` | 1686 - 1692 | Best (lowest) QS rank within a set of professors. |
 | | `filteredSorted()` | 1693 - 1737 | Applies search + status/tag/fav filters, then sorts by name/papers/recent or QS college grouping (favorites first, manual drag order, then name). |
+
+### Registry bridge (spec §15-20, PapersData / RL_*)
+
+Canonical papers live in the shared `#PapersData` vault (`00_Components/08_Research_Library.js`, `RL_*` API); ProffTrack professors keep lightweight `paperRefs: [{ paperId, journal, addedAt }]`. `prof.papers` stays readable through a computed getter whose writes flow back into the registry, so all UI code paths keep working unchanged.
+
+- **`decorateProf(p)` (private)** — installs the `papers` getter on a professor. **2026-10-25:** now migration-safe — a professor still carrying a legacy embedded `papers` array has those papers converted into registry items (`MigrateLegacyPaper`) BEFORE the getter replaces the array (the getter reads `paperRefs` only, so decorating a never-migrated professor used to orphan its papers and the next save erased them from the vault). Returns whether a migration happened. The getter is non-enumerable, so `JSON.stringify` (persist/vault/save) serializes only `paperRefs` — vaults become clean after the first migrated save.
+- **`MigrateLegacyPaper(prof, pp)` (exported, added 2026-10-25)** — single canonical home for the legacy-paper → registry conversion (extracted from the old inline sweep): `RL_Upsert` with `professorId` ownership, base64 attachments moved to IndexedDB via `BlobStore_PutDataUrl`, journal carried onto the ref, `addedAt` from `pp.createdAt`. Papers without a status default to `'read'` (statusOf/sanitizeIds convention — the pre-fix mapping flipped them to wishlist).
+- **`MigratePapersToRegistry()` (exported)** — one-time sweep: runs `decorateProf` over every professor, then sets `state.registryMigrated` and persists when anything migrated (or when a non-empty library has never been marked). Called from `loadState()`/`SeedSampleLibrary()`; import paths call it after `sanitizeIds()`. Idempotent — registry items re-upsert by id, never duplicate.
+- **Write routing** — `upsertPaper()` is the only sanctioned paper write from modals/bulk-add; raw `(p.papers = …).push(...)` on a decorated professor throws (`TypeError: … only a getter`, strict-mode ESM) and was the root cause of the 2026-10-25 import/bulk-add crashes.
+
+**Known limitation (registry rollout Phase 0, 2026-10-25):** `Professors_DATA.json` (tab export) and the master `Local_HUB_DATA.json` envelope do **not** carry the `PapersData` slice yet — `RL_ExportSlice()`/`RL_ImportSlice()` are still unwired (Phase 1+). A refs-only export is therefore incomplete as a backup: re-importing it recreates the professors with `paperRefs` that dangle until the matching registry items are imported through the R&D/Papers path. The data itself is safe inside any saved LocalHUB `.html` (the bundler syncs `window.PapersState` → `#PapersData`), and legacy `papers`-array exports/imports convert on the fly via `MigrateLegacyPaper()`.
+
 
 ## 01_Utils.js
 
@@ -248,7 +255,7 @@ Professors/
 | | `paperRowHTML(paper, prof)` | 1999 - 2029 | Collapsed paper row: icon, title, meta (year, venue, stars, status pill, dates, re-read/journal counts). |
 | | `paperDetailHTML(paper, prof)` | 2030 - 2082 | Expanded paper detail: info cells, tags, summary/notes blocks, journal timeline with per-entry delete, and the action row (download paper/attachment/details, copy citation/BibTeX buttons, add journal entry, log re-read, edit, delete). |
 | | `profCardHTML(p)` | 2083 - 2145 (reworked 2026-10-03) | Professor card: grip (drag), **big 64px portrait** (proff.html style — a blank dashed circle when no photo was dropped/pasted/linked, no initials fallback), name/dept/college, QS + count chips, and the **college logo on the far right** (`p.collegeLogo`, 76×54 contained box; self-removes on load error). When open: contact links, area chips, bio, action row, papers block. |
-| | `renderEmptyState()` | 2211 - 2227 | Empty-library state with Add-first-professor and Load-sample buttons. |
+| | `renderEmptyState()` | 2211 - 2227 | Empty-library state with Add-first-professor and Load-sample buttons. **2026-10-25:** the seed button routes through `SeedSampleLibrary()` (00_State) instead of assigning raw `seedSamples()` — sample papers enter the registry and are decorated immediately, so later paper writes stay visible. |
 | | `renderList()` | 2228 - 2257 | Main list render: college-grouped (QS mode) or flat; toggles `.grouped`; no-match state; updates keyboard focus. |
 
 ## 03_Professor_List/02_List_Actions.js
@@ -341,7 +348,7 @@ Professors/
 | `07_Bulk_Add_Modal.js` | `GetBulkModalHTML()` | 1188 - 1216 | Bulk-add dialog (status select + line list). |
 | | `parseBulkLine(line)` | 3224 - 3241 | Extracts URL and year `(2017)` / `— 2019` / `[NeurIPS 2019]`, cleans the remainder into a title. |
 | | `openBulkModal(profId)` | 3242 - 3252 | Targets a professor, resets fields. |
-| | `InitBulkModal()` | 3253 - 3289 | Live "Add N papers" counter; add: skips duplicates by normalized title, applies chosen status + lifecycle dates, `sanitizeIds`, expand + re-render + summary toast. |
+| | `InitBulkModal()` | 3253 - 3289 | Live "Add N papers" counter; add: skips duplicates by normalized title, applies chosen status + lifecycle dates, `sanitizeIds`, expand + re-render + summary toast. **2026-10-25:** each line now goes through `upsertPaper()` (registry-aware) instead of a raw `prof.papers.push(...)` — the raw push threw on decorated professors and bypassed the registry otherwise. |
 
 ## 04_Modals/08_Paste_Import_Modal.js
 
@@ -389,9 +396,9 @@ Professors/
 | File | Functions | Source (proff.html) | Description |
 | :--- | :--- | :--- | :--- |
 | `03_Import.js` | `parseLibraryText(text, name)` (private) | 2910 - 2915 | Accepts a .json export or a saved ProffTrack HTML (extracts the `#app-data` vault). |
-| | `mergeLibrary(incoming)` | 2916 - 2957 | Merge by id or name+college; fills missing fields, never duplicates professors or paper titles. |
+| | `mergeLibrary(incoming)` | 2916 - 2957 | Merge by id or name+college; fills missing fields, never duplicates professors or paper titles. **2026-10-25:** incoming legacy papers merge through `MigrateLegacyPaper(existing, pp)` instead of a raw `existing.papers.push(...)` (which threw `TypeError` on decorated professors — the getter property has no setter); tail order is now `sanitizeIds → MigratePapersToRegistry → persist → render` so imported legacy libraries convert to the registry in the same pass. |
 | | `parseCSV(text)` (private) | 2982 - 3002 | RFC-4180-ish CSV parser (quotes, CRLF, BOM). |
-| | `InitImport()` | 2958 - 2978, 3003 - 3071 | JSON/HTML import (replace empty library or merge) and CSV import (column mapping, status labels, college inheritance, replace-vs-merge). |
+| | `InitImport()` | 2958 - 2978, 3003 - 3071 | JSON/HTML import (replace empty library or merge) and CSV import (column mapping, status labels, college inheritance, replace-vs-merge). **2026-10-25:** both replace-into-empty branches run `MigratePapersToRegistry()` after `sanitizeIds()`. |
 
 ## Professors.js (entry point)
 

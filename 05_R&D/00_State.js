@@ -101,7 +101,6 @@ export function NormalizeState(raw) {
   out.meta = Object.assign(DefaultState().rd.meta, out.meta || {});
 
   const now = new Date().toISOString();
-  const today = now.slice(0, 10);
   out.items = out.items.map((it) => ({
     id: it.id || uid('it'),
     type: ['paper', 'book', 'thesis'].includes(it.type) ? it.type : 'paper',
@@ -129,8 +128,8 @@ export function NormalizeState(raw) {
     tags: Array.isArray(it.tags) ? it.tags : [],
     groupId: it.groupId || null,
     localPath: typeof it.localPath === 'string' ? it.localPath.trim() : '',
-    startedOn: it.startedOn || (it.status === 'reading' ? today : null),
-    finishedOn: it.finishedOn || (it.status === 'read' ? today : null),
+    startedOn: it.startedOn || null,
+    finishedOn: it.finishedOn || null,
     institution: typeof it.institution === 'string' ? it.institution.trim() : '',
     advisor: typeof it.advisor === 'string' ? it.advisor.trim() : '',
     degree: typeof it.degree === 'string' ? it.degree.trim() : '',
@@ -290,6 +289,12 @@ export function CreateItem(fields) {
     color: typeof fields.color === 'string' ? fields.color : '',
     tags: Array.isArray(fields.tags) ? fields.tags : [],
     groupId: fields.groupId || null,
+    localPath: typeof fields.localPath === 'string' ? fields.localPath.trim() : '',
+    startedOn: fields.startedOn || null,
+    finishedOn: fields.finishedOn || null,
+    institution: typeof fields.institution === 'string' ? fields.institution.trim() : '',
+    advisor: typeof fields.advisor === 'string' ? fields.advisor.trim() : '',
+    degree: typeof fields.degree === 'string' ? fields.degree.trim() : '',
     positions: { timeline: null, map: null, group: null },
     createdAt: now,
     updatedAt: now
@@ -318,7 +323,7 @@ export function UpdateItem(id, patch, opts) {
   if (!item) return null;
   const allowed = ['type', 'title', 'authors', 'journal', 'volume', 'issue', 'pages',
     'year', 'publisher', 'doi', 'url', 'bibtexKey', 'status', 'starred', 'important',
-    'notes', 'color', 'tags', 'groupId', 'progress'];
+    'notes', 'color', 'tags', 'groupId', 'progress', 'institution', 'advisor', 'degree', 'localPath'];
   allowed.forEach((k) => {
     if (patch[k] !== undefined) item[k] = patch[k];
   });
@@ -654,6 +659,7 @@ export function GetLinks() {
 export function MatchesFilters(item) {
   const u = state.rd.ui;
   if (u.starredOnly && !item.starred) return false;
+  if (u.tagFilter && !(item.tags || []).some((t) => String(t).toLowerCase() === String(u.tagFilter).toLowerCase())) return false;
   if (u.typeFilter !== 'ALL' && item.type !== u.typeFilter) return false;
   if (u.statusFilter !== 'ALL' && item.status !== u.statusFilter) return false;
   if (u.yearFilter && String(item.year || '????') !== String(u.yearFilter)) return false;
@@ -820,14 +826,20 @@ export function NormKey(s) {
   return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
 }
 
+/* One canonical DOI key normalizer for every duplicate detector: strips
+   https://(dx.)doi.org/ prefixes (URL form) and bare `doi:` prefixes. */
+export function NormalizeDoiKey(raw) {
+  return NormKey(String(raw || '').replace(/^https?:\/\/((dx\.)?doi\.org)\//i, '').replace(/^doi:/i, ''));
+}
+
 export function FindDuplicates(fields, excludeId) {
-  const doi = NormKey(String(fields.doi || '').replace(/^https?:\/(dx\.)?doi\.org\//i, '').replace(/^doi:/i, ''));
+  const doi = NormalizeDoiKey(fields.doi);
   const title = NormKey(fields.title);
   const bib = NormKey(fields.bibtexKey);
   if (!doi && !title && !bib) return [];
   return state.rd.items.filter((it) => {
     if (excludeId && it.id === excludeId) return false;
-    if (doi && it.doi && NormKey(it.doi) === doi) return true;
+    if (doi && it.doi && NormalizeDoiKey(it.doi) === doi) return true;
     if (title && NormKey(it.title) === title) return true;
     if (bib && it.bibtexKey && NormKey(it.bibtexKey) === bib) return true;
     return false;
@@ -845,7 +857,7 @@ export function FindDuplicateClusters() {
   const byDoi = new Map(), byTitle = new Map();
   const reasons = new Map();
   state.rd.items.forEach((it) => {
-    const d = NormKey(String(it.doi || '').replace(/^https?:\/\/((dx\.)?doi\.org)\//i, '').replace(/^doi:/i, ''));
+    const d = NormalizeDoiKey(it.doi);
     const t = NormKey(it.title);
     if (d) {
       if (byDoi.has(d)) { union(byDoi.get(d), it.id); reasons.set(find(it.id), (reasons.get(find(it.id)) === 'title' ? 'doi+title' : 'doi')); }
@@ -897,7 +909,8 @@ export function MergeItems(primaryId, secondaryIds, choices) {
     return pv;
   };
 
-  ['title', 'journal', 'volume', 'issue', 'pages', 'year', 'publisher', 'doi', 'url', 'bibtexKey', 'type']
+  ['title', 'journal', 'volume', 'issue', 'pages', 'year', 'publisher', 'doi', 'url', 'bibtexKey', 'type',
+    'institution', 'advisor', 'degree', 'localPath']
     .forEach((f) => { primary[f] = pickField(f); });
   primary.authors = pickField('authors') || [];
 

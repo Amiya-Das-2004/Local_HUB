@@ -16,6 +16,9 @@ import { OpenDrawer, CloseDrawer } from './03_Drawer.js';
 import { ToggleQueue, CloseQueue } from './04_Queue_Panel.js';
 import { ToggleStatsPopover, CloseStatsPopover } from './05_Stats_Popover.js';
 import { OpenHealthModal, OpenDuplicatesModal } from './06_Health_Modal.js';
+import { CloseGoalModal } from '../02_Dashboard/01_Stats_Bar.js';
+import { CloseLinkFloatingPanel } from './08_Link_Modal.js';
+import { DownloadBibtexFile } from '../05_Data_IO/02_Export.js';
 import { SettleConfirm } from './01_Modal_Core.js';
 
 export function GetHelpPanelHTML() {
@@ -112,10 +115,10 @@ export function PaletteActions() {
     { icon: 'alert', label: 'Find duplicate papers', hint: 'footer chip', run: () => OpenDuplicatesModal() },
     { icon: 'download', label: 'Save standalone HTML', hint: 'one-file export', run: () => { const b = document.querySelector('[data-action="export-standalone"]'); if (b) b.click(); } },
     { icon: 'copy', label: 'Export library as .bib', hint: 'BibTeX file', run: () => { const b = document.querySelector('[data-action="export-bibtex"]'); if (b) b.click(); } },
-    { icon: 'copy', label: 'Export .bib — current filters (' + VisibleItems().length + ' items)', hint: 'subset export', run: () => { if (window.RDExport) window.RDExport.DownloadBibtexFile({ mode: 'visible' }); } },
+    { icon: 'copy', label: 'Export .bib — current filters (' + VisibleItems().length + ' items)', hint: 'subset export', run: () => DownloadBibtexFile({ mode: 'visible' }) },
     { icon: 'download', label: 'Export library as JSON', hint: 'backup', run: () => { const b = document.querySelector('[data-action="export-json"]'); if (b) b.click(); } },
     { icon: 'upload', label: 'Import a .bib file…', hint: 'bulk import', run: () => { const b = document.querySelector('[data-action="import-bibtex-file"]'); if (b) b.click(); } },
-    { icon: 'spark', label: 'Toggle light / dark theme', hint: 'appearance', run: () => { const b = document.getElementById('rd-theme-btn'); if (b) b.click(); } },
+    { icon: 'spark', label: 'Toggle light / dark theme', hint: 'appearance', run: () => { const b = document.getElementById('theme-toggle-btn') || document.getElementById('rd-theme-btn'); if (b) b.click(); } },
     { icon: 'help', label: 'Help & keyboard shortcuts', hint: '?', kbd: '?', run: () => ShowHelpPanel() }
   ];
   if (tab === 'timeline' || tab === 'map' || tab === 'group') {
@@ -131,7 +134,7 @@ export function PaletteActions() {
         icon: 'network',
         label: 'Auto-arrange map',
         hint: 'layout',
-        run: () => { const b = document.querySelector('#panel-map [data-action="auto-arrange"]'); if (b) b.click(); }
+        run: () => { const b = document.querySelector('#panel-map [data-action="relayout"]'); if (b) b.click(); }
       });
     }
   }
@@ -263,6 +266,7 @@ export function PaletteRun(idx) {
 
 export function OpenPalette() {
   PaletteState = { open: true, query: '', active: 0, entries: [] };
+  if (window.RDHelpModal) window.RDHelpModal.PaletteState = PaletteState;
   RenderPalette();
 }
 
@@ -272,7 +276,12 @@ export function ClosePalette() {
   RenderPalette();
 }
 
+/* Global keydown binds once per page load — initRDApp re-runs on every tab
+   re-entry, and duplicated handlers made Ctrl+K open-then-close the palette.
+   Flag on window: standalone bundles re-declare module lets per route change. */
 export function InitGlobalKeys() {
+  if (typeof window === 'undefined' || window.__RD_GLOBAL_KEYS_BOUND__) return;
+  window.__RD_GLOBAL_KEYS_BOUND__ = true;
   document.addEventListener('keydown', (e) => {
     if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
       e.preventDefault();
@@ -296,6 +305,8 @@ export function InitGlobalKeys() {
       CloseQueue();
       CloseStatsPopover();
       CloseHelpPanel(false);
+      CloseGoalModal();
+      CloseLinkFloatingPanel();
       const dd = document.getElementById('sections-dropdown-window');
       if (dd) dd.classList.add('hidden');
       return;
