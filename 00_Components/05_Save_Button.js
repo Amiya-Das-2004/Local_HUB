@@ -399,6 +399,9 @@ export async function SaveAndDownloadApp() {
     ];
 
     const professorFiles = [
+      // Dependency-ordered: 04_Footer.js / 08_Paste_Import_Modal.js /
+      // 01_Save_Button.js (core PROFF_TEMPLATE saver) removed 2026-10-25 —
+      // IO lives in the header now (footer gone; Save is context-aware).
       '04_Professors/00_State.js',
       '04_Professors/01_Utils.js',
       '04_Professors/02_Styles.js',
@@ -406,7 +409,6 @@ export async function SaveAndDownloadApp() {
       '04_Professors/01_HTML_Page/01_Header.js',
       '04_Professors/01_HTML_Page/02_Toolbar.js',
       '04_Professors/01_HTML_Page/03_Theme_Toggle.js',
-      '04_Professors/01_HTML_Page/04_Footer.js',
       '04_Professors/02_Dashboard/01_Stats_Bar.js',
       '04_Professors/02_Dashboard/02_Resume_Section.js',
       '04_Professors/02_Dashboard/03_Heatmap.js',
@@ -420,9 +422,7 @@ export async function SaveAndDownloadApp() {
       '04_Professors/04_Modals/05_Journal_Browser.js',
       '04_Professors/04_Modals/06_Compare_Modal.js',
       '04_Professors/04_Modals/07_Bulk_Add_Modal.js',
-      '04_Professors/04_Modals/08_Paste_Import_Modal.js',
       '04_Professors/04_Modals/09_Shortcuts_Modal.js',
-      '04_Professors/05_Data_IO/01_Save_Button.js',
       '04_Professors/05_Data_IO/02_Export.js',
       '04_Professors/05_Data_IO/03_Import.js',
       '04_Professors/Professors.js'

@@ -187,7 +187,7 @@ export function InitListActions() {
         break;
       case 'del-prof': armConfirm(el, function () { deleteProf(profId); }); break;
       case 'dl-prof-list': downloadProfPapers(prof); break;
-      case 'copy-prof': copyText(JSON.stringify(prof, null, 2), 'Professor copied as JSON — paste it into any ProffTrack library (footer → “Paste professor JSON”).'); break;
+      case 'copy-prof': copyText(JSON.stringify(prof, null, 2), 'Professor copied as JSON.'); break;
       case 'edit-paper': if (paper) openPaperModal(profId, paper); break;
       case 'del-paper': armConfirm(el, function () { deletePaper(profId, paperId); }); break;
       case 'dl-paper': if (paper) downloadPaperFile(paper, prof); break;

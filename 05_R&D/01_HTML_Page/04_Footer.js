@@ -15,10 +15,7 @@ export function GetFooterHTML() {
         <button class="ghost-btn sm dup-chip" id="rd-dups-chip" data-action="open-duplicates" title="Find duplicate papers (same DOI or title) and merge them" hidden>
           ${ICONS.alert}<span id="rd-dups-count"></span>
         </button>
-        <button class="ghost-btn sm" data-action="export-standalone" title="Save / Download Standalone HTML">${ICONS.download}<span>Standalone HTML</span></button>
         <button class="ghost-btn sm" data-action="export-bibtex" title="Download the whole library as a .bib file for LaTeX/JabRef/Zotero">${ICONS.copy}<span>Export .bib</span></button>
-        <button class="ghost-btn sm" data-action="export-json" title="Export library as JSON backup">${ICONS.download}<span>JSON</span></button>
-        <button class="ghost-btn sm" data-action="import-json" title="Import a JSON library backup">${ICONS.upload}<span>Import JSON</span></button>
         <button class="ghost-btn sm" data-action="import-bibtex-file" title="Bulk import a .bib file (multiple entries supported)">${ICONS.upload}<span>Import .bib</span></button>
         <input type="file" id="rd-import-file" accept=".json,application/json" class="hidden" />
         <input type="file" id="rd-bibtex-file" accept=".bib,.bibtex,text/x-bibtex" class="hidden" />

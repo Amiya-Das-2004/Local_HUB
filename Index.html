@@ -794,6 +794,12 @@
         routeRoot.removeAttribute('data-theme');
       }
       document.body.classList.remove('prof-dark');
+      // Full theme-state hygiene: tabs also set data-theme on <html>/<body>
+      // (ProffTrack, R&D) and prof-light on <body> — none of it may survive a
+      // route change; every tab re-applies its own theme on mount.
+      document.body.classList.remove('prof-light');
+      document.body.removeAttribute('data-theme');
+      document.documentElement.removeAttribute('data-theme');
 
       try {
         if (lowerHash.startsWith('#bookmarks')) {

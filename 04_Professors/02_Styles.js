@@ -7,7 +7,11 @@
 
 export function GetProfessorsStyles() {
   return `
-  :root, [data-theme="light"], .prof-light, #ProfessorsApp:not(.prof-dark){
+  /* tokens are carried by body.prof-light/.prof-dark and the app root — NOT :root —
+     so the injected stylesheet can't re-skin the landing page or other tabs
+     (the landing defines its own :root tokens; same-selector conflicts would
+     resolve by style-tag order) */
+  [data-theme="light"], .prof-light, #ProfessorsApp:not(.prof-dark){
     --paper:#f6f3eb;
     --surface:#fffdf8;
     --surface-2:#f4efe3;
@@ -80,9 +84,12 @@ export function GetProfessorsStyles() {
   }
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
   [hidden]{display:none!important}
-  ::selection{background:rgba(17,94,84,.28)}
-  body.prof-dark ::selection,#ProfessorsApp.prof-dark ::selection{background:rgba(31,181,159,.32)}
-  body{
+  body:has(#ProfessorsApp) ::selection{background:rgba(17,94,84,.28)}
+  body.prof-dark:has(#ProfessorsApp) ::selection,#ProfessorsApp.prof-dark ::selection{background:rgba(31,181,159,.32)}
+  /* body-level rules are gated on the mounted app (:has) — an unconditional
+     body{background:var(--paper)} here out-ranked the landing's own body rule
+     by style-tag order and turned the landing page cream after visiting this tab */
+  body:has(#ProfessorsApp){
     font-family:var(--sans);
     color:var(--ink);
     line-height:1.55;
@@ -93,16 +100,16 @@ export function GetProfessorsStyles() {
       var(--paper);
     transition:background .3s ease,color .3s ease;
   }
-  body.prof-dark{
+  body.prof-dark:has(#ProfessorsApp){
     background:
       radial-gradient(1200px 500px at 85% -10%, rgba(31,181,159,.08), transparent 60%),
       radial-gradient(900px 420px at -10% 0%, rgba(229,168,75,.06), transparent 55%),
       var(--paper);
   }
-  body::-webkit-scrollbar{width:11px}
-  body::-webkit-scrollbar-track{background:transparent}
-  body::-webkit-scrollbar-thumb{background:#d0c9b6;border-radius:8px;border:3px solid var(--paper)}
-  body.prof-dark::-webkit-scrollbar-thumb{background:#2a3d35;border-color:var(--paper)}
+  body:has(#ProfessorsApp)::-webkit-scrollbar{width:11px}
+  body:has(#ProfessorsApp)::-webkit-scrollbar-track{background:transparent}
+  body:has(#ProfessorsApp)::-webkit-scrollbar-thumb{background:#d0c9b6;border-radius:8px;border:3px solid var(--paper)}
+  body.prof-dark:has(#ProfessorsApp)::-webkit-scrollbar-thumb{background:#2a3d35;border-color:var(--paper)}
 
   body.modal-open{overflow:hidden}
   button{font-family:inherit;cursor:pointer}
@@ -457,6 +464,8 @@ export function GetProfessorsStyles() {
     display:grid;place-items:center;margin:0 auto 18px;border:1px solid var(--teal-border);
   }
   .empty-ico svg{width:34px;height:34px}
+  /* dark mode: --teal-mid is nearly invisible on the dark teal-soft circle — use the bright accent */
+  #ProfessorsApp.prof-dark .empty-ico,body.prof-dark .empty-ico{color:var(--teal)}
   @media (prefers-reduced-motion:no-preference){
     .empty-ico{animation:floaty 3.4s ease-in-out infinite}
   }

@@ -11,6 +11,8 @@
 
 import { $ } from '../01_Utils.js';
 import { openProfModal } from '../04_Modals/02_Professor_Modal.js';
+import { ExportLibraryJson } from '../05_Data_IO/02_Export.js';
+import { SaveAndDownloadApp } from '../../00_Components/05_Save_Button.js';
 import { SCHOLAR_CAP_SVG, EnsureIconButtonStyles } from '../../00_Components/09_Icon_Button.js';
 
 const PERSON_ADD_SVG = `
@@ -54,19 +56,20 @@ export function GetHeaderHTML() {
           </span>
         </a>
         <div class="header-actions">
-          <button id="importBtn" class="icb-btn" type="button" data-tip="Import — load a saved .json / .html library (CSV import lives in the footer)" aria-label="Import ProfessorTrack data">
+          <button id="importBtn" class="icb-btn" type="button" data-tip="Import — load a saved .json / .html library" aria-label="Import ProfessorTrack data">
             ${IMPORT_SVG}
           </button>
-          <button id="exportBtn" class="icb-btn" type="button" data-tip="Export — download the library as .json (CSV export lives in the footer)" aria-label="Export ProfessorTrack data">
+          <button id="exportBtn" class="icb-btn" type="button" data-tip="Export — download the library as .json" aria-label="Export ProfessorTrack data">
             ${EXPORT_SVG}
           </button>
-          <button id="saveBtn" class="icb-btn icb-accent" type="button" data-tip="Save — download ProfessorTrack as one offline file" aria-label="Save ProfessorTrack data">
+          <button id="saveBtn" class="icb-btn icb-accent" type="button" data-tip="Save — download this workspace as one offline HTML file" aria-label="Save ProfessorTrack data">
             ${SAVE_SVG}
           </button>
           <button id="themeBtn" class="icb-btn" type="button" data-tip="Change theme" aria-label="Change theme">
             <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
             <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
           </button>
+          <input id="importFile" type="file" accept=".html,.htm,.json,application/json,text/html" hidden aria-hidden="true" tabindex="-1"/>
         </div>
       </div>
 
@@ -101,21 +104,26 @@ let scrollBound = false;
 export function InitHeader() {
   $('#addProfBtn').addEventListener('click', function () { openProfModal(null); });
 
-  /* import / export — delegate to the footer's wired IO buttons so the
-     JSON/CSV handlers keep a single canonical binding */
+  /* IO — the header owns Import/Export/Save outright (footer removed
+     2026-10-25). Import opens the header's hidden file input (JSON/HTML
+     handled by InitImport); Export downloads the library JSON directly.
+     Save is context-aware: inside the tab shell the Tab_Save_Handler
+     clone-swaps #saveBtn (→ ProffTrack.html), so this binding only ever
+     fires in the master app, where saving is global (Local_HUB.html). */
   var importBtn = $('#importBtn');
   if (importBtn) {
     importBtn.addEventListener('click', function () {
-      var target = document.getElementById('importJsonBtn');
-      if (target) target.click();
+      var input = document.getElementById('importFile');
+      if (input) input.click();
     });
   }
   var exportBtn = $('#exportBtn');
   if (exportBtn) {
-    exportBtn.addEventListener('click', function () {
-      var target = document.getElementById('exportJsonBtn');
-      if (target) target.click();
-    });
+    exportBtn.addEventListener('click', ExportLibraryJson);
+  }
+  var saveBtn = $('#saveBtn');
+  if (saveBtn) {
+    saveBtn.addEventListener('click', function () { SaveAndDownloadApp(); });
   }
 
   /* chart icon — toggle the reading dashboard (stats bar + heatmap) */

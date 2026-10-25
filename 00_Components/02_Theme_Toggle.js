@@ -105,7 +105,11 @@ export function InitThemeToggleLogic() {
   document.documentElement.setAttribute('data-theme', savedTheme);
   updateThemeToggleButtons(savedTheme);
 
-  if (btn) {
+  if (btn && !btn.__themeToggleBound) {
+    /* Guard against double-binding: InitThemeToggleLogic runs on every
+       InitHeader (per tab boot / re-entry), and a duplicated listener would
+       make one click flip the theme twice — the button then looks dead. */
+    btn.__themeToggleBound = true;
     btn.addEventListener('click', () => {
       const current = document.documentElement.getAttribute('data-theme') || 'dark';
       const next = current === 'dark' ? 'light' : 'dark';

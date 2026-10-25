@@ -12,7 +12,6 @@ import { $ } from '../01_Utils.js';
 import { toggleTheme } from '../01_HTML_Page/03_Theme_Toggle.js';
 import { updateKbFocus, moveKb, toggleKbCard, toggleKbFav, moveFocusedProf } from '../03_Professor_List/02_List_Actions.js';
 import { openCompare } from './06_Compare_Modal.js';
-import { downloadWebsite } from '../05_Data_IO/01_Save_Button.js';
 
 export function openModal(id) {
   var m = $(id);
@@ -101,7 +100,11 @@ export function InitModalCore() {
     }
     if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
       e.preventDefault();
-      downloadWebsite();
+      /* delegate to whatever binding #saveBtn currently carries: the header's
+         context-aware saver (master app → global Local_HUB.html build) or the
+         Tab_Save_Handler override (tab shell → ProffTrack.html) */
+      var saveBtnEl = document.getElementById('saveBtn');
+      if (saveBtnEl) saveBtnEl.click();
       return;
     }
     if (modalOpen() || isTyping(e.target)) return;

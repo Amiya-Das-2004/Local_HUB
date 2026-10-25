@@ -1,0 +1,538 @@
+{
+  "rd": {
+    "version": 1,
+    "goal": 24,
+    "goalStart": 0,
+    "items": [
+      {
+        "id": "it_mvo4t24k75knr",
+        "type": "paper",
+        "title": "GridapTopOpt.jl: a scalable Julia toolbox for level set-based topology optimisation",
+        "authors": [
+          "Wegert, Zachary J",
+          "Manyer, Jordi",
+          "Mallon, Connor N",
+          "Badia, Santiago",
+          "Challis, Vivien J"
+        ],
+        "journal": "Structural and Multidisciplinary Optimization",
+        "volume": "68",
+        "issue": "1",
+        "pages": "22",
+        "year": 2025,
+        "publisher": "Springer",
+        "doi": "",
+        "url": "",
+        "bibtexKey": "wegert2025gridaptopopt",
+        "status": "reading",
+        "progress": 45,
+        "starred": true,
+        "important": false,
+        "notes": "",
+        "color": "",
+        "tags": [
+          "Julia",
+          "level-set",
+          "toolbox"
+        ],
+        "groupId": "grp_mvo4t24j3hxws",
+        "localPath": "",
+        "startedOn": null,
+        "finishedOn": null,
+        "institution": "",
+        "advisor": "",
+        "degree": "",
+        "positions": {
+          "timeline": {
+            "x": 1760,
+            "y": 230
+          },
+          "map": {
+            "x": 90,
+            "y": 90
+          },
+          "group": {
+            "x": 110,
+            "y": 154
+          }
+        },
+        "createdAt": "2026-10-25T17:58:44.996Z",
+        "updatedAt": "2026-10-25T17:58:44.996Z"
+      },
+      {
+        "id": "it_mvo4t24kycerf",
+        "type": "paper",
+        "title": "Stress Constrained Micropolar SIMP-based Topology Optimization",
+        "authors": [
+          "Rahaman, Md Masiur",
+          "Das, Amiya",
+          "Ganguly, Subrata"
+        ],
+        "journal": "International Journal of Solids and Structures",
+        "volume": "",
+        "issue": "",
+        "pages": "",
+        "year": 2025,
+        "publisher": "",
+        "doi": "",
+        "url": "",
+        "bibtexKey": "rahaman2025stress",
+        "status": "reading",
+        "progress": 60,
+        "starred": true,
+        "important": true,
+        "notes": "",
+        "color": "",
+        "tags": [
+          "micropolar",
+          "SIMP",
+          "stress"
+        ],
+        "groupId": "grp_mvo4t24jfus3g",
+        "localPath": "",
+        "startedOn": null,
+        "finishedOn": null,
+        "institution": "",
+        "advisor": "",
+        "degree": "",
+        "positions": {
+          "timeline": {
+            "x": 1760,
+            "y": 388
+          },
+          "map": {
+            "x": 390,
+            "y": 90
+          },
+          "group": {
+            "x": 640,
+            "y": 154
+          }
+        },
+        "createdAt": "2026-10-25T17:58:44.996Z",
+        "updatedAt": "2026-10-25T17:58:44.996Z"
+      },
+      {
+        "id": "it_mvo4t24kwyvcn",
+        "type": "book",
+        "title": "Theory of Micropolar Elasticity",
+        "authors": [
+          "Nowacki, Wiestaw"
+        ],
+        "journal": "Monographs and Surveys in Mechanics",
+        "volume": "",
+        "issue": "",
+        "pages": "",
+        "year": 1970,
+        "publisher": "Oxford University Press",
+        "doi": "",
+        "url": "",
+        "bibtexKey": "nowacki1970theory",
+        "status": "read",
+        "progress": 100,
+        "starred": false,
+        "important": false,
+        "notes": "",
+        "color": "",
+        "tags": [
+          "cosserat",
+          "classic"
+        ],
+        "groupId": "grp_mvo4t24jfus3g",
+        "localPath": "",
+        "startedOn": null,
+        "finishedOn": null,
+        "institution": "",
+        "advisor": "",
+        "degree": "",
+        "positions": {
+          "timeline": {
+            "x": 200,
+            "y": 230
+          },
+          "map": {
+            "x": 690,
+            "y": 90
+          },
+          "group": {
+            "x": 864,
+            "y": 154
+          }
+        },
+        "createdAt": "2026-10-25T17:58:44.996Z",
+        "updatedAt": "2026-10-25T17:58:44.996Z"
+      },
+      {
+        "id": "it_mvo4t24k809uc",
+        "type": "paper",
+        "title": "A 99 line topology optimization code written in Matlab",
+        "authors": [
+          "Sigmund, Ole"
+        ],
+        "journal": "Structural and Multidisciplinary Optimization",
+        "volume": "21",
+        "issue": "2",
+        "pages": "120-127",
+        "year": 2001,
+        "publisher": "Springer",
+        "doi": "",
+        "url": "",
+        "bibtexKey": "sigmund200199",
+        "status": "read",
+        "progress": 100,
+        "starred": true,
+        "important": false,
+        "notes": "",
+        "color": "",
+        "tags": [
+          "matlab",
+          "classic",
+          "SIMP"
+        ],
+        "groupId": "grp_mvo4t24j3hxws",
+        "localPath": "",
+        "startedOn": null,
+        "finishedOn": null,
+        "institution": "",
+        "advisor": "",
+        "degree": "",
+        "positions": {
+          "timeline": {
+            "x": 460,
+            "y": 230
+          },
+          "map": {
+            "x": 990,
+            "y": 90
+          },
+          "group": {
+            "x": 334,
+            "y": 154
+          }
+        },
+        "createdAt": "2026-10-25T17:58:44.996Z",
+        "updatedAt": "2026-10-25T17:58:44.996Z"
+      },
+      {
+        "id": "it_mvo4t24ka0mrj",
+        "type": "book",
+        "title": "Topology Optimization: Theory, Methods, and Applications",
+        "authors": [
+          "Bendsoe, Martin Philip",
+          "Sigmund, Ole"
+        ],
+        "journal": "",
+        "volume": "",
+        "issue": "",
+        "pages": "",
+        "year": 2003,
+        "publisher": "Springer",
+        "doi": "",
+        "url": "",
+        "bibtexKey": "bendsoe2003topology",
+        "status": "reading",
+        "progress": 40,
+        "starred": false,
+        "important": false,
+        "notes": "",
+        "color": "",
+        "tags": [
+          "fundamentals"
+        ],
+        "groupId": "grp_mvo4t24j3hxws",
+        "localPath": "",
+        "startedOn": null,
+        "finishedOn": null,
+        "institution": "",
+        "advisor": "",
+        "degree": "",
+        "positions": {
+          "timeline": {
+            "x": 720,
+            "y": 230
+          },
+          "map": {
+            "x": 90,
+            "y": 320
+          },
+          "group": {
+            "x": 110,
+            "y": 304
+          }
+        },
+        "createdAt": "2026-10-25T17:58:44.996Z",
+        "updatedAt": "2026-10-25T17:58:44.996Z"
+      },
+      {
+        "id": "it_mvo4t24kzwnkb",
+        "type": "paper",
+        "title": "A survey of structural topology optimization methods for composites and cellular structures",
+        "authors": [
+          "Deaton, Joshua D",
+          "Grandhi, Ramana V"
+        ],
+        "journal": "Structural and Multidisciplinary Optimization",
+        "volume": "50",
+        "issue": "3",
+        "pages": "397-424",
+        "year": 2014,
+        "publisher": "Springer",
+        "doi": "",
+        "url": "",
+        "bibtexKey": "deaton2014survey",
+        "status": "read",
+        "progress": 100,
+        "starred": false,
+        "important": false,
+        "notes": "",
+        "color": "",
+        "tags": [
+          "survey"
+        ],
+        "groupId": "grp_mvo4t24jzdma7",
+        "localPath": "",
+        "startedOn": null,
+        "finishedOn": null,
+        "institution": "",
+        "advisor": "",
+        "degree": "",
+        "positions": {
+          "timeline": {
+            "x": 1240,
+            "y": 230
+          },
+          "map": {
+            "x": 390,
+            "y": 320
+          },
+          "group": {
+            "x": 1170,
+            "y": 154
+          }
+        },
+        "createdAt": "2026-10-25T17:58:44.996Z",
+        "updatedAt": "2026-10-25T17:58:44.996Z"
+      },
+      {
+        "id": "it_mvo4t24kwfuif",
+        "type": "thesis",
+        "title": "Level Set Methods for Structural Topology Optimization",
+        "authors": [
+          "Mallon, Connor N"
+        ],
+        "journal": "PhD Thesis — University of Wollongong",
+        "volume": "",
+        "issue": "",
+        "pages": "",
+        "year": 2018,
+        "publisher": "",
+        "doi": "",
+        "url": "",
+        "bibtexKey": "mallon2018level",
+        "status": "unread",
+        "progress": 0,
+        "starred": false,
+        "important": false,
+        "notes": "",
+        "color": "",
+        "tags": [
+          "level-set",
+          "thesis"
+        ],
+        "groupId": "grp_mvo4t24jzdma7",
+        "localPath": "",
+        "startedOn": null,
+        "finishedOn": null,
+        "institution": "",
+        "advisor": "",
+        "degree": "",
+        "positions": {
+          "timeline": {
+            "x": 1500,
+            "y": 230
+          },
+          "map": {
+            "x": 690,
+            "y": 320
+          },
+          "group": {
+            "x": 1394,
+            "y": 154
+          }
+        },
+        "createdAt": "2026-10-25T17:58:44.996Z",
+        "updatedAt": "2026-10-25T17:58:44.996Z"
+      },
+      {
+        "id": "it_mvo4t24kj54rn",
+        "type": "paper",
+        "title": "Efficient topology optimization in MATLAB using 88 lines of code",
+        "authors": [
+          "Andreassen, Erik",
+          "Clausen, Anders",
+          "Schevenels, Mattias",
+          "Lazarov, Boyan S",
+          "Sigmund, Ole"
+        ],
+        "journal": "Structural and Multidisciplinary Optimization",
+        "volume": "43",
+        "issue": "1",
+        "pages": "1-16",
+        "year": 2011,
+        "publisher": "Springer",
+        "doi": "",
+        "url": "",
+        "bibtexKey": "andreassen2011efficient",
+        "status": "unread",
+        "progress": 0,
+        "starred": false,
+        "important": false,
+        "notes": "",
+        "color": "",
+        "tags": [
+          "matlab",
+          "efficient"
+        ],
+        "groupId": "grp_mvo4t24jzdma7",
+        "localPath": "",
+        "startedOn": null,
+        "finishedOn": null,
+        "institution": "",
+        "advisor": "",
+        "degree": "",
+        "positions": {
+          "timeline": {
+            "x": 980,
+            "y": 230
+          },
+          "map": {
+            "x": 990,
+            "y": 320
+          },
+          "group": {
+            "x": 1170,
+            "y": 304
+          }
+        },
+        "createdAt": "2026-10-25T17:58:44.996Z",
+        "updatedAt": "2026-10-25T17:58:44.996Z"
+      }
+    ],
+    "groups": [
+      {
+        "id": "grp_mvo4t24j3hxws",
+        "name": "Topology Optimization",
+        "color": "#8b6dff",
+        "x": 90,
+        "y": 90
+      },
+      {
+        "id": "grp_mvo4t24jfus3g",
+        "name": "Micropolar Theory",
+        "color": "#2dd4bf",
+        "x": 620,
+        "y": 90
+      },
+      {
+        "id": "grp_mvo4t24jzdma7",
+        "name": "Reading List",
+        "color": "#fb923c",
+        "x": 1150,
+        "y": 90
+      }
+    ],
+    "groupOrder": [
+      "grp_mvo4t24j3hxws",
+      "grp_mvo4t24jfus3g",
+      "grp_mvo4t24jzdma7"
+    ],
+    "itemOrder": [
+      "it_mvo4t24k75knr",
+      "it_mvo4t24kycerf",
+      "it_mvo4t24kwyvcn",
+      "it_mvo4t24k809uc",
+      "it_mvo4t24ka0mrj",
+      "it_mvo4t24kzwnkb",
+      "it_mvo4t24kwfuif",
+      "it_mvo4t24kj54rn"
+    ],
+    "links": [
+      {
+        "id": "lnk_mvo4t24llohd1",
+        "from": "it_mvo4t24k809uc",
+        "fromAnchor": "a-e",
+        "to": "it_mvo4t24kj54rn",
+        "toAnchor": "a-w",
+        "label": ""
+      },
+      {
+        "id": "lnk_mvo4t24lw88kz",
+        "from": "it_mvo4t24kj54rn",
+        "fromAnchor": "a-e",
+        "to": "it_mvo4t24kzwnkb",
+        "toAnchor": "a-w",
+        "label": ""
+      },
+      {
+        "id": "lnk_mvo4t24l07ne4",
+        "from": "it_mvo4t24kwyvcn",
+        "fromAnchor": "a-e",
+        "to": "it_mvo4t24kycerf",
+        "toAnchor": "a-w",
+        "label": ""
+      },
+      {
+        "id": "lnk_mvo4t24lpjtqf",
+        "from": "it_mvo4t24ka0mrj",
+        "fromAnchor": "a-e",
+        "to": "it_mvo4t24k75knr",
+        "toAnchor": "a-s",
+        "label": ""
+      }
+    ],
+    "ui": {
+      "activeTab": "list",
+      "activeSection": "ALL",
+      "columnCount": 2,
+      "search": "",
+      "typeFilter": "ALL",
+      "statusFilter": "ALL",
+      "starredOnly": false,
+      "showDashboard": true,
+      "queueOpen": false,
+      "queueOrder": [],
+      "queueSort": "smart",
+      "collapsedSections": [],
+      "minimap": true,
+      "yearFilter": null,
+      "sortMode": "year-desc",
+      "theme": "light",
+      "views": {
+        "timeline": {
+          "x": 0,
+          "y": 0,
+          "k": 1
+        },
+        "map": {
+          "x": 0,
+          "y": 0,
+          "k": 1
+        },
+        "group": {
+          "x": 0,
+          "y": 0,
+          "k": 1
+        }
+      }
+    },
+    "meta": {
+      "seededAt": "2026-10-25T17:58:44.995Z",
+      "exportedAt": null,
+      "exportCount": 0,
+      "embeddedExportedAt": null,
+      "onboarded": false,
+      "createdAt": "2026-10-25T17:58:44.994Z"
+    },
+    "_lastSaved": 1792951127204
+  }
+}

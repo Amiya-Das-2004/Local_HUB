@@ -1,12 +1,10 @@
 /* ==========================================================================
    PROFESSORS — 04_Modals/09_Shortcuts_Modal.js
-   Keyboard shortcuts help dialog (? key / footer "Shortcuts" link).
+   Keyboard shortcuts help dialog (opened with the ? key via 01_Modal_Core;
+   the footer "Shortcuts" link was removed with the footer, 2026-10-25).
    Extracted verbatim from proff.html (markup 1246-1279, helpBtn binding 3682).
    ==========================================================================
 */
-
-import { $ } from '../01_Utils.js';
-import { openModal } from './01_Modal_Core.js';
 
 export function GetShortcutsModalHTML() {
   return `
@@ -47,5 +45,6 @@ export function GetShortcutsModalHTML() {
 }
 
 export function InitShortcutsModal() {
-  $('#helpBtn').addEventListener('click', function () { openModal('#helpModal'); });
+  /* opened via the `?` keyboard shortcut (01_Modal_Core) — the footer
+     Shortcuts link was removed with the footer, 2026-10-25 */
 }

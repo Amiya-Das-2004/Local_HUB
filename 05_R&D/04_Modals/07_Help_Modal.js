@@ -19,7 +19,23 @@ import { OpenHealthModal, OpenDuplicatesModal } from './06_Health_Modal.js';
 import { CloseGoalModal } from '../02_Dashboard/01_Stats_Bar.js';
 import { CloseLinkFloatingPanel } from './08_Link_Modal.js';
 import { DownloadBibtexFile } from '../05_Data_IO/02_Export.js';
+import { RDSaveButton } from '../05_Data_IO/01_Save_Button.js';
 import { SettleConfirm } from './01_Modal_Core.js';
+
+/* Dispatch a delegated action even when its footer button no longer exists:
+   the hub dispatcher handles it directly, and the tab shell's capture-phase
+   override (Tab_Import_Export_Handler) still gets to intercept it. */
+function DispatchAction(action) {
+  const existing = document.querySelector(`[data-action="${action}"]`);
+  if (existing) { existing.click(); return; }
+  const tmp = document.createElement('button');
+  tmp.type = 'button';
+  tmp.setAttribute('data-action', action);
+  tmp.style.display = 'none';
+  document.body.appendChild(tmp);
+  tmp.click();
+  tmp.remove();
+}
 
 export function GetHelpPanelHTML() {
   return `
@@ -113,11 +129,11 @@ export function PaletteActions() {
     { icon: 'search', label: 'Library statistics', hint: 'footer', run: () => { ToggleStatsPopover(); } },
     { icon: 'health', label: 'Library health check', hint: 'H', kbd: 'H', run: () => OpenHealthModal('ALL') },
     { icon: 'alert', label: 'Find duplicate papers', hint: 'footer chip', run: () => OpenDuplicatesModal() },
-    { icon: 'download', label: 'Save standalone HTML', hint: 'one-file export', run: () => { const b = document.querySelector('[data-action="export-standalone"]'); if (b) b.click(); } },
+    { icon: 'download', label: 'Save standalone HTML', hint: 'one-file export', run: () => { if (window.RDSaveButton && typeof window.RDSaveButton.DownloadStandaloneHTML === 'function') window.RDSaveButton.DownloadStandaloneHTML(); else RDSaveButton.DownloadStandaloneHTML(); } },
     { icon: 'copy', label: 'Export library as .bib', hint: 'BibTeX file', run: () => { const b = document.querySelector('[data-action="export-bibtex"]'); if (b) b.click(); } },
     { icon: 'copy', label: 'Export .bib — current filters (' + VisibleItems().length + ' items)', hint: 'subset export', run: () => DownloadBibtexFile({ mode: 'visible' }) },
-    { icon: 'download', label: 'Export library as JSON', hint: 'backup', run: () => { const b = document.querySelector('[data-action="export-json"]'); if (b) b.click(); } },
-    { icon: 'upload', label: 'Import a .bib file…', hint: 'bulk import', run: () => { const b = document.querySelector('[data-action="import-bibtex-file"]'); if (b) b.click(); } },
+    { icon: 'download', label: 'Export library as JSON', hint: 'backup', run: () => DispatchAction('export-json') },
+    { icon: 'upload', label: 'Import a .bib file…', hint: 'bulk import', run: () => DispatchAction('import-bibtex-file') },
     { icon: 'spark', label: 'Toggle light / dark theme', hint: 'appearance', run: () => { const b = document.getElementById('theme-toggle-btn') || document.getElementById('rd-theme-btn'); if (b) b.click(); } },
     { icon: 'help', label: 'Help & keyboard shortcuts', hint: '?', kbd: '?', run: () => ShowHelpPanel() }
   ];

@@ -7,7 +7,6 @@
 */
 
 import { toast, uid, norm, todayISO, statusOf, avatarColor } from './01_Utils.js';
-import { seedSamples } from './03_Seed_Data.js';
 import { RL_Upsert, RL_Get, RL_Delete, RL_FindByTitle } from '../00_Components/08_Research_Library.js';
 import { BlobStore_PutDataUrl } from '../00_Components/07_Blob_Store.js';
 import { render } from './Professors.js';
@@ -68,16 +67,8 @@ export function loadState() {
     return;
   }
 
-  // 3. Fallback to seed samples if no valid embedded state exists
-  state = { version: 1, updatedAt: null, professors: seedSamples() };
-  MigratePapersToRegistry();
-}
-
-/* "Load sample library" (empty state) — seeds through the same registry
-   pipeline as loadState so sample papers are born as registry items. */
-export function SeedSampleLibrary() {
-  state = { version: 1, updatedAt: null, professors: seedSamples() };
-  MigratePapersToRegistry();
+  // 3. No valid embedded state -> start empty (sample library removed 2026-10-25)
+  state = { version: 1, updatedAt: null, professors: [] };
 }
 
 export function ClearProfessorsLocalCache() {
@@ -220,7 +211,7 @@ export function MigrateLegacyPaper(prof, pp) {
 
 /* One-time migration: embedded legacy papers become registry items (base64
    attachments move to IndexedDB); professors keep journal-bearing refs.
-   Called from loadState()/SeedSampleLibrary(); decorateProf() also converts
+   Called from loadState(); decorateProf() also converts
    as a safety net, so no decoration path can orphan legacy papers. */
 export function MigratePapersToRegistry() {
   var changed = false;

@@ -7,12 +7,14 @@
 // (shared components + these handler files + the professor modules) into ONE
 // standalone HTML file and downloads it.
 //
-// The shared Save button on Index.html (all-in-one build) is completely untouched,
-// and the tab's core PROFF_TEMPLATE saver (05_Data_IO/01_Save_Button.js) stays
-// available for non-tab contexts; this override simply wins inside the tab shell
-// because it rebinds #saveBtn after initProfessorsApp() mounts the header.
+// The master Save on Index.html (all-in-one build) is completely untouched —
+// there the header Save button triggers the global build (Local_HUB.html).
+// The old core PROFF_TEMPLATE saver (05_Data_IO/01_Save_Button.js) was removed
+// on 2026-10-25: the tab standalone is the only self-save path left for this
+// tab, and this override wins inside the tab shell because it rebinds #saveBtn
+// after initProfessorsApp() mounts the header.
 
-const TAB_OUTPUT_NAME = 'Professor.html';
+const TAB_OUTPUT_NAME = 'ProffTrack.html';
 
 // Syncs the tab's DOM <script type="application/json"> vault blocks with live
 // window states and localStorage caches (local copy of the proven shared sync
@@ -146,6 +148,8 @@ const tabHandlerFiles = [
 ];
 
 // Same list and order as professorFiles in 00_Components/05_Save_Button.js.
+// 04_Footer.js / 08_Paste_Import_Modal.js / 01_Save_Button.js removed
+// 2026-10-25 (footer gone; IO lives in the header; Save is context-aware).
 const tabModuleFiles = [
   '04_Professors/00_State.js',
   '04_Professors/01_Utils.js',
@@ -154,7 +158,6 @@ const tabModuleFiles = [
   '04_Professors/01_HTML_Page/01_Header.js',
   '04_Professors/01_HTML_Page/02_Toolbar.js',
   '04_Professors/01_HTML_Page/03_Theme_Toggle.js',
-  '04_Professors/01_HTML_Page/04_Footer.js',
   '04_Professors/02_Dashboard/01_Stats_Bar.js',
   '04_Professors/02_Dashboard/02_Resume_Section.js',
   '04_Professors/02_Dashboard/03_Heatmap.js',
@@ -168,9 +171,7 @@ const tabModuleFiles = [
   '04_Professors/04_Modals/05_Journal_Browser.js',
   '04_Professors/04_Modals/06_Compare_Modal.js',
   '04_Professors/04_Modals/07_Bulk_Add_Modal.js',
-  '04_Professors/04_Modals/08_Paste_Import_Modal.js',
   '04_Professors/04_Modals/09_Shortcuts_Modal.js',
-  '04_Professors/05_Data_IO/01_Save_Button.js',
   '04_Professors/05_Data_IO/02_Export.js',
   '04_Professors/05_Data_IO/03_Import.js',
   '04_Professors/Professors.js'

@@ -1,14 +1,16 @@
 /* ==========================================================================
    PROFESSORS — 05_Data_IO/02_Export.js
    Paper/professor .txt detail sheets, paper-PDF fetching (with new-tab
-   fallback), in-page attachment download, JSON + CSV library export,
-   citations/BibTeX builders and the Print flow. Extracted verbatim from
-   proff.html (lines 2723-2830, 2885-2909, 2979, 3073-3114, 3449-3450).
+   fallback), in-page attachment download, the header JSON library export
+   (ExportLibraryJson), citations/BibTeX builders and the print-mode
+   accordion expansion. Extracted verbatim from
+   proff.html (lines 2723-2830, 2885-2909, 2979, 3073-3114, 3449-3450);
+   CSV export / Print link removed with the footer (2026-10-25).
    ==========================================================================
 */
 
 import { state, ui, persist } from '../00_State.js';
-import { $, toast, saveBlob, saveText, sanitizeFilename, STATUS_META, statusOf } from '../01_Utils.js';
+import { toast, saveBlob, saveText, sanitizeFilename, STATUS_META, statusOf } from '../01_Utils.js';
 import { render } from '../Professors.js';
 
 export function paperDetailsText(paper, prof) {
@@ -119,12 +121,6 @@ export function downloadProfPapers(prof) {
   toast('Papers list for ' + prof.name + ' downloaded.');
 }
 
-/* ---------- json export ---------- */
-function csvCell(v) {
-  v = String(v == null ? '' : v);
-  return /[",\n\r;]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
-}
-
 /* ---------- citations & BibTeX ---------- */
 export function citationText(paper) {
   var bits = [];
@@ -168,30 +164,17 @@ export function downloadBibtex(prof) {
   toast('BibTeX downloaded — ' + prof.papers.length + ' entr' + (prof.papers.length === 1 ? 'y' : 'ies') + '.');
 }
 
+/* header Export — download the whole library as one JSON file */
+export function ExportLibraryJson() {
+  persist();
+  saveBlob(new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' }), 'profftrack-library.json');
+  toast('Library exported as JSON.');
+}
+
 export function InitExport() {
-  $('#exportJsonBtn').addEventListener('click', function () {
-    persist();
-    saveBlob(new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' }), 'profftrack-library.json');
-    toast('Library exported as JSON.');
-  });
-  $('#exportCsvBtn').addEventListener('click', function () {
-    var rows = [['Professor', 'Title', 'Department', 'College', 'QS Rank', 'Paper', 'Authors', 'Year', 'Venue', 'Rating', 'Status', 'Started on', 'Finished on', 'Tags', 'Link']];
-    state.professors.forEach(function (p) {
-      if (!(p.papers || []).length) {
-        rows.push([p.name, p.title, p.department, p.college, p.qsRank, '', '', '', '', '', '', '', '', '', '']);
-        return;
-      }
-      p.papers.forEach(function (pp) {
-        rows.push([p.name, p.title, p.department, p.college, p.qsRank, pp.title, pp.authors, pp.year, pp.venue, pp.rating, STATUS_META[statusOf(pp)].label, pp.startedOn || '', pp.finishedOn || pp.readDate || '', (pp.tags || []).join('; '), pp.url]);
-      });
-    });
-    var csv = rows.map(function (r) { return r.map(csvCell).join(','); }).join('\r\n');
-    saveBlob(new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' }), 'profftrack-papers.csv');
-    toast('CSV exported — opens cleanly in Excel / Sheets.');
-  });
-  $('#printBtn').addEventListener('click', function () { window.print(); });
   /* print mode expands every accordion so the PDF contains full details;
-     inert while the Professors app is not mounted */
+     inert while the Professors app is not mounted (native Ctrl+P still
+     benefits — the footer Print link was removed with the footer) */
   window.addEventListener('beforeprint', function () {
     if (!document.getElementById('ProfessorsApp')) return;
     ui.printMode = true; render();

@@ -1,12 +1,13 @@
 /* ==========================================================================
    PROFESSORS — 03_Seed_Data.js
-   Sample library + built-in QS college auto-fill database.
-   Extracted verbatim from workspace proff.html <script> IIFE.
+   Built-in QS college auto-fill database for the Add/Edit Professor dialog.
+   (The sample library that used to live here was removed 2026-10-25 —
+   `seedSamples()` deleted; the file keeps only the college matcher.)
    ==========================================================================
 */
 
 import { state } from './00_State.js';
-import { norm, uid } from './01_Utils.js';
+import { norm } from './01_Utils.js';
 
 /* Approximate QS World University Rankings — used ONLY for auto-fill suggestions. */
 export const KNOWN_COLLEGES = [
@@ -77,56 +78,4 @@ export function matchCollege(input) {
     }
   }
   return null;
-}
-
-/* ============================== sample library ============================== */
-export function seedSamples() {
-  var t = function (daysAgo) { return new Date(Date.now() - daysAgo * 86400000).toISOString(); };
-  var rd = function (daysAgo) { return new Date(Date.now() - daysAgo * 86400000).toISOString().slice(0, 10); };
-  return [
-    {
-      id: uid('p'), name: 'Dr. Aleksander Madry', title: 'Professor', department: 'EECS · CSAIL',
-      college: 'Massachusetts Institute of Technology (MIT)', qsRank: 1,
-      collegeLogo: 'https://logo.clearbit.com/mit.edu',
-      areas: ['Adversarial ML', 'Robust Optimization'], email: '', website: 'https://madry-lab.ml/', photo: '',
-      bio: 'Known for foundational work on adversarial robustness and building reliable, understandable ML systems.',
-      createdAt: t(40), papers: [
-        { id: uid('pp'), title: 'Towards Deep Learning Models Resistant to Adversarial Attacks', authors: 'Madry, Makelov, Schmidt, Tsipras, Vladu', year: 2018, venue: 'ICLR', url: 'https://arxiv.org/pdf/1706.06083', readDate: rd(21), startedOn: rd(23), finishedOn: rd(21), rating: 5, tags: ['adversarial', 'robustness'], summary: 'Introduces PGD (projected gradient descent) as a universal first-order adversary and frames robust optimization for deep nets.', notes: 'Re-read section 4 before the seminar; the attack/defense framing still holds up.', createdAt: t(21) }
-      ]
-    },
-    {
-      id: uid('p'), name: 'Dr. Christopher D. Manning', title: 'Professor', department: 'Linguistics & Computer Science',
-      college: 'Stanford University', qsRank: 6,
-      collegeLogo: 'https://logo.clearbit.com/stanford.edu',
-      areas: ['NLP', 'Computational Linguistics'], email: '', website: 'https://nlp.stanford.edu/~manning/', photo: '',
-      bio: 'Author of classic NLP textbooks; focuses on representation learning for language and human language understanding.',
-      createdAt: t(35), papers: [
-        { id: uid('pp'), title: 'GloVe: Global Vectors for Word Representation', authors: 'Pennington, Socher, Manning', year: 2014, venue: 'EMNLP', url: 'https://nlp.stanford.edu/pdfs/glove.pdf', readDate: rd(30), startedOn: rd(33), finishedOn: rd(30), rating: 4, tags: ['embeddings', 'word-vectors'], summary: 'Learns word embeddings by combining global matrix factorization statistics with local context-window objectives.', notes: 'Compare against word2vec in the survey I am writing.', createdAt: t(30) },
-        { id: uid('pp'), title: 'A Fast and Accurate Dependency Parser using Neural Networks', authors: 'Chen, Manning', year: 2014, venue: 'EMNLP', url: 'https://aclanthology.org/D14-1082.pdf', readDate: null, startedOn: rd(5), finishedOn: null, rating: 4, tags: ['parsing', 'neural-nets'], summary: 'Greedy transition-based parsing with dense features and embeddings — near state-of-the-art speed at the time.', notes: '', status: 'reading', journal: [{ d: rd(5), t: 'Started as the commute read — §2 dense-feature arc-standard system is surprisingly readable.' }], createdAt: t(12) }
-      ]
-    },
-    {
-      id: uid('p'), name: 'Dr. Christopher Ré', title: 'Professor', department: 'Computer Science',
-      college: 'Stanford University', qsRank: 6,
-      collegeLogo: 'https://logo.clearbit.com/stanford.edu',
-      areas: ['Information Extraction', 'ML Systems'], email: '', website: '', photo: '',
-      bio: 'Leads the Hazy Research group; works on data-centric AI and efficient foundation-model systems.',
-      createdAt: t(28), papers: [
-        { id: uid('pp'), title: 'SpanBERT: Improving Pre-training by Representing and Predicting Spans', authors: 'Joshi, Chen, Liu, Weld, Zettlemoyer, Ré', year: 2020, venue: 'TACL', url: 'https://arxiv.org/pdf/1907.10529', readDate: rd(18), startedOn: rd(20), finishedOn: rd(18), rating: 4, tags: ['pretraining', 'qa'], summary: 'Span-masking + span-boundary objective improves transfer to extractive QA and relation extraction.', notes: '', createdAt: t(18) },
-        { id: uid('pp'), title: 'FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness', authors: 'Dao, Fu, Ermon, Rudra, Ré', year: 2022, venue: 'NeurIPS', url: 'https://arxiv.org/pdf/2205.14135', readDate: rd(0), startedOn: rd(4), finishedOn: rd(0), rating: 5, tags: ['efficiency', 'attention'], summary: 'Recomputes attention tiles in SRAM instead of materializing the N×N matrix — exact attention with far less memory traffic.', notes: 'Great IO-complexity framing; try sketching the tiling diagram from memory.', journal: [{ d: rd(4), t: 'Skimmed §2 — the IO-cost framing clicks once you count HBM reads instead of FLOPs.' }, { d: rd(0), t: 'Finished + redrew the tiling diagram from memory; got the softmax rescale right on the second try.' }], createdAt: t(6) },
-        { id: uid('pp'), title: 'Scaling Data-Constrained Language Models', authors: 'Muennighoff, Rush, Barak, et al.', year: 2023, venue: 'arXiv', url: 'https://arxiv.org/abs/2305.16264', readDate: null, rating: 3, tags: ['scaling', 'data'], summary: 'Asks how far LMs can scale when training data is bounded — introduces epoch-reuse scaling laws.', notes: 'Queued for the data-centric reading group.', status: 'wishlist', createdAt: t(3) }
-      ]
-    },
-    {
-      id: uid('p'), name: 'Dr. Yoshua Bengio', title: 'Professor', department: 'MILA · Computer Science',
-      college: 'Université de Montréal', qsRank: 159,
-      collegeLogo: 'https://logo.clearbit.com/umontreal.ca',
-      areas: ['Deep Learning', 'Machine Learning Theory'], email: '', website: '', photo: '',
-      bio: 'Turing Award laureate; long-standing research on representation learning, generative models and the science of deep learning.',
-      createdAt: t(50), papers: [
-        { id: uid('pp'), title: 'A Neural Probabilistic Language Model', authors: 'Bengio, Ducharme, Vincent, Jauvin', year: 2003, venue: 'JMLR', url: 'https://www.jmlr.org/papers/volume3/bengio03a/bengio03a.pdf', readDate: rd(26), startedOn: rd(29), finishedOn: rd(26), rating: 5, tags: ['language-models', 'classic'], summary: 'The original neural LM: learns distributed word features and a probability function simultaneously.', notes: 'Amazing how much of modern LLMs is already visible here.', createdAt: t(26) },
-        { id: uid('pp'), title: 'Neural Machine Translation by Jointly Learning to Align and Translate', authors: 'Bahdanau, Cho, Bengio', year: 2015, venue: 'ICLR', url: 'https://arxiv.org/pdf/1409.0473', readDate: rd(1), startedOn: rd(3), finishedOn: rd(1), rating: 5, tags: ['attention', 'translation'], summary: 'Introduced additive attention for NMT — the decoder softly aligns to source words as it translates.', notes: '', createdAt: t(9) }
-      ]
-    }
-  ];
 }

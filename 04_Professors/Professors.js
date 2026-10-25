@@ -22,7 +22,6 @@ import { $ } from './01_Utils.js';
 import { GetHeaderHTML, InitHeader } from './01_HTML_Page/01_Header.js';
 import { InitToolbar } from './01_HTML_Page/02_Toolbar.js';
 import { applyTheme, InitThemeToggle } from './01_HTML_Page/03_Theme_Toggle.js';
-import { GetFooterHTML, InitFooter } from './01_HTML_Page/04_Footer.js';
 import { GetGoalModalHTML, renderStats, InitStatsBar } from './02_Dashboard/01_Stats_Bar.js';
 import { renderResume, InitResumeSection } from './02_Dashboard/02_Resume_Section.js';
 import { renderHeat, InitHeatmap } from './02_Dashboard/03_Heatmap.js';
@@ -36,16 +35,16 @@ import { GetJournalModalHTML, InitJournalModal } from './04_Modals/04_Journal_Mo
 import { GetJournalBrowserHTML } from './04_Modals/05_Journal_Browser.js';
 import { GetCompareModalHTML, InitCompareModal } from './04_Modals/06_Compare_Modal.js';
 import { GetBulkModalHTML, InitBulkModal } from './04_Modals/07_Bulk_Add_Modal.js';
-import { GetPasteModalHTML, InitPasteImportModal } from './04_Modals/08_Paste_Import_Modal.js';
 import { GetShortcutsModalHTML, InitShortcutsModal } from './04_Modals/09_Shortcuts_Modal.js';
-import { InitSaveButton } from './05_Data_IO/01_Save_Button.js';
 import { InitExport } from './05_Data_IO/02_Export.js';
 import { InitImport } from './05_Data_IO/03_Import.js';
 
 /* master render cycle (proff.html line 2279) */
 export function render() { renderStats(); renderResume(); renderHeat(); renderTagBar(); renderList(); updateKbFocus(); }
 
-/* static page skeleton: header + 5 content sections + footer + 9 modals + toast + back-to-top */
+/* static page skeleton: header + 5 content sections + modals + toast + back-to-top
+   (footer removed 2026-10-25 — IO lives in the header; paste-JSON modal removed
+   with it; core PROFF_TEMPLATE saver replaced by the context-aware header Save) */
 function GetProfessorsHTML() {
   return '<div class="page">' +
     GetHeaderHTML() +
@@ -56,10 +55,8 @@ function GetProfessorsHTML() {
       '<section id="tagBar" class="tag-bar" hidden aria-label="Filter by tag"></section>' +
       '<section id="profList" class="prof-list" aria-live="polite"></section>' +
     '</main>' +
-    GetFooterHTML() +
     GetProfessorModalHTML() +
     GetPaperModalHTML() +
-    GetPasteModalHTML() +
     GetJournalModalHTML() +
     GetCompareModalHTML() +
     GetBulkModalHTML() +
@@ -96,7 +93,6 @@ export function initProfessorsApp() {
   InitHeader();
   InitToolbar();
   InitThemeToggle();
-  InitFooter();
   InitStatsBar();
   InitResumeSection();
   InitHeatmap();
@@ -107,9 +103,7 @@ export function initProfessorsApp() {
   InitJournalModal();
   InitCompareModal();
   InitBulkModal();
-  InitPasteImportModal();
   InitShortcutsModal();
-  InitSaveButton();
   InitExport();
   InitImport();
 
@@ -118,7 +112,15 @@ export function initProfessorsApp() {
     booted = true;
     loadState();
     sanitizeIds();
-    if (!state.theme) state.theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+    /* Seed the private theme from the app-wide one: the old check looked for
+       a `dark` CLASS on <html> that nothing sets (theming uses the
+       data-theme ATTRIBUTE), so this always resolved 'light' and the tab
+       booted light no matter what the rest of the hub was using. */
+    if (!state.theme) {
+      state.theme = document.documentElement.getAttribute('data-theme')
+        || (typeof localStorage !== 'undefined' && localStorage.getItem('lh_theme'))
+        || 'dark';
+    }
   } else {
     /* hash re-entry: restore the select values the fresh markup forgot */
     $('#sortSelect').value = ui.sort;

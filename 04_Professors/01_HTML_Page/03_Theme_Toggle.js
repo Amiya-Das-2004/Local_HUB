@@ -28,6 +28,10 @@ export function toggleTheme() {
   state.theme = (state.theme === 'dark') ? 'light' : 'dark';
   applyTheme(state.theme);
   persist();
+  /* Mirror the choice into the app-wide preference (lh_theme is never wiped
+     by any tab's vault-first loadState, so this is what makes the toggle
+     survive a reload and keep every tab on the same theme). */
+  try { localStorage.setItem('lh_theme', state.theme); } catch (e) { }
 }
 export function InitThemeToggle() {
   $('#themeBtn').addEventListener('click', toggleTheme);

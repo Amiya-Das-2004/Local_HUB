@@ -17,13 +17,13 @@ Professors/
 ├── 00_State.js                       ← ProfState + UI state, load/save, data ops, sorting
 ├── 01_Utils.js                       ← Shared helpers, ICONS, STATUS_META, toast, clipboard
 ├── 02_Styles.js                      ← Full ProffTrack CSS, injected once
-├── 03_Seed_Data.js                   ← Sample library + built-in QS college auto-fill
+├── 03_Seed_Data.js                   ← Built-in QS college auto-fill DB (sample library
+│                                       removed 2026-10-25)
 │
-├── 01_HTML_Page/                     ← app shell (header / toolbar / theme / footer)
+├── 01_HTML_Page/                     ← app shell (header / toolbar / theme)
 │   ├── 01_Header.js
 │   ├── 02_Toolbar.js
-│   ├── 03_Theme_Toggle.js
-│   └── 04_Footer.js
+│   └── 03_Theme_Toggle.js
 │
 ├── 02_Dashboard/                     ← widgets above the list
 │   ├── 01_Stats_Bar.js
@@ -43,16 +43,13 @@ Professors/
 │   ├── 05_Journal_Browser.js
 │   ├── 06_Compare_Modal.js
 │   ├── 07_Bulk_Add_Modal.js
-│   ├── 08_Paste_Import_Modal.js
 │   └── 09_Shortcuts_Modal.js
 │
 ├── 05_Data_IO/
-│   ├── 01_Save_Button.js             ← core self-saving standalone (embeds the pristine
-│   │                                    proff.html as PROFF_TEMPLATE); still active in the
-│   │                                    master app — inside the tab shell the Tab_Save_Handler
-│   │                                    override wins
 │   ├── 02_Export.js
 │   └── 03_Import.js
+│   (01_Save_Button.js — core PROFF_TEMPLATE saver — and the footer/paste-modal
+│    modules were deleted 2026-10-25: the header owns IO and Save is context-aware)
 │
 └── 06_Tab_Professors/
     ├── Professor.html                ← isolated tab shell (see Wiring above)
@@ -63,12 +60,12 @@ Professors/
     │                                    and #PapersData (← window.PapersState / 'PapersData_Local_Cache')
     │                                    vaults into the clone, bundles sharedComponentFiles
     │                                    (07_Blob_Store, 08_Research_Library, 09_Icon_Button) +
-    │                                    the three tab handlers + all 27 professor modules into the
-    │                                    boot script, and downloads `Professor.html`. Inside an
+    │                                    the three tab handlers + all 24 professor modules into the
+    │                                    boot script, and downloads `ProffTrack.html`. Inside an
     │                                    already-standalone (`__IS_STANDALONE__`) it re-emits itself
     │                                    with fresh vault data. `InitTabSaveOverride()` clone-swaps
-    │                                    #saveBtn after init, so this wins over the core
-    │                                    PROFF_TEMPLATE saver inside the tab shell only.
+    │                                    #saveBtn after init, so inside the tab shell Save is
+    │                                    tab-only (master contexts use the global build instead).
     ├── Tab_Logo_Handler.js           ← `InitTabLogoOverride()` clone-swaps `.site-header .brand`;
     │                                    clicking it stays inside the tab (clears the hash).
     └── Tab_Import_Export_Handler.js  ← `TriggerTabExport()` downloads `Professors_DATA.json`
@@ -78,21 +75,23 @@ Professors/
                                          accepts a direct library JSON), replaces the library via
                                          vault + `profftrack:v1` + mirror, then reloads.
                                          `InitTabImportExportOverride()` clone-swaps #importBtn /
-                                         #exportBtn; the footer's core merge/CSV/paste flows are
-                                         left untouched.
+                                         #exportBtn (tab-only JSON IO; the footer's merge/CSV/paste
+                                         flows no longer exist).
 ```
 
 ## Wiring (connected 2026-09-30)
 
-- **Data vault**: `00_State.loadState()` reads `<script type="application/json" id="ProfessorsData">` first, then falls back to the original `#app-data` id, then compares against `localStorage['profftrack:v1']` (same store key as proff.html) and keeps whichever is newer. `persist()` writes localStorage, mirrors the live library to `window.ProfessorsState` (the LocalHUB Save button's vault-sync candidate key), and syncs the vault tag when present.
-- **Entry**: `Professors.js → initProfessorsApp()` mounts `<div id="ProfessorsApp">` — inside the shell's `#root` when present, else on `<body>` — with the full page skeleton (header + 5 content sections + footer + 9 modals + toast + back-to-top), runs every `Init*` binder, then boots exactly like proff.html (loadState → sanitizeIds → theme → `ui.sort` from select → render).
+- **Data vault**: `00_State.loadState()` reads `<script type="application/json" id="ProfessorsData">` first (falling back to the original `#app-data` id) and wipes the machine-local `localStorage['profftrack:v1']` cache — the vault is the single source of truth. `persist()` writes localStorage, mirrors the live library to `window.ProfessorsState` (the LocalHUB Save button's vault-sync candidate key), and syncs the vault tag when present.
+- **Entry**: `Professors.js → initProfessorsApp()` mounts `<div id="ProfessorsApp">` — inside the shell's `#root` when present, else on `<body>` — with the full page skeleton (header + 5 content sections + 8 modals + toast + back-to-top; the footer was removed 2026-10-25), runs every `Init*` binder, then boots exactly like proff.html (loadState → sanitizeIds → theme → `ui.sort` from select → render).
 - **Index.html (DONE, re-verified 2026-10-25)**: three touch points —
   1. `LandingPageData` orb: `{ "Name": "PROFESSORS", "Url": "#Professors", "PageUrl": "04_Professors/06_Tab_Professors/Professor.html", "Color": 1013358 }` (clicking the orb opens the tab shell directly, same as BOOKMARK/NOTES; `01_Landing_Page/03_Orbs.js` handles that via `PageUrl`)
   2. Vault tag `<script type="application/json" id="ProfessorsData">` in `<head>`
   3. Route in `handleRoute()`: `#professors` → `import('./04_Professors/Professors.js')` → `mod.initProfessorsApp()`
 - **Standalone `04_Professors/06_Tab_Professors/Professor.html` (DONE, blueprint-aligned 2026-10-03)**: LocalHUB tab-page shell following the exact `01_Tab_Bookmarks/` / `Tab_Notes/` pattern — LocalHUB favicon + title, `window.__LOCALHUB_PAGE__ = 'professors'` (no `__LOCALHUB_HUB_URL__`; the brand click is owned by `Tab_Logo_Handler.js`), the shared `#PapersData` vault + the `#ProfessorsData` vault, `<div id="root">` and a module boot script that clears `#root`, calls `initProfessorsApp()` (importing `../Professors.js`), then boots the three per-tab overrides (`InitTabSaveOverride` → `InitTabLogoOverride` → `InitTabImportExportOverride`). Re-runs on hashchange. Open it directly for tab-only access; `Index.html`'s `LandingPageData` orb points to this path.
-- **All-in-one bundle**: `00_Components/05_Save_Button.js` lists `professorFiles` (all 27 modules), bundles them in landing mode into `LoadProfessorsPage()`, and the bundled router handles `#professors`. `window.ProfessorsState` (set in `persist()`) is the vault-sync key `syncAllStatesToDOM()` picks up, so a saved `Local_HUB.html` carries the library.
-- **Self-save from anywhere**: the ProffTrack **Save & Download** button (and Ctrl/Cmd+S) regenerates the original self-contained `proff.html` (with current data) from the embedded `PROFF_TEMPLATE`, so the downloaded file re-saves itself anywhere, exactly like the original.
+- **All-in-one bundle**: `00_Components/05_Save_Button.js` lists `professorFiles` (all 24 modules), bundles them in landing mode into `LoadProfessorsPage()`, and the bundled router handles `#professors`. `window.ProfessorsState` (set in `persist()`) is the vault-sync key `syncAllStatesToDOM()` picks up, so a saved `Local_HUB.html` carries the library.
+- **Context-aware Save (2026-10-25 IO reform)**: the header owns Import / Export / Save outright — the footer (explainer text, Export CSV, Import CSV, Paste JSON, Set-goal link, Shortcuts link, Print link, Clear all) was removed entirely. Save routes by context:
+  - **Master app** (dev `Index.html` or bundled `Local_HUB.html`): header Save (and Ctrl/Cmd+S) triggers the **global** build via `SaveAndDownloadApp()` (`00_Components/05_Save_Button.js`) → downloads `Local_HUB.html` with every tab's data.
+  - **Tab shell** (`06_Tab_Professors/Professor.html`): `InitTabSaveOverride` clone-swaps `#saveBtn` → `SaveProfessorsStandalone()` → downloads **`ProffTrack.html`** (this tab only). Ctrl/Cmd+S in `01_Modal_Core` delegates by clicking `#saveBtn`, so it picks up whichever binding is live.
 
 ## 00_State.js
 
@@ -105,8 +104,7 @@ Professors/
 | | `paperPasses(pp)` | 1392 - 1396 | Status-filter + tag-filter gate shared by every renderer. |
 | | `persist()` | 1505 - 1508 | Writes `state` to localStorage, calls `window.MarkUnsavedChanges(true)`, and syncs the `#ProfessorsData`/`#app-data` vault tag when present. |
 | | `isEmptyData(d)` | — | REMOVED 2026-10-25 (dead code — nothing compared data candidates anymore). |
-| | `loadState()` | 1512 - 1536 | Loads state strictly from the embedded `#ProfessorsData` HTML vault, wiping any leftover machine-local cache to eliminate cross-file contamination; seeds sample library on clean first run. **2026-10-25:** both branches now end with `MigratePapersToRegistry()` so legacy embedded `papers` arrays become registry items BEFORE any decoration (previously the decoration orphaned them and the next save erased them — see Registry bridge below). |
-| | `SeedSampleLibrary()` | — (added 2026-10-25) | "Load sample library" state op: resets `state` to fresh `seedSamples()` output, then runs `MigratePapersToRegistry()` — sample papers are born as registry items with `paperRefs`, never as legacy arrays. Used by the empty-state seed button (`01_Prof_Cards.js`). |
+| | `loadState()` | 1512 - 1536 | Loads state strictly from the embedded `#ProfessorsData` HTML vault, wiping any leftover machine-local cache to eliminate cross-file contamination; a missing/malformed vault starts an EMPTY library (the sample-library fallback was removed 2026-10-25). **2026-10-25:** the loaded branch ends with `MigratePapersToRegistry()` so legacy embedded `papers` arrays become registry items BEFORE any decoration (previously the decoration orphaned them and the next save erased them — see Registry bridge below). |
 | | `ClearProfessorsLocalCache()` | — | Purges `profftrack:v1` from browser `localStorage`. |
 | | `sanitizeIds()` | 1587 - 1599 | Repairs records saved by older builds (missing ids/status, malformed rereads/journal arrays). |
 | | `getProf(id)` | 1635 - 1638 | Finds a professor by id. |
@@ -124,7 +122,7 @@ Canonical papers live in the shared `#PapersData` vault (`00_Components/08_Resea
 
 - **`decorateProf(p)` (private)** — installs the `papers` getter on a professor. **2026-10-25:** now migration-safe — a professor still carrying a legacy embedded `papers` array has those papers converted into registry items (`MigrateLegacyPaper`) BEFORE the getter replaces the array (the getter reads `paperRefs` only, so decorating a never-migrated professor used to orphan its papers and the next save erased them from the vault). Returns whether a migration happened. The getter is non-enumerable, so `JSON.stringify` (persist/vault/save) serializes only `paperRefs` — vaults become clean after the first migrated save.
 - **`MigrateLegacyPaper(prof, pp)` (exported, added 2026-10-25)** — single canonical home for the legacy-paper → registry conversion (extracted from the old inline sweep): `RL_Upsert` with `professorId` ownership, base64 attachments moved to IndexedDB via `BlobStore_PutDataUrl`, journal carried onto the ref, `addedAt` from `pp.createdAt`. Papers without a status default to `'read'` (statusOf/sanitizeIds convention — the pre-fix mapping flipped them to wishlist).
-- **`MigratePapersToRegistry()` (exported)** — one-time sweep: runs `decorateProf` over every professor, then sets `state.registryMigrated` and persists when anything migrated (or when a non-empty library has never been marked). Called from `loadState()`/`SeedSampleLibrary()`; import paths call it after `sanitizeIds()`. Idempotent — registry items re-upsert by id, never duplicate.
+- **`MigratePapersToRegistry()` (exported)** — one-time sweep: runs `decorateProf` over every professor, then sets `state.registryMigrated` and persists when anything migrated (or when a non-empty library has never been marked). Called from `loadState()`; import paths call it after `sanitizeIds()`. Idempotent — registry items re-upsert by id, never duplicate.
 - **Write routing** — `upsertPaper()` is the only sanctioned paper write from modals/bulk-add; raw `(p.papers = …).push(...)` on a decorated professor throws (`TypeError: … only a getter`, strict-mode ESM) and was the root cause of the 2026-10-25 import/bulk-add crashes.
 
 **Known limitation (registry rollout Phase 0, 2026-10-25):** `Professors_DATA.json` (tab export) and the master `Local_HUB_DATA.json` envelope do **not** carry the `PapersData` slice yet — `RL_ExportSlice()`/`RL_ImportSlice()` are still unwired (Phase 1+). A refs-only export is therefore incomplete as a backup: re-importing it recreates the professors with `paperRefs` that dangle until the matching registry items are imported through the R&D/Papers path. The data itself is safe inside any saved LocalHUB `.html` (the bundler syncs `window.PapersState` → `#PapersData`), and legacy `papers`-array exports/imports convert on the fly via `MigrateLegacyPaper()`.
@@ -161,7 +159,7 @@ Canonical papers live in the shared `#PapersData` vault (`00_Components/08_Resea
 
 | File | Functions | Source (proff.html) | Description |
 | :--- | :--- | :--- | :--- |
-| `02_Styles.js` | `GetProfessorsStyles()` | 11 - 826 | Returns the complete ProffTrack stylesheet verbatim (light/dark tokens, header, cards, heatmap, modals, print rules, responsive). |
+| `02_Styles.js` | `GetProfessorsStyles()` | 11 - 826 | Returns the complete ProffTrack stylesheet (light/dark tokens, header, cards, heatmap, modals, print rules, responsive). **2026-10-25 leak fix:** the injected stylesheet stays mounted across routes, so its page-level rules are gated — `:root` was dropped from the token selector (it overrode the landing's own `:root` tokens by style-tag order) and every `body`-level rule (`body{background:var(--paper)…}`, its dark variant, `::selection`, `::-webkit-scrollbar`) is scoped under `body:has(#ProfessorsApp)` so it paints only while the app is mounted. Previously the unconditional body rule re-skinned the landing page cream after visiting this tab. The Index.html router now also strips `prof-light` and body/html `data-theme` between routes (each tab re-applies its theme on mount), which keeps the class-qualified dark rules inert off-route. |
 | | `InitProfessorsStyles()` | — (adapter) | Injects it once as `<style id="ProfessorsStyles">`; safe on re-entry. |
 
 ## 03_Seed_Data.js
@@ -170,14 +168,14 @@ Canonical papers live in the shared `#PapersData` vault (`00_Components/08_Resea
 | :--- | :--- | :--- | :--- |
 | `03_Seed_Data.js` | `KNOWN_COLLEGES` | 1399 - 1435 | Approximate QS ranking table (36 colleges) used only for auto-fill suggestions. |
 | | `matchCollege(input)` | 1602 - 1632 | College auto-fill: existing library wins, then exact/alias/substring match against KNOWN_COLLEGES. Returns `{ name, rank, source }`. |
-| `03_Seed_Data.js` | `seedSamples()` | 1539 - 1584 (adapted) | 4-professor / 6-paper sample library (Madry, Manning, Ré, Bengio) with statuses, journal entries and re-reads; carries `collegeLogo` URLs (logo.clearbit.com) for the proff.html-style card heads. |
+| | `seedSamples()` | — | REMOVED 2026-10-25 with the sample-library feature (user request); the file now only carries the college auto-fill DB. |
 
 ## 01_HTML_Page/01_Header.js
 
 | File | Functions | Source (proff.html) | Description |
 | :--- | :--- | :--- | :--- |
 | `01_Header.js` | `GetHeaderHTML()` | 833 - 902 (layout reformed 2026-10-03) | Site header markup, two rows only: Row 1 = bare 36px scholar-cap brand mark (no button box) + ProfessorTrack title + flat actions **Import → Export → Save → Theme**; Row 2 (`.pt-row2` command bar) = chart/dashboard toggle → sort select → search bar → Add Professor. The global-nav cluster, the io dropdown and the old row 3 (status filter, favorites, expand-all, compare, journal) were removed. |
-| | `InitHeader()` | 3660, 3696 - 3703 (adapted) | Binds Add-Professor, Import (`#importBtn` → clicks footer's `#importJsonBtn`), Export (`#exportBtn` → clicks footer's `#exportJsonBtn`), chart-toggle dashboard hide/show, brand link → hub; back-to-top + window scroll listener (bound once, live queries) toggling `.scrolled` header shadow + scroll-top visibility. |
+| | `InitHeader()` | 3660, 3696 - 3703 (adapted) | Binds Add-Professor; **Import** (`#importBtn` opens the header's own hidden `#importFile` input), **Export** (`#exportBtn` → `ExportLibraryJson()`), **Save** (context-aware: `SaveAndDownloadApp()` global build in the master; the Tab_Save_Handler clone-swap replaces the binding inside the tab shell), chart-toggle dashboard hide/show, brand link → hub; back-to-top + window scroll listener (bound once, live queries) toggling `.scrolled` header shadow + scroll-top visibility. |
 
 ## 01_HTML_Page/02_Toolbar.js
 
@@ -189,16 +187,11 @@ Canonical papers live in the shared `#PapersData` vault (`00_Components/08_Resea
 
 | File | Functions | Source (proff.html) | Description |
 | :--- | :--- | :--- | :--- |
-| `03_Theme_Toggle.js` | `applyTheme(t)` | 2374 - 2376 | Toggles the `dark` class on `<html>`. |
-| | `toggleTheme()` | 2377 - 2381 | Flips `state.theme`, applies and persists it. |
+| `03_Theme_Toggle.js` | `applyTheme(t)` | 2374 - 2376 | Toggles `prof-dark`/`prof-light` on `#ProfessorsApp` + `<body>` and mirrors the theme onto `<html data-theme>`. |
+| | `toggleTheme()` | 2377 - 2381 | Flips `state.theme`, applies and persists it, and mirrors the choice into the app-wide `lh_theme` localStorage key so it survives reloads and stays coherent with the other tabs (2026-10-25). |
 | | `InitThemeToggle()` | 2382 | Binds the sun/moon button. |
 
-## 01_HTML_Page/04_Footer.js
-
-| File | Functions | Source (proff.html) | Description |
-| :--- | :--- | :--- | :--- |
-| `04_Footer.js` | `GetFooterHTML()` | 914 - 942 | Footer markup: self-save explainer + Export JSON/CSV, Import CSV/JSON, Paste JSON, Set reading goal, Shortcuts, Print, Clear all links + hidden file inputs. |
-| | `InitFooter()` | 3464 - 3472 | Clear-all with two-click `armConfirm` (resets state via `replaceState`, keeps theme). |
+Boot seeding (Professors.js): when `state.theme` is unset it is seeded from `<html data-theme>` → `lh_theme` → `'dark'`. The old seed read a `dark` CLASS on `<html>` that nothing ever set, so the tab always booted light and the toggle never stuck (fixed 2026-10-25).
 
 ## 02_Dashboard/01_Stats_Bar.js
 
@@ -210,7 +203,7 @@ Canonical papers live in the shared `#PapersData` vault (`00_Components/08_Resea
 | | `statsHTML()` | 2151 - 2207 | Six stat cards: professors, papers read, reading list, colleges, best-ranked college, activity card (this month + streak badge + sparkline + goal row with pace projection). |
 | | `renderStats()` | 2208 - 2210 | Mounts statsHTML into `#statsBar`. |
 | | `openGoalModal()` (private) | 2385 - 2391 | Prefills + opens the goal modal. |
-| | `InitStatsBar()` | 2392 - 2415 | Binds footer goal link, `#goalSetBtn` delegation inside `#statsBar`, goal save (1-999 + start month) and goal remove. |
+| | `InitStatsBar()` | 2392 - 2415 | `#goalSetBtn` delegation inside `#statsBar` (the only goal entry point since the footer goal link was removed 2026-10-25; the stats bar — and with it the button — renders only when the library is non-empty), goal save (1-999 + start month) and goal remove. |
 
 ## 02_Dashboard/02_Resume_Section.js
 
@@ -255,7 +248,7 @@ Canonical papers live in the shared `#PapersData` vault (`00_Components/08_Resea
 | | `paperRowHTML(paper, prof)` | 1999 - 2029 | Collapsed paper row: icon, title, meta (year, venue, stars, status pill, dates, re-read/journal counts). |
 | | `paperDetailHTML(paper, prof)` | 2030 - 2082 | Expanded paper detail: info cells, tags, summary/notes blocks, journal timeline with per-entry delete, and the action row (download paper/attachment/details, copy citation/BibTeX buttons, add journal entry, log re-read, edit, delete). |
 | | `profCardHTML(p)` | 2083 - 2145 (reworked 2026-10-03) | Professor card: grip (drag), **big 64px portrait** (proff.html style — a blank dashed circle when no photo was dropped/pasted/linked, no initials fallback), name/dept/college, QS + count chips, and the **college logo on the far right** (`p.collegeLogo`, 76×54 contained box; self-removes on load error). When open: contact links, area chips, bio, action row, papers block. |
-| | `renderEmptyState()` | 2211 - 2227 | Empty-library state with Add-first-professor and Load-sample buttons. **2026-10-25:** the seed button routes through `SeedSampleLibrary()` (00_State) instead of assigning raw `seedSamples()` — sample papers enter the registry and are decorated immediately, so later paper writes stay visible. |
+| | `renderEmptyState()` | 2211 - 2227 | Empty-library state — deliberately minimal since 2026-10-25: logo mark + "Your library is empty" heading + one **Add your first professor** CTA (the explainer paragraph and the Load-sample button were removed per user request). |
 | | `renderList()` | 2228 - 2257 | Main list render: college-grouped (QS mode) or flat; toggles `.grouped`; no-match state; updates keyboard focus. |
 
 ## 03_Professor_List/02_List_Actions.js
@@ -302,7 +295,6 @@ Canonical papers live in the shared `#PapersData` vault (`00_Components/08_Resea
 | File | Functions | Source (proff.html) | Description |
 | :--- | :--- | :--- | :--- |
 | `03_Paper_Modal.js` | `GetPaperModalHTML()` | 1013 - 1104 | Add/Edit Paper form markup (title, authors, year, venue, URL, status, rating, dates, tags, summary, notes, PDF dropzone). |
-| | `setPendingAttachment(v)` | — (ESM adapter) | External setter for the module-private `pendingAttachment` (used by the Save button's `clearTransientDom`). |
 | | `updateAttachUI()` (private) | 2606 - 2617 | Dropzone label/meta/remove-button state. |
 | | `handleAttachFile(file)` (private) | 2618 - 2628 | Validates ≤20 MB, reads as data URL (attachment travels inside saved HTML). |
 | | `openPaperModal(profId, paper)` | 2629 - 2655 | Prefills for edit/add incl. existing attachment. |
@@ -350,31 +342,12 @@ Canonical papers live in the shared `#PapersData` vault (`00_Components/08_Resea
 | | `openBulkModal(profId)` | 3242 - 3252 | Targets a professor, resets fields. |
 | | `InitBulkModal()` | 3253 - 3289 | Live "Add N papers" counter; add: skips duplicates by normalized title, applies chosen status + lifecycle dates, `sanitizeIds`, expand + re-render + summary toast. **2026-10-25:** each line now goes through `upsertPaper()` (registry-aware) instead of a raw `prof.papers.push(...)` — the raw push threw on decorated professors and bypassed the registry otherwise. |
 
-## 04_Modals/08_Paste_Import_Modal.js
-
-| File | Functions | Source (proff.html) | Description |
-| :--- | :--- | :--- | :--- |
-| `08_Paste_Import_Modal.js` | `GetPasteModalHTML()` | 1107 - 1127 | Paste-professor-JSON dialog. |
-| | `InitPasteImportModal()` | 3199 - 3220 | Open/clear; import: single professor object or professors array; empty library → replace via `replaceState`, else `mergeLibrary`. |
-
 ## 04_Modals/09_Shortcuts_Modal.js
 
 | File | Functions | Source (proff.html) | Description |
 | :--- | :--- | :--- | :--- |
 | `09_Shortcuts_Modal.js` | `GetShortcutsModalHTML()` | 1246 - 1279 | Keyboard shortcuts help dialog. |
-| | `InitShortcutsModal()` | 3682 | Binds the footer Shortcuts link. |
-
-## 05_Data_IO/01_Save_Button.js
-
-| File | Functions | Source (proff.html) | Description |
-| :--- | :--- | :--- | :--- |
-| `01_Save_Button.js` | `SAVE_NAME` | 1350 | Output filename `proff.html`. |
-| | `PROFF_TEMPLATE` | whole file | The pristine 214 KB proff.html embedded as a string with an `__APP_DATA_JSON__` placeholder — the modular Save always emits a complete, self-saving standalone file (works from `file://` and http). |
-| | `clearTransientDom()` | 2833 - 2864 | Resets transient UI before a save (lists, filters, drag state, toast, attachment). |
-| | `persistSelection(html, selId, value)` (private) | — (adapter) | Moves the `selected` attribute inside the template's sort/status selects — the original mutated the live DOM instead. |
-| | `buildSaveHtml()` | 2865 - 2875 | Injects current state JSON into the template vault (`<` escaped) and persists current sort/status selections. |
-| | `downloadWebsite()` | 2876 - 2882 | Persist → build → download `proff.html` → re-render + toast. Also bound to Ctrl/⌘+S in `01_Modal_Core.js`. |
-| | `InitSaveButton()` | 2883 | Binds the header Save & Download button. |
+| | `InitShortcutsModal()` | 3682 | No bindings since 2026-10-25 — the dialog opens via the `?` keyboard shortcut (`01_Modal_Core`); the footer Shortcuts link was removed with the footer. |
 
 ## 05_Data_IO/02_Export.js
 
@@ -385,11 +358,11 @@ Canonical papers live in the shared `#PapersData` vault (`00_Components/08_Resea
 | | `downloadPaperFile(paper, prof)` | 2782 - 2811 | Fetches the paper URL (CORS) and saves it; falls back to a new tab; no URL → downloads details .txt. |
 | | `downloadAttachment(paper)` | 2812 - 2824 | Decodes the in-page base64 PDF and saves it as octet-stream. |
 | | `downloadProfPapers(prof)` | 2825 - 2830 | Downloads the professor's papers list .txt. |
-| | `csvCell(v)` (private) | 2891 - 2894 | CSV field escaping. |
 | | `citationText(paper)` | 3074 - 3083 | Ready-to-paste citation string. **Unwired in proff.html** (`cite-copy` action has no case there); kept as-is. |
 | | `bibtexText(prof)` | 3085 - 3109 | BibTeX entries (citekey dedupe, ProffTrack note). |
 | | `downloadBibtex(prof)` | 3110 - 3114 | Downloads the .bib file. **Unwired in proff.html** (`dl-prof-bib` action has no case there); kept as-is. |
-| | `InitExport()` | 2886 - 2909, 2979, 3449 - 3450 | Binds Export JSON, Export CSV, Print; window before/afterprint toggles `ui.printMode` (expands all accordions in print output) and re-renders. |
+| | `ExportLibraryJson()` | — (extracted 2026-10-25) | Header Export: persists and downloads the whole library as `profftrack-library.json`. |
+| | `InitExport()` | 2979, 3449 - 3450 | Window before/afterprint toggles `ui.printMode` (expands all accordions in print output) and re-renders. The footer Export-JSON/CSV and Print link bindings were removed with the footer (CSV export deleted). |
 
 ## 05_Data_IO/03_Import.js
 
@@ -397,15 +370,14 @@ Canonical papers live in the shared `#PapersData` vault (`00_Components/08_Resea
 | :--- | :--- | :--- | :--- |
 | `03_Import.js` | `parseLibraryText(text, name)` (private) | 2910 - 2915 | Accepts a .json export or a saved ProffTrack HTML (extracts the `#app-data` vault). |
 | | `mergeLibrary(incoming)` | 2916 - 2957 | Merge by id or name+college; fills missing fields, never duplicates professors or paper titles. **2026-10-25:** incoming legacy papers merge through `MigrateLegacyPaper(existing, pp)` instead of a raw `existing.papers.push(...)` (which threw `TypeError` on decorated professors — the getter property has no setter); tail order is now `sanitizeIds → MigratePapersToRegistry → persist → render` so imported legacy libraries convert to the registry in the same pass. |
-| | `parseCSV(text)` (private) | 2982 - 3002 | RFC-4180-ish CSV parser (quotes, CRLF, BOM). |
-| | `InitImport()` | 2958 - 2978, 3003 - 3071 | JSON/HTML import (replace empty library or merge) and CSV import (column mapping, status labels, college inheritance, replace-vs-merge). **2026-10-25:** both replace-into-empty branches run `MigratePapersToRegistry()` after `sanitizeIds()`. |
+| | `InitImport()` | 2958 - 2978 | Binds the header's hidden `#importFile` input: JSON/HTML import (replace empty library or merge). CSV import was removed with the footer (2026-10-25). Replace-into-empty branches run `MigratePapersToRegistry()` after `sanitizeIds()`. |
 
 ## Professors.js (entry point)
 
 | File | Functions | Source (proff.html) | Description |
 | :--- | :--- | :--- | :--- |
 | `Professors.js` | `render()` | 2279 | Master render cycle: stats → resume → heatmap → tag bar → list → keyboard focus. Exported so data-op modules can trigger it. |
-| | `GetProfessorsHTML()` (private) | 830, 905 - 911, 1325 - 1333 | Page skeleton: header, 5 content sections, footer, all 9 modals, toast, back-to-top. |
+| | `GetProfessorsHTML()` (private) | 830, 905 - 911, 1325 - 1333 | Page skeleton: header, 5 content sections, all 8 modals, toast, back-to-top (footer + paste modal removed 2026-10-25). |
 | | `initProfessorsApp()` | 3705 - 3711 + init wrappers | Injects styles, mounts `#ProfessorsApp`, binds every element handler, then boots once exactly like proff.html (`loadState → sanitizeIds → theme → ui.sort → render`); on hash re-entry restores select values and re-renders instead. |
 
 ## Deliberate adaptations (no behavior change unless noted)
@@ -421,7 +393,8 @@ Canonical papers live in the shared `#PapersData` vault (`00_Components/08_Resea
 9. **Brand link navigation** (01_Header.js) — in proff.html it is inert (`onclick="return false"`). Inside the Index.html SPA the modular header clears the hash (→ landing). The tab shell `06_Tab_Professors/Professor.html` no longer sets `__LOCALHUB_HUB_URL__`; there `Tab_Logo_Handler.js` clone-swaps the brand click so it stays inside the isolated tab. Saved proff.html keeps the original inert behaviour (its inline code has no such handler).
 10. **Mounts into `#root` when the shell provides one** (Professor.html / bundled Local_HUB.html), else creates `#ProfessorsApp` on `<body>`.
 11. **Header reform (2026-10-03, user-annotated request)** — the header was redesigned beyond proff.html: the scholar cap is a bare enlarged 36px SVG brand mark (no button box), the cross-tab global-nav cluster is gone from this tab, the io dropdown became flat **Import** / **Export** icon buttons (delegating to the footer's wired `#importJsonBtn` / `#exportJsonBtn`, so JSON is the header's default format and CSV stays footer-only), actions ordered Import → Export → Save → Theme, and the sort select moved into the `.pt-row2` command bar (toggle → sort → search → add professor) as concentric pills. Row 3 was deleted; its controls are guarded in `InitToolbar`/`InitProfessorModal`-adjacent binders (see adaptations 8 and the `InitCompareModal` / hash-re-entry notes) so nothing crashes and any control can be re-wired later. Keyboard shortcuts (`c` compare, `f` favorite) still work.
-12. **Media + drag redesign (2026-10-03, user request referencing the proff.html design sample)** — professors gain a `collegeLogo` field (data URL or link) alongside `photo`; both are captured in the Add/Edit dialog via click / drag-drop / paste tiles (≤ 5 MB data URLs travel inside the saved HTML and the tab standalone). Card heads show a big 64px portrait — blank when no photo exists, by design (the initials fallback remains only in compare/resume via `cmpAvatar`) — with the college logo on the far right. All modals are draggable by their headers. The sample `proff.html` design file the user dropped into `04_Professors/` is a **reference only** — it is not part of the app or any bundler list.
+12. **IO reform (2026-10-25, user request)** — the footer was removed entirely ("import/export/save on top, nothing else below"): the header Import opens its own hidden `#importFile` input, header Export calls the extracted `ExportLibraryJson()`, and header Save is context-aware (master → global `Local_HUB.html` build via `SaveAndDownloadApp()`; tab shell → `ProffTrack.html` via the clone-swapped Tab_Save_Handler binding). The core PROFF_TEMPLATE saver (`05_Data_IO/01_Save_Button.js`), the footer (`04_Footer.js`), and the Paste-JSON modal (`08_Paste_Import_Modal.js`) were deleted; CSV import/export, Print link, Clear-all, Shortcuts link and the footer goal link went with them (Print-mode accordion expansion survives via native before/afterprint; Shortcuts via `?`; goal via the stats-bar button). The sample library (`seedSamples()` + empty-state seed button + explainer paragraph) was removed the same day — an empty vault now boots an empty library.
+13. **Media + drag redesign (2026-10-03, user request referencing the proff.html design sample)** — professors gain a `collegeLogo` field (data URL or link) alongside `photo`; both are captured in the Add/Edit dialog via click / drag-drop / paste tiles (≤ 5 MB data URLs travel inside the saved HTML and the tab standalone). Card heads show a big 64px portrait — blank when no photo exists, by design (the initials fallback remains only in compare/resume via `cmpAvatar`) — with the college logo on the far right. All modals are draggable by their headers. The sample `proff.html` design file the user dropped into `04_Professors/` is a **reference only** — it is not part of the app or any bundler list.
 
 ## Known dead controls (present in proff.html, kept as-is)
 

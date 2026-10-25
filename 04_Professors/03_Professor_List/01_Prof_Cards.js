@@ -6,7 +6,7 @@
    ==========================================================================
 */
 
-import { state, ui, paperPasses, collegeKey, collegeBestRank, filteredSorted, SeedSampleLibrary } from '../00_State.js';
+import { state, ui, paperPasses, collegeKey, collegeBestRank, filteredSorted } from '../00_State.js';
 import { $, esc, fmtDate, stars, fmtSize, avatarColor, initials, toast, ICONS, STATUS_META, statusOf, statusPill } from '../01_Utils.js';
 import { openProfModal } from '../04_Modals/02_Professor_Modal.js';
 import { openBulkModal } from '../04_Modals/07_Bulk_Add_Modal.js';
@@ -218,20 +218,17 @@ export function profCardHTML(p) {
 }
 
 export function renderEmptyState() {
+  /* deliberately minimal (2026-10-25): logo mark + heading + one CTA —
+     the explainer paragraph and the "Load sample library" button are gone */
   $('#profList').innerHTML =
     '<div class="empty-state">' +
       '<div class="empty-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/></svg></div>' +
       '<h2>Your library is empty</h2>' +
-      '<p>Add the professors you follow — their college, its QS ranking and the papers you&#39;ve read. ProfessorTrack groups them by college and ranks them automatically, and the whole library lives inside this single HTML file.</p>' +
       '<div class="empty-actions">' +
         '<button type="button" class="btn btn-primary" id="emptyAddBtn">' + ICONS.plus + 'Add your first professor</button>' +
-        '<button type="button" class="btn btn-line" id="emptySeedBtn">Load sample library</button>' +
       '</div>' +
     '</div>';
   $('#emptyAddBtn').addEventListener('click', function () { openProfModal(null); });
-  $('#emptySeedBtn').addEventListener('click', function () {
-    SeedSampleLibrary(); render(); toast('Sample library loaded — explore, then make it yours.');
-  });
 }
 export function renderList() {
   updateExpandBtn();

@@ -109,8 +109,6 @@ export function GetPaperModalHTML() {
 
 /* paper modal */
 var pendingAttachment = null;
-/* external reset hook (used by the Save button's clearTransientDom) */
-export function setPendingAttachment(v) { pendingAttachment = v; }
 
 function updateAttachUI() {
   var label = $('#attachLabel'), meta = $('#attachMeta'), rm = $('#attachRemove');

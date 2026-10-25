@@ -160,7 +160,8 @@ function openGoalModal() {
   setTimeout(function () { inp.focus(); }, 60);
 }
 export function InitStatsBar() {
-  $('#goalLinkBtn').addEventListener('click', openGoalModal);
+  /* goal entry points: the stats-bar "Set a yearly goal →" button (the footer
+     goal link was removed with the footer, 2026-10-25) */
   $('#statsBar').addEventListener('click', function (e) {
     if (e.target.closest && e.target.closest('#goalSetBtn')) openGoalModal();
   });
