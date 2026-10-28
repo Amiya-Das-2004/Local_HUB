@@ -252,16 +252,22 @@ export function InitLogoLogic() {
         window.location.href = hubUrl;
       } else {
         // Navigate back to the Landing Page by clearing hash
-        if (window.location.hash && window.location.hash !== '#') {
-          window.location.hash = '';
-        } else {
-          // If hash is already empty or '#', dispatch hashchange so router re-evaluates
-          window.location.hash = '#';
-          try {
-            window.dispatchEvent(new HashChangeEvent('hashchange'));
-          } catch (_) {
-            window.dispatchEvent(new Event('hashchange'));
+        try {
+          if (window.history && window.history.pushState) {
+            window.history.pushState(null, '', window.location.pathname + window.location.search);
+          } else {
+            window.location.hash = '';
           }
+        } catch (_) {
+          window.location.hash = '';
+        }
+        try {
+          window.dispatchEvent(new HashChangeEvent('hashchange'));
+        } catch (_) {
+          window.dispatchEvent(new Event('hashchange'));
+        }
+        if (typeof window.handleLocalHubRoute === 'function') {
+          window.handleLocalHubRoute('');
         }
       }
     });

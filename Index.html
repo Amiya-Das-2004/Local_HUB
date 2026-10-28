@@ -776,8 +776,8 @@
 
   <!-- Master JS Component Loader & Router -->
   <script type="module" id="localhub-router">
-    async function handleRoute() {
-      const currentHash = (window.location.hash || '').trim();
+    async function handleRoute(forcedHash) {
+      const currentHash = (typeof forcedHash === 'string' ? forcedHash : (window.location.hash || '')).trim();
       const lowerHash = currentHash.toLowerCase();
       const routeRoot = document.getElementById('root');
 

@@ -535,8 +535,8 @@ ${bundledRD}
 /* ==========================================================================
    MASTER ROUTER
    ========================================================================== */
-function handleRoute() {
-  const currentHash = (window.location.hash || '').trim();
+function handleRoute(forcedHash) {
+  const currentHash = (typeof forcedHash === 'string' ? forcedHash : (window.location.hash || '')).trim();
   const lowerHash = currentHash.toLowerCase();
   if (lowerHash.startsWith('#fig-') || lowerHash.startsWith('#eq-')) {
     return;
@@ -547,6 +547,9 @@ function handleRoute() {
     root.removeAttribute('data-theme');
   }
   document.body.classList.remove('prof-dark');
+  document.body.classList.remove('prof-light');
+  document.body.removeAttribute('data-theme');
+  document.documentElement.removeAttribute('data-theme');
 
   if (lowerHash.startsWith('#bookmarks')) {
     LoadBookmarkPage();
@@ -561,6 +564,7 @@ function handleRoute() {
   }
 }
 
+window.handleLocalHubRoute = handleRoute;
 window.addEventListener('hashchange', handleRoute);
 handleRoute();
 `;
@@ -654,6 +658,14 @@ export function HasUnsavedChanges() {
       if (window.__NOTES_UNSAVED__) anyDirty = true;
     }
 
+    if (typeof window.HasUnsavedRDChanges === 'function') {
+      hasProvider = true;
+      if (window.HasUnsavedRDChanges()) anyDirty = true;
+    } else if (typeof window.__RD_UNSAVED__ === 'boolean') {
+      hasProvider = true;
+      if (window.__RD_UNSAVED__) anyDirty = true;
+    }
+
     if (hasProvider) {
       return anyDirty;
     }
@@ -683,6 +695,14 @@ export function GetUnsavedChangesCount() {
       hasProvider = true;
     } else if (typeof window.__NOTES_UNSAVED_COUNT__ === 'number') {
       total += window.__NOTES_UNSAVED_COUNT__;
+      hasProvider = true;
+    }
+
+    if (typeof window.GetRDUnsavedChangesCount === 'function') {
+      total += window.GetRDUnsavedChangesCount();
+      hasProvider = true;
+    } else if (typeof window.__RD_UNSAVED_COUNT__ === 'number') {
+      total += window.__RD_UNSAVED_COUNT__;
       hasProvider = true;
     }
 
@@ -798,6 +818,8 @@ export function ClearAllLocalCaches(preserveRecovery = false) {
     window.__NOTES_UNSAVED__ = false;
     window.__BOOKMARKS_UNSAVED__ = false;
     window.__BOOKMARKS_UNSAVED_COUNT__ = 0;
+    window.__RD_UNSAVED__ = false;
+    window.__RD_UNSAVED_COUNT__ = 0;
     if (!preserveRecovery) {
       // Full clear (post-save): recovery snapshots die too — the downloaded
       // file now contains the edits. The boot sweep (preserveRecovery=true)
@@ -807,6 +829,9 @@ export function ClearAllLocalCaches(preserveRecovery = false) {
       }
       if (typeof window.ClearBookmarkLocalCache === 'function') {
         try { window.ClearBookmarkLocalCache(); } catch (e) { }
+      }
+      if (typeof window.ClearRDLocalCache === 'function') {
+        try { window.ClearRDLocalCache(); } catch (e) { }
       }
     }
   }

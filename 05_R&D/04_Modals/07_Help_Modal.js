@@ -325,6 +325,14 @@ export function InitGlobalKeys() {
       CloseLinkFloatingPanel();
       const dd = document.getElementById('sections-dropdown-window');
       if (dd) dd.classList.add('hidden');
+      const impMenu = document.getElementById('rd-import-dropdown');
+      if (impMenu) impMenu.classList.add('hidden');
+      const expMenu = document.getElementById('rd-export-dropdown');
+      if (expMenu) expMenu.classList.add('hidden');
+      const impBtn = document.getElementById('rd-btn-import-menu');
+      if (impBtn) impBtn.setAttribute('aria-expanded', 'false');
+      const expBtn = document.getElementById('rd-btn-export-menu');
+      if (expBtn) expBtn.setAttribute('aria-expanded', 'false');
       return;
     }
     const t = e.target;

@@ -122,11 +122,6 @@ import {
   StartLinkDraw
 } from './03_Views/03_Map_View.js';
 import {
-  GetStatsHTML,
-  GetGoalModalHTML,
-  InitStatsBar
-} from './02_Dashboard/01_Stats_Bar.js';
-import {
   RenderResume,
   InitResumeSection
 } from './02_Dashboard/02_Resume_Section.js';
@@ -134,10 +129,6 @@ import {
   RenderHeat,
   InitHeatmap
 } from './02_Dashboard/03_Heatmap.js';
-import {
-  RenderTagBar,
-  InitTagBar
-} from './02_Dashboard/04_Tag_Bar.js';
 import {
   ShowToast,
   ConfirmAction,
@@ -202,10 +193,8 @@ export function GetAppHTML() {
       ${GetTabbarHTML()}
       ${GetToolbarHTML()}
       <div class="rd-dashboard-wrap" id="rd-dashboard" ${isDashOpen ? '' : 'hidden'}>
-        <div class="rd-stats-grid" id="rd-stats-bar"></div>
         <div id="rd-resume-section"></div>
         <div id="rd-heatmap-section"></div>
-        <div id="rd-tag-bar"></div>
       </div>
       <main class="rd-content">
         <section class="rd-tab-panel active" id="panel-list" aria-label="List view"></section>
@@ -235,7 +224,6 @@ export function GetAppHTML() {
     <div id="rd-palette-root"></div>
     <div id="rd-modal-root"></div>
     <div id="rd-confirm-root"></div>
-    ${GetGoalModalHTML()}
     ${GetLinkFloatingPanelHTML()}
   `;
 }
@@ -265,11 +253,8 @@ export function RenderAll() {
     chartBtn.setAttribute('aria-pressed', isDashOpen ? 'true' : 'false');
   }
   if (isDashOpen) {
-    const sb = document.getElementById('rd-stats-bar');
-    if (sb) sb.innerHTML = GetStatsHTML();
     RenderResume();
     RenderHeat();
-    RenderTagBar();
   }
 
   document.querySelectorAll('.rd-node-card, .rd-item-card').forEach((el) => {
@@ -385,11 +370,8 @@ export function InitDelegatedEvents() {
             chartBtn.setAttribute('aria-pressed', !cur ? 'true' : 'false');
           }
           if (!cur) {
-            const sb = document.getElementById('rd-stats-bar');
-            if (sb) sb.innerHTML = GetStatsHTML();
             RenderResume();
             RenderHeat();
-            RenderTagBar();
           }
           return;
         }
@@ -958,10 +940,8 @@ export function initRDApp(container) {
   InitQueueDnD();
   AttachCanvasEvents('timeline');
   AttachCanvasEvents('map');
-  InitStatsBar();
   InitResumeSection();
   InitHeatmap();
-  InitTagBar();
   InitGlobalKeys();
   InitLinkModal();
   ApplyTheme();
@@ -985,12 +965,6 @@ export function initRDApp(container) {
   }
 
   RenderAll();
-
-  if (state.rd.meta && !state.rd.meta.onboarded) {
-    setTimeout(() => {
-      if (state.rd.meta && !state.rd.meta.onboarded) ShowHelpPanel();
-    }, 650);
-  }
 
   window.openLinkFloatingPanel = OpenLinkFloatingPanel;
   window.closeLinkFloatingPanel = CloseLinkFloatingPanel;

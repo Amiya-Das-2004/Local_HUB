@@ -1,9 +1,7 @@
 // Per-tab logo click handler for 05_R&D/06_Tab_RD/R&D.html.
 //
-// In isolated tab mode, clicking the LocalHUB hub item in R&D's global-nav
-// cluster keeps the user within the R&D workspace (clearing any in-tab
-// deep-link hash re-boots the page) rather than navigating away to
-// Index.html. The active flask identity item is already a disabled no-op.
+// In isolated tab mode, clicking the logo takes the user back to the
+// Landing Page (Index.html) via window.__LOCALHUB_HUB_URL__ or fallback.
 //
 // Self-contained on purpose: not listed in the all-in-one bundler, not needed
 // by Index.html.
@@ -15,7 +13,15 @@ export function InitTabLogoOverride() {
   brandLink.replaceWith(clone);
   clone.addEventListener('click', (e) => {
     e.preventDefault();
-    // Stay within the isolated R&D tab without redirecting to Index.html
-    window.location.hash = '';
+    document.querySelectorAll('#notes-text-floating-dock').forEach(el => {
+      if (typeof el.__cleanup === 'function') el.__cleanup();
+      el.remove();
+    });
+    const hubUrl = (typeof window !== 'undefined' && window.__LOCALHUB_HUB_URL__) || '../../Index.html';
+    if (hubUrl) {
+      window.location.href = hubUrl;
+    } else {
+      window.location.hash = '';
+    }
   });
 }

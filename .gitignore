@@ -1,7 +1,7 @@
 # Zcode files and local editor config
 .zcode/
 .zcodeignore
-Prompt.md
+#Prompt.md
 
 # Scratch and temporary testing files
 scratch/

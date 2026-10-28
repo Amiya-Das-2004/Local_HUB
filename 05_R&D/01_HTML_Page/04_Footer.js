@@ -15,13 +15,8 @@ export function GetFooterHTML() {
         <button class="ghost-btn sm dup-chip" id="rd-dups-chip" data-action="open-duplicates" title="Find duplicate papers (same DOI or title) and merge them" hidden>
           ${ICONS.alert}<span id="rd-dups-count"></span>
         </button>
-        <button class="ghost-btn sm" data-action="export-bibtex" title="Download the whole library as a .bib file for LaTeX/JabRef/Zotero">${ICONS.copy}<span>Export .bib</span></button>
-        <button class="ghost-btn sm" data-action="import-bibtex-file" title="Bulk import a .bib file (multiple entries supported)">${ICONS.upload}<span>Import .bib</span></button>
         <input type="file" id="rd-import-file" accept=".json,application/json" class="hidden" />
         <input type="file" id="rd-bibtex-file" accept=".bib,.bibtex,text/x-bibtex" class="hidden" />
-        <button class="ghost-btn sm" data-action="open-health" title="Library health check (H) — missing DOIs, key clashes, empty groups…">${ICONS.health}<span>Health</span></button>
-        <button class="ghost-btn sm danger" data-action="reset-data" title="Clear all R&D data">Reset</button>
-        <span class="rd-footer-note">R&amp;D Library &middot; local-first &middot; v1.8</span>
       </div>
     </footer>
   `;

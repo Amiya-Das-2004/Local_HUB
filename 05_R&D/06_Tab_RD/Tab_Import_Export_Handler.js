@@ -117,17 +117,6 @@ export function TriggerTabImport(onSuccess = null) {
           }
         }
 
-        // 3. Save to R&D's localStorage store (persist() shape: { rd: … }).
-        //    loadState() deletes this key at boot (vault-first), but the three
-        //    save/export handlers read it as a fallback data source.
-        try {
-          if (typeof localStorage !== 'undefined') {
-            localStorage.setItem('rd_library_v1', JSON.stringify({ rd: cleanData }));
-          }
-        } catch (err) {
-          console.warn('[R&D Import] Failed to cache in localStorage:', err);
-        }
-
         alert('R&D library imported successfully! Remember to click SAVE HTML to make it permanent in your HTML.');
 
         if (onSuccess) {

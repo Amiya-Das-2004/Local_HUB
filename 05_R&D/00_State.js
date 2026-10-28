@@ -7,6 +7,7 @@
 
 import { RD_LAYOUT, RD_GROUP_PALETTE, RD_ITEM_PALETTE, SeedDataJSON } from './03_Seed_Data.js';
 import { uid, copyText } from './01_Utils.js';
+import { OfferRecoverySnapshot, WriteRecoverySnapshot, ClearRecoverySnapshot, PurgeLegacyRecoveryKeys } from '../00_Components/10_Recovery.js';
 
 export const STORE_KEY = 'rd_library_v1';
 
@@ -179,6 +180,190 @@ export var state = DefaultState();
 export var ui = state.rd.ui;
 let PersistCb = null;
 
+let baselineRDMap = (typeof window !== 'undefined' && window.__RD_BASELINE__)
+  ? window.__RD_BASELINE__
+  : new Map(); // id -> fingerprint string
+let isBaselineCaptured = Boolean(typeof window !== 'undefined' && window.__RD_BASELINE_CAPTURED__);
+let hasUnsavedRDChanges = Boolean(typeof window !== 'undefined' && window.__RD_UNSAVED__);
+let baselineGroupIds = (typeof window !== 'undefined' && window.__RD_BASELINE_GROUPS__)
+  ? window.__RD_BASELINE_GROUPS__
+  : new Set();
+let baselineLinkIds = (typeof window !== 'undefined' && window.__RD_BASELINE_LINKS__)
+  ? window.__RD_BASELINE_LINKS__
+  : new Set();
+
+if (typeof window !== 'undefined') {
+  window.__RD_BASELINE__ = baselineRDMap;
+  window.__RD_BASELINE_CAPTURED__ = isBaselineCaptured;
+  window.__RD_UNSAVED__ = hasUnsavedRDChanges;
+  window.__RD_BASELINE_GROUPS__ = baselineGroupIds;
+  window.__RD_BASELINE_LINKS__ = baselineLinkIds;
+}
+
+export function getRDItemFingerprint(it) {
+  if (!it || typeof it !== 'object') return '';
+  return JSON.stringify({
+    title: String(it.title || '').trim(),
+    type: String(it.type || '').trim(),
+    authors: Array.isArray(it.authors) ? it.authors.map(a => String(a).trim()).filter(Boolean) : [],
+    journal: String(it.journal || '').trim(),
+    volume: String(it.volume || '').trim(),
+    issue: String(it.issue || '').trim(),
+    pages: String(it.pages || '').trim(),
+    year: it.year ? Number(it.year) : null,
+    publisher: String(it.publisher || '').trim(),
+    doi: String(it.doi || '').trim(),
+    url: String(it.url || '').trim(),
+    bibtexKey: String(it.bibtexKey || '').trim(),
+    status: String(it.status || 'unread'),
+    progress: Number(it.progress || 0),
+    starred: Boolean(it.starred),
+    important: Boolean(it.important),
+    notes: String(it.notes || ''),
+    color: String(it.color || ''),
+    tags: Array.isArray(it.tags) ? [...it.tags].sort() : [],
+    groupId: it.groupId || null,
+    localPath: String(it.localPath || '').trim(),
+    startedOn: it.startedOn || null,
+    finishedOn: it.finishedOn || null,
+    institution: String(it.institution || '').trim(),
+    advisor: String(it.advisor || '').trim(),
+    degree: String(it.degree || '').trim()
+  });
+}
+
+export function CaptureRDBaseline(curState = state) {
+  baselineRDMap.clear();
+  baselineGroupIds.clear();
+  baselineLinkIds.clear();
+  const rd = (curState && curState.rd) || curState;
+  if (rd && Array.isArray(rd.items)) {
+    rd.items.forEach(it => {
+      if (!it || !it.id) return;
+      baselineRDMap.set(it.id, getRDItemFingerprint(it));
+    });
+  }
+  if (rd && Array.isArray(rd.groups)) {
+    rd.groups.forEach(g => { if (g && g.id) baselineGroupIds.add(g.id); });
+  }
+  if (rd && Array.isArray(rd.links)) {
+    rd.links.forEach(l => { if (l && l.id) baselineLinkIds.add(l.id); });
+  }
+  isBaselineCaptured = true;
+  hasUnsavedRDChanges = false;
+  if (typeof window !== 'undefined') {
+    window.__RD_BASELINE__ = baselineRDMap;
+    window.__RD_BASELINE_CAPTURED__ = true;
+    window.__RD_UNSAVED__ = false;
+    window.__RD_UNSAVED_COUNT__ = 0;
+    window.__RD_BASELINE_GROUPS__ = baselineGroupIds;
+    window.__RD_BASELINE_LINKS__ = baselineLinkIds;
+    if (typeof window.MarkUnsavedChanges === 'function') {
+      const overallDirty = typeof window.HasUnsavedChanges === 'function' ? window.HasUnsavedChanges() : false;
+      const overallCount = typeof window.GetUnsavedChangesCount === 'function' ? window.GetUnsavedChangesCount() : 0;
+      window.MarkUnsavedChanges(overallDirty, overallCount);
+    }
+  }
+}
+
+export function CalculateRDChanges() {
+  if (!isBaselineCaptured) {
+    return { count: 0, isDirty: false, addedCount: 0, editedCount: 0, deletedCount: 0 };
+  }
+
+  let addedCount = 0;
+  let editedCount = 0;
+  let deletedCount = 0;
+  const currentIds = new Set();
+  const rd = (state && state.rd) || state;
+
+  if (rd && Array.isArray(rd.items)) {
+    rd.items.forEach(it => {
+      if (!it || !it.id) return;
+      currentIds.add(it.id);
+      const origFp = baselineRDMap.get(it.id);
+      if (origFp === undefined) {
+        addedCount++;
+      } else {
+        const currFp = getRDItemFingerprint(it);
+        if (origFp !== currFp) {
+          editedCount++;
+        }
+      }
+    });
+  }
+
+  for (const [origId] of baselineRDMap) {
+    if (!currentIds.has(origId)) {
+      deletedCount++;
+    }
+  }
+
+  let groupDiff = 0;
+  if (rd && Array.isArray(rd.groups)) {
+    const curGroupIds = new Set(rd.groups.map(g => g.id));
+    rd.groups.forEach(g => { if (!baselineGroupIds.has(g.id)) groupDiff++; });
+    for (const gid of baselineGroupIds) { if (!curGroupIds.has(gid)) groupDiff++; }
+  }
+
+  let linkDiff = 0;
+  if (rd && Array.isArray(rd.links)) {
+    const curLinkIds = new Set(rd.links.map(l => l.id));
+    rd.links.forEach(l => { if (!baselineLinkIds.has(l.id)) linkDiff++; });
+    for (const lid of baselineLinkIds) { if (!curLinkIds.has(lid)) linkDiff++; }
+  }
+
+  const totalCount = addedCount + editedCount + deletedCount + groupDiff + linkDiff;
+  const isDirty = totalCount > 0;
+
+  return {
+    count: totalCount,
+    isDirty,
+    addedCount,
+    editedCount,
+    deletedCount,
+    groupDiff,
+    linkDiff
+  };
+}
+
+export function GetRDUnsavedChangesCount() {
+  const diff = CalculateRDChanges();
+  return diff.count;
+}
+
+export function HasUnsavedRDChanges() {
+  if (!isBaselineCaptured) return hasUnsavedRDChanges;
+  const diff = CalculateRDChanges();
+  return diff.isDirty;
+}
+
+export function SetRDUnsavedChanges(dirty = true) {
+  let isDirty = false;
+  let count = 0;
+  if (dirty === false) {
+    isDirty = false;
+    count = 0;
+  } else if (isBaselineCaptured) {
+    const diff = CalculateRDChanges();
+    isDirty = diff.isDirty;
+    count = diff.count;
+  } else {
+    isDirty = Boolean(dirty);
+    count = isDirty ? 1 : 0;
+  }
+  hasUnsavedRDChanges = isDirty;
+  if (typeof window !== 'undefined') {
+    window.__RD_UNSAVED__ = hasUnsavedRDChanges;
+    window.__RD_UNSAVED_COUNT__ = count;
+    if (typeof window.MarkUnsavedChanges === 'function') {
+      const overallDirty = typeof window.HasUnsavedChanges === 'function' ? window.HasUnsavedChanges() : hasUnsavedRDChanges;
+      const overallCount = typeof window.GetUnsavedChangesCount === 'function' ? window.GetUnsavedChangesCount() : count;
+      window.MarkUnsavedChanges(overallDirty, overallCount);
+    }
+  }
+}
+
 export function replaceState(next) {
   state = next;
   ui = state.rd.ui;
@@ -189,16 +374,13 @@ export function OnPersist(cb) {
 }
 
 export function persist(silent) {
-  try {
-    localStorage.setItem(STORE_KEY, JSON.stringify({ rd: state.rd }));
-  } catch (e) {
-    console.warn('[R&D] Could not persist state:', e);
-  }
+  // Pure in-memory session: NO localStorage write to eliminate cross-file contamination!
+  // Write path-scoped crash recovery snapshot in sessionStorage
+  WriteRecoverySnapshot('RD', state.rd);
+
   if (typeof window !== 'undefined') {
     try { window.RDState = state; } catch (e) { }
-    if (typeof window.MarkUnsavedChanges === 'function') {
-      window.MarkUnsavedChanges(true);
-    }
+    SetRDUnsavedChanges(true);
   }
   syncVault();
   if (!silent && PersistCb) PersistCb();
@@ -212,31 +394,79 @@ export function syncVault() {
   }
 }
 
+function RestoreRDFromSnapshot(snapData) {
+  if (!snapData || typeof snapData !== 'object') return;
+  state = NormalizeState({ rd: snapData });
+  ui = state.rd.ui;
+  if (typeof window !== 'undefined') window.RDState = state;
+  syncVault();
+  SetRDUnsavedChanges(true);
+  if (typeof window !== 'undefined' && window.RDUI && typeof window.RDUI.RenderAll === 'function') {
+    window.RDUI.RenderAll();
+  }
+}
+
 export function loadState() {
   const embedded = EmbeddedInitialData();
 
-  // 1. Wipe any stale leftover cache from previous files or sessions
+  // 1. Wipe any stale leftover cache from older builds to eliminate cross-file contamination
   try {
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem(STORE_KEY);
+      localStorage.removeItem('rd_library_v1');
+      localStorage.removeItem('RDData_Local_Cache');
+      localStorage.removeItem('RD_Local_Cache');
     }
   } catch (e) { }
 
-  // 2. Pure load directly from embedded HTML data vault (#RDData)
+  // 2. Purge legacy fixed-key recovery caches
+  PurgeLegacyRecoveryKeys();
+
+  // 3. Offer path-scoped crash-recovery snapshot (sessionStorage)
+  OfferRecoverySnapshot({
+    baseKey: 'RD',
+    label: 'research library',
+    onRestore: (snapData) => RestoreRDFromSnapshot(snapData)
+  });
+
+  // 4. Pure load directly from embedded HTML data vault (#RDData)
   if (embedded && embedded.rd) {
     state = NormalizeState(embedded);
     ui = state.rd.ui;
+    if (typeof window !== 'undefined') window.RDState = state;
+    if (!isBaselineCaptured) {
+      CaptureRDBaseline(state);
+    }
     return state;
   }
 
-  // 3. Clean default fallback
+  // 5. Clean default fallback
   state = DefaultState();
   ui = state.rd.ui;
+  if (typeof window !== 'undefined') window.RDState = state;
+  if (!isBaselineCaptured) {
+    CaptureRDBaseline(state);
+  }
   return state;
 }
 
+export function ClearRDLocalCache() {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(STORE_KEY);
+      localStorage.removeItem('rd_library_v1');
+      localStorage.removeItem('RDData_Local_Cache');
+      localStorage.removeItem('RD_Local_Cache');
+    }
+  } catch (e) {
+    console.warn('Failed to clear RD local cache:', e);
+  }
+  ClearRecoverySnapshot('RD');
+  CaptureRDBaseline(state);
+}
+
 export function Clear() {
-  try { localStorage.removeItem(STORE_KEY); } catch (e) { }
+  ClearRDLocalCache();
 }
 
 export function ExportSnapshot() {
@@ -1205,3 +1435,17 @@ export function SaveQuiet() { return persist(true); }
 export const ITEM_PALETTE = RD_ITEM_PALETTE;
 export const GROUP_PALETTE = RD_GROUP_PALETTE;
 export { RD_LAYOUT };
+
+if (typeof window !== 'undefined') {
+  window.RDState = state;
+  window.SaveRDState = persist;
+  window.ClearRDLocalCache = ClearRDLocalCache;
+  window.CaptureRDBaseline = CaptureRDBaseline;
+  window.CalculateRDChanges = CalculateRDChanges;
+  window.GetRDUnsavedChangesCount = GetRDUnsavedChangesCount;
+  window.HasUnsavedRDChanges = HasUnsavedRDChanges;
+  window.SetRDUnsavedChanges = SetRDUnsavedChanges;
+}
+
+// Initial load on import
+loadState();

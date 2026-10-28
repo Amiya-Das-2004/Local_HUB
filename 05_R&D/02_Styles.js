@@ -299,6 +299,121 @@ body {
   flex-shrink: 0;
 }
 
+/* ===== HEADER IMPORT/EXPORT DROPDOWNS ===== */
+.rd-dropdown-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.rd-dropdown-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--border, #2a2e40);
+  background: var(--surface, #181b27);
+  color: var(--text-secondary, #a0a4b8);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 0;
+  margin: 0;
+  user-select: none;
+}
+
+.rd-dropdown-trigger:hover,
+.rd-dropdown-trigger[aria-expanded="true"] {
+  color: var(--text, #e8eaf2);
+  border-color: var(--accent, #8b6dff);
+  background: var(--card, #1c1f2e);
+  box-shadow: 0 0 10px var(--accent-glow, rgba(139, 109, 255, 0.2));
+}
+
+.rd-dropdown-trigger svg {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 440px) {
+  .rd-dropdown-trigger {
+    width: 32px;
+    height: 32px;
+  }
+  .rd-dropdown-trigger svg {
+    width: 15px;
+    height: 15px;
+  }
+}
+
+@media (max-width: 360px) {
+  .rd-dropdown-trigger {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+  }
+  .rd-dropdown-trigger svg {
+    width: 13px;
+    height: 13px;
+  }
+}
+
+.rd-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 136px;
+  background: var(--card, #181b27);
+  border: 1px solid var(--border, #2a2e40);
+  border-radius: 8px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 15px rgba(139, 109, 255, 0.15);
+  padding: 4px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.rd-dropdown-menu.hidden {
+  display: none !important;
+}
+
+.rd-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text, #e8eaf2);
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  user-select: none;
+  transition: background 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+}
+
+.rd-dropdown-item:hover,
+.rd-dropdown-item:focus-visible {
+  background: color-mix(in srgb, var(--accent, #8b6dff) 16%, transparent);
+  color: var(--accent, #8b6dff);
+  outline: none;
+}
+
+.rd-dropdown-item svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
 @media (max-width: 768px) {
   .rd-header-inner,
   :where(.rd-app) .header-inner {

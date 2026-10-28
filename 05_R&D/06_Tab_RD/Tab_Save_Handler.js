@@ -193,6 +193,7 @@ export async function SaveRDStandalone() {
     const finalModuleCode = `
 window.__IS_STANDALONE__ = true;
 window.__LOCALHUB_PAGE__ = 'rd';
+window.__LOCALHUB_HUB_URL__ = 'Index.html';
 
 /* ==========================================================================
    SHARED COMPONENTS (icon buttons)
