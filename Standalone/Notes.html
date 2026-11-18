@@ -1066,16 +1066,22 @@ function InitLogoLogic() {
         window.location.href = hubUrl;
       } else {
         // Navigate back to the Landing Page by clearing hash
-        if (window.location.hash && window.location.hash !== '#') {
-          window.location.hash = '';
-        } else {
-          // If hash is already empty or '#', dispatch hashchange so router re-evaluates
-          window.location.hash = '#';
-          try {
-            window.dispatchEvent(new HashChangeEvent('hashchange'));
-          } catch (_) {
-            window.dispatchEvent(new Event('hashchange'));
+        try {
+          if (window.history && window.history.pushState) {
+            window.history.pushState(null, '', window.location.pathname + window.location.search);
+          } else {
+            window.location.hash = '';
           }
+        } catch (_) {
+          window.location.hash = '';
+        }
+        try {
+          window.dispatchEvent(new HashChangeEvent('hashchange'));
+        } catch (_) {
+          window.dispatchEvent(new Event('hashchange'));
+        }
+        if (typeof window.handleLocalHubRoute === 'function') {
+          window.handleLocalHubRoute('');
         }
       }
     });
@@ -1191,7 +1197,11 @@ function InitThemeToggleLogic() {
   document.documentElement.setAttribute('data-theme', savedTheme);
   updateThemeToggleButtons(savedTheme);
 
-  if (btn) {
+  if (btn && !btn.__themeToggleBound) {
+    /* Guard against double-binding: InitThemeToggleLogic runs on every
+       InitHeader (per tab boot / re-entry), and a duplicated listener would
+       make one click flip the theme twice — the button then looks dead. */
+    btn.__themeToggleBound = true;
     btn.addEventListener('click', () => {
       const current = document.documentElement.getAttribute('data-theme') || 'dark';
       const next = current === 'dark' ? 'light' : 'dark';
@@ -1627,6 +1637,12 @@ function TriggerImport(onSuccess = null) {
           masterBlocks['ProfessorsData'] = importedData;
         } else if (Array.isArray(importedData.items) || importedData.groupOrder || importedData.links) {
           masterBlocks['RDData'] = importedData;
+        } else if (importedData.rd && typeof importedData.rd === 'object' &&
+                   (Array.isArray(importedData.rd.items) || importedData.rd.groupOrder || importedData.rd.links)) {
+          /* R&D's own backup shape ({ rd: <library> } — RD_DATA.json /
+             rd-library-backup-*.json). Without this branch it fell through to
+             the generic loop, wrote a dead `#rd` script block and was lost. */
+          masterBlocks['RDData'] = importedData.rd;
         } else if (Array.isArray(importedData.tabs)) {
           masterBlocks['LandingPageData'] = importedData;
         } else {
@@ -1723,8 +1739,14 @@ function TriggerImport(onSuccess = null) {
               if (typeof window.replaceState === 'function') window.replaceState(cleanData);
             }
             if (id === 'RDData') {
-              if (window.RDState) Object.assign(window.RDState, { rd: cleanData });
-              if (window.RD && typeof window.RD.replaceState === 'function') window.RD.replaceState(cleanData);
+              /* Route through the R&D module hook: NormalizeState + persist +
+                 full re-render. A raw Object.assign bypassed normalization and
+                 left the running UI showing stale data. */
+              if (window.RD && typeof window.RD.ReplaceAll === 'function') {
+                window.RD.ReplaceAll(cleanData);
+              } else if (window.RDState) {
+                Object.assign(window.RDState, { rd: cleanData });
+              }
             }
             if (window[id + 'State']) Object.assign(window[id + 'State'], cleanData);
             if (window[id]) Object.assign(window[id], cleanData);
@@ -2091,6 +2113,7 @@ function InitImportExport(onImportSuccess = null) {
 }
 
 /* --- 00_Components/05_Save_Button.js --- */
+
 // Save button svg logo
 function GetSaveButtonHTML() {
   return `
@@ -2269,18 +2292,22 @@ function syncAllStatesToDOM(doc) {
       }
     }
 
-    // 2. Check localStorage cache for latest edits only if not found in live window state
+    // 2. Fallback to this file's path-scoped recovery snapshot (sessionStorage)
+    //    only if not found in live window state. The old shared localStorage
+    //    keys are NOT read here anymore — they leaked data between different
+    //    LocalHUB files sharing one origin.
     if (!foundData) {
-      const cacheKeys = [id + '_Local_Cache', id.replace(/Data$/, '') + '_Local_Cache', id];
-      if (id === 'RDData') cacheKeys.push('rd_library_v1');
-      for (const ck of cacheKeys) {
+      const snap = ReadRecoverySnapshot(id);
+      if (snap && snap.data && typeof snap.data === 'object') {
+        foundData = (id === 'RDData' && snap.data.rd) ? snap.data.rd : snap.data;
+      }
+      if (!foundData && id === 'RDData') {
         try {
-          const cached = localStorage.getItem(ck);
-          if (cached) {
-            const parsed = JSON.parse(cached);
+          const rdRaw = localStorage.getItem('rd_library_v1');
+          if (rdRaw) {
+            const parsed = JSON.parse(rdRaw);
             if (parsed && typeof parsed === 'object') {
-              foundData = (id === 'RDData' && parsed.rd) ? parsed.rd : parsed;
-              break;
+              foundData = parsed.rd ? parsed.rd : parsed;
             }
           }
         } catch (e) { }
@@ -2382,7 +2409,8 @@ async function SaveAndDownloadApp() {
       '00_Components/06_Color_Selector.js',
       '00_Components/07_Blob_Store.js',
       '00_Components/08_Research_Library.js',
-      '00_Components/09_Icon_Button.js'
+      '00_Components/09_Icon_Button.js',
+      '00_Components/10_Recovery.js'
     ];
 
     const landingFiles = [
@@ -2420,6 +2448,9 @@ async function SaveAndDownloadApp() {
       '03_Notes/Writing_Engine/Block_Engine.js',
       '03_Notes/Writing_Engine/Numbering_Engine.js',
       '03_Notes/Writing_Engine/Math_Renderer.js',
+      '03_Notes/Writing_Engine/Tikz_Engine/Tikz_Source_Converter.js',
+      '03_Notes/Writing_Engine/Tikz_Engine/Tikz_Engine_Loader.js',
+      '03_Notes/Writing_Engine/Tikz_Engine/Tikz_Font_Store.js',
       '03_Notes/Writing_Engine/Tikz_Engine/Tikz_Renderer.js',
       '03_Notes/Writing_Engine/Code_Highlighter.js',
       '03_Notes/Writing_Engine/Link_Parser.js',
@@ -2444,6 +2475,7 @@ async function SaveAndDownloadApp() {
       '03_Notes/B_Editor_View/01_Blocks/Text_Block/Text_Block_Markdown.js',
       '03_Notes/B_Editor_View/01_Blocks/Text_Block.js',
       '03_Notes/B_Editor_View/01_Blocks/Equation_Block.js',
+      '03_Notes/B_Editor_View/01_Blocks/Tikz_Render_Panel.js',
       '03_Notes/B_Editor_View/01_Blocks/Tikz_Block.js',
       '03_Notes/B_Editor_View/01_Blocks/Image_Block.js',
       '03_Notes/B_Editor_View/01_Blocks/Table_Block.js',
@@ -2485,6 +2517,9 @@ async function SaveAndDownloadApp() {
     ];
 
     const professorFiles = [
+      // Dependency-ordered: 04_Footer.js / 08_Paste_Import_Modal.js /
+      // 01_Save_Button.js (core PROFF_TEMPLATE saver) removed 2026-10-25 —
+      // IO lives in the header now (footer gone; Save is context-aware).
       '04_Professors/00_State.js',
       '04_Professors/01_Utils.js',
       '04_Professors/02_Styles.js',
@@ -2492,7 +2527,6 @@ async function SaveAndDownloadApp() {
       '04_Professors/01_HTML_Page/01_Header.js',
       '04_Professors/01_HTML_Page/02_Toolbar.js',
       '04_Professors/01_HTML_Page/03_Theme_Toggle.js',
-      '04_Professors/01_HTML_Page/04_Footer.js',
       '04_Professors/02_Dashboard/01_Stats_Bar.js',
       '04_Professors/02_Dashboard/02_Resume_Section.js',
       '04_Professors/02_Dashboard/03_Heatmap.js',
@@ -2506,9 +2540,7 @@ async function SaveAndDownloadApp() {
       '04_Professors/04_Modals/05_Journal_Browser.js',
       '04_Professors/04_Modals/06_Compare_Modal.js',
       '04_Professors/04_Modals/07_Bulk_Add_Modal.js',
-      '04_Professors/04_Modals/08_Paste_Import_Modal.js',
       '04_Professors/04_Modals/09_Shortcuts_Modal.js',
-      '04_Professors/05_Data_IO/01_Save_Button.js',
       '04_Professors/05_Data_IO/02_Export.js',
       '04_Professors/05_Data_IO/03_Import.js',
       '04_Professors/Professors.js'
@@ -2621,8 +2653,8 @@ ${bundledRD}
 /* ==========================================================================
    MASTER ROUTER
    ========================================================================== */
-function handleRoute() {
-  const currentHash = (window.location.hash || '').trim();
+function handleRoute(forcedHash) {
+  const currentHash = (typeof forcedHash === 'string' ? forcedHash : (window.location.hash || '')).trim();
   const lowerHash = currentHash.toLowerCase();
   if (lowerHash.startsWith('#fig-') || lowerHash.startsWith('#eq-')) {
     return;
@@ -2633,6 +2665,9 @@ function handleRoute() {
     root.removeAttribute('data-theme');
   }
   document.body.classList.remove('prof-dark');
+  document.body.classList.remove('prof-light');
+  document.body.removeAttribute('data-theme');
+  document.documentElement.removeAttribute('data-theme');
 
   if (lowerHash.startsWith('#bookmarks')) {
     LoadBookmarkPage();
@@ -2647,6 +2682,7 @@ function handleRoute() {
   }
 }
 
+window.handleLocalHubRoute = handleRoute;
 window.addEventListener('hashchange', handleRoute);
 handleRoute();
 `;
@@ -2673,7 +2709,7 @@ handleRoute();
   }
 
   // Cleanup injected dev scripts, runtime containers, and dynamic TikZ engine tags before download
-  DocClone.querySelectorAll('script[src*="livepreview"], script[src*="livereload"], #tikzjax-js, #tikzjax-css, script[src*="tikzjax"]').forEach(s => s.remove());
+  DocClone.querySelectorAll('script[src*="livepreview"], script[src*="livereload"], #tikzjax-js, #tikzjax-css, script[src*="tikzjax"], #tikz-engine-host, #tikz-saved-fonts').forEach(s => s.remove());
   ['#canvas-container', '#loading-container', '#root'].forEach(sel => {
     const el = DocClone.querySelector(sel);
     if (el) el.innerHTML = '';
@@ -2739,6 +2775,14 @@ function HasUnsavedChanges() {
       if (window.__NOTES_UNSAVED__) anyDirty = true;
     }
 
+    if (typeof window.HasUnsavedRDChanges === 'function') {
+      hasProvider = true;
+      if (window.HasUnsavedRDChanges()) anyDirty = true;
+    } else if (typeof window.__RD_UNSAVED__ === 'boolean') {
+      hasProvider = true;
+      if (window.__RD_UNSAVED__) anyDirty = true;
+    }
+
     if (hasProvider) {
       return anyDirty;
     }
@@ -2767,6 +2811,14 @@ function GetUnsavedChangesCount() {
       hasProvider = true;
     } else if (typeof window.__NOTES_UNSAVED_COUNT__ === 'number') {
       total += window.__NOTES_UNSAVED_COUNT__;
+      hasProvider = true;
+    }
+
+    if (typeof window.GetRDUnsavedChangesCount === 'function') {
+      total += window.GetRDUnsavedChangesCount();
+      hasProvider = true;
+    } else if (typeof window.__RD_UNSAVED_COUNT__ === 'number') {
+      total += window.__RD_UNSAVED_COUNT__;
       hasProvider = true;
     }
 
@@ -2827,8 +2879,12 @@ function ShowUnsavedRefreshModal() {
   // Pure in-memory sessions rely on standard browser beforeunload navigation prompts
 }
 
-// Clears all unsaved local cache keys from browser localStorage
-function ClearAllLocalCaches() {
+// Clears all unsaved local cache keys from browser localStorage.
+// preserveRecovery=true (boot sweep only) keeps the path-scoped sessionStorage
+// recovery snapshots alive — they must survive exits/reloads to be offerable;
+// the save flow (preserveRecovery=false default) clears them because the
+// edits are now permanent inside the downloaded file.
+function ClearAllLocalCaches(preserveRecovery = false) {
   if (typeof localStorage === 'undefined') return;
   // 1. Clear known tab cache keys based on DOM data blocks
   if (typeof document !== 'undefined') {
@@ -2877,11 +2933,21 @@ function ClearAllLocalCaches() {
     window.__NOTES_UNSAVED__ = false;
     window.__BOOKMARKS_UNSAVED__ = false;
     window.__BOOKMARKS_UNSAVED_COUNT__ = 0;
-    if (typeof window.ClearNotesLocalCache === 'function') {
-      try { window.ClearNotesLocalCache(); } catch (e) { }
-    }
-    if (typeof window.ClearBookmarkLocalCache === 'function') {
-      try { window.ClearBookmarkLocalCache(); } catch (e) { }
+    window.__RD_UNSAVED__ = false;
+    window.__RD_UNSAVED_COUNT__ = 0;
+    if (!preserveRecovery) {
+      // Full clear (post-save): recovery snapshots die too — the downloaded
+      // file now contains the edits. The boot sweep (preserveRecovery=true)
+      // must NOT touch them.
+      if (typeof window.ClearNotesLocalCache === 'function') {
+        try { window.ClearNotesLocalCache(); } catch (e) { }
+      }
+      if (typeof window.ClearBookmarkLocalCache === 'function') {
+        try { window.ClearBookmarkLocalCache(); } catch (e) { }
+      }
+      if (typeof window.ClearRDLocalCache === 'function') {
+        try { window.ClearRDLocalCache(); } catch (e) { }
+      }
     }
   }
   const saveBtn = typeof document !== 'undefined' ? document.getElementById('save-btn') : null;
@@ -2928,13 +2994,14 @@ function InitSaveButtonLogic() {
       }
     });
 
-    // Immediately wipe localStorage cache when leaving or closing the page
-    window.addEventListener('pagehide', () => {
-      ClearAllLocalCaches();
-    });
+    // NOTE: no pagehide wipe — sessionStorage recovery snapshots are per-tab
+    // and path-scoped, so they can never leak into another file, and wiping
+    // on exit destroyed the crash-recovery data right when it was needed.
+    // Legacy localStorage keys are purged on load by each tab's state module.
 
-    // Clean sweep on initial startup to ensure no stale cache from other files contaminates this session
-    ClearAllLocalCaches();
+    // Clean sweep on initial startup to ensure no stale cache from other files
+    // contaminates this session (recovery snapshots preserved)
+    ClearAllLocalCaches(true);
   }
 }
 
@@ -3382,6 +3449,228 @@ if (typeof window !== 'undefined') {
 }
 
 
+/* --- 00_Components/10_Recovery.js --- */
+// 00_Components/10_Recovery.js
+//
+// Path-scoped crash-recovery snapshots + legacy cache purge.
+//
+// WHY THIS EXISTS: localStorage is scoped by ORIGIN, not by file — every
+// standalone HTML opened from disk (file://) or from one localhost server
+// shares a single localStorage namespace. The old fixed keys
+// (`NotesData_Local_Cache`, `Bookmarks_Local_Cache`, …) therefore bled data
+// between DIFFERENT .html files ("opened another file and it showed the
+// previous file's notes"). Recovery snapshots here are:
+//   1. Scoped to THIS file: key = prefix + vaultId + '::' + location.pathname
+//   2. Stored in sessionStorage: per-tab, survives reloads (and Chrome tab
+//      restore after a browser crash), dies with the tab — so a snapshot can
+//      never leak into a different file or even a different tab.
+//   3. NEVER applied silently: on load the shell calls OfferRecoverySnapshot()
+//      which shows a Restore / Discard banner; nothing touches vault state
+//      until the user picks.
+// A successful SAVE (download of the standalone HTML) must clear the vault's
+// snapshot — the edits are now permanent inside the downloaded file.
+const LOCALHUB_RECOVERY_PREFIX = 'LocalHub_Recovery::';
+
+// Legacy fixed-key caches (pre-scoping era). They are only ever wiped these
+// days — no load path reads them — so purging on load removes any data left
+// behind by older builds of the app.
+const LOCALHUB_RECOVERY_LEGACY_KEYS = [
+  'NotesData_Local_Cache',
+  'Bookmarks_Local_Cache',
+  'LandingPageData_Local_Cache',
+  'PapersData_Local_Cache'
+];
+
+const localhubRecoveryOffered = new Set(); // baseKeys already offered this page session
+let localhubRecoveryBannerCount = 0;       // stacks multiple banners vertically
+let localhubRecoveryWarnedQuota = false;
+let localhubRecoveryStyleInjected = false;
+
+// Returns the file-scoped sessionStorage key for a vault id (e.g. 'NotesData')
+function GetRecoveryScopeKey(baseKey) {
+  let path = '';
+  try {
+    path = (typeof location !== 'undefined' && location.pathname) ? location.pathname : '';
+  } catch (e) { }
+  return LOCALHUB_RECOVERY_PREFIX + baseKey + '::' + path;
+}
+
+// Reads { data, savedAt } for this file's snapshot of a vault; null when absent.
+// Corrupt payloads are removed instead of retried forever.
+function ReadRecoverySnapshot(baseKey) {
+  if (typeof sessionStorage === 'undefined') return null;
+  try {
+    const raw = sessionStorage.getItem(GetRecoveryScopeKey(baseKey));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || !parsed.data || typeof parsed.data !== 'object') {
+      sessionStorage.removeItem(GetRecoveryScopeKey(baseKey));
+      return null;
+    }
+    return { data: parsed.data, savedAt: Number(parsed.savedAt) || 0 };
+  } catch (e) {
+    try { sessionStorage.removeItem(GetRecoveryScopeKey(baseKey)); } catch (e2) { }
+    return null;
+  }
+}
+
+// Best-effort snapshot write. On quota exhaustion (multi-MB vaults with
+// base64 images) it degrades silently — recovery is insurance, not storage.
+function WriteRecoverySnapshot(baseKey, data) {
+  if (typeof sessionStorage === 'undefined' || !data || typeof data !== 'object') return;
+  try {
+    sessionStorage.setItem(GetRecoveryScopeKey(baseKey), JSON.stringify({ data, savedAt: Date.now() }));
+  } catch (e) {
+    if (!localhubRecoveryWarnedQuota) {
+      localhubRecoveryWarnedQuota = true;
+      console.warn(`[Recovery] Snapshot for "${baseKey}" not stored (quota):`, e);
+    }
+  }
+}
+
+// Removes this file's snapshot for a vault (call after a successful Save/Export).
+function ClearRecoverySnapshot(baseKey) {
+  if (typeof sessionStorage === 'undefined') return;
+  try {
+    sessionStorage.removeItem(GetRecoveryScopeKey(baseKey));
+  } catch (e) { }
+}
+
+// One-time-per-load cleanup of the old shared-origin fixed keys.
+function PurgeLegacyRecoveryKeys() {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    LOCALHUB_RECOVERY_LEGACY_KEYS.forEach((k) => localStorage.removeItem(k));
+  } catch (e) { }
+}
+
+function ensureRecoveryBannerStyles() {
+  if (localhubRecoveryStyleInjected || typeof document === 'undefined') return;
+  localhubRecoveryStyleInjected = true;
+  const style = document.createElement('style');
+  style.id = 'localhub-recovery-styles';
+  style.textContent = `
+    .localhub-recovery-banner {
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 9500;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      max-width: min(92vw, 640px);
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border, #2a2e40);
+      background: var(--surface, #181b27);
+      color: var(--text, #e8eaf2);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+      font-size: 12.5px;
+      line-height: 1.4;
+      font-family: inherit;
+    }
+    .localhub-recovery-banner .localhub-recovery-text { min-width: 0; }
+    .localhub-recovery-banner .localhub-recovery-title { font-weight: 700; margin-bottom: 2px; }
+    .localhub-recovery-banner .localhub-recovery-sub { color: var(--text-secondary, #a0a4b8); }
+    .localhub-recovery-banner .localhub-recovery-actions { display: flex; gap: 6px; flex-shrink: 0; }
+    .localhub-recovery-banner button {
+      font: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 7px;
+      cursor: pointer;
+      border: 1px solid var(--border, #2a2e40);
+      background: transparent;
+      color: var(--text, #e8eaf2);
+      transition: filter 0.15s ease, background 0.15s ease;
+      white-space: nowrap;
+    }
+    .localhub-recovery-banner .localhub-recovery-restore {
+      background: var(--accent, #8b6dff);
+      border-color: transparent;
+      color: #ffffff;
+    }
+    .localhub-recovery-banner button:hover { filter: brightness(1.12); }
+  `;
+  document.head.appendChild(style);
+}
+
+// Offers a found snapshot via a non-blocking banner. Never auto-applies.
+// - onRestore(data): apply the snapshot to the caller's state, persist it and
+//   re-render. Exceptions keep the snapshot for a later attempt.
+// - Auto-hides after 45s WITHOUT discarding (the next load offers again).
+// - Restore/Discard always clear the snapshot.
+function OfferRecoverySnapshot({ baseKey, label = 'unsaved edits', onRestore = null } = {}) {
+  if (typeof document === 'undefined' || typeof sessionStorage === 'undefined' || !baseKey) return;
+  if (localhubRecoveryOffered.has(baseKey)) return;
+  const snap = ReadRecoverySnapshot(baseKey);
+  if (!snap) return;
+  localhubRecoveryOffered.add(baseKey);
+
+  const mount = () => {
+    ensureRecoveryBannerStyles();
+    const banner = document.createElement('div');
+    banner.className = 'localhub-recovery-banner';
+    banner.style.top = `calc(var(--notes-header-height, var(--header-height, 74px)) + ${12 + localhubRecoveryBannerCount * 70}px)`;
+    localhubRecoveryBannerCount++;
+
+    const when = snap.savedAt ? new Date(snap.savedAt).toLocaleString() : '';
+    banner.innerHTML = `
+      <div class="localhub-recovery-text">
+        <div class="localhub-recovery-title">Recover unsaved ${label}?</div>
+        <div class="localhub-recovery-sub">Found a snapshot from your last session on this file${when ? ` (${when})` : ''}.</div>
+      </div>
+      <div class="localhub-recovery-actions">
+        <button type="button" class="localhub-recovery-restore">Restore</button>
+        <button type="button" class="localhub-recovery-discard">Discard</button>
+      </div>
+    `;
+
+    const close = () => {
+      if (banner.parentNode) banner.parentNode.removeChild(banner);
+      localhubRecoveryBannerCount = Math.max(0, localhubRecoveryBannerCount - 1);
+      clearTimeout(autoHideTimer);
+    };
+
+    banner.querySelector('.localhub-recovery-restore').addEventListener('click', () => {
+      try {
+        if (typeof onRestore === 'function') onRestore(snap.data);
+        ClearRecoverySnapshot(baseKey);
+      } catch (e) {
+        console.warn('[Recovery] Restore failed; snapshot kept:', e);
+        return;
+      }
+      close();
+    });
+    banner.querySelector('.localhub-recovery-discard').addEventListener('click', () => {
+      ClearRecoverySnapshot(baseKey);
+      close();
+    });
+
+    const autoHideTimer = setTimeout(close, 45000);
+    document.body.appendChild(banner);
+  };
+
+  if (document.body) {
+    mount();
+  } else {
+    document.addEventListener('DOMContentLoaded', mount, { once: true });
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.LocalHubRecovery = {
+    GetRecoveryScopeKey,
+    ReadRecoverySnapshot,
+    WriteRecoverySnapshot,
+    ClearRecoverySnapshot,
+    PurgeLegacyRecoveryKeys,
+    OfferRecoverySnapshot
+  };
+}
+
+
 
 /* ==========================================================================
    PER-TAB HANDLERS
@@ -3569,7 +3858,8 @@ const sharedComponentFiles = [
   '00_Components/04_Import_Export.js',
   '00_Components/05_Save_Button.js',
   '00_Components/06_Color_Selector.js',
-  '00_Components/09_Icon_Button.js'
+  '00_Components/09_Icon_Button.js',
+  '00_Components/10_Recovery.js'
 ];
 
 const tabHandlerFiles = [
@@ -3587,6 +3877,9 @@ const tabModuleFiles = [
   '03_Notes/Writing_Engine/Block_Engine.js',
   '03_Notes/Writing_Engine/Numbering_Engine.js',
   '03_Notes/Writing_Engine/Math_Renderer.js',
+  '03_Notes/Writing_Engine/Tikz_Engine/Tikz_Source_Converter.js',
+  '03_Notes/Writing_Engine/Tikz_Engine/Tikz_Engine_Loader.js',
+  '03_Notes/Writing_Engine/Tikz_Engine/Tikz_Font_Store.js',
   '03_Notes/Writing_Engine/Tikz_Engine/Tikz_Renderer.js',
   '03_Notes/Writing_Engine/Code_Highlighter.js',
   '03_Notes/Writing_Engine/Link_Parser.js',
@@ -3611,6 +3904,7 @@ const tabModuleFiles = [
   '03_Notes/B_Editor_View/01_Blocks/Text_Block/Text_Block_Markdown.js',
   '03_Notes/B_Editor_View/01_Blocks/Text_Block.js',
   '03_Notes/B_Editor_View/01_Blocks/Equation_Block.js',
+  '03_Notes/B_Editor_View/01_Blocks/Tikz_Render_Panel.js',
   '03_Notes/B_Editor_View/01_Blocks/Tikz_Block.js',
   '03_Notes/B_Editor_View/01_Blocks/Image_Block.js',
   '03_Notes/B_Editor_View/01_Blocks/Table_Block.js',
@@ -3732,7 +4026,7 @@ handlePageRoute();
   }
 
   // Cleanup injected dev scripts, runtime containers, and dynamic TikZ engine tags before download
-  DocClone.querySelectorAll('script[src*="livepreview"], script[src*="livereload"], #tikzjax-js, #tikzjax-css, script[src*="tikzjax"]').forEach(s => s.remove());
+  DocClone.querySelectorAll('script[src*="livepreview"], script[src*="livereload"], #tikzjax-js, #tikzjax-css, script[src*="tikzjax"], #tikz-engine-host, #tikz-saved-fonts').forEach(s => s.remove());
   ['#canvas-container', '#loading-container', '#root'].forEach(sel => {
     const el = DocClone.querySelector(sel);
     if (el) el.innerHTML = '';
@@ -3964,6 +4258,7 @@ let NotesState = (typeof window !== 'undefined' && window.NotesState && Array.is
       globalMacros: { ...DEFAULT_GLOBAL_MACROS },
       tableTemplates: [],
       tikzTemplates: [],
+      tikzFonts: {},
       bibliography: [],
       citationStyle: 'numeric',
       folders: [],
@@ -4098,6 +4393,7 @@ function LoadNotesState(forceReload = false) {
           globalMacros: parsedDom.globalMacros || { ...DEFAULT_GLOBAL_MACROS },
           tableTemplates: Array.isArray(parsedDom.tableTemplates) ? parsedDom.tableTemplates : [],
           tikzTemplates: Array.isArray(parsedDom.tikzTemplates) ? parsedDom.tikzTemplates : [],
+          tikzFonts: (parsedDom.tikzFonts && typeof parsedDom.tikzFonts === 'object') ? parsedDom.tikzFonts : {},
           bibliography: Array.isArray(parsedDom.bibliography) ? parsedDom.bibliography : [],
           citationStyle: typeof parsedDom.citationStyle === 'string' ? parsedDom.citationStyle : 'numeric',
           folders: Array.isArray(parsedDom.folders) ? parsedDom.folders : [],
@@ -4110,26 +4406,32 @@ function LoadNotesState(forceReload = false) {
     }
   }
 
-  // 1. Wipe any stale leftover cache from previous files or sessions
-  try {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem('NotesData_Local_Cache');
-    }
-  } catch (e) { }
+  // 1. Purge legacy fixed-key caches (older builds shared them across files)
+  PurgeLegacyRecoveryKeys();
 
-  // 2. Pure, clean load directly from HTML data vault (#NotesData)
+  // 2. Offer this file's crash-recovery snapshot (sessionStorage, path-scoped).
+  //    Never auto-applies — the user picks Restore or Discard in the banner.
+  OfferRecoverySnapshot({
+    baseKey: 'NotesData',
+    label: 'notes',
+    onRestore: (snapData) => RestoreNotesFromSnapshot(snapData)
+  });
+
+  // 3. Pure, clean load directly from HTML data vault (#NotesData)
   if (domState) {
     Object.assign(NotesState, {
       vaultMeta: domState.vaultMeta,
       globalMacros: domState.globalMacros || { ...DEFAULT_GLOBAL_MACROS },
       tableTemplates: domState.tableTemplates || [],
       tikzTemplates: domState.tikzTemplates || [],
+      tikzFonts: domState.tikzFonts || {},
       bibliography: domState.bibliography || [],
       citationStyle: domState.citationStyle || 'numeric',
       folders: domState.folders.length > 0 ? domState.folders : Array.from(new Set(domState.notes.map(n => n.folder || 'General').filter(Boolean))),
       tags: domState.tags.length > 0 ? domState.tags : Array.from(new Set(domState.notes.flatMap(n => n.tags || []).filter(Boolean))),
       notes: domState.notes
     });
+    mergeNoteMacrosIntoGlobal(NotesState);
     if (typeof window !== 'undefined') window.NotesState = NotesState;
     if (!isBaselineCaptured) {
       CaptureNotesBaseline(NotesState);
@@ -4143,6 +4445,7 @@ function LoadNotesState(forceReload = false) {
     globalMacros: { ...DEFAULT_GLOBAL_MACROS },
     tableTemplates: [],
     tikzTemplates: [],
+    tikzFonts: {},
     bibliography: [],
     citationStyle: 'numeric',
     folders: [],
@@ -4154,6 +4457,29 @@ function LoadNotesState(forceReload = false) {
     CaptureNotesBaseline(NotesState);
   }
   return NotesState;
+}
+
+// Macros are global-only. Older files may still carry per-note macros
+// (note.macros.equation / note.macros.tikz): append each line the global set does
+// not already contain, then clear the note's copy. Idempotent across reloads.
+function mergeNoteMacrosIntoGlobal(state) {
+  if (!state || !Array.isArray(state.notes)) return;
+  if (!state.globalMacros || typeof state.globalMacros !== 'object') state.globalMacros = { ...DEFAULT_GLOBAL_MACROS };
+  ['equation', 'tikz'].forEach((kind) => {
+    let globalText = typeof state.globalMacros[kind] === 'string' ? state.globalMacros[kind] : '';
+    const existing = new Set(globalText.split('\n').map(l => l.trim()).filter(Boolean));
+    state.notes.forEach((note) => {
+      const local = note && note.macros && typeof note.macros[kind] === 'string' ? note.macros[kind] : '';
+      if (!local.trim()) return;
+      const newLines = local.split('\n').filter(l => l.trim() && !existing.has(l.trim()));
+      if (newLines.length) {
+        globalText = `${globalText.replace(/\s+$/, '')}\n% --- merged from note: ${note.title || note.id} ---\n${newLines.join('\n')}`;
+        newLines.forEach(l => existing.add(l.trim()));
+      }
+      note.macros[kind] = '';
+    });
+    state.globalMacros[kind] = globalText;
+  });
 }
 
 let notesSaveDebounceTimer = null;
@@ -4348,8 +4674,38 @@ function persistNotesToStorageImmediate() {
     dataBlock.textContent = JSON.stringify(NotesState, null, 2);
   }
 
+  // 2. Keep this file's path-scoped crash-recovery snapshot in sessionStorage
+  //    in sync with the working buffer (survives reloads/crashes, never leaks
+  //    into other files or tabs).
+  WriteRecoverySnapshot('NotesData', NotesState);
+
   // Pure in-memory session: do NOT persist unsaved working notes buffer to browser localStorage.
   // This ensures zero cross-file cache contamination between different standalone LocalHUB files.
+}
+
+// Applies a user-approved recovery snapshot (Restore banner) to the live state:
+// sanitizes notes, persists to the DOM vault and re-renders. The baseline is
+// deliberately NOT recaptured — it still reflects the on-disk vault, so the
+// restored edits keep counting as unsaved until the next SAVE.
+function RestoreNotesFromSnapshot(snapData) {
+  if (!snapData || typeof snapData !== 'object') return;
+  Object.assign(NotesState, {
+    vaultMeta: snapData.vaultMeta || NotesState.vaultMeta,
+    globalMacros: snapData.globalMacros || NotesState.globalMacros,
+    tableTemplates: Array.isArray(snapData.tableTemplates) ? snapData.tableTemplates : NotesState.tableTemplates,
+    tikzTemplates: Array.isArray(snapData.tikzTemplates) ? snapData.tikzTemplates : NotesState.tikzTemplates,
+    bibliography: Array.isArray(snapData.bibliography) ? snapData.bibliography : NotesState.bibliography,
+    citationStyle: typeof snapData.citationStyle === 'string' ? snapData.citationStyle : NotesState.citationStyle,
+    folders: Array.isArray(snapData.folders) ? snapData.folders : NotesState.folders,
+    tags: Array.isArray(snapData.tags) ? snapData.tags : NotesState.tags,
+    notes: Array.isArray(snapData.notes) ? snapData.notes.map(sanitizeNote) : NotesState.notes
+  });
+  if (typeof window !== 'undefined') window.NotesState = NotesState;
+  persistNotesToStorageImmediate();
+  SetNotesUnsavedChanges(true);
+  if (typeof window !== 'undefined' && typeof window.initNotesApp === 'function') {
+    window.initNotesApp();
+  }
 }
 
 // Immediately flushes any pending debounced state writes to the DOM vault
@@ -4422,6 +4778,7 @@ function ClearNotesLocalCache() {
   } catch (e) {
     console.warn('Failed to clear NotesData_Local_Cache:', e);
   }
+  ClearRecoverySnapshot('NotesData');
   if (typeof clearAllBlockHistory === 'function') {
     clearAllBlockHistory();
   }
@@ -6530,22 +6887,16 @@ function parseLatexMacrosIntoObject(macroString, targetMacros = {}) {
 }
 
 /**
- * Returns merged KaTeX macros: built-in + global macros + note-level local macros
+ * Returns merged KaTeX macros: built-in + global macros.
+ * Macros are global-only (per-note macros from older files are merged into the
+ * global set on load by 00_State.js → mergeNoteMacrosIntoGlobal). The `note`
+ * parameter is kept for call-site compatibility.
  */
-function getActiveKatexMacros(note = null) {
-  const effectiveNote = note || activeNoteContext;
+function getActiveKatexMacros(_note = null) {
   const combinedMacros = { ...KATEX_MACROS };
-
-  // 1. Global equation macros
   if (typeof NotesState !== 'undefined' && NotesState.globalMacros?.equation) {
     parseLatexMacrosIntoObject(NotesState.globalMacros.equation, combinedMacros);
   }
-
-  // 2. Note-level local equation macros (override/extend global)
-  if (effectiveNote?.macros?.equation) {
-    parseLatexMacrosIntoObject(effectiveNote.macros.equation, combinedMacros);
-  }
-
   return combinedMacros;
 }
 function ensureKatexLoaded() {
@@ -7229,414 +7580,414 @@ if (typeof window !== 'undefined') {
 }
 
 
+/* --- 03_Notes/Writing_Engine/Tikz_Engine/Tikz_Source_Converter.js --- */
+/**
+ * 03_Notes/Writing_Engine/Tikz_Engine/Tikz_Source_Converter.js
+ * Turns a TikZ block (plus the global TikZ preamble) into the pieces the TikZJax
+ * engine accepts: a package map, a TikZ library list, extra preamble text and the
+ * document body.
+ *
+ * Accepts both styles of input:
+ *   - just a picture:   \begin{tikzpicture} ... \end{tikzpicture}
+ *   - a full Overleaf standalone document (\documentclass ... \begin{document} ... \end{document})
+ *
+ * Packages the engine does not ship are dropped (and reported) instead of
+ * crashing TeX with "file not found".
+ */
+
+// Packages whose files are available to the TikZJax engine (dist/tex_files of @drgrice1/tikzjax).
+const TIKZ_AVAILABLE_PACKAGES = new Set([
+  'amsbsy', 'amsfonts', 'amsgen', 'amsmath', 'amsopn', 'amssymb', 'amstext',
+  'array', 'etoolbox', 'expl3', 'hf-tikz', 'ifthen', 'pgfcalendar', 'pgfplots',
+  'tikz-3dplot', 'tikz-cd', 'xparse'
+]);
+
+// Already loaded by the engine's core (or meaningless for a single SVG) — silently ignored.
+const TIKZ_IGNORED_PACKAGES = new Set([
+  'tikz', 'pgf', 'xcolor', 'color', 'standalone', 'graphicx', 'graphics',
+  'inputenc', 'fontenc', 'lmodern', 'geometry', 'hyperref', 'babel', 'microtype'
+]);
+
+// Strips % comments (keeps escaped \%)
+function stripTexComments(src) {
+  return src.split('\n').map(line => line.replace(/(^|[^\\])%.*$/, '$1')).join('\n');
+}
+
+// Removes \usepackage / \usetikzlibrary / \documentclass from `text`, collecting them.
+function extractTikzPreambleCommands(text, acc) {
+  let out = text.replace(/\\documentclass\s*(\[[^\]]*\])?\s*\{[^}]*\}/g, '');
+  out = out.replace(/\\usepackage\s*(?:\[([^\]]*)\])?\s*\{([^}]*)\}/g, (_, opts, names) => {
+    names.split(',').map(s => s.trim()).filter(Boolean).forEach(name => {
+      if (TIKZ_IGNORED_PACKAGES.has(name)) return;
+      if (TIKZ_AVAILABLE_PACKAGES.has(name)) {
+        acc.packages[name] = opts ? opts.trim() : (acc.packages[name] || '');
+      } else if (!acc.unavailable.includes(name)) {
+        acc.unavailable.push(name);
+      }
+    });
+    return '';
+  });
+  out = out.replace(/\\usetikzlibrary\s*\{([^}]*)\}/g, (_, libs) => {
+    libs.split(',').map(s => s.trim()).filter(Boolean).forEach(lib => {
+      if (!acc.libraries.includes(lib)) acc.libraries.push(lib);
+    });
+    return '';
+  });
+  return out;
+}
+
+// Raw #RRGGBB / #RGB colours are illegal inside TikZ keys: turn each into a \definecolor name.
+function convertHexColorsToTikzNames(text, colorDefs) {
+  return text.replace(/#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b/g, (match, hex) => {
+    const full = hex.length === 3 ? hex.split('').map(c => c + c).join('') : hex;
+    const name = `col_${full.toLowerCase()}`;
+    colorDefs.set(name, `\\definecolor{${name}}{HTML}{${full.toUpperCase()}}`);
+    return name;
+  });
+}
+
+/**
+ * @param {string} blockCode      Code typed in the TikZ block
+ * @param {string} globalPreamble The vault-wide TikZ preamble (Macros → TikZ tab)
+ * @returns {{ body: string, packages: Object<string,string>, libraries: string[], preamble: string, unavailable: string[] }}
+ */
+function convertTikzSource(blockCode = '', globalPreamble = '') {
+  const acc = { packages: {}, libraries: [], unavailable: [] };
+  const colorDefs = new Map();
+
+  // Saved SVGs are shown on white "paper" in both themes, so dual colours resolve to their light value.
+  const lightGlobal = resolveThemeColors(stripTexComments(globalPreamble || ''), false);
+  const lightBlock = resolveThemeColors(stripTexComments(blockCode || ''), false);
+
+  // 1. Global preamble: commands are collected, everything else (\tikzset, \newcommand, \def...) stays preamble text.
+  let preambleText = extractTikzPreambleCommands(lightGlobal, acc);
+
+  // 2. Block: a full document contributes its own preamble; otherwise the whole block is the body.
+  let body;
+  const docMatch = lightBlock.match(/\\begin\{document\}([\s\S]*?)\\end\{document\}/);
+  if (docMatch) {
+    const blockPreamble = extractTikzPreambleCommands(lightBlock.slice(0, docMatch.index), acc);
+    preambleText += '\n' + blockPreamble;
+    body = docMatch[1];
+  } else {
+    body = extractTikzPreambleCommands(lightBlock, acc);
+  }
+
+  body = body.trim();
+  // A bare list of drawing commands is wrapped in a picture (pictures/environments are kept as written).
+  if (body && !/\\begin\{[a-zA-Z*]+\}/.test(body)) {
+    body = `\\begin{tikzpicture}\n${body}\n\\end{tikzpicture}`;
+  }
+
+  // Theme colour names used by older notes/templates — fixed to the light palette.
+  const themeColorDefs = [
+    '\\definecolor{themeColor}{HTML}{DC2626}',
+    '\\definecolor{themeText}{HTML}{111827}',
+    '\\definecolor{themeBg}{HTML}{FFFFFF}'
+  ];
+
+  preambleText = convertHexColorsToTikzNames(preambleText, colorDefs);
+  body = convertHexColorsToTikzNames(body, colorDefs);
+
+  const preamble = [...themeColorDefs, ...colorDefs.values(), preambleText.trim()]
+    .filter(Boolean)
+    .join('\n');
+
+  return {
+    body,
+    packages: acc.packages,
+    libraries: acc.libraries,
+    preamble,
+    unavailable: acc.unavailable
+  };
+}
+
+
+/* --- 03_Notes/Writing_Engine/Tikz_Engine/Tikz_Engine_Loader.js --- */
+/**
+ * 03_Notes/Writing_Engine/Tikz_Engine/Tikz_Engine_Loader.js
+ * Online TikZ engine: @drgrice1/tikzjax (TeX compiled to WebAssembly) loaded from the
+ * jsdelivr CDN only when a diagram actually needs compiling.
+ *
+ * - No local engine files: the HTML stays small. Without internet nothing can be
+ *   compiled, but every diagram keeps showing its last saved SVG (see Tikz_Block.js).
+ * - Packages are fetched on demand by the engine from the same CDN folder.
+ * - Compiles run one at a time so TeX log lines can be attributed to the right diagram.
+ */
+const TIKZ_ENGINE_ID = 'drgrice1-tikzjax@1.0.0-beta24';
+const TIKZ_ENGINE_CDN = 'https://cdn.jsdelivr.net/npm/@drgrice1/tikzjax@1.0.0-beta24/dist/';
+
+const TIKZ_ENGINE_LOAD_TIMEOUT_MS = 60000;
+const TIKZ_COMPILE_TIMEOUT_MS = 120000;
+
+let tikzEngineLoadPromise = null;
+let tikzEngineCompileQueue = Promise.resolve();
+let tikzEngineHostEl = null;
+
+/** Loads fonts.css + tikzjax.js from the CDN once. Rejects (and allows a retry) when offline. */
+function loadTikzEngine() {
+  if (typeof window === 'undefined') return Promise.reject(new Error('No browser window'));
+  if (window.TikzJax && document.getElementById('tikzjax-js')) return Promise.resolve();
+  if (tikzEngineLoadPromise) return tikzEngineLoadPromise;
+
+  tikzEngineLoadPromise = new Promise((resolve, reject) => {
+    if (!document.getElementById('tikzjax-css')) {
+      const link = document.createElement('link');
+      link.id = 'tikzjax-css';
+      link.rel = 'stylesheet';
+      link.href = TIKZ_ENGINE_CDN + 'fonts.css';
+      document.head.appendChild(link);
+    }
+    const script = document.createElement('script');
+    script.id = 'tikzjax-js';
+    script.src = TIKZ_ENGINE_CDN + 'tikzjax.js';
+    const timer = setTimeout(() => fail(new Error('Timed out while downloading the TikZ engine.')), TIKZ_ENGINE_LOAD_TIMEOUT_MS);
+    function fail(err) {
+      clearTimeout(timer);
+      script.remove();
+      document.getElementById('tikzjax-css')?.remove();
+      tikzEngineLoadPromise = null; // next call retries
+      reject(err);
+    }
+    script.onload = () => { clearTimeout(timer); resolve(); };
+    script.onerror = () => fail(new Error('Could not download the TikZ engine (offline or CDN unreachable).'));
+    document.head.appendChild(script);
+  });
+  return tikzEngineLoadPromise;
+}
+
+// Hidden off-screen host: the engine only picks up <script type="text/tikz"> inside <body>.
+function getTikzEngineHost() {
+  if (tikzEngineHostEl && tikzEngineHostEl.isConnected) return tikzEngineHostEl;
+  tikzEngineHostEl = document.createElement('div');
+  tikzEngineHostEl.id = 'tikz-engine-host';
+  tikzEngineHostEl.setAttribute('aria-hidden', 'true');
+  tikzEngineHostEl.style.cssText = 'position:fixed;left:-100000px;top:0;width:2000px;visibility:hidden;pointer-events:none;';
+  document.body.appendChild(tikzEngineHostEl);
+  return tikzEngineHostEl;
+}
+
+// Keeps the TeX error lines ("! ..." plus the "l.<n>" context) from the captured log.
+function summarizeTexErrors(logLines) {
+  const out = [];
+  for (let i = 0; i < logLines.length; i++) {
+    const line = String(logLines[i] || '');
+    if (/^!/.test(line.trim())) {
+      out.push(line.trim());
+      for (let j = i + 1; j < Math.min(logLines.length, i + 6); j++) {
+        const ctx = String(logLines[j] || '').trim();
+        if (/^l\.\d+/.test(ctx)) { out.push(ctx); break; }
+      }
+    }
+  }
+  return out.slice(0, 6).join('\n');
+}
+
+function compileTikzOnce({ body, packages, libraries, preamble }) {
+  return new Promise((resolve, reject) => {
+    const hostIsNew = !(tikzEngineHostEl && tikzEngineHostEl.isConnected);
+    const host = getTikzEngineHost();
+    const slot = document.createElement('div');
+
+    const logLines = [];
+    const origLog = console.log;
+    console.log = function (...args) {
+      try { args.forEach(a => String(a).split('\n').forEach(l => logLines.push(l))); } catch (_) {}
+      return origLog.apply(console, args);
+    };
+
+    let settled = false;
+    let observer = null;
+    const finish = (err, svg) => {
+      if (settled) return;
+      settled = true;
+      console.log = origLog;
+      clearTimeout(timer);
+      if (observer) observer.disconnect();
+      slot.remove();
+      if (err) reject(err); else resolve(svg);
+    };
+
+    const timer = setTimeout(() => finish(new Error('TikZ compile timed out.')), TIKZ_COMPILE_TIMEOUT_MS);
+
+    // Success: the engine swaps its loader for the SVG and fires this (bubbling) event.
+    slot.addEventListener('tikzjax-load-finished', (ev) => {
+      const svgEl = ev.target && ev.target.tagName && ev.target.tagName.toLowerCase() === 'svg'
+        ? ev.target
+        : slot.querySelector('svg');
+      if (svgEl) finish(null, svgEl.outerHTML);
+      else finish(new Error('The TikZ engine finished without producing an SVG.'));
+    });
+
+    // Success can also be seen directly: the final SVG (unlike the engine's spinner) has no <animate>.
+    // Failure: the engine replaces its loader with a broken <img>.
+    observer = new MutationObserver(() => {
+      const finalSvg = Array.from(slot.querySelectorAll('svg')).find(s => !s.querySelector('animate'));
+      if (finalSvg) { finish(null, finalSvg.outerHTML); return; }
+      const img = slot.querySelector('img');
+      if (img) {
+        img.removeAttribute('src');
+        const texErr = summarizeTexErrors(logLines);
+        finish(new Error(texErr || 'TeX could not compile this diagram. Check the code (missing ; or }, unknown command or package).'));
+      }
+    });
+    observer.observe(slot, { childList: true, subtree: true });
+
+    const script = document.createElement('script');
+    script.type = 'text/tikz';
+    script.setAttribute('data-tex-packages', JSON.stringify(packages || {}));
+    if (libraries && libraries.length) script.setAttribute('data-tikz-libraries', libraries.join(','));
+    if (preamble) script.setAttribute('data-add-to-preamble', preamble);
+    script.setAttribute('data-show-console', 'true');
+    // Our blocks keep their own saved SVG; the engine's IndexedDB cache is not needed and its
+    // write is awaited before the "finished" event, which can stall.
+    script.setAttribute('data-disable-cache', 'true');
+    script.textContent = body;
+    // The engine's MutationObserver queues EVERY added node that is or contains a
+    // <script type="text/tikz">. If two added nodes in one observer batch both contain the
+    // script (host + slot, or slot + script), it is queued twice, the engine then tracks a
+    // detached loader and the SVG never reaches the page. So: the script goes into the slot
+    // before the slot is attached, and a freshly created host gets its own earlier tick.
+    slot.appendChild(script);
+    if (hostIsNew) setTimeout(() => host.appendChild(slot), 0);
+    else host.appendChild(slot);
+  });
+}
+
+/**
+ * Compiles converted TikZ source to an SVG string. Queued: one compile at a time.
+ * @param {{ body: string, packages: Object, libraries: string[], preamble: string }} source
+ * @returns {Promise<string>} SVG markup
+ */
+function compileTikzWithEngine(source) {
+  const run = async () => {
+    await loadTikzEngine();
+    return compileTikzOnce(source);
+  };
+  const result = tikzEngineCompileQueue.then(run, run);
+  tikzEngineCompileQueue = result.catch(() => {});
+  return result;
+}
+
+
+/* --- 03_Notes/Writing_Engine/Tikz_Engine/Tikz_Font_Store.js --- */
+/**
+ * 03_Notes/Writing_Engine/Tikz_Engine/Tikz_Font_Store.js
+ * Keeps the TeX web fonts used by saved TikZ SVGs inside the notes file itself
+ * (NotesState.tikzFonts: { cmr10: "data:font/woff2;base64,..." }), shared by every
+ * diagram, so saved diagrams render correctly offline without the engine or CDN.
+ */
+
+
+const TIKZ_FONT_STYLE_ID = 'tikz-saved-fonts';
+
+/** Font families (cmr10, cmmi7, ...) referenced by an SVG string. */
+function getTikzSvgFontFamilies(svg = '') {
+  const found = new Set();
+  const re = /font-family\s*[:=]\s*["']?([A-Za-z0-9]+)/g;
+  let m;
+  while ((m = re.exec(svg)) !== null) found.add(m[1]);
+  return Array.from(found);
+}
+
+function tikzArrayBufferToBase64(buf) {
+  const bytes = new Uint8Array(buf);
+  let bin = '';
+  const CHUNK = 0x8000;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(bin);
+}
+
+/** Writes @font-face rules for every stored font (idempotent). */
+function applyStoredTikzFonts() {
+  if (typeof document === 'undefined') return;
+  const fonts = NotesState.tikzFonts || {};
+  let style = document.getElementById(TIKZ_FONT_STYLE_ID);
+  if (!style) {
+    style = document.createElement('style');
+    style.id = TIKZ_FONT_STYLE_ID;
+    document.head.appendChild(style);
+  }
+  style.textContent = Object.entries(fonts)
+    .filter(([name, url]) => /^[A-Za-z0-9]+$/.test(name) && typeof url === 'string' && url.startsWith('data:font/'))
+    .map(([name, url]) => `@font-face { font-family: ${name}; src: url('${url}') format('woff2'); }`)
+    .join('\n');
+}
+
+/**
+ * Downloads (from the engine CDN) and stores any font the SVG uses that the file
+ * does not have yet. Returns true when the store changed. Failures are non-fatal:
+ * the diagram is still saved, it just needs the CDN fonts until a later render.
+ */
+async function storeTikzFontsForSvg(svg) {
+  if (!NotesState.tikzFonts || typeof NotesState.tikzFonts !== 'object') NotesState.tikzFonts = {};
+  const missing = getTikzSvgFontFamilies(svg).filter(name => !NotesState.tikzFonts[name]);
+  if (!missing.length) return false;
+  let changed = false;
+  await Promise.all(missing.map(async (name) => {
+    try {
+      const res = await fetch(`${TIKZ_ENGINE_CDN}fonts/${name}.woff2`);
+      if (!res.ok) return;
+      NotesState.tikzFonts[name] = 'data:font/woff2;base64,' + tikzArrayBufferToBase64(await res.arrayBuffer());
+      changed = true;
+    } catch (_) { /* offline: keep going without this font */ }
+  }));
+  if (changed) applyStoredTikzFonts();
+  return changed;
+}
+
+
 /* --- 03_Notes/Writing_Engine/Tikz_Engine/Tikz_Renderer.js --- */
 /**
  * 03_Notes/Writing_Engine/Tikz_Engine/Tikz_Renderer.js
- * Isolated on-demand TikZJax SVG processor for Single Page Applications.
+ * TikZ rendering front-end used by the TikZ block.
  *
- * Engine assets are fully local: Tikz_Engine/v1/tikzjax.js embeds the TeX WASM
- * module and the 160MB core dump as base64 (no network fetches), and
- * Tikz_Engine/v1/fonts.css embeds all BaKoMa fonts as data: URIs. The loader
- * probes page-relative candidate locations and only falls back to the original
- * tikzjax.com CDN when the local engine folder cannot be found (e.g. a
- * standalone HTML carried away without its Tikz_Engine/ folder).
+ * Model: every TikZ block stores its own last good SVG (block.svg) and the render key
+ * it was made from (block.svgKey = hash of engine + code + global TikZ preamble).
+ *   - Viewing a note only shows the saved SVG: no engine, no internet needed.
+ *   - Compiling happens only when the code or the global preamble changed (or on ▶).
+ *   - A failed / offline compile never replaces the saved SVG.
+ *
+ * Pieces: Tikz_Source_Converter.js (Overleaf → engine input), Tikz_Engine_Loader.js
+ * (online TikZJax engine), Tikz_Font_Store.js (fonts saved in the file).
  */
 
-// Resolved against the PAGE URL, in order: dev master shell (repo root),
-// dev tab shell (03_Notes/Tab_Notes/), exported standalones (Standalone/),
-// and the "Tikz_Engine/ folder sits next to the HTML" portable case.
-const TIKZ_ENGINE_BASES = [
-  '03_Notes/Writing_Engine/Tikz_Engine/v1/',
-  '../Writing_Engine/Tikz_Engine/v1/',
-  '../03_Notes/Writing_Engine/Tikz_Engine/v1/',
-  'Tikz_Engine/v1/',
-  'https://tikzjax.com/v1/'
-];
 
-// Bumped whenever v1/tikzjax.js is re-patched (wasm/core re-embed, FS exposure, packages)
-// so browsers re-fetch the engine instead of serving a stale heuristic-cached copy.
-const TIKZ_ENGINE_VERSION = 'v2';
 
-let loadTikzEnginePromise = null;
-function ensureTikzJaxLoaded(callback) {
-  if (typeof window.__tikzjax_runner === 'function') {
-    if (callback) callback();
-    return Promise.resolve();
-  }
 
-  if (loadTikzEnginePromise) {
-    return loadTikzEnginePromise.then(() => {
-      if (callback) callback();
-    }).catch(err => {
-      if (callback) callback(err);
-      throw err;
-    });
-  }
+// Fonts saved in the file are available as soon as the module loads.
+if (typeof document !== 'undefined') applyStoredTikzFonts();
 
-  loadTikzEnginePromise = new Promise((resolve, reject) => {
-    // 1. Purge any dead or uninitialized script/css tags left from exported HTML
-    if (typeof document !== 'undefined') {
-      const deadScript = document.getElementById('tikzjax-js');
-      if (deadScript && typeof window.__tikzjax_runner !== 'function') {
-        deadScript.remove();
-      }
-      const deadCss = document.getElementById('tikzjax-css');
-      if (deadCss && typeof window.__tikzjax_runner !== 'function') {
-        deadCss.remove();
-      }
-    }
+/** Kept for callers that still announce the open note; macros are global-only now. */
+function setActiveTikzNoteContext(_note) {}
 
-    let baseIndex = 0;
-    const tryNextBase = () => {
-      if (baseIndex >= TIKZ_ENGINE_BASES.length) {
-        loadTikzEnginePromise = null;
-        const errMsg = 'TikZ engine unavailable: local Tikz_Engine/ folder not found and the tikzjax.com CDN fallback failed.';
-        console.error(errMsg);
-        reject(new Error(errMsg));
-        return;
-      }
-
-      const base = TIKZ_ENGINE_BASES[baseIndex++];
-
-      if (!document.getElementById('tikzjax-css')) {
-        const link = document.createElement('link');
-        link.id = 'tikzjax-css';
-        link.rel = 'stylesheet';
-        link.href = base + 'fonts.css';
-        document.head.appendChild(link);
-      }
-
-      const script = document.createElement('script');
-      script.src = base + 'tikzjax.js?v=' + TIKZ_ENGINE_VERSION;
-
-      script.onload = () => {
-        script.id = 'tikzjax-js';
-        if (typeof window.onload === 'function') {
-          window.__tikzjax_runner = window.onload;
-          resolve();
-        } else if (typeof window.__tikzjax_runner === 'function') {
-          resolve();
-        } else {
-          // Poll briefly (max 600ms) in case window.onload takes a tick
-          let checks = 0;
-          const t = setInterval(() => {
-            checks++;
-            if (typeof window.onload === 'function') {
-              window.__tikzjax_runner = window.onload;
-              clearInterval(t);
-              resolve();
-            } else if (typeof window.__tikzjax_runner === 'function') {
-              clearInterval(t);
-              resolve();
-            } else if (checks > 12) {
-              clearInterval(t);
-              script.remove();
-              const cssLink = document.getElementById('tikzjax-css');
-              if (cssLink) cssLink.remove();
-              tryNextBase();
-            }
-          }, 50);
-        }
-      };
-
-      script.onerror = () => {
-        // This candidate does not resolve (unexpected shell depth, or standalone
-        // moved without its engine folder) — clean up and try the next base.
-        script.remove();
-        const cssLink = document.getElementById('tikzjax-css');
-        if (cssLink) cssLink.remove();
-        tryNextBase();
-      };
-
-      document.head.appendChild(script);
-    };
-
-    tryNextBase();
-  });
-
-  return loadTikzEnginePromise.then(() => {
-    if (callback) callback();
-  }).catch(err => {
-    if (callback) callback(err);
-  });
+/** The vault-wide TikZ preamble (Macros → TikZ tab). */
+function getGlobalTikzPreamble() {
+  return (NotesState.globalMacros && typeof NotesState.globalMacros.tikz === 'string')
+    ? NotesState.globalMacros.tikz
+    : '';
 }
 
-
-let activeTikzNoteContext = null;
-function setActiveTikzNoteContext(note) {
-  activeTikzNoteContext = note;
-}
-
-/**
- * In-memory Bi-Theme cache for compiled TikZ diagrams (Map<"theme:::code", svgHtml>)
- * Enables instant 0ms switching between light and dark themes without repeating WASM compilation.
- */
-const TIKZ_CACHE_VERSION = 'v2_glyph_fix';
-const tikzSvgCache = new Map();
-
-function hashString(str) {
-  let hash = 0;
+// FNV-1a 32-bit, hex
+function tikzHashString(str) {
+  let h = 0x811c9dc5;
   for (let i = 0; i < str.length; i++) {
-    hash = ((hash << 5) - hash) + str.charCodeAt(i);
-    hash |= 0;
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
   }
-  return String(hash);
+  return (h >>> 0).toString(16).padStart(8, '0');
 }
-function clearTikzSvgCache() {
-  tikzSvgCache.clear();
-  try {
-    if (typeof sessionStorage !== 'undefined') {
-      const keysToRemove = [];
-      for (let i = 0; i < sessionStorage.length; i++) {
-        const key = sessionStorage.key(i);
-        if (key && key.startsWith('LocalHUB_Tikz_')) {
-          keysToRemove.push(key);
-        }
-      }
-      keysToRemove.forEach(k => sessionStorage.removeItem(k));
-    }
-  } catch (e) {}
-}
-function getCachedTikzSvg(code, theme = null, preambleKey = '') {
-  if (!code) return null;
-  const isLight = (theme === 'light' || (theme === null && typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light'));
-  const currentTheme = isLight ? 'light' : 'dark';
-  const rawClean = code.trim();
-  // The effective preamble (global + note-level TikZ macros) is part of the compiled script,
-  // so it MUST be part of the key or notes with different local macros share one compiled SVG.
-  const effPreambleKey = preambleKey || resolveThemeColors(getActiveTikzPreamble(null));
-  const cacheKey = `${currentTheme}:::${TIKZ_CACHE_VERSION}:::${effPreambleKey ? hashString(effPreambleKey) + ':::' : ''}${rawClean}`;
-  if (tikzSvgCache.has(cacheKey)) {
-    return tikzSvgCache.get(cacheKey);
-  }
-  try {
-    if (typeof sessionStorage !== 'undefined') {
-      const sessionVal = sessionStorage.getItem(`LocalHUB_Tikz_${hashString(cacheKey)}`);
-      if (sessionVal) {
-        tikzSvgCache.set(cacheKey, sessionVal);
-        return sessionVal;
-      }
-    }
-  } catch (e) {}
-  return null;
+
+/** Identifies what a saved SVG was compiled from; a mismatch means the SVG is outdated. */
+function getTikzRenderKey(code) {
+  return tikzHashString(`${TIKZ_ENGINE_ID}\n${getGlobalTikzPreamble()}\n${(code || '').trim()}`);
 }
 
 /**
- * Registry of active TikZ containers to dynamically re-render on theme changes
- */
-const activeTikzContainers = new Set();
-let themeChangeDebounceTimer = null;
-
-/**
- * Sequential FIFO compile mutex queue: ensures only one TikZ diagram compiles in the
- * single-threaded TeX WASM virtual filesystem (sample.tex, sample.dvi) at any given moment.
- */
-let tikzCompileQueue = Promise.resolve();
-
-if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-  const themeObserver = new MutationObserver(() => {
-    clearTimeout(themeChangeDebounceTimer);
-    themeChangeDebounceTimer = setTimeout(() => {
-      activeTikzContainers.forEach(container => {
-        if (!container.isConnected) {
-          activeTikzContainers.delete(container);
-          return;
-        }
-        const code = (typeof container.__getTikzCode === 'function')
-          ? container.__getTikzCode()
-          : container.__lastTikzCode;
-
-        if (code) {
-          renderTikzToElement(code, container, container.__lastTikzOnComplete, container.__lastTikzNoteContext);
-        }
-      });
-    }, 120);
-  });
-
-  if (document.documentElement) {
-    themeObserver.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['data-theme']
-    });
-  }
-}
-
-/**
- * Helper to ensure element is attached to DOM before running document-scoped TikzJax runner
- */
-function whenConnected(element, callback) {
-  if (!element) return;
-  if (element.isConnected) {
-    callback();
-    return;
-  }
-
-  let attempts = 0;
-  const maxAttempts = 120; // ~2 seconds at 60fps
-  let settled = false;
-
-  const check = () => {
-    if (settled) return;
-    attempts++;
-    if (element.isConnected) {
-      settled = true;
-      callback();
-    } else if (attempts < maxAttempts) {
-      requestAnimationFrame(check);
-    } else {
-      settled = true;
-      console.warn('TikZ container was not attached to document within timeout.');
-    }
-  };
-
-  requestAnimationFrame(check);
-  setTimeout(() => {
-    if (!settled && element.isConnected) {
-      settled = true;
-      callback();
-    }
-  }, 100);
-}
-
-/**
- * Returns merged TikZ preamble (libraries, \tikzset styles, and theme colors)
- */
-function getActiveTikzPreamble(note = null) {
-  const effectiveNote = note || activeTikzNoteContext;
-  const parts = [];
-
-  // 0. Core math punctuation fixes for TikZJax BaKoMa font engine:
-  // Remaps math comma and decimal point to use operators font (cmr10) instead of cmmi10 slot 59.
-  // \mathcode primitives only: \DeclareMathSymbol is preamble-only LaTeX, but the TikZJax engine
-  // injects \begin{document} ahead of this text — any preamble-only command here fatals the WASM core.
-  parts.push('\\mathcode`,="602C');
-  parts.push('\\mathcode`.="002E');
-
-  // 1. Global TikZ macros & styles
-  if (typeof NotesState !== 'undefined' && NotesState.globalMacros?.tikz) {
-    parts.push(NotesState.globalMacros.tikz);
-  } else {
-    // Default fallback libraries
-    parts.push('\\usetikzlibrary{patterns, angles, calc, quotes, shapes, shapes.geometric, shapes.misc, arrows, arrows.meta, positioning, intersections, fadings, decorations.pathmorphing, decorations.markings, fit, matrix, 3d, automata, trees, mindmap}');
-  }
-
-  // 2. Note-level local TikZ macros
-  if (effectiveNote?.macros?.tikz) {
-    parts.push(effectiveNote.macros.tikz);
-  }
-
-  // 3. Inject active theme color definitions
-  const isLight = (typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light');
-  const themeHex = isLight ? 'DC2626' : 'F87171'; // Clean fallback without #
-  parts.push(`\\definecolor{themeColor}{HTML}{${themeHex}}`);
-  parts.push(`\\definecolor{themeText}{HTML}{${isLight ? '111827' : 'F1F5F9'}}`);
-  parts.push(`\\definecolor{themeBg}{HTML}{${isLight ? 'FFFFFF' : '181B27'}}`);
-
-  return parts.join('\n');
-}
-
-/**
- * Helper to wait for TikzJax to asynchronously process the <script type="text/tikz"> tag
- * and replace it with the rendered <svg> element.
- */
-function waitForTikzSvg(targetContainer, renderId, timeoutMs = 25000) {
-  return new Promise((resolve, reject) => {
-    // 1. If SVG is already present
-    const existingSvg = targetContainer.querySelector('svg');
-    if (existingSvg) {
-      resolve(existingSvg);
-      return;
-    }
-
-    const startTime = Date.now();
-    let isSettled = false;
-    let observer = null;
-    let checkInterval = null;
-
-    const cleanup = () => {
-      isSettled = true;
-      if (observer) {
-        observer.disconnect();
-        observer = null;
-      }
-      if (checkInterval) {
-        clearInterval(checkInterval);
-        checkInterval = null;
-      }
-      if (typeof window !== 'undefined') {
-        window.removeEventListener('unhandledrejection', rejectionHandler);
-      }
-    };
-
-    const rejectionHandler = (ev) => {
-      if (targetContainer.__tikzRenderId !== renderId) return;
-      const msg = ev?.reason?.message || String(ev?.reason || '');
-      if (msg.includes('sample.dvi') || msg.includes('TeX') || msg.includes('wasm') || msg.includes('Inflate')) {
-        cleanup();
-        const cleanMsg = msg.includes('sample.dvi')
-          ? 'LaTeX syntax error or missing semicolon inside TikZ environment.'
-          : msg;
-        reject(new Error(`TikZ compilation failed in TeX engine: ${cleanMsg}`));
-      }
-    };
-
-    if (typeof window !== 'undefined') {
-      window.addEventListener('unhandledrejection', rejectionHandler);
-    }
-
-    observer = new MutationObserver(() => {
-      if (targetContainer.__tikzRenderId !== renderId) {
-        cleanup();
-        return;
-      }
-      const svg = targetContainer.querySelector('svg');
-      if (svg && !isSettled) {
-        cleanup();
-        resolve(svg);
-      }
-    });
-
-    observer.observe(targetContainer, { childList: true, subtree: true });
-
-    checkInterval = setInterval(() => {
-      if (targetContainer.__tikzRenderId !== renderId) {
-        // A newer render superseded this one — settle the promise so the awaiting
-        // closure is released (and its onComplete can reset the UI) instead of hanging forever.
-        cleanup();
-        resolve(null);
-        return;
-      }
-
-      const svg = targetContainer.querySelector('svg');
-      if (svg && !isSettled) {
-        cleanup();
-        resolve(svg);
-        return;
-      }
-
-      // Check if script was replaced by an element that does NOT contain SVG
-      const script = targetContainer.querySelector('script[type="text/tikz"]');
-      if (!script && !isSettled) {
-        const divReplacement = targetContainer.querySelector('div.page') || targetContainer.querySelector('div[style*="display: flex"]');
-        if (divReplacement && !divReplacement.querySelector('svg') && (Date.now() - startTime > 8000)) {
-          cleanup();
-          reject(new Error('TikZ compilation completed but no SVG was generated. Please check syntax and semicolons.'));
-          return;
-        }
-      }
-
-      if (Date.now() - startTime > timeoutMs && !isSettled) {
-        cleanup();
-        reject(new Error('TikZ compilation timed out. The local TeX engine did not respond in time — press ↻ Retry, or simplify the diagram.'));
-      }
-    }, 100);
-  });
-}
-
-/**
- * Auto-heals missing backslashes for common TikZ commands while strictly respecting path syntax.
- * 'node' is only transformed to '\node' if it starts a new statement (after ';', ']', '}', or at the start).
- * If 'node' appears on a continuation line (such as inside a multi-line \draw ... node ...;), it is preserved.
+ * Auto-heals missing backslashes for common TikZ commands while respecting path syntax.
+ * 'node' only becomes '\node' when it starts a new statement (after ';', ']', '}' or at the start).
  */
 function healTikzCode(code) {
   if (!code) return '';
@@ -7654,351 +8005,41 @@ function healTikzCode(code) {
     });
 }
 
-/**
- * Fixes TikZJax BaKoMa font encoding mismatch for math symbols:
- * 1. In BaKoMa cmsy10/cmbsy10 fonts, ASCII 124 maps to glyph 18 ('club' ♣),
- *    while ASCII 106 ('j') maps to glyph 47 ('bar' |), and ASCII 107 ('k') maps to glyph 44 ('bardbl' ||).
- *    TikZJax translates DVI char 106 into '&#124;' and DVI char 107 into '&#8741;' but leaves font-family as cmsy10.
- *    Correcting &#124; to &#106; and &#8741; to &#107; inside cmsy elements restores authentic TeX vertical bars.
- * 2. In BaKoMa cmex10 font, TikZJax misassigns cmex to tex256 (T1 text encoding), converting DVI 0 (\bigl()
- *    to 96 (`) which BaKoMa cmex10.ttf renders as glyph 10 (coproducttext ∐).
- *    Mapping tex256 codepoints to authentic BaKoMa cmex10 glyph indices restores authentic TeX delimiters.
- */
-const CMEX_GLYPH_FIX_MAP = {
-  96: 161,    // DVI 000 parenleftbig (\bigl()
-  180: 162,   // DVI 001 parenrightbig (\bigr))
-  710: 163,   // DVI 002 bracketleftbig (\bigl[)
-  732: 164,   // DVI 003 bracketrightbig (\bigr])
-  168: 165,   // DVI 004 floorleftbig (\bigl\lfloor)
-  733: 166,   // DVI 005 floorrightbig (\bigr\rfloor)
-  730: 167,   // DVI 006 ceilingleftbig (\bigl\lceil)
-  711: 168,   // DVI 007 ceilingrightbig (\bigr\rceil)
-  728: 169,   // DVI 008 braceleftbig (\bigl\{)
-  175: 170,   // DVI 009 bracerightbig (\bigr\})
-  729: 173,   // DVI 010 angbracketleftbig (\bigl\langle)
-  184: 174,   // DVI 011 angbracketrightbig (\bigr\rangle)
-  731: 175,   // DVI 012 vextendsingle
-  8218: 176,  // DVI 013 vextenddouble
-  8249: 177,  // DVI 014 slashbig
-  8250: 178,  // DVI 015 backslashbig
-  8220: 179,  // DVI 016 parenleftBig (\Bigl()
-  8221: 180,  // DVI 017 parenrightBig (\Bigr))
-  8222: 181,  // DVI 018 parenleftbigg (\biggl()
-  171: 182,   // DVI 019 parenrightbigg (\biggr))
-  187: 8729,  // DVI 020 bracketleftbigg (\biggl[)
-  8211: 184,  // DVI 021 bracketrightbigg (\biggr])
-  8212: 185,  // DVI 022 floorleftbigg
-  8204: 186,  // DVI 023 floorrightbigg
-  8240: 187,  // DVI 024 ceilingleftbigg
-  305: 188,   // DVI 025 ceilingrightbigg
-  567: 189,   // DVI 026 braceleftbigg
-  64256: 190, // DVI 027 bracerightbigg
-  64257: 191, // DVI 028 angbracketleftbigg
-  64258: 192, // DVI 029 angbracketrightbigg
-  64259: 193, // DVI 030 slashbigg
-  64260: 194, // DVI 031 backslashbigg
-  32: 195,    // DVI 032 parenleftBigg (\Biggl()
-  173: 196    // DVI 127 arrowdblbt
-};
-function fixTikzSvgGlyphs(container) {
-  if (!container) return;
-  const textElements = container.querySelectorAll('text, tspan');
-  textElements.forEach(el => {
-    const style = el.getAttribute('style') || '';
-
-    // 1. cmsy10 / cmbsy10 font encoding fixes:
-    // In BaKoMa cmsy, ASCII 124 maps to glyph 18 ('club' ♣), while 106 ('j') maps to | and 107 ('k') maps to ||.
-    if (/font-family:\s*(?:cmbsy|cmsy)\d*/i.test(style) || /cmsy/i.test(el.style?.fontFamily || '')) {
-      if (el.innerHTML && (/&#124;|\||&#8741;|\u2225/.test(el.innerHTML) || /\||\u2225/.test(el.textContent || ''))) {
-        el.innerHTML = el.innerHTML
-          .replace(/&#124;|\|/g, '&#106;')
-          .replace(/&#8741;|\u2225/g, '&#107;');
-      }
-    }
-
-    // 2. cmmi10 / cmmib10 vector arrow (\vec) and math comma encoding fixes:
-    // TikZJax maps DVI char 126 (\vec accent) to Unicode &#8407; (U+20D7).
-    // In BaKoMa cmmi TrueType fonts, codepoint 8407 is unmapped; the authentic 'vector' glyph is at ASCII 126 (~).
-    // For commas in math mode ($(-1, 1)$), BaKoMa cmmi10 renders character 44 / slot 59 as an elevated turned mark/accent.
-    // Swapping font-family to cmr10 and ensuring character ',' restores authentic baseline Roman commas.
-    if (/font-family:\s*(?:cmmib|cmmi)\d*/i.test(style) || /cmmi/i.test(el.style?.fontFamily || '')) {
-      if (el.innerHTML && (/&#8407;|\u20D7/.test(el.innerHTML) || /\u20D7/.test(el.textContent || ''))) {
-        el.innerHTML = el.innerHTML
-          .replace(/&#8407;|\u20D7/g, '&#126;');
-      }
-
-      const rawContent = el.textContent || '';
-      const trimmed = rawContent.trim();
-      if (
-        trimmed === ',' ||
-        trimmed === ';' ||
-        /^[‘'`´\u2018\u2019\u0060\u00B4\u02BB\u02BC\u02BD]$/.test(trimmed) ||
-        /^(?:&#44;|&#59;|&#8216;|&#8217;|&#96;|&#180;)$/.test((el.innerHTML || '').trim())
-      ) {
-        el.textContent = ',';
-        const newStyle = style.replace(/cmmi(\d*)/gi, 'cmr$1');
-        el.setAttribute('style', newStyle);
-        if (el.style) {
-          el.style.fontFamily = (el.style.fontFamily || '').replace(/cmmi(\d*)/gi, 'cmr$1');
-        }
-      } else if (/[‘'`´\u2018\u2019\u0060\u00B4\u02BB\u02BC\u02BD]/.test(rawContent)) {
-        el.textContent = rawContent.replace(/[‘'`´\u2018\u2019\u0060\u00B4\u02BB\u02BC\u02BD]/g, ',');
-      }
-    }
-
-    // 3. cmex10 / cmex math extension delimiter fixes (\bigl(, \bigr), \Bigl, \Biggl, etc.):
-    if (/font-family:\s*(?:cmex)\d*/i.test(style) || /cmex/i.test(el.style?.fontFamily || '')) {
-      const walkAndFix = (node) => {
-        if (!node) return;
-        if (node.nodeType === 3) {
-          const text = node.nodeValue || '';
-          if (text) {
-            let replaced = false;
-            const fixed = Array.from(text).map(ch => {
-              const cp = ch.codePointAt(0);
-              if (CMEX_GLYPH_FIX_MAP[cp]) {
-                replaced = true;
-                return String.fromCodePoint(CMEX_GLYPH_FIX_MAP[cp]);
-              }
-              return ch;
-            }).join('');
-            if (replaced) node.nodeValue = fixed;
-          }
-        } else if (node.childNodes && node.childNodes.length > 0) {
-          Array.from(node.childNodes).forEach(walkAndFix);
-        }
-      };
-      walkAndFix(el);
-    }
-  });
+/** Converter output for a block (used for warnings such as unavailable packages). */
+function prepareTikzSource(code) {
+  return convertTikzSource(code || '', getGlobalTikzPreamble());
 }
 
 /**
- * Compiles TikZ code into SVG inside targetContainer without whole-page refresh.
- * @param {string} tikzCode - The raw TikZ LaTeX code.
- * @param {HTMLElement} targetContainer - Target DOM element to render the diagram.
- * @param {Function} [onComplete] - Callback receiving (success, error).
- * @param {Object} [noteContext] - Optional note object containing local macros.
+ * Compiles a block's code to SVG and stores the fonts it needs in the file.
+ * @returns {Promise<{ svg: string, key: string, unavailable: string[] }>} — rejects with the TeX error
  */
-function renderTikzToElement(tikzCode, targetContainer, onComplete = null, noteContext = null) {
-  if (!targetContainer) return;
+async function renderTikzToSvg(code) {
+  const source = prepareTikzSource(code);
+  if (!source.body) throw new Error('The TikZ block is empty.');
+  const svg = await compileTikzWithEngine(source);
+  await storeTikzFontsForSvg(svg);
+  return { svg, key: getTikzRenderKey(code), unavailable: source.unavailable };
+}
 
-  targetContainer.__lastTikzCode = tikzCode;
-  targetContainer.__lastTikzOnComplete = onComplete;
-  targetContainer.__lastTikzNoteContext = noteContext;
-  activeTikzContainers.add(targetContainer);
-
-  const rawClean = (tikzCode || '').trim();
-  if (!rawClean) {
-    targetContainer.innerHTML = '<div class="text-xs text-[var(--text-secondary,#a0a4b8)] italic p-4 text-center select-none">Empty TikZ diagram</div>';
-    if (onComplete) onComplete(true);
-    return;
-  }
-
-  // 1. Instant Bi-Theme Cache Check.
-  // The effective preamble (global + note-level macros) is part of the compiled script, so it
-  // must be part of the key — otherwise notes with different local TikZ macros share one SVG.
-  const isLight = (typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light');
-  const currentTheme = isLight ? 'light' : 'dark';
-  const basePreamble = resolveThemeColors(getActiveTikzPreamble(noteContext));
-  const cacheKey = `${currentTheme}:::${TIKZ_CACHE_VERSION}:::${hashString(basePreamble)}:::${rawClean}`;
-
-  let cachedHtml = tikzSvgCache.get(cacheKey);
-  if (!cachedHtml) {
-    try {
-      if (typeof sessionStorage !== 'undefined') {
-        cachedHtml = sessionStorage.getItem(`LocalHUB_Tikz_${hashString(cacheKey)}`);
-        if (cachedHtml) {
-          tikzSvgCache.set(cacheKey, cachedHtml);
-        }
-      }
-    } catch (e) {}
-  }
-
-  if (cachedHtml) {
-    targetContainer.innerHTML = cachedHtml;
-    fixTikzSvgGlyphs(targetContainer);
-    if (onComplete) onComplete(true);
-    return;
-  }
-
-  const currentRenderId = (targetContainer.__tikzRenderId || 0) + 1;
-  targetContainer.__tikzRenderId = currentRenderId;
-
-  // 1. Auto-heal common typo: missing backslash before draw, node, path, fill, clip
-  const healedCode = healTikzCode(rawClean);
-
-  // 2. Resolve dual-theme colors (#Light|#Dark)
-  const resolvedCode = resolveThemeColors(healedCode);
-
-  // 3. Translate any raw #HEX colors to valid TikZ \definecolor names
-  // In LaTeX/TikZ, raw '#' causes "Illegal parameter number in definition of \pgfkeyscurrentkey"
-  const colorMap = new Map();
-  const tikzSafeCode = resolvedCode.replace(/#([0-9a-fA-F]{3,8})\b/g, (match, hex) => {
-    let fullHex = hex;
-    if (hex.length === 3) fullHex = hex.split('').map(c => c + c).join('');
-    if (fullHex.length === 6) {
-      const colorName = `col_${fullHex.toLowerCase()}`;
-      if (!colorMap.has(colorName)) {
-        colorMap.set(colorName, `\\definecolor{${colorName}}{HTML}{${fullHex.toUpperCase()}}`);
-      }
-      return colorName;
-    }
-    return match;
-  });
-
-  const dynamicColorPreamble = Array.from(colorMap.values()).join('\n');
-  const fullPreamble = [basePreamble, dynamicColorPreamble].filter(Boolean).join('\n');
-
-  let fullTikzScript = '';
-  if (tikzSafeCode.includes('\\begin{tikzpicture}')) {
-    fullTikzScript = `${fullPreamble}\n${tikzSafeCode}`;
+/** Puts a saved SVG into `target`, scaled to the container width with its natural aspect ratio. */
+function mountTikzSvg(target, svg) {
+  if (!target) return;
+  target.innerHTML = svg || '';
+  const svgEl = target.querySelector('svg');
+  if (!svgEl) return;
+  const vb = (svgEl.getAttribute('viewBox') || '').trim().split(/\s+/).map(Number);
+  svgEl.style.display = 'block';
+  svgEl.style.margin = '0 auto';
+  svgEl.style.overflow = 'visible';
+  svgEl.style.height = 'auto';
+  if (vb.length === 4 && vb[2] > 0 && vb[3] > 0) {
+    svgEl.style.aspectRatio = `${vb[2]} / ${vb[3]}`;
+    svgEl.style.width = '100%';
+    svgEl.style.maxWidth = `${vb[2]}pt`;
   } else {
-    fullTikzScript = `${fullPreamble}\n\\begin{tikzpicture}\n${tikzSafeCode}\n\\end{tikzpicture}`;
+    svgEl.style.maxWidth = '100%';
   }
-
-  // Temporary compiling indicator
-  targetContainer.innerHTML = `
-    <div class="tikz-compiling-indicator flex items-center justify-center gap-2.5 p-4 text-xs font-medium text-[var(--text-secondary,#a0a4b8)] select-none">
-      <svg class="animate-spin h-4 w-4 text-[var(--accent,#8b6dff)]" viewBox="0 0 24 24" fill="none">
-        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-      </svg>
-      <span>Compiling TikZ diagram...</span>
-    </div>
-  `;
-
-  whenConnected(targetContainer, () => {
-    if (targetContainer.__tikzRenderId !== currentRenderId || !targetContainer.isConnected) return;
-
-    tikzCompileQueue = tikzCompileQueue.catch(() => {}).then(async () => {
-      if (targetContainer.__tikzRenderId !== currentRenderId || !targetContainer.isConnected) return;
-
-      try {
-        await ensureTikzJaxLoaded();
-      } catch (loadErr) {
-        if (targetContainer.__tikzRenderId !== currentRenderId) return;
-        targetContainer.innerHTML = `
-          <div class="p-3 text-xs text-red-400 bg-red-950/20 border border-red-800/40 rounded-lg select-text text-center flex flex-col items-center gap-2">
-            <div><strong>TikZ Engine Unavailable:</strong> ${loadErr.message || 'Check network connection or local engine folder.'}</div>
-            <button type="button" class="tikz-retry-btn px-2.5 py-1 rounded-md border border-red-700/60 bg-red-900/30 hover:bg-red-900/60 text-red-200 text-[11px] font-semibold cursor-pointer transition-colors" title="Try loading again">↻ Retry Load</button>
-          </div>
-        `;
-        const retryBtn = targetContainer.querySelector('.tikz-retry-btn');
-        if (retryBtn) {
-          retryBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            renderTikzToElement(tikzCode, targetContainer, onComplete, noteContext);
-          });
-        }
-        if (onComplete) onComplete(false, loadErr);
-        return;
-      }
-
-      if (targetContainer.__tikzRenderId !== currentRenderId || !targetContainer.isConnected) return;
-
-      try {
-        targetContainer.innerHTML = '';
-        const scriptEl = document.createElement('script');
-        scriptEl.type = 'text/tikz';
-        scriptEl.textContent = fullTikzScript;
-        targetContainer.appendChild(scriptEl);
-
-        const runner = window.__tikzjax_runner || (typeof window.onload === 'function' ? window.onload : null);
-        if (typeof runner === 'function') {
-          window.__tikzjax_runner = runner;
-          try {
-            const runnerPromise = runner();
-            if (runnerPromise && typeof runnerPromise.catch === 'function') {
-              runnerPromise.catch(e => console.warn('TikZJax background promise rejection handled:', e));
-            }
-          } catch (e) {
-            console.error('TikZJax runner invocation error:', e);
-          }
-        }
-
-        // Asynchronously wait for TikzJax to finish compilation and mount the SVG
-        const svgEl = await waitForTikzSvg(targetContainer, currentRenderId, 30000);
-        if (targetContainer.__tikzRenderId !== currentRenderId) return;
-
-        if (svgEl) {
-          // Fix BaKoMa font glyph mismatch (e.g. |u| rendering as clubs ♣ and ||u|| missing)
-          fixTikzSvgGlyphs(targetContainer);
-
-          // 1. Unlock all parent wrappers injected by TikzJax (n and .page) so height expands naturally
-          let parent = svgEl.parentElement;
-          while (parent && parent !== targetContainer) {
-            parent.style.width = '100%';
-            parent.style.maxWidth = '100%';
-            parent.style.height = 'auto';
-            parent.style.minHeight = '0';
-            parent.style.position = 'relative';
-            parent.style.display = 'flex';
-            parent.style.flexDirection = 'column';
-            parent.style.alignItems = 'center';
-            parent.style.justifyContent = 'center';
-            parent.style.overflow = 'visible';
-            parent = parent.parentElement;
-          }
-
-          // 2. Parse natural dimensions from viewBox for exact aspect ratio
-          const vb = svgEl.getAttribute('viewBox');
-          let naturalWidth = null;
-          let naturalHeight = null;
-          if (vb) {
-            const parts = vb.trim().split(/\s+/).map(Number);
-            if (parts.length === 4 && parts[2] > 0 && parts[3] > 0) {
-              naturalWidth = parts[2];
-              naturalHeight = parts[3];
-            }
-          }
-
-          // 3. Style SVG: width is dominant, centered, height automatically scales with aspect ratio
-          svgEl.style.position = 'relative';
-          svgEl.style.display = 'block';
-          svgEl.style.margin = '0 auto';
-          svgEl.style.overflow = 'visible';
-
-          if (naturalWidth && naturalHeight) {
-            svgEl.style.aspectRatio = `${naturalWidth} / ${naturalHeight}`;
-            svgEl.style.maxWidth = `${naturalWidth}pt`;
-            svgEl.style.width = '100%';
-            svgEl.style.height = 'auto';
-          } else {
-            svgEl.style.maxWidth = '100%';
-            svgEl.style.height = 'auto';
-          }
-
-          // Cache the fully rendered and responsive container HTML for this theme and code
-          tikzSvgCache.set(cacheKey, targetContainer.innerHTML);
-          try {
-            if (typeof sessionStorage !== 'undefined') {
-              sessionStorage.setItem(`LocalHUB_Tikz_${hashString(cacheKey)}`, targetContainer.innerHTML);
-            }
-          } catch (e) {}
-
-          if (onComplete) onComplete(true);
-        }
-      } catch (err) {
-        if (targetContainer.__tikzRenderId !== currentRenderId) return;
-        console.error('TikzJax compilation error:', err);
-        targetContainer.innerHTML = `
-          <div class="p-3 text-xs text-red-400 bg-red-950/20 border border-red-800/40 rounded-lg select-text text-center flex flex-col items-center gap-2">
-            <div><strong>TikZ Compilation Failed:</strong> ${err.message || 'Check syntax and semicolons.'}</div>
-            <button type="button" class="tikz-retry-btn px-2.5 py-1 rounded-md border border-red-700/60 bg-red-900/30 hover:bg-red-900/60 text-red-200 text-[11px] font-semibold cursor-pointer transition-colors" title="Try compiling again (large diagrams can take a while on the local TeX engine)">↻ Retry Compile</button>
-          </div>
-        `;
-        const retryBtn = targetContainer.querySelector('.tikz-retry-btn');
-        if (retryBtn) {
-          retryBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            renderTikzToElement(tikzCode, targetContainer, onComplete, noteContext);
-          });
-        }
-        if (onComplete) onComplete(false, err);
-      }
-    });
-  });
 }
 
 
@@ -18343,12 +18384,195 @@ function renderEquationBlock(block, isEditing = false, onUpdate = null, { onDone
 }
 
 
+/* --- 03_Notes/B_Editor_View/01_Blocks/Tikz_Render_Panel.js --- */
+/**
+ * 03_Notes/B_Editor_View/01_Blocks/Tikz_Render_Panel.js
+ * The diagram area of a TikZ block: shows the block's saved SVG on a white "paper"
+ * card and (re)compiles only when needed.
+ *
+ * Rules
+ *   - block.svg / block.svgKey hold the last GOOD render; they are replaced only by a
+ *     successful compile. A failed or offline compile keeps them and shows a warning.
+ *   - A compile is attempted automatically when there is no SVG yet or the saved one is
+ *     outdated (code or global TikZ preamble changed) — once per session per version.
+ */
+
+
+
+// `${blockId}:${renderKey}` versions already auto-compiled this session (prevents retry loops).
+const tikzAutoRenderAttempts = new Set();
+
+if (typeof document !== 'undefined' && !document.getElementById('tikz-render-panel-styles')) {
+  const style = document.createElement('style');
+  style.id = 'tikz-render-panel-styles';
+  style.textContent = `
+    .tikz-paper { background: #ffffff; color: #111827; border-radius: 10px; padding: 12px; width: 100%;
+      display: flex; justify-content: center; box-sizing: border-box; border: 1px solid transparent; }
+    .tikz-paper.tikz-paper-bordered { border-color: var(--border, #2a2e40); box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
+    :root:not([data-theme="light"]) .tikz-paper { border-color: rgba(255,255,255,0.06); }
+    :root:not([data-theme="light"]) .tikz-paper.tikz-paper-bordered { border-color: var(--border-light, #353a52); }
+    .tikz-svg-slot { max-width: 100%; }
+    .tikz-empty-note { color: #6b7088; font-size: 12px; font-style: italic; padding: 18px 8px; text-align: center; }
+    .tikz-status { display: flex; align-items: flex-start; gap: 8px; font-size: 11.5px; line-height: 1.45;
+      padding: 6px 10px; border-radius: 8px; margin-bottom: 6px; border: 1px solid; }
+    .tikz-status[hidden] { display: none; }
+    .tikz-status pre { margin: 4px 0 0; white-space: pre-wrap; font-size: 11px; opacity: 0.9; }
+    .tikz-status.is-busy { color: var(--text-secondary, #a0a4b8); border-color: var(--border, #2a2e40); background: var(--surface, #181b27); }
+    .tikz-status.is-warn { color: #b45309; border-color: rgba(217,119,6,0.45); background: rgba(245,158,11,0.10); }
+    :root:not([data-theme="light"]) .tikz-status.is-warn { color: #fbbf24; }
+    .tikz-status.is-error { color: #b91c1c; border-color: rgba(220,38,38,0.45); background: rgba(239,68,68,0.10); }
+    :root:not([data-theme="light"]) .tikz-status.is-error { color: #f87171; }
+    .tikz-status .tikz-status-btn { margin-left: auto; flex-shrink: 0; cursor: pointer; font-weight: 600; font-size: 11px;
+      padding: 1px 8px; border-radius: 6px; border: 1px solid currentColor; background: transparent; color: inherit; }
+    .tikz-status .tikz-spin { width: 12px; height: 12px; border: 2px solid currentColor; border-right-color: transparent;
+      border-radius: 50%; animation: tikzSpin 0.8s linear infinite; flex-shrink: 0; margin-top: 2px; }
+    @keyframes tikzSpin { to { transform: rotate(360deg); } }
+  `;
+  document.head.appendChild(style);
+}
+
+/**
+ * @param {Object} block                TikZ block (mutated: svg, svgKey)
+ * @param {Object} opts
+ * @param {number} opts.fitPercent      Width of the diagram (10–100 %)
+ * @param {boolean} opts.hasBorder      Draw a border around the paper
+ * @param {Function} [opts.getCode]     Current code (edit mode passes the live editor value)
+ * @param {Function} [opts.onSaved]     Called after a successful render was stored on the block
+ */
+function createTikzRenderPanel(block, { fitPercent = 100, hasBorder = false, getCode = null, onSaved = null } = {}) {
+  const el = document.createElement('div');
+  el.className = 'tikz-render-panel w-full flex flex-col';
+  el.innerHTML = `
+    <div class="tikz-status" hidden></div>
+    <div class="tikz-paper${hasBorder ? ' tikz-paper-bordered' : ''}">
+      <div class="tikz-svg-slot" style="width: ${fitPercent}%;"></div>
+    </div>
+  `;
+  const statusEl = el.querySelector('.tikz-status');
+  const paperEl = el.querySelector('.tikz-paper');
+  const slotEl = el.querySelector('.tikz-svg-slot');
+  const currentCode = () => (typeof getCode === 'function' ? getCode() : (block.code || block.content || ''));
+
+  let busy = false;
+  let lastError = null;
+  let pendingCode = null;
+
+  const showSvg = () => {
+    if (block.svg) mountTikzSvg(slotEl, block.svg);
+    else slotEl.innerHTML = '<div class="tikz-empty-note">No rendered diagram yet.</div>';
+  };
+
+  const setStatus = (kind, html, button = null) => {
+    if (!kind) { statusEl.hidden = true; statusEl.innerHTML = ''; return; }
+    statusEl.hidden = false;
+    statusEl.className = `tikz-status is-${kind}`;
+    statusEl.innerHTML = `${kind === 'busy' ? '<span class="tikz-spin"></span>' : ''}<div class="min-w-0">${html}</div>`;
+    if (button) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'tikz-status-btn';
+      btn.textContent = button.label;
+      btn.addEventListener('click', (e) => { e.stopPropagation(); button.onClick(); });
+      statusEl.appendChild(btn);
+    }
+  };
+
+  const unavailableNote = (code) => {
+    const missing = prepareTikzSource(code).unavailable;
+    return missing.length
+      ? `<div>Not available in the online TikZ engine (ignored): <strong>${missing.map(escapeHtml).join(', ')}</strong></div>`
+      : '';
+  };
+
+  const refreshStatus = () => {
+    if (busy) return;
+    const code = currentCode().trim();
+    if (lastError) {
+      const head = block.svg
+        ? '⚠ Render failed — showing the last saved diagram.'
+        : '⚠ Render failed — nothing could be drawn.';
+      setStatus(block.svg ? 'warn' : 'error',
+        `<strong>${head}</strong><pre>${escapeHtml(lastError)}</pre>${unavailableNote(code)}`,
+        { label: '↻ Retry', onClick: () => compile({ force: true }) });
+      return;
+    }
+    if (code && block.svg && block.svgKey !== getTikzRenderKey(code)) {
+      setStatus('warn', 'Diagram is outdated (code or TikZ preamble changed since it was rendered).',
+        { label: '↻ Re-render', onClick: () => compile({ force: true }) });
+      return;
+    }
+    const note = unavailableNote(code);
+    setStatus(note ? 'warn' : null, note);
+  };
+
+  /** Compiles the current code; saves only on success. */
+  function compile({ force = false } = {}) {
+    const code = currentCode();
+    if (!code.trim()) { lastError = null; refreshStatus(); return Promise.resolve(false); }
+    const key = getTikzRenderKey(code);
+    if (!force && block.svg && block.svgKey === key) { lastError = null; refreshStatus(); return Promise.resolve(true); }
+    if (busy) { pendingCode = code; return Promise.resolve(false); }
+
+    busy = true;
+    setStatus('busy', block.svg ? 'Rendering… (showing the saved diagram meanwhile)' : 'Rendering diagram…');
+    return renderTikzToSvg(code).then(({ svg, key: renderedKey }) => {
+      block.svg = svg;
+      block.svgKey = renderedKey;
+      lastError = null;
+      showSvg();
+      SaveNotesState();
+      if (typeof onSaved === 'function') onSaved({ svg, svgKey: renderedKey });
+      return true;
+    }).catch((err) => {
+      lastError = (err && err.message) ? err.message : String(err);
+      return false;
+    }).finally(() => {
+      busy = false;
+      refreshStatus();
+      if (pendingCode !== null) {
+        const next = pendingCode;
+        pendingCode = null;
+        if (next !== code) compile();
+      }
+    });
+  }
+
+  /** Auto-compile when the saved SVG is missing or outdated (once per version per session). */
+  function autoRender() {
+    const code = currentCode();
+    if (!code.trim()) return;
+    const key = getTikzRenderKey(code);
+    if (block.svg && block.svgKey === key) return;
+    const attemptId = `${block.id || ''}:${key}`;
+    if (tikzAutoRenderAttempts.has(attemptId)) return;
+    tikzAutoRenderAttempts.add(attemptId);
+    compile();
+  }
+
+  showSvg();
+  refreshStatus();
+
+  return {
+    el,
+    compile,
+    autoRender,
+    refreshStatus,
+    setFit(percent) { slotEl.style.width = `${percent}%`; },
+    setBorder(on) { paperEl.classList.toggle('tikz-paper-bordered', Boolean(on)); }
+  };
+}
+
+
 /* --- 03_Notes/B_Editor_View/01_Blocks/Tikz_Block.js --- */
 /**
  * 03_Notes/B_Editor_View/01_Blocks/Tikz_Block.js
- * Interactive TikZ diagram block with isolated single-block compilation,
- * template browser, template naming modal, and flexible \begin{tikzpicture}[...] support.
+ * Interactive TikZ diagram block: code editor, template browser / naming modal, and a
+ * saved-SVG preview (Tikz_Render_Panel.js). The block stores its last good render
+ * (block.svg + block.svgKey); it re-compiles only when the code or the global TikZ
+ * preamble changes, and a failed/offline compile keeps the saved diagram.
+ * Accepts a bare \begin{tikzpicture}...\end{tikzpicture} or a full Overleaf document.
  */
+
 
 
 
@@ -18448,24 +18672,20 @@ function renderTikzBlock(block, isEditing = false, onUpdate = null, { onDone = n
   // 1. View Mode
   if (!isEditing) {
     const wrap = document.createElement('figure');
-    const borderClasses = hasBorder
-      ? 'border border-[var(--border)] bg-[var(--surface)] shadow-xs'
-      : 'border border-transparent bg-transparent';
-    wrap.className = `my-1 p-4 rounded-xl ${borderClasses} flex flex-col items-center justify-center w-full select-text transition-all box-border`;
+    wrap.className = 'my-1 py-2 flex flex-col items-center justify-center w-full select-text transition-all box-border';
     wrap.style.scrollbarWidth = 'thin';
 
     applyFigureAttributes(wrap, { tag, figNumber, label: figLabel });
 
-    const svgWrap = document.createElement('div');
-    svgWrap.className = 'preview-inner flex flex-col items-center justify-center transition-all';
-    svgWrap.style.width = `${fitPercent}%`;
-    svgWrap.style.maxWidth = '100%';
-    const cachedSvg = getCachedTikzSvg(tikzCode);
-    if (cachedSvg) {
-      svgWrap.innerHTML = cachedSvg;
-    }
-    renderTikzToElement(tikzCode, svgWrap);
-    wrap.appendChild(svgWrap);
+    // Saved SVG only; compiles in the background just when it is missing or outdated.
+    const panel = createTikzRenderPanel(block, {
+      fitPercent,
+      hasBorder,
+      getCode: () => tikzCode,
+      onSaved: (fields) => { if (onUpdate) onUpdate(fields); }
+    });
+    wrap.appendChild(panel.el);
+    panel.autoRender();
 
     const captionText = showCaptions ? formatFigureCaptionText({ caption, allowNumbering, figNumber, label: figLabel }) : '';
     appendFigureCaption(wrap, captionText);
@@ -18549,10 +18769,8 @@ function renderTikzBlock(block, isEditing = false, onUpdate = null, { onDone = n
     <!-- Template Browser Window & Save Template Modal -->
     ${GetTikzTemplatesModalHTML()}
 
-    <!-- Middle: Live TikZ SVG Preview Pane -->
-    <div class="preview-pane w-full p-4 rounded-xl ${currentBorderState ? 'border border-[var(--border)] bg-[var(--surface)] shadow-xs' : 'border border-transparent bg-transparent'} flex flex-col items-center justify-center select-text transition-all box-border" style="scrollbar-width: thin;">
-      <div class="preview-inner flex flex-col items-center justify-center transition-all" style="width: ${currentFitPercent}%; max-width: 100%;"></div>
-    </div>
+    <!-- Middle: saved SVG preview (re-rendered only when the code changes) -->
+    <div class="preview-pane w-full select-text box-border"></div>
 
     <!-- Bottom: Monospace TikZ Code Editor with Line Numbers, Spacing & Folding -->
     <div class="tikz-editor-mount w-full"></div>
@@ -18574,7 +18792,6 @@ function renderTikzBlock(block, isEditing = false, onUpdate = null, { onDone = n
   `;
 
   const preview = editWrap.querySelector('.preview-pane');
-  const previewInner = editWrap.querySelector('.preview-inner');
   const allowNumberingCb = editWrap.querySelector('.allow-numbering-cb');
   const tagInput = editWrap.querySelector('.tag-input');
   const captionInput = editWrap.querySelector('.caption-input');
@@ -18598,6 +18815,16 @@ function renderTikzBlock(block, isEditing = false, onUpdate = null, { onDone = n
   if (tagInput) tagInput.addEventListener('input', paintTagState);
   paintTagState();
 
+  // Re-render automatically shortly after typing stops (only when the code really changed).
+  const AUTO_COMPILE_DELAY_MS = 1500;
+  let autoCompileTimer = null;
+  const scheduleAutoCompile = () => {
+    clearTimeout(autoCompileTimer);
+    autoCompileTimer = setTimeout(() => {
+      if (editWrap.isConnected) renderPanel.compile();
+    }, AUTO_COMPILE_DELAY_MS);
+  };
+
   const codeEditor = createCodeEditor({
     blockId: block.id,
     value: tikzCode,
@@ -18610,24 +18837,30 @@ function renderTikzBlock(block, isEditing = false, onUpdate = null, { onDone = n
       if (onUpdate) {
         onUpdate({ code: val, content: val, width: currentFitPercent });
       }
+      scheduleAutoCompile();
     },
     onChange: (val) => {
       if (onUpdate) {
         onUpdate({ code: val, content: val, width: currentFitPercent });
       }
+      scheduleAutoCompile();
     }
   });
   editorMount.appendChild(codeEditor);
 
   const textarea = codeEditor.textarea;
+  const getEditorCode = () => (codeEditor.getValue ? codeEditor.getValue() : textarea.value);
 
-  // Synchronously populate cached SVG if available so preview doesn't flash or jump
-  const cachedSvg = getCachedTikzSvg(tikzCode);
-  if (cachedSvg && previewInner) {
-    previewInner.innerHTML = cachedSvg;
-  }
+  // Saved-SVG preview: shows block.svg; replaced only by a successful compile.
+  const renderPanel = createTikzRenderPanel(block, {
+    fitPercent: currentFitPercent,
+    hasBorder: currentBorderState,
+    getCode: getEditorCode,
+    onSaved: (fields) => { if (onUpdate) onUpdate(fields); }
+  });
+  preview.appendChild(renderPanel.el);
 
-  // Single-block compile executor
+  // Single-block compile executor (▶ forces a fresh render)
   const compile = (showVisualFeedback = false) => {
     const rawVal = codeEditor.getValue ? codeEditor.getValue() : textarea.value;
     let val = healTikzCode(rawVal);
@@ -18647,8 +18880,12 @@ function renderTikzBlock(block, isEditing = false, onUpdate = null, { onDone = n
       btnCompile.disabled = true;
     }
 
-    const compileTarget = previewInner || preview;
-    renderTikzToElement(val, compileTarget, () => {
+    if (onUpdate) {
+      onUpdate({ code: val, content: val, width: currentFitPercent });
+    }
+
+    clearTimeout(autoCompileTimer);
+    renderPanel.compile({ force: showVisualFeedback }).finally(() => {
       if (showVisualFeedback && btnCompile) {
         btnCompile.innerHTML = `
           <svg viewBox="0 0 24 24" fill="currentColor" class="w-3 h-3">
@@ -18658,10 +18895,6 @@ function renderTikzBlock(block, isEditing = false, onUpdate = null, { onDone = n
         btnCompile.disabled = false;
       }
     });
-
-    if (onUpdate) {
-      onUpdate({ code: val, content: val, width: currentFitPercent });
-    }
   };
 
   // Compile button trigger
@@ -18734,13 +18967,9 @@ function renderTikzBlock(block, isEditing = false, onUpdate = null, { onDone = n
     getCurrentCode: () => (codeEditor.getValue ? codeEditor.getValue() : textarea.value)
   });
   container.__blockCleanup = () => {
+    clearTimeout(autoCompileTimer);
     templatesLogic.cleanup?.();
   };
-
-  // Provide code getter for dynamic theme re-rendering
-  const getTikzSource = () => (codeEditor.getValue ? codeEditor.getValue() : textarea.value);
-  preview.__getTikzCode = getTikzSource;
-  if (previewInner) previewInner.__getTikzCode = getTikzSource;
 
   // Fit % Width Handling
   const fitInput = editWrap.querySelector('.fit-percent-input');
@@ -18748,7 +18977,7 @@ function renderTikzBlock(block, isEditing = false, onUpdate = null, { onDone = n
   const updateFitWidth = (newVal) => {
     currentFitPercent = newVal;
     block.width = currentFitPercent;
-    if (previewInner) previewInner.style.width = `${currentFitPercent}%`;
+    renderPanel.setFit(currentFitPercent);
       if (onUpdate) {
         onUpdate({
           code: textarea.value,
@@ -18794,11 +19023,10 @@ function renderTikzBlock(block, isEditing = false, onUpdate = null, { onDone = n
 
     if (currentBorderState) {
       borderToggleBtn.className = 'btn-border-toggle h-7 px-2.5 py-0 text-xs font-semibold rounded-md border flex items-center justify-center gap-1.5 transition-all flex-shrink-0 cursor-pointer border-purple-500 bg-purple-500/15 text-purple-400 shadow-xs';
-      preview.className = 'preview-pane w-full p-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-xs flex flex-col items-center justify-center select-text transition-all box-border';
     } else {
       borderToggleBtn.className = 'btn-border-toggle h-7 px-2.5 py-0 text-xs font-semibold rounded-md border flex items-center justify-center gap-1.5 transition-all flex-shrink-0 cursor-pointer border-[var(--border)] bg-[var(--surface)] text-[var(--text-dim)] opacity-70';
-      preview.className = 'preview-pane w-full p-4 rounded-xl border border-transparent bg-transparent flex flex-col items-center justify-center select-text transition-all box-border';
     }
+    renderPanel.setBorder(currentBorderState);
 
     borderToggleBtn.title = `Surrounding Border: ${currentBorderState ? 'ON' : 'OFF'}`;
 
@@ -18839,8 +19067,8 @@ function renderTikzBlock(block, isEditing = false, onUpdate = null, { onDone = n
   tagInput?.addEventListener('input', triggerMetaUpdate);
   captionInput?.addEventListener('input', triggerMetaUpdate);
 
-  // Initial compile on block load
-  compile(false);
+  // Opening the editor shows the saved SVG; it compiles only if missing or outdated.
+  renderPanel.autoRender();
 
   // Copy Block TikZ Code Handler with 2-second green tick confirmation
   const handleCopyBlock = async (btn) => {
@@ -22634,19 +22862,20 @@ function InitFontSizeLogic(onSizeChange) {
  * 03_Notes/B_Editor_View/03_Floating_ToolBar/04_Macros_Modal.js
  * Dedicated Modal for LaTeX Equation Macros and TikZ Styles/Preamble.
  * Features:
- * - Top Bar: [∑ Macros] | [🌐 Global | 📄 Local] | [ + | ○ Light | ○ Dark ] | [✕ Close]
+ * - Top Bar: [∑ Macros] | [ + | ○ Light | ○ Dark ] | [✕ Close]
+ * - Macros are global-only: one set for every note in this file (per-note macros from
+ *   older files are merged into it on load — see 00_State.js mergeNoteMacrosIntoGlobal).
  * - VS Code-Style Tabs: [∑ Equation Macros] | [🎨 TikZ Macros]
  * - Preset Quick Insertion Buttons
  * - Integration with 00_Components/06_Color_Selector.js
  * - Real-time state persistence and canvas re-render trigger
  */
-function OpenMacrosModal({ note = null, onSave = null } = {}) {
+function OpenMacrosModal({ onSave = null } = {}) {
   // Remove any existing macros modal
   const existing = document.getElementById('notes-macros-modal-backdrop');
   if (existing) existing.remove();
 
-  // Working state copy
-  let isGlobal = true;
+  // Working state copy (global macros only)
   let activeTab = 'equation'; // 'equation' | 'tikz'
 
   const workingGlobal = {
@@ -22654,10 +22883,6 @@ function OpenMacrosModal({ note = null, onSave = null } = {}) {
     tikz: NotesState.globalMacros?.tikz || DEFAULT_GLOBAL_MACROS.tikz
   };
 
-  const workingLocal = {
-    equation: note?.macros?.equation || '',
-    tikz: note?.macros?.tikz || ''
-  };
 
   // Create Modal Backdrop
   const backdrop = document.createElement('div');
@@ -22678,18 +22903,8 @@ function OpenMacrosModal({ note = null, onSave = null } = {}) {
         </div>
         <div class="flex flex-col leading-none">
           <span class="font-bold text-xs sm:text-sm text-[var(--text)]">Macros & Preamble</span>
-          <span class="text-[10px] text-[var(--text-dim)]">KaTeX & TikZ Config</span>
+          <span class="text-[10px] text-[var(--text-dim)]">Global · applies to every note</span>
         </div>
-      </div>
-
-      <!-- Center-Left: Global / Local Switch -->
-      <div class="flex items-center rounded-lg border border-[var(--border)] bg-[var(--card)] p-0.5 text-xs font-semibold flex-shrink-0">
-        <button type="button" class="btn-scope-global px-2.5 py-1 rounded-md transition-all cursor-pointer font-medium" title="Vault-wide macros applied across all notes">
-          🌐 Global
-        </button>
-        <button type="button" class="btn-scope-local px-2.5 py-1 rounded-md transition-all cursor-pointer font-medium" title="Note-specific macros applied only to this note">
-          📄 Local ${note?.title ? `(${escapeHtml(note.title.slice(0, 14))}${note.title.length > 14 ? '…' : ''})` : ''}
-        </button>
       </div>
 
       <!-- Center-Right: Color Selector Mount -->
@@ -22742,8 +22957,6 @@ function OpenMacrosModal({ note = null, onSave = null } = {}) {
   document.body.appendChild(backdrop);
 
   // Grab DOM references
-  const btnGlobal = modal.querySelector('.btn-scope-global');
-  const btnLocal = modal.querySelector('.btn-scope-local');
   const tabEquation = modal.querySelector('.tab-btn-equation');
   const tabTikz = modal.querySelector('.tab-btn-tikz');
   const textarea = modal.querySelector('.macro-editor-textarea');
@@ -22777,23 +22990,13 @@ function OpenMacrosModal({ note = null, onSave = null } = {}) {
 
   // Save current textarea content to working state
   function saveCurrentTextareaToState() {
-    const target = isGlobal ? workingGlobal : workingLocal;
-    target[activeTab] = textarea.value;
+    workingGlobal[activeTab] = textarea.value;
   }
 
   textarea.addEventListener('input', saveCurrentTextareaToState);
 
-  // Update UI appearance based on isGlobal and activeTab
+  // Update UI appearance based on the active tab
   function updateUI() {
-    // 1. Update Global / Local switch buttons
-    if (isGlobal) {
-      btnGlobal.className = 'btn-scope-global px-2.5 py-1 rounded-md transition-all cursor-pointer font-bold bg-[var(--accent)] text-white shadow-xs';
-      btnLocal.className = 'btn-scope-local px-2.5 py-1 rounded-md transition-all cursor-pointer font-medium text-[var(--text-secondary)] hover:text-[var(--text)]';
-    } else {
-      btnLocal.className = 'btn-scope-local px-2.5 py-1 rounded-md transition-all cursor-pointer font-bold bg-[var(--accent)] text-white shadow-xs';
-      btnGlobal.className = 'btn-scope-global px-2.5 py-1 rounded-md transition-all cursor-pointer font-medium text-[var(--text-secondary)] hover:text-[var(--text)]';
-    }
-
     // 2. Update Tabs
     if (activeTab === 'equation') {
       tabEquation.className = 'tab-btn tab-btn-equation flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold rounded-t-lg border-t-2 border-[var(--accent)] bg-[var(--card)] text-[var(--text)] shadow-xs cursor-pointer';
@@ -22804,22 +23007,8 @@ function OpenMacrosModal({ note = null, onSave = null } = {}) {
     }
 
     // 3. Load text content into editor
-    const source = isGlobal ? workingGlobal : workingLocal;
-    textarea.value = source[activeTab] || '';
+    textarea.value = workingGlobal[activeTab] || '';
   }
-
-  // Scope button listeners
-  btnGlobal.addEventListener('click', () => {
-    saveCurrentTextareaToState();
-    isGlobal = true;
-    updateUI();
-  });
-
-  btnLocal.addEventListener('click', () => {
-    saveCurrentTextareaToState();
-    isGlobal = false;
-    updateUI();
-  });
 
   // Tab button listeners
   tabEquation.addEventListener('click', () => {
@@ -22836,12 +23025,8 @@ function OpenMacrosModal({ note = null, onSave = null } = {}) {
 
   // Reset defaults
   btnReset.addEventListener('click', () => {
-    if (confirm(`Reset ${isGlobal ? 'Global' : 'Local'} ${activeTab === 'equation' ? 'Equation' : 'TikZ'} macros to default preset?`)) {
-      if (isGlobal) {
-        workingGlobal[activeTab] = DEFAULT_GLOBAL_MACROS[activeTab];
-      } else {
-        workingLocal[activeTab] = '';
-      }
+    if (confirm(`Reset ${activeTab === 'equation' ? 'Equation' : 'TikZ'} macros to the default preset?`)) {
+      workingGlobal[activeTab] = DEFAULT_GLOBAL_MACROS[activeTab];
       updateUI();
     }
   });
@@ -22859,13 +23044,8 @@ function OpenMacrosModal({ note = null, onSave = null } = {}) {
   btnSave.addEventListener('click', () => {
     saveCurrentTextareaToState();
 
-    // 1. Commit Global Macros
+    // 1. Commit Global Macros (the only scope)
     NotesState.globalMacros = { ...workingGlobal };
-
-    // 2. Commit Local Note Macros
-    if (note) {
-      note.macros = { ...workingLocal };
-    }
 
     // 3. Persist State (invalidates the KaTeX cache so equations re-render with the new macros)
     bumpKatexMacroVersion();
@@ -22874,8 +23054,7 @@ function OpenMacrosModal({ note = null, onSave = null } = {}) {
     // 4. Notify Parent / Re-render canvas
     if (onSave) {
       onSave({
-        globalMacros: workingGlobal,
-        localMacros: workingLocal
+        globalMacros: workingGlobal
       });
     }
 
@@ -23363,10 +23542,7 @@ function CreateFloatingToolbar({
       btnMacros.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        OpenMacrosModal({
-          note,
-          onSave: onMacrosChange
-        });
+        OpenMacrosModal({ onSave: onMacrosChange });
       });
     }
 

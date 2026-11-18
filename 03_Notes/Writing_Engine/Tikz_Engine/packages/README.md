@@ -1,5 +1,9 @@
 # TikZ Packages & Libraries Catalog
 
+> **Historical.** This catalog describes the removed `v1/` engine. TikZ now compiles with the
+> online `@drgrice1/tikzjax` engine (see `../Tikz_Engine_Loader.js`); its available packages are
+> listed in `../Tikz_Source_Converter.js` (`TIKZ_AVAILABLE_PACKAGES`).
+
 This directory documents the packages and libraries available to Local_HUB's **local TikZ engine**
 (`../v1/tikzjax.js` — TeX WASM + 160MB core dump embedded as base64, zero network).
 

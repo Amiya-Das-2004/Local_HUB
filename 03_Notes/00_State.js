@@ -53,6 +53,7 @@ export let NotesState = (typeof window !== 'undefined' && window.NotesState && A
       globalMacros: { ...DEFAULT_GLOBAL_MACROS },
       tableTemplates: [],
       tikzTemplates: [],
+      tikzFonts: {},
       bibliography: [],
       citationStyle: 'numeric',
       folders: [],
@@ -187,6 +188,7 @@ export function LoadNotesState(forceReload = false) {
           globalMacros: parsedDom.globalMacros || { ...DEFAULT_GLOBAL_MACROS },
           tableTemplates: Array.isArray(parsedDom.tableTemplates) ? parsedDom.tableTemplates : [],
           tikzTemplates: Array.isArray(parsedDom.tikzTemplates) ? parsedDom.tikzTemplates : [],
+          tikzFonts: (parsedDom.tikzFonts && typeof parsedDom.tikzFonts === 'object') ? parsedDom.tikzFonts : {},
           bibliography: Array.isArray(parsedDom.bibliography) ? parsedDom.bibliography : [],
           citationStyle: typeof parsedDom.citationStyle === 'string' ? parsedDom.citationStyle : 'numeric',
           folders: Array.isArray(parsedDom.folders) ? parsedDom.folders : [],
@@ -217,12 +219,14 @@ export function LoadNotesState(forceReload = false) {
       globalMacros: domState.globalMacros || { ...DEFAULT_GLOBAL_MACROS },
       tableTemplates: domState.tableTemplates || [],
       tikzTemplates: domState.tikzTemplates || [],
+      tikzFonts: domState.tikzFonts || {},
       bibliography: domState.bibliography || [],
       citationStyle: domState.citationStyle || 'numeric',
       folders: domState.folders.length > 0 ? domState.folders : Array.from(new Set(domState.notes.map(n => n.folder || 'General').filter(Boolean))),
       tags: domState.tags.length > 0 ? domState.tags : Array.from(new Set(domState.notes.flatMap(n => n.tags || []).filter(Boolean))),
       notes: domState.notes
     });
+    mergeNoteMacrosIntoGlobal(NotesState);
     if (typeof window !== 'undefined') window.NotesState = NotesState;
     if (!isBaselineCaptured) {
       CaptureNotesBaseline(NotesState);
@@ -236,6 +240,7 @@ export function LoadNotesState(forceReload = false) {
     globalMacros: { ...DEFAULT_GLOBAL_MACROS },
     tableTemplates: [],
     tikzTemplates: [],
+    tikzFonts: {},
     bibliography: [],
     citationStyle: 'numeric',
     folders: [],
@@ -247,6 +252,29 @@ export function LoadNotesState(forceReload = false) {
     CaptureNotesBaseline(NotesState);
   }
   return NotesState;
+}
+
+// Macros are global-only. Older files may still carry per-note macros
+// (note.macros.equation / note.macros.tikz): append each line the global set does
+// not already contain, then clear the note's copy. Idempotent across reloads.
+function mergeNoteMacrosIntoGlobal(state) {
+  if (!state || !Array.isArray(state.notes)) return;
+  if (!state.globalMacros || typeof state.globalMacros !== 'object') state.globalMacros = { ...DEFAULT_GLOBAL_MACROS };
+  ['equation', 'tikz'].forEach((kind) => {
+    let globalText = typeof state.globalMacros[kind] === 'string' ? state.globalMacros[kind] : '';
+    const existing = new Set(globalText.split('\n').map(l => l.trim()).filter(Boolean));
+    state.notes.forEach((note) => {
+      const local = note && note.macros && typeof note.macros[kind] === 'string' ? note.macros[kind] : '';
+      if (!local.trim()) return;
+      const newLines = local.split('\n').filter(l => l.trim() && !existing.has(l.trim()));
+      if (newLines.length) {
+        globalText = `${globalText.replace(/\s+$/, '')}\n% --- merged from note: ${note.title || note.id} ---\n${newLines.join('\n')}`;
+        newLines.forEach(l => existing.add(l.trim()));
+      }
+      note.macros[kind] = '';
+    });
+    state.globalMacros[kind] = globalText;
+  });
 }
 
 let notesSaveDebounceTimer = null;

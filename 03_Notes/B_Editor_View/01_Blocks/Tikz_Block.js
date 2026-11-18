@@ -1,10 +1,14 @@
 /**
  * 03_Notes/B_Editor_View/01_Blocks/Tikz_Block.js
- * Interactive TikZ diagram block with isolated single-block compilation,
- * template browser, template naming modal, and flexible \begin{tikzpicture}[...] support.
+ * Interactive TikZ diagram block: code editor, template browser / naming modal, and a
+ * saved-SVG preview (Tikz_Render_Panel.js). The block stores its last good render
+ * (block.svg + block.svgKey); it re-compiles only when the code or the global TikZ
+ * preamble changes, and a failed/offline compile keeps the saved diagram.
+ * Accepts a bare \begin{tikzpicture}...\end{tikzpicture} or a full Overleaf document.
  */
 
-import { renderTikzToElement, getCachedTikzSvg, healTikzCode } from '../../Writing_Engine/Tikz_Engine/Tikz_Renderer.js';
+import { healTikzCode } from '../../Writing_Engine/Tikz_Engine/Tikz_Renderer.js';
+import { createTikzRenderPanel } from './Tikz_Render_Panel.js';
 import { escapeHtml } from '../../02_Utils.js';
 import { CreateColorSelector } from '../../../00_Components/06_Color_Selector.js';
 import { GetTikzTemplatesModalHTML, InitTikzTemplatesLogic } from './Tikz_Templates_Modal.js';
@@ -106,24 +110,20 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
   // 1. View Mode
   if (!isEditing) {
     const wrap = document.createElement('figure');
-    const borderClasses = hasBorder
-      ? 'border border-[var(--border)] bg-[var(--surface)] shadow-xs'
-      : 'border border-transparent bg-transparent';
-    wrap.className = `my-1 p-4 rounded-xl ${borderClasses} flex flex-col items-center justify-center w-full select-text transition-all box-border`;
+    wrap.className = 'my-1 py-2 flex flex-col items-center justify-center w-full select-text transition-all box-border';
     wrap.style.scrollbarWidth = 'thin';
 
     applyFigureAttributes(wrap, { tag, figNumber, label: figLabel });
 
-    const svgWrap = document.createElement('div');
-    svgWrap.className = 'preview-inner flex flex-col items-center justify-center transition-all';
-    svgWrap.style.width = `${fitPercent}%`;
-    svgWrap.style.maxWidth = '100%';
-    const cachedSvg = getCachedTikzSvg(tikzCode);
-    if (cachedSvg) {
-      svgWrap.innerHTML = cachedSvg;
-    }
-    renderTikzToElement(tikzCode, svgWrap);
-    wrap.appendChild(svgWrap);
+    // Saved SVG only; compiles in the background just when it is missing or outdated.
+    const panel = createTikzRenderPanel(block, {
+      fitPercent,
+      hasBorder,
+      getCode: () => tikzCode,
+      onSaved: (fields) => { if (onUpdate) onUpdate(fields); }
+    });
+    wrap.appendChild(panel.el);
+    panel.autoRender();
 
     const captionText = showCaptions ? formatFigureCaptionText({ caption, allowNumbering, figNumber, label: figLabel }) : '';
     appendFigureCaption(wrap, captionText);
@@ -207,10 +207,8 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
     <!-- Template Browser Window & Save Template Modal -->
     ${GetTikzTemplatesModalHTML()}
 
-    <!-- Middle: Live TikZ SVG Preview Pane -->
-    <div class="preview-pane w-full p-4 rounded-xl ${currentBorderState ? 'border border-[var(--border)] bg-[var(--surface)] shadow-xs' : 'border border-transparent bg-transparent'} flex flex-col items-center justify-center select-text transition-all box-border" style="scrollbar-width: thin;">
-      <div class="preview-inner flex flex-col items-center justify-center transition-all" style="width: ${currentFitPercent}%; max-width: 100%;"></div>
-    </div>
+    <!-- Middle: saved SVG preview (re-rendered only when the code changes) -->
+    <div class="preview-pane w-full select-text box-border"></div>
 
     <!-- Bottom: Monospace TikZ Code Editor with Line Numbers, Spacing & Folding -->
     <div class="tikz-editor-mount w-full"></div>
@@ -232,7 +230,6 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
   `;
 
   const preview = editWrap.querySelector('.preview-pane');
-  const previewInner = editWrap.querySelector('.preview-inner');
   const allowNumberingCb = editWrap.querySelector('.allow-numbering-cb');
   const tagInput = editWrap.querySelector('.tag-input');
   const captionInput = editWrap.querySelector('.caption-input');
@@ -256,6 +253,16 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
   if (tagInput) tagInput.addEventListener('input', paintTagState);
   paintTagState();
 
+  // Re-render automatically shortly after typing stops (only when the code really changed).
+  const AUTO_COMPILE_DELAY_MS = 1500;
+  let autoCompileTimer = null;
+  const scheduleAutoCompile = () => {
+    clearTimeout(autoCompileTimer);
+    autoCompileTimer = setTimeout(() => {
+      if (editWrap.isConnected) renderPanel.compile();
+    }, AUTO_COMPILE_DELAY_MS);
+  };
+
   const codeEditor = createCodeEditor({
     blockId: block.id,
     value: tikzCode,
@@ -268,24 +275,30 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
       if (onUpdate) {
         onUpdate({ code: val, content: val, width: currentFitPercent });
       }
+      scheduleAutoCompile();
     },
     onChange: (val) => {
       if (onUpdate) {
         onUpdate({ code: val, content: val, width: currentFitPercent });
       }
+      scheduleAutoCompile();
     }
   });
   editorMount.appendChild(codeEditor);
 
   const textarea = codeEditor.textarea;
+  const getEditorCode = () => (codeEditor.getValue ? codeEditor.getValue() : textarea.value);
 
-  // Synchronously populate cached SVG if available so preview doesn't flash or jump
-  const cachedSvg = getCachedTikzSvg(tikzCode);
-  if (cachedSvg && previewInner) {
-    previewInner.innerHTML = cachedSvg;
-  }
+  // Saved-SVG preview: shows block.svg; replaced only by a successful compile.
+  const renderPanel = createTikzRenderPanel(block, {
+    fitPercent: currentFitPercent,
+    hasBorder: currentBorderState,
+    getCode: getEditorCode,
+    onSaved: (fields) => { if (onUpdate) onUpdate(fields); }
+  });
+  preview.appendChild(renderPanel.el);
 
-  // Single-block compile executor
+  // Single-block compile executor (▶ forces a fresh render)
   const compile = (showVisualFeedback = false) => {
     const rawVal = codeEditor.getValue ? codeEditor.getValue() : textarea.value;
     let val = healTikzCode(rawVal);
@@ -305,8 +318,12 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
       btnCompile.disabled = true;
     }
 
-    const compileTarget = previewInner || preview;
-    renderTikzToElement(val, compileTarget, () => {
+    if (onUpdate) {
+      onUpdate({ code: val, content: val, width: currentFitPercent });
+    }
+
+    clearTimeout(autoCompileTimer);
+    renderPanel.compile({ force: showVisualFeedback }).finally(() => {
       if (showVisualFeedback && btnCompile) {
         btnCompile.innerHTML = `
           <svg viewBox="0 0 24 24" fill="currentColor" class="w-3 h-3">
@@ -316,10 +333,6 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
         btnCompile.disabled = false;
       }
     });
-
-    if (onUpdate) {
-      onUpdate({ code: val, content: val, width: currentFitPercent });
-    }
   };
 
   // Compile button trigger
@@ -392,13 +405,9 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
     getCurrentCode: () => (codeEditor.getValue ? codeEditor.getValue() : textarea.value)
   });
   container.__blockCleanup = () => {
+    clearTimeout(autoCompileTimer);
     templatesLogic.cleanup?.();
   };
-
-  // Provide code getter for dynamic theme re-rendering
-  const getTikzSource = () => (codeEditor.getValue ? codeEditor.getValue() : textarea.value);
-  preview.__getTikzCode = getTikzSource;
-  if (previewInner) previewInner.__getTikzCode = getTikzSource;
 
   // Fit % Width Handling
   const fitInput = editWrap.querySelector('.fit-percent-input');
@@ -406,7 +415,7 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
   const updateFitWidth = (newVal) => {
     currentFitPercent = newVal;
     block.width = currentFitPercent;
-    if (previewInner) previewInner.style.width = `${currentFitPercent}%`;
+    renderPanel.setFit(currentFitPercent);
       if (onUpdate) {
         onUpdate({
           code: textarea.value,
@@ -452,11 +461,10 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
 
     if (currentBorderState) {
       borderToggleBtn.className = 'btn-border-toggle h-7 px-2.5 py-0 text-xs font-semibold rounded-md border flex items-center justify-center gap-1.5 transition-all flex-shrink-0 cursor-pointer border-purple-500 bg-purple-500/15 text-purple-400 shadow-xs';
-      preview.className = 'preview-pane w-full p-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-xs flex flex-col items-center justify-center select-text transition-all box-border';
     } else {
       borderToggleBtn.className = 'btn-border-toggle h-7 px-2.5 py-0 text-xs font-semibold rounded-md border flex items-center justify-center gap-1.5 transition-all flex-shrink-0 cursor-pointer border-[var(--border)] bg-[var(--surface)] text-[var(--text-dim)] opacity-70';
-      preview.className = 'preview-pane w-full p-4 rounded-xl border border-transparent bg-transparent flex flex-col items-center justify-center select-text transition-all box-border';
     }
+    renderPanel.setBorder(currentBorderState);
 
     borderToggleBtn.title = `Surrounding Border: ${currentBorderState ? 'ON' : 'OFF'}`;
 
@@ -497,8 +505,8 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
   tagInput?.addEventListener('input', triggerMetaUpdate);
   captionInput?.addEventListener('input', triggerMetaUpdate);
 
-  // Initial compile on block load
-  compile(false);
+  // Opening the editor shows the saved SVG; it compiles only if missing or outdated.
+  renderPanel.autoRender();
 
   // Copy Block TikZ Code Handler with 2-second green tick confirmation
   const handleCopyBlock = async (btn) => {

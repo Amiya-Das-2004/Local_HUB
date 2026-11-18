@@ -67,7 +67,8 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 │   │   │   ├── Text_Keyboard.js            ← Keyboard shortcuts (multiline tab/indent, bullets)
 │   │   │   ├── Text_Parser.js              ← Fast markdown AST tokenizer and segmenter
 │   │   │   └── Text_Widgets.js             ← Inline widgets (checkboxes, tags, pills)
-│   │   ├── Tikz_Block.js                   ← Interactive TikZ/PGF graphic block
+│   │   ├── Tikz_Block.js                   ← TikZ block: code editor, templates, saved-SVG preview
+│   │   ├── Tikz_Render_Panel.js            ← Saved-SVG diagram area: white paper card, compile-on-change, keep-last-good + warnings
 │   │   ├── Tikz_Templates.js               ← Predefined academic diagram templates
 │   │   └── Tikz_Templates_Modal.js         ← TikZ template selector dialog
 │   │
@@ -80,7 +81,7 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 │       ├── 01_Study_View_Toggle.js         ← Switch to presentation/study reading mode
 │       ├── 02_Note_Fonts.js                ← Document typography selector (Sans/Serif/Mono)
 │       ├── 03_Font_Size.js                 ← Base text size increment/decrement control
-│       ├── 04_Macros_Modal.js              ← Global & per-note LaTeX macros config modal
+│       ├── 04_Macros_Modal.js              ← Global-only LaTeX equation macros & TikZ preamble modal
 │       ├── 05_Citation_Style.js            ← Citation format switcher (Numeric/Author-Year)
 │       ├── 06_Equation_Numbering.js        ← Equation numbering style selector (1 / a / i)
 │       └── 07_Figure_Numbering.js          ← Figure numbering style + caption visibility (1/A/a/I/i)
@@ -101,10 +102,14 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
     ├── Math_Renderer.js                    ← KaTeX compiler with LaTeX macro expansion support
     ├── Numbering_Engine.js                 ← Heading prefixes, figures, label-gated 3-tier equation numbers (1.a.i), citation order
     ├── Table_Parser.js                     ← Markdown table string parser and serializer
-    └── Tikz_Engine/                        ← Dedicated OFFLINE TikZ compilation engine (no CDN dependency)
-        ├── Tikz_Renderer.js                ← TikZ standalone SVG compiler; local-first base-cascade loader (v1/ → tikzjax.com CDN fallback)
-        ├── v1/                             ← Self-contained runtime: tikzjax.js (TeX WASM + 160MB core dump embedded as base64), fonts.css (140 BaKoMa fonts as data URIs), tex.wasm + core.dump.gz sources, tikzjax.js.orig pristine copy
-        └── packages/                       ← Tier 1 core libraries & Tier 2 extended package scaffolds (inert .gitkeep placeholders — packages live inside the core dump)
+    └── Tikz_Engine/                        ← Online TikZ engine (@drgrice1/tikzjax via jsdelivr) + saved-SVG support
+        ├── Tikz_Source_Converter.js        ← Block code + global preamble → engine input; accepts a bare tikzpicture or a full Overleaf document
+        ├── Tikz_Engine_Loader.js           ← Loads the CDN engine on demand; queued compile → SVG string or TeX error lines
+        ├── Tikz_Font_Store.js              ← Saves the TeX web fonts used by SVGs into the file (NotesState.tikzFonts) for offline viewing
+        ├── Tikz_Renderer.js                ← Front-end: render key, renderTikzToSvg, mountTikzSvg, healTikzCode
+        ├── packages/                       ← Legacy notes about the removed v1 engine's package support (reference only)
+        ├── obsidian-tikzjax-main/          ← Reference copy of the Obsidian TikZJax plugin (not loaded by the app)
+        └── tikzjax-master/                 ← Reference copy of the original TikZJax sources (not loaded by the app)
 ```
 
 ---
@@ -118,23 +123,24 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `DEFAULT_GLOBAL_MACROS` | 3 - 45 | Default LaTeX macros dictionary containing predefined equation shortcuts (`\mb`, `\cancelto`, `\comment`, `\R`, `\C`, `\N`, `\Z`) and TikZ styles/libraries. |
-| `NotesState` | 48 - 63 | Central in-memory reactive state object holding vault metadata, global macros, table templates, tikz templates, bibliography entries, citation style, folders, tags, and notes; hydrated from `window.NotesState` when a prior shell already loaded one and re-synced to `window` on init. |
-| `mergeOrderedLists(existing, derived)` | 67 - 71 | Merges a manually curated list (drag-reordered folders/tags — the ordering source of truth) with freshly derived values; existing entries keep their positions, only NEW values are appended. |
-| `sanitizeNote(n, idx = 0)` | 74 - 124 | Validates note object schema, fills missing fallback properties (id, slug, title, folder, tags, blocks, macros, autoNumbering), normalizes the Obsidian-style typed `properties` list (legacy `description` migrates in as a `Description` text property), passes through per-note numbering configs (`equationNumbering`, `figureNumbering`, `showFigureCaptions` — objects or legacy strings), prevents data corruption, and runs the orientation-container migration. |
-| `migrateOrientationContainers(note)` | 130 - 163 | One-time legacy migration: hoists Multi-Column `cols[]` embedded children to top-level blocks (inserted right after the container; empty padding text blocks are dropped) and rewrites them as non-destructive `members`/`rows` references. |
-| `LoadNotesState(forceReload = false)` | 166 - 250 | Reuses in-memory state when not stale to eliminate multi-MB JSON re-parsing on route changes (Object.assign-ing `window.NotesState` data in when it diverged), then reads and parses notes directly from the DOM script vault (#NotesData), purges legacy fixed-key caches, offers this file's path-scoped sessionStorage recovery snapshot (never auto-applied — Restore/Discard banner via `OfferRecoverySnapshot`), and calls `CaptureNotesBaseline(NotesState)` on first load. |
-| `getBlockFingerprint(block)` | 271 - 281 | Stable JSON fingerprint of a block for baseline diffing; strips transient `_isEditing`/`_temp` fields and falls back to a string key when the block is not JSON-serializable. |
-| `CaptureNotesBaseline(state = NotesState)` | 283 - 321 | Captures initial/committed baseline snapshot of all note blocks (fingerprints via `getBlockFingerprint`) and metadata (title, folder, tags, description, order) for idempotent change diffing; mirrors the maps into `window.__NOTES_BASELINE_*`, resets unsaved status and badge count to 0. |
-| `CalculateNotesBlockChanges()` | 323 - 398 | Computes exact count of modified, added, deleted blocks across all notes, plus metadata changes (including deleted notes), comparing current state against the captured baseline snapshot. |
-| `GetNotesUnsavedChangesCount()` | 400 - 403 | Returns the exact number of unsaved block/metadata changes across all notes. |
-| `HasUnsavedNotesChanges()` | 405 - 409 | Returns boolean whether any uncommitted block or metadata changes exist. |
-| `SetNotesUnsavedChanges(dirty = true)` | 411 - 435 | Computes block diff and syncs unsaved state and count with `window.MarkUnsavedChanges(isDirty, overallCount)` (aggregated across all tabs via `window.HasUnsavedChanges`/`window.GetUnsavedChangesCount` when present) and global window flags. |
-| `persistNotesToStorageImmediate()` | 437 - 456 | Cancels any pending debounce and serializes `NotesState` into the live DOM `<script id="NotesData">` vault, then refreshes this file's path-scoped crash-recovery snapshot in sessionStorage (`WriteRecoverySnapshot` — survives reloads/crashes, never leaks into other files or tabs; localStorage is deliberately never written). |
-| `RestoreNotesFromSnapshot(snapData)` | 462 - 481 | Applies a user-approved recovery snapshot (Restore banner): sanitizes snapshot notes into `NotesState`, persists to the DOM vault, re-renders via `initNotesApp()`. The baseline is deliberately NOT recaptured so restored edits keep counting as unsaved until the next SAVE. |
-| `flushNotesSave()` | 484 - 486 | Immediately flushes any pending debounced state writes to DOM #NotesData. |
-| `SaveNotesState(newState = null, { immediate = false } = {})` | 513 - 537 | Re-derives active folder/tag lists through `mergeOrderedLists` (append-only, so drag order and intentionally-empty folders survive saves), updates unsaved change diff count, and persists the active working buffer to the DOM vault with debouncing (~280ms) or immediately. |
-| `ClearNotesLocalCache()` | 540 - 556 | Clears pending debounce, the legacy localStorage recovery cache, and this file's recovery snapshot (`ClearRecoverySnapshot`) after save/export, re-captures the baseline to reset change tracking to 0, and clears all per-block undo/redo history via `clearAllBlockHistory()`. |
+| `DEFAULT_GLOBAL_MACROS` | 4 - 46 | Default LaTeX macros dictionary containing predefined equation shortcuts (`\mb`, `\cancelto`, `\comment`, `\R`, `\C`, `\N`, `\Z`) and TikZ styles/libraries. |
+| `NotesState` | 49 - 65 | Central in-memory reactive state object holding vault metadata, global macros, table templates, tikz templates, saved TikZ fonts (`tikzFonts`: family → woff2 data URI, shared by every saved diagram), bibliography entries, citation style, folders, tags, and notes; hydrated from `window.NotesState` when a prior shell already loaded one and re-synced to `window` on init. |
+| `mergeOrderedLists(existing, derived)` | 68 - 72 | Merges a manually curated list (drag-reordered folders/tags — the ordering source of truth) with freshly derived values; existing entries keep their positions, only NEW values are appended. |
+| `sanitizeNote(n, idx = 0)` | 75 - 125 | Validates note object schema, fills missing fallback properties (id, slug, title, folder, tags, blocks, macros, autoNumbering), normalizes the Obsidian-style typed `properties` list (legacy `description` migrates in as a `Description` text property), passes through per-note numbering configs (`equationNumbering`, `figureNumbering`, `showFigureCaptions` — objects or legacy strings), prevents data corruption, and runs the orientation-container migration. |
+| `migrateOrientationContainers(note)` | 131 - 164 | One-time legacy migration: hoists Multi-Column `cols[]` embedded children to top-level blocks (inserted right after the container; empty padding text blocks are dropped) and rewrites them as non-destructive `members`/`rows` references. |
+| `LoadNotesState(forceReload = false)` | 167 - 255 | Reuses in-memory state when not stale to eliminate multi-MB JSON re-parsing on route changes (Object.assign-ing `window.NotesState` data in when it diverged), then reads and parses notes directly from the DOM script vault (#NotesData), purges legacy fixed-key caches, offers this file's path-scoped sessionStorage recovery snapshot (never auto-applied — Restore/Discard banner via `OfferRecoverySnapshot`), and calls `CaptureNotesBaseline(NotesState)` on first load. Also loads `tikzFonts` and runs `mergeNoteMacrosIntoGlobal()` before the baseline is captured. |
+| `mergeNoteMacrosIntoGlobal(state)` | 260 - 278 | Macros are global-only: appends every line of older files' per-note macros (`note.macros.equation` / `.tikz`) that the global set does not already contain (under a `% --- merged from note: <title> ---` marker), then clears the note's copy. Idempotent across reloads. |
+| `getBlockFingerprint(block)` | 299 - 309 | Stable JSON fingerprint of a block for baseline diffing; strips transient `_isEditing`/`_temp` fields and falls back to a string key when the block is not JSON-serializable. |
+| `CaptureNotesBaseline(state = NotesState)` | 311 - 349 | Captures initial/committed baseline snapshot of all note blocks (fingerprints via `getBlockFingerprint`) and metadata (title, folder, tags, description, order) for idempotent change diffing; mirrors the maps into `window.__NOTES_BASELINE_*`, resets unsaved status and badge count to 0. |
+| `CalculateNotesBlockChanges()` | 351 - 426 | Computes exact count of modified, added, deleted blocks across all notes, plus metadata changes (including deleted notes), comparing current state against the captured baseline snapshot. |
+| `GetNotesUnsavedChangesCount()` | 428 - 431 | Returns the exact number of unsaved block/metadata changes across all notes. |
+| `HasUnsavedNotesChanges()` | 433 - 437 | Returns boolean whether any uncommitted block or metadata changes exist. |
+| `SetNotesUnsavedChanges(dirty = true)` | 439 - 463 | Computes block diff and syncs unsaved state and count with `window.MarkUnsavedChanges(isDirty, overallCount)` (aggregated across all tabs via `window.HasUnsavedChanges`/`window.GetUnsavedChangesCount` when present) and global window flags. |
+| `persistNotesToStorageImmediate()` | 465 - 484 | Cancels any pending debounce and serializes `NotesState` into the live DOM `<script id="NotesData">` vault, then refreshes this file's path-scoped crash-recovery snapshot in sessionStorage (`WriteRecoverySnapshot` — survives reloads/crashes, never leaks into other files or tabs; localStorage is deliberately never written). |
+| `RestoreNotesFromSnapshot(snapData)` | 490 - 509 | Applies a user-approved recovery snapshot (Restore banner): sanitizes snapshot notes into `NotesState`, persists to the DOM vault, re-renders via `initNotesApp()`. The baseline is deliberately NOT recaptured so restored edits keep counting as unsaved until the next SAVE. |
+| `flushNotesSave()` | 512 - 514 | Immediately flushes any pending debounced state writes to DOM #NotesData. |
+| `SaveNotesState(newState = null, { immediate = false } = {})` | 541 - 565 | Re-derives active folder/tag lists through `mergeOrderedLists` (append-only, so drag order and intentionally-empty folders survive saves), updates unsaved change diff count, and persists the active working buffer to the DOM vault with debouncing (~280ms) or immediately. |
+| `ClearNotesLocalCache()` | 568 - 585 | Clears pending debounce, the legacy localStorage recovery cache, and this file's recovery snapshot (`ClearRecoverySnapshot`) after save/export, re-captures the baseline to reset change tracking to 0, and clears all per-block undo/redo history via `clearAllBlockHistory()`. |
 
 Module-level side effects: exports `window.SaveNotesState` / `flushNotesSave` / `ClearNotesLocalCache` / `CaptureNotesBaseline` / `CalculateNotesBlockChanges` / `GetNotesUnsavedChangesCount` / `HasUnsavedNotesChanges` / `SetNotesUnsavedChanges` for flat-bundle/standalone use, installs a one-shot `beforeunload` guard that prompts when `hasUnsavedNotesChanges` (or any tab's unsaved flag) is set, and runs `NotesState = LoadNotesState()` on import.
 
@@ -206,8 +212,8 @@ Module-level side effects: exports `window.SaveNotesState` / `flushNotesSave` / 
 | `bundleTabFile(filePath)` | 143 - 167 | Fetches one modular JS file (resolved against the project root via `import.meta.url`), strips `import`/`export` statements, and returns a commented flat code chunk; missing files are skipped with a warning. |
 | `bundleTabGroup(files)` | 169 - 173 | Sequentially concatenates `bundleTabFile` output for a file list. |
 | `sharedComponentFiles` / `tabHandlerFiles` / `tabModuleFiles` | 175 - 262 | The tab bundler's three registration arrays: 7 shared `00_Components` files, the 3 `Tab_Notes` handler adapters, and the full 70-entry ordered Notes module graph (dependency-ordered: state → utils → engines → block infra → block renderers → text submodules → editor chrome → card view → graph → header → Notes.js). New Notes modules MUST be added here. |
-| `SaveNotesStandalone()` | 266 - 383 | Bundles `Notes.html` into a self-contained, standalone single-file HTML document: clones the document, syncs vaults via `syncTabStatesToDOM`, and (when not already standalone) flattens shared components + handlers + tab modules into one inline module that defines `LoadThisPage()` (boots `initNotesApp` + all three tab overrides) and a `handlePageRoute()` hash router, replacing the `#localhub-router` boot script. Inside an already-standalone file it just re-emits itself with fresh vault data. Cleans injected dev/live-reload and TikZ engine tags, empties runtime containers, downloads via blob, clears local caches, and flashes the Save button green for 2s. |
-| `InitTabSaveOverride()` | 387 - 434 | Swaps the shared Save-button binding (which would build the all-in-one app) for the per-tab `SaveNotesStandalone` by cloning the button, and provides a standalone implementation of `window.MarkUnsavedChanges(dirty, count)` driving the `.save-badge` unsaved-changes pill (restoring any count present on mount). |
+| `SaveNotesStandalone()` | 271 - 388 | Bundles `Notes.html` into a self-contained, standalone single-file HTML document: clones the document, syncs vaults via `syncTabStatesToDOM`, and (when not already standalone) flattens shared components + handlers + tab modules into one inline module that defines `LoadThisPage()` (boots `initNotesApp` + all three tab overrides) and a `handlePageRoute()` hash router, replacing the `#localhub-router` boot script. Inside an already-standalone file it just re-emits itself with fresh vault data. Cleans injected dev/live-reload and TikZ engine tags, empties runtime containers, downloads via blob, clears local caches, and flashes the Save button green for 2s. Before download it strips dev scripts and runtime TikZ elements (`#tikzjax-js`, `#tikzjax-css`, `#tikz-engine-host`, `#tikz-saved-fonts` — saved fonts already live in `#NotesData`). |
+| `InitTabSaveOverride()` | 392 - 439 | Swaps the shared Save-button binding (which would build the all-in-one app) for the per-tab `SaveNotesStandalone` by cloning the button, and provides a standalone implementation of `window.MarkUnsavedChanges(dirty, count)` driving the `.save-badge` unsaved-changes pill (restoring any count present on mount). |
 
 **Tab_Notes/Tab_Logo_Handler.js**
 
@@ -380,19 +386,19 @@ Module-level side effects: exports `window.SaveNotesState` / `flushNotesSave` / 
 | `ensureCiteMathStyles()` | 85 - 97 | Injects (id-guarded) the `.note-cite-math` / `.note-cite-missing` badge styles used by in-math `\cite` badges. |
 | `setActiveEquationTagMap(map)` / `getActiveEquationTagMap()` | 201 - 207 | Sets/returns the active equation tag map (normalized tag → `{ label, blockId, subIndex }`) computed by `computeEquationNumbers()`. Both `\eq{}` render paths (view + live widget) read it. |
 | `parseLatexMacrosIntoObject(macroString, targetMacros = {})` | 265 - 299 | Parses `\newcommand`, `\renewcommand`, `\def`, and `\gdef` statements from a macro string into a target KaTeX macro dictionary. |
-| `getActiveKatexMacros(note = null)` | 304 - 319 | Merges built-in macros, global vault macros, and note-specific local macros into a unified KaTeX macro object. |
-| `ensureKatexLoaded()` | 321 - 353 | Asynchronously injects KaTeX CSS and JS from CDN and re-renders elements with pending math placeholders once loaded. |
-| `layoutCanceltoElement(el)` | 358 - 434 | Dynamically measures expression dimensions and renders continuous extended SVG arrow vector with adaptive target value positioning and compact line-height scaling. |
-| `getCanceltoElements(root)` | 436 - 450 | Collects all `.lh-cancelto` wrappers (excluding base/val children) under a root element for observer wiring. |
-| `initCanceltoLayoutObserver()` | 452 - 489 | Observes the DOM with MutationObserver and ResizeObserver to automatically layout and update `\cancelto` elements. |
-| `ensureCanceltoStyles()` | 491 - 602 | Injects CSS rules for `.lh-cancelto`, `.lh-cancelto-base`, `.lh-cancelto-svg`, `.lh-cancelto-val`, optical `.katex` font size normalization (inline 1.0em / display 1.05em, `[data-eq-member]` row margins 0.3em), LaTeX math hyperlink styles (`\url{}`/`\href{}`), and in-math figure/equation citation badge styles; boots observers. |
-| `postProcessKatexHtml(html)` | 604 - 621 | Post-processes compiled KaTeX HTML: every external `<a href="http(s)…">` gains `target="_blank"`, `rel="noopener noreferrer"`, and the `note-katex-link` class (themeable dotted-underline styling). |
-| `bumpKatexMacroVersion()` | 629 - 632 | Increments the macro version and clears the KaTeX cache so renders made with stale macros are never reused; called by the editor when citation style or equation numbering format changes. |
-| `clearKatexCache()` | 634 - 636 | Clears the in-memory KaTeX compilation cache (`katexCache`). |
-| `renderKatex(tex, isDisplayMode = false, noteContext = null)` | 638 - 739 | Synchronously compiles a LaTeX formula to HTML/MathML using KaTeX, utilizing a bounded LRU cache (`katexCache`, 800 entries; cache key = theme + note context + display mode + macro version + tex). Preprocessing converts in-math `\fig{tag}` / `\eqref{name}` / `\eq{name}` / `\ref{name}` / `\cite{keys}` into real badges via trusted `\href` + `\htmlData` + `\htmlClass` (`\eqref`/`\eq` render parenthesized, `\ref` bare; `\htmlData{eq-badge=…}` anchors member-level jumps; `\cite` badges carry space-separated `data-cite-keys` since KaTeX `\htmlData` values cannot contain commas) and normalizes `\url{}` targets to `https://`. `\label{}` is always stripped before KaTeX; in DISPLAY math the first label resolves a far-right number badge wrapper (`data-eq-block-id` + `data-eq-badge`) — this is what numbers `$$...$$` equations written inside text blocks. The KaTeX `trust` callback whitelists `\htmlClass`/`\htmlData` plus `\href`/`\url` restricted to `https?://` or `#`-anchors (blocking `javascript:` URLs from imported notes). |
-| `parseAndRenderMathInText(rawText = '')` | 741 - 743 | Convenience wrapper calling formatRichTextWithMath to parse and render inline math within text. |
-| `formatRichTextWithMath(rawText = '', options = {})` | 752 - 975 | Full-featured text compiler handling display math ($$...$$), inline math ($...$), task checkboxes ([ ], [x]), bullet lists, and markdown formatting. |
-| `parseInlineMarkdownAndLatex(str)` | 977 - 1001 | Parses inline formatting tokens (bold, italic, strikethrough, code) and LaTeX text styling (`\textcolor`, `\underline`, `\textbf`, `\textit`, `\cancel`). `\fig` / `\eq` / `\eqref` / `\ref` / `\cite` / `\href` / `\url` are deliberately NOT converted here — they only function inside $...$ math (renderKatex preprocessing); bare occurrences stay literal text. |
+| `getActiveKatexMacros(_note = null)` | 307 - 313 | Merges built-in KaTeX macros with the global equation macros (macros are global-only; the parameter is kept for call-site compatibility). |
+| `ensureKatexLoaded()` | 315 - 347 | Asynchronously injects KaTeX CSS and JS from CDN and re-renders elements with pending math placeholders once loaded. |
+| `layoutCanceltoElement(el)` | 352 - 428 | Dynamically measures expression dimensions and renders continuous extended SVG arrow vector with adaptive target value positioning and compact line-height scaling. |
+| `getCanceltoElements(root)` | 430 - 444 | Collects all `.lh-cancelto` wrappers (excluding base/val children) under a root element for observer wiring. |
+| `initCanceltoLayoutObserver()` | 446 - 483 | Observes the DOM with MutationObserver and ResizeObserver to automatically layout and update `\cancelto` elements. |
+| `ensureCanceltoStyles()` | 485 - 596 | Injects CSS rules for `.lh-cancelto`, `.lh-cancelto-base`, `.lh-cancelto-svg`, `.lh-cancelto-val`, optical `.katex` font size normalization (inline 1.0em / display 1.05em, `[data-eq-member]` row margins 0.3em), LaTeX math hyperlink styles (`\url{}`/`\href{}`), and in-math figure/equation citation badge styles; boots observers. |
+| `postProcessKatexHtml(html)` | 598 - 615 | Post-processes compiled KaTeX HTML: every external `<a href="http(s)…">` gains `target="_blank"`, `rel="noopener noreferrer"`, and the `note-katex-link` class (themeable dotted-underline styling). |
+| `bumpKatexMacroVersion()` | 623 - 626 | Increments the macro version and clears the KaTeX cache so renders made with stale macros are never reused; called by the editor when citation style or equation numbering format changes. |
+| `clearKatexCache()` | 628 - 630 | Clears the in-memory KaTeX compilation cache (`katexCache`). |
+| `renderKatex(tex, isDisplayMode = false, noteContext = null)` | 632 - 733 | Synchronously compiles a LaTeX formula to HTML/MathML using KaTeX, utilizing a bounded LRU cache (`katexCache`, 800 entries; cache key = theme + note context + display mode + macro version + tex). Preprocessing converts in-math `\fig{tag}` / `\eqref{name}` / `\eq{name}` / `\ref{name}` / `\cite{keys}` into real badges via trusted `\href` + `\htmlData` + `\htmlClass` (`\eqref`/`\eq` render parenthesized, `\ref` bare; `\htmlData{eq-badge=…}` anchors member-level jumps; `\cite` badges carry space-separated `data-cite-keys` since KaTeX `\htmlData` values cannot contain commas) and normalizes `\url{}` targets to `https://`. `\label{}` is always stripped before KaTeX; in DISPLAY math the first label resolves a far-right number badge wrapper (`data-eq-block-id` + `data-eq-badge`) — this is what numbers `$$...$$` equations written inside text blocks. The KaTeX `trust` callback whitelists `\htmlClass`/`\htmlData` plus `\href`/`\url` restricted to `https?://` or `#`-anchors (blocking `javascript:` URLs from imported notes). |
+| `parseAndRenderMathInText(rawText = '')` | 735 - 737 | Convenience wrapper calling formatRichTextWithMath to parse and render inline math within text. |
+| `formatRichTextWithMath(rawText = '', options = {})` | 746 - 969 | Full-featured text compiler handling display math ($$...$$), inline math ($...$), task checkboxes ([ ], [x]), bullet lists, and markdown formatting. |
+| `parseInlineMarkdownAndLatex(str)` | 971 - 995 | Parses inline formatting tokens (bold, italic, strikethrough, code) and LaTeX text styling (`\textcolor`, `\underline`, `\textbf`, `\textit`, `\cancel`). `\fig` / `\eq` / `\eqref` / `\ref` / `\cite` / `\href` / `\url` are deliberately NOT converted here — they only function inside $...$ math (renderKatex preprocessing); bare occurrences stay literal text. |
 
 Module-level document handlers (registered once, guarded by window flags): capturing-phase click handler for KaTeX external hyperlinks (lines 100 - 114), capturing-phase click handler for figure citations `[Fig. X]` / `#fig-` anchors with scroll-to-target + highlight pulse (lines 117 - 195), and capturing-phase click handler for equation reference badges / `.eq-number-badge` with member-row jump via `data-eq-badge` (lines 211 - 259).
 
@@ -429,25 +435,70 @@ Module-level document handlers (registered once, guarded by window flags): captu
 | `parseLatexTabular(input)` | 247 - 557 | Compiles standard LaTeX `\begin{tabular}` and `\begin{table}` environments into responsive, styled HTML tables with cell formatting and math. |
 | `parseMarkdownTable(markdown)` | 558 - 598 | Fallback parser converting GitHub-flavored Markdown tables into responsive HTML tables with formatted math cells. |
 
+**Tikz_Engine/Tikz_Source_Converter.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| `../../../00_Components/06_Color_Selector.js` | `resolveThemeColors` | `convertTikzSource()` |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `TIKZ_AVAILABLE_PACKAGES` / `TIKZ_IGNORED_PACKAGES` | 18 - 28 | Packages shipped by the online engine (amsmath/amssymb family, array, etoolbox, expl3, hf-tikz, ifthen, pgfcalendar, pgfplots, tikz-3dplot, tikz-cd, xparse) and packages silently ignored because the engine core already loads them or they are meaningless for one SVG (tikz, xcolor, standalone, graphicx, inputenc…). |
+| `stripTexComments(src)` | 31 - 33 | Removes `%` comments (keeps `\%`). |
+| `extractTikzPreambleCommands(text, acc)` | 36 - 56 | Pulls `\documentclass`, `\usepackage[opts]{a,b}` and `\usetikzlibrary{…}` out of a text into the accumulator (available packages → `packages`, others → `unavailable`). |
+| `convertHexColorsToTikzNames(text, colorDefs)` | 59 - 66 | Rewrites raw `#RRGGBB` / `#RGB` colours (illegal in TikZ keys) to `col_rrggbb` names with matching `\definecolor`s. |
+| `convertTikzSource(blockCode, globalPreamble)` | 73 - 122 | Builds the engine input `{ body, packages, libraries, preamble, unavailable }`: global preamble first, then — for a full Overleaf document — the block's own preamble and the `document` body; otherwise the whole block is the body (bare drawing commands are wrapped in a `tikzpicture`). Dual `#Light|#Dark` colours resolve to the light value and `themeColor`/`themeText`/`themeBg` are fixed to the light palette, because saved SVGs sit on white paper in both themes. |
+
+**Tikz_Engine/Tikz_Engine_Loader.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| *(None)* | — | — |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `TIKZ_ENGINE_ID` / `TIKZ_ENGINE_CDN` | 12 - 13 | Engine identity (part of every render key) and its jsdelivr folder (`@drgrice1/tikzjax@1.0.0-beta24/dist/`). |
+| `loadTikzEngine()` | 23 - 52 | Injects `fonts.css` + `tikzjax.js` from the CDN once (singleton promise); rejects with an "offline or CDN unreachable" error and resets so a later call retries. |
+| `getTikzEngineHost()` | 55 - 63 | Hidden off-screen `#tikz-engine-host` in `<body>` where compile scripts are placed (the engine only scans the body). |
+| `summarizeTexErrors(logLines)` | 66 - 79 | Extracts `! …` TeX error lines plus their `l.<n>` context from the captured TeX log. |
+| `compileTikzOnce(source)` | 81 - 150 | One compile: builds a `<script type="text/tikz">` with `data-tex-packages` / `data-tikz-libraries` / `data-add-to-preamble`, `data-show-console`, `data-disable-cache` (the engine's IndexedDB write is awaited before its finished event and can stall), captures `console.log` for TeX messages, and resolves with the final SVG (no `<animate>`, unlike the spinner) or rejects with the TeX errors when the engine shows its broken `<img>`. The script is put in its slot BEFORE the slot is attached, and a newly created host is attached one tick earlier: the engine's MutationObserver queues every added node that contains a tikz script, so two such nodes in one batch queue it twice and the SVG never reaches the page. |
+| `compileTikzWithEngine(source)` | 157 - 165 | Loads the engine if needed and runs `compileTikzOnce` through a FIFO queue (one compile at a time, so captured log lines belong to one diagram). |
+
+**Tikz_Engine/Tikz_Font_Store.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| `../../00_State.js` | `NotesState` | `applyStoredTikzFonts()`, `storeTikzFontsForSvg()` |
+| `./Tikz_Engine_Loader.js` | `TIKZ_ENGINE_CDN` | `storeTikzFontsForSvg()` |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `getTikzSvgFontFamilies(svg)` | 14 - 20 | Font families (`cmr10`, `cmmi7`, …) referenced by an SVG string. |
+| `tikzArrayBufferToBase64(buf)` | 22 - 30 | Chunked ArrayBuffer → base64. |
+| `applyStoredTikzFonts()` | 33 - 46 | Writes `@font-face` rules (data URIs) for every font in `NotesState.tikzFonts` into `<style id="tikz-saved-fonts">` (stripped by the save handlers — the fonts already live in `#NotesData`). |
+| `storeTikzFontsForSvg(svg)` | 53 - 68 | Downloads from the CDN and stores any font the SVG uses that the file lacks (~10 KB each, once per file); failures are non-fatal. |
+
 **Tikz_Engine/Tikz_Renderer.js**
 
 | Import Location | Functions Imported | used in Functions |
 | :--- | :--- | :--- |
-| `../../../00_Components/06_Color_Selector.js` | `resolveThemeColors` | `renderTikzToElement()` |
-| `../../00_State.js` | `NotesState` | `getActiveTikzPreamble()` |
+| `../../00_State.js` | `NotesState` | `getGlobalTikzPreamble()` |
+| `./Tikz_Source_Converter.js` | `convertTikzSource` | `prepareTikzSource()` |
+| `./Tikz_Engine_Loader.js` | `compileTikzWithEngine`, `TIKZ_ENGINE_ID` | `renderTikzToSvg()`, `getTikzRenderKey()` |
+| `./Tikz_Font_Store.js` | `storeTikzFontsForSvg`, `applyStoredTikzFonts` | `renderTikzToSvg()`, module load |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `ensureTikzJaxLoaded(callback)` | 30 - 135 | Loads the self-contained local TikZ engine (`v1/tikzjax.js` + `v1/fonts.css`, zero network fetches) via a Promise-based singleton (`loadTikzEnginePromise`) and base cascade (`TIKZ_ENGINE_BASES`: repo root → `../Writing_Engine/` → `../03_Notes/` → `Tikz_Engine/` → CDN). Includes startup dead-tag purge and eliminates race conditions. |
-| `setActiveTikzNoteContext(note)` | 138 - 145 | Sets the active note context for note-level TikZ preamble and style customization. |
-| `clearTikzSvgCache()` | 158 - 173 | Clears the in-memory cache and sessionStorage of rendered TikZ SVG graphics. |
-| `getCachedTikzSvg(code, theme)` | 174 - 200 | Retrieves cached SVG output with versioned cache keys (`v2_glyph_fix`) from in-memory Map or sessionStorage. |
-| `whenConnected(element, callback)` | 241 - 277 | Ensures target DOM container is attached to document body before triggering TikZJax script execution. |
-| `getActiveTikzPreamble(note)` | 278 - 315 | Combines core math punctuation fixes (`\mathcode` primitives mapping comma/period to `operators`/`cmr10`), default TikZ libraries, global vault preambles, and note-level local TikZ styles with theme color tokens. |
-| `waitForTikzSvg(targetContainer, renderId, timeoutMs)` | 316 - 414 | Polls, listens for TeX engine unhandled rejections, and uses MutationObserver to wait until TikZJax replaces the script tag with compiled SVG markup. |
-| `healTikzCode(code)` | 415 - 440 | Auto-heals missing backslashes for common TikZ commands while strictly respecting path syntax. |
-| `fixTikzSvgGlyphs(container)` | 478 - 557 | Corrects BaKoMa font encoding mismatches (via `CMEX_GLYPH_FIX_MAP`): cmsy bars, cmmi vector accents, cmex delimiters, and normalizes cmmi math commas/turned quotes to baseline cmr commas. |
-| `renderTikzToElement(tikzCode, targetContainer, onComplete, noteContext)` | 558 - 778 | Compiles TikZ code into an SVG element within target container using a sequential FIFO mutex queue (`tikzCompileQueue`) to prevent TeX WASM memory collisions, utilizing 2-tier in-memory and sessionStorage caching. |
+| `setActiveTikzNoteContext(_note)` | 24 - 24 | No-op kept for `04_LaTeX_Editor.js` (macros are global-only). |
+| `getGlobalTikzPreamble()` | 27 - 31 | The vault-wide TikZ preamble (`NotesState.globalMacros.tikz`). |
+| `tikzHashString(str)` | 34 - 41 | FNV-1a 32-bit hex hash. |
+| `getTikzRenderKey(code)` | 44 - 46 | Hash of engine id + global TikZ preamble + trimmed code; stored as `block.svgKey` — a mismatch means the saved SVG is outdated. |
+| `healTikzCode(code)` | 52 - 66 | Auto-heals missing backslashes for common TikZ commands while strictly respecting path syntax. |
+| `prepareTikzSource(code)` | 69 - 71 | `convertTikzSource(code, getGlobalTikzPreamble())` (also used for the unavailable-package warning). |
+| `renderTikzToSvg(code)` | 77 - 83 | Converts, compiles through the engine queue, stores the needed fonts; resolves `{ svg, key, unavailable }` or rejects with the TeX error text. |
+| `mountTikzSvg(target, svg)` | 86 - 103 | Inserts a saved SVG scaled to the container width with its natural aspect ratio (max width = natural size). |
+
+Module-level side effect: `applyStoredTikzFonts()` on load, so saved diagrams have their fonts before any engine is loaded.
 
 ## A_Notes_Card_View
 **01_Navbar.js**
@@ -901,7 +952,8 @@ Module-level document handlers (registered once, guarded by window flags): captu
 
 | Import Location | Functions Imported | used in Functions |
 | :--- | :--- | :--- |
-| `../../Writing_Engine/Tikz_Engine/Tikz_Renderer.js` | `renderTikzToElement`, `getCachedTikzSvg`, `healTikzCode` | `renderTikzBlock()` |
+| `../../Writing_Engine/Tikz_Engine/Tikz_Renderer.js` | `healTikzCode` | `renderTikzBlock()` |
+| `./Tikz_Render_Panel.js` | `createTikzRenderPanel` | `renderTikzBlock()` |
 | `../../02_Utils.js` | `escapeHtml` | `renderTikzBlock()` |
 | `../../../00_Components/06_Color_Selector.js` | `CreateColorSelector` | `renderTikzBlock()` |
 | `./Tikz_Templates_Modal.js` | `GetTikzTemplatesModalHTML`, `InitTikzTemplatesLogic` | `renderTikzBlock()` |
@@ -912,7 +964,20 @@ Module-level document handlers (registered once, guarded by window flags): captu
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `renderTikzBlock(block, isEditing = false, onUpdate = null, options = {})` | 72 - 580 | Main TikZ block renderer supporting live on-demand vector SVG compilation (heal-on-compile recorded as an immediate undo snapshot), customizable Fit % width with auto aspect-ratio height, dual-theme color selector, surrounding border toggle, template browser modal, scientific captioning, figure numbering, and integrated monospace code editor. |
+| `renderTikzBlock(block, isEditing = false, onUpdate = null, options = {})` | 76 - 587 | TikZ block. View mode: a `<figure>` with the saved-SVG panel (`createTikzRenderPanel` → `autoRender()`) plus caption/numbering. Edit mode: toolbar (Border, Fit %, Templates, Save Template, ▶ compile = forced render, dual-colour inserter — dual colours resolve to their light value), the saved-SVG preview panel, the code editor (auto-render 1.5 s after typing stops, only when the render key changed), and tag/caption/numbering controls. Code may be a bare `tikzpicture` (global preamble applies) or a full Overleaf document. Heal-on-compile is recorded as an undo step; `__blockCleanup` clears the auto-render timer. |
+
+**Tikz_Render_Panel.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| `../../00_State.js` | `SaveNotesState` | `createTikzRenderPanel()` |
+| `../../02_Utils.js` | `escapeHtml` | `createTikzRenderPanel()` |
+| `../../Writing_Engine/Tikz_Engine/Tikz_Renderer.js` | `renderTikzToSvg`, `mountTikzSvg`, `getTikzRenderKey`, `prepareTikzSource` | `createTikzRenderPanel()` |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `tikzAutoRenderAttempts` | 18 - 18 | Session set of `blockId:renderKey` versions already auto-compiled (prevents retry loops when offline or failing). |
+| `createTikzRenderPanel(block, { fitPercent, hasBorder, getCode, onSaved })` | 57 - 178 | Diagram area of a TikZ block: shows `block.svg` on a white `.tikz-paper` card (white in both themes; optional border) and a status line. `compile({ force })` renders the current code and, ONLY on success, stores `block.svg` + `block.svgKey`, saves state and calls `onSaved`; a failure keeps the saved SVG and shows `⚠ Render failed — showing the last saved diagram` with the TeX error lines and ↻ Retry (or `nothing could be drawn` when there is no saved SVG). `autoRender()` compiles once per version when the SVG is missing or outdated. Also shows an outdated notice with ↻ Re-render and a warning listing packages the online engine does not have. Returns `{ el, compile, autoRender, refreshStatus, setFit, setBorder }`. Injects `#tikz-render-panel-styles` once. |
 
 **Tikz_Templates.js**
 
@@ -1178,12 +1243,10 @@ Delegated document-level `mouseover`/`click` listeners (registered once, marker-
 | :--- | :--- | :--- |
 | `../../00_State.js` | `NotesState`, `SaveNotesState`, `DEFAULT_GLOBAL_MACROS` | `OpenMacrosModal()` |
 | `../../../00_Components/06_Color_Selector.js` | `CreateColorSelector` | `OpenMacrosModal()` |
-| `../../02_Utils.js` | `escapeHtml` | `OpenMacrosModal()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `OpenMacrosModal({ note = null, onSave = null } = {})` | 17 - 262 | Displays modal dialog to configure and edit global vault and local note LaTeX equation macros and TikZ preambles with live persistence. |
-
+\g<1>18 - 211 | Global-only macros dialog (\"Global · applies to every note\"): Equation-macros and TikZ-preamble tabs over one textarea, dual-colour inserter, Reset to the default preset, Save & Apply → `NotesState.globalMacros`, `bumpKatexMacroVersion()`, `SaveNotesState()`, `onSave({ globalMacros })` (the editor re-renders; TikZ diagrams whose preamble changed re-render automatically). The former Global/Local switch was removed. |\n
 **05_Citation_Style.js**
 
 | Import Location | Functions Imported | used in Functions |

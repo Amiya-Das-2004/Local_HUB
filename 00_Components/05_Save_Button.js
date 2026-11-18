@@ -334,6 +334,9 @@ export async function SaveAndDownloadApp() {
       '03_Notes/Writing_Engine/Block_Engine.js',
       '03_Notes/Writing_Engine/Numbering_Engine.js',
       '03_Notes/Writing_Engine/Math_Renderer.js',
+      '03_Notes/Writing_Engine/Tikz_Engine/Tikz_Source_Converter.js',
+      '03_Notes/Writing_Engine/Tikz_Engine/Tikz_Engine_Loader.js',
+      '03_Notes/Writing_Engine/Tikz_Engine/Tikz_Font_Store.js',
       '03_Notes/Writing_Engine/Tikz_Engine/Tikz_Renderer.js',
       '03_Notes/Writing_Engine/Code_Highlighter.js',
       '03_Notes/Writing_Engine/Link_Parser.js',
@@ -358,6 +361,7 @@ export async function SaveAndDownloadApp() {
       '03_Notes/B_Editor_View/01_Blocks/Text_Block/Text_Block_Markdown.js',
       '03_Notes/B_Editor_View/01_Blocks/Text_Block.js',
       '03_Notes/B_Editor_View/01_Blocks/Equation_Block.js',
+      '03_Notes/B_Editor_View/01_Blocks/Tikz_Render_Panel.js',
       '03_Notes/B_Editor_View/01_Blocks/Tikz_Block.js',
       '03_Notes/B_Editor_View/01_Blocks/Image_Block.js',
       '03_Notes/B_Editor_View/01_Blocks/Table_Block.js',
@@ -591,7 +595,7 @@ handleRoute();
   }
 
   // Cleanup injected dev scripts, runtime containers, and dynamic TikZ engine tags before download
-  DocClone.querySelectorAll('script[src*="livepreview"], script[src*="livereload"], #tikzjax-js, #tikzjax-css, script[src*="tikzjax"]').forEach(s => s.remove());
+  DocClone.querySelectorAll('script[src*="livepreview"], script[src*="livereload"], #tikzjax-js, #tikzjax-css, script[src*="tikzjax"], #tikz-engine-host, #tikz-saved-fonts').forEach(s => s.remove());
   ['#canvas-container', '#loading-container', '#root'].forEach(sel => {
     const el = DocClone.querySelector(sel);
     if (el) el.innerHTML = '';

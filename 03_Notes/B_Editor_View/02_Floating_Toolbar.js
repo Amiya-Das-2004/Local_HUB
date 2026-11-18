@@ -234,10 +234,7 @@ export function CreateFloatingToolbar({
       btnMacros.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        OpenMacrosModal({
-          note,
-          onSave: onMacrosChange
-        });
+        OpenMacrosModal({ onSave: onMacrosChange });
       });
     }
 

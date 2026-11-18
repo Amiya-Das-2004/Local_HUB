@@ -84,17 +84,16 @@ Status legend: `Planned` · `In progress` · `Done`
 
 ## Issue 5 — TikZ diagrams recompile on every open (and need the engine/internet)
 
-**Status:** Planned
+**Status:** Done
 
-**Where:** `Writing_Engine/Tikz_Engine/Tikz_Renderer.js` → `getCachedTikzSvg()` caches only in memory + `sessionStorage`.
-
-**Problem**
-- Opening `Standalone/Notes.html` recompiles every TikZ block.
-- Compiling needs either the ~25 MB `Tikz_Engine/v1/` runtime next to the file or an internet connection (CDN fallback). A standalone file opened offline on another machine shows no diagrams.
-
-**Fix**
-- Persist the compiled SVG (per theme, keyed exactly like the current cache key) into the `#NotesAssets` store.
-- Reading a note renders the stored SVG instantly and offline; the engine loads only when TikZ code is edited.
+**What changed**
+- The old local engine (`Tikz_Engine/v1/`, ~25 MB, 2019 TeX build where every `\usepackage` crashed) was removed.
+- Diagrams compile with the newer TikZJax (`@drgrice1/tikzjax`) loaded from the jsdelivr CDN **only when a compile is needed** (`Tikz_Engine_Loader.js`).
+- Each TikZ block stores its last good render: `block.svg` + `block.svgKey` (hash of engine + code + global TikZ preamble). Viewing a note only shows the saved SVG — no engine, no internet.
+- A compile happens when the code or the global preamble changed (auto, 1.5 s after typing stops), or on ▶. A failed or offline compile **keeps the saved SVG** and shows a warning with the TeX error lines (`Tikz_Render_Panel.js`).
+- The TeX fonts used by saved SVGs are stored once in the file (`NotesState.tikzFonts`, `Tikz_Font_Store.js`), so saved diagrams render correctly offline.
+- Full Overleaf documents can be pasted into a block (`Tikz_Source_Converter.js`); packages the engine does not ship (e.g. `tkz-euclide`) are skipped with a warning.
+- Saved SVGs live inside each block in `#NotesData`, not in the planned `#NotesAssets` store (still planned under Issue 1 for images).
 
 ---
 
@@ -114,7 +113,7 @@ Status legend: `Planned` · `In progress` · `Done`
 
 1. Issues 1 + 2 + 3 — asset store, de-duplication, WebP (fixes the silent recovery failure).
 2. Issue 4 — save in place.
-3. Issue 5 — persisted TikZ SVGs.
+3. ~~Issue 5 — persisted TikZ SVGs.~~ Done.
 4. Issue 6 — storage indicator.
 
 After every step: verify `Tab_Notes/Notes.html` (modular) and the compiled `Standalone/Notes.html` behave identically, and update `Notes.md` (folder tree + function tables) and the status fields above.
