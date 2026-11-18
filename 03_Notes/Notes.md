@@ -15,6 +15,7 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 ├── 03_Library.js                           ← BibTeX bibliography manager, modal dialog, and citation styler
 ├── Notes.js                                ← Master lifecycle orchestrator for card/editor/graph views
 ├── Notes.md                                ← This architecture & API reference
+├── Notes_Issues_And_Fixes.md               ← Known issues (single-file storage limits) and the planned in-file fixes
 ├── Tab_Notes/                              ← Dedicated standalone single-tab runner and handler adapters
 │   ├── Notes.html                          ← Standalone single-tab HTML runner for Notes
 │   ├── Tab_Import_Export_Handler.js        ← Tab-isolated JSON backup and recovery adapter
