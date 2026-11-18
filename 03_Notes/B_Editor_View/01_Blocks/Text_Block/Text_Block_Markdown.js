@@ -542,7 +542,7 @@ export function createLiveBlockElement(blk, options = {}) {
         return renderSingleLineToDom(blk.raw, options);
       }
       el = document.createElement('div');
-      el.className = 'live-line obsidian-task-item flex items-start gap-2 min-h-[1.5em] my-0.5 select-text';
+      el.className = 'live-line obsidian-task-item flex items-start min-h-[1.5em] my-0.5 select-text';
       el.setAttribute('data-raw', blk.raw);
 
       if (blk.indent) {
@@ -571,7 +571,12 @@ export function createLiveBlockElement(blk, options = {}) {
       );
 
       el.appendChild(checkboxWidget);
-      el.appendChild(parseTextToFragment(blk.content, options));
+      // One inline label element: as direct flex children, text nodes and math
+      // widgets each became separate flex items and lost the spaces between them.
+      const label = document.createElement('span');
+      label.className = 'obsidian-task-label min-w-0 flex-1';
+      label.appendChild(parseTextToFragment(blk.content, options));
+      el.appendChild(label);
       break;
     }
 

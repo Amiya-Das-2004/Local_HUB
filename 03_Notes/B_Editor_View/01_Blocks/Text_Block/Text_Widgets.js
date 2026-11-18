@@ -71,16 +71,65 @@ if (typeof document !== 'undefined') {
       vertical-align: middle;
       line-height: 1;
     }
+    /* Task checkbox — identical geometry in edit and reading mode.
+       The wrapper is exactly one text line tall (1lh), so the box is centred on the
+       first line of the task text whether the line is a block (edit) or a flex
+       row (reading), and wrapped multi-line task text stays aligned. */
     .live-widget.live-checkbox {
       display: inline-flex;
       align-items: center;
-      justify-content: center;
-      vertical-align: middle;
-      line-height: 1;
+      justify-content: flex-start;
+      vertical-align: top;
+      line-height: inherit;
+      height: calc(var(--note-line-height, 1.7) * 1em);
+      height: 1lh;
+      padding: 0 !important;
+      margin-right: 0.5em;
+      flex-shrink: 0;
     }
+    .live-line.obsidian-task-item { gap: 0 !important; align-items: flex-start; }
+    /* Themed box: follows --card / --text-dim / --accent, which flip with data-theme */
     .live-widget.live-checkbox .note-task-checkbox {
-      margin: 0;
-      vertical-align: middle;
+      appearance: none;
+      -webkit-appearance: none;
+      box-sizing: border-box;
+      width: 0.95em;
+      height: 0.95em;
+      min-width: 13px;
+      min-height: 13px;
+      margin: 0 !important;
+      border: 1.5px solid var(--text-dim, #6b7088);
+      border-radius: 4px;
+      background: var(--card, #1c1f2e);
+      display: inline-grid;
+      place-content: center;
+      cursor: pointer;
+      position: relative;
+      transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .live-widget.live-checkbox .note-task-checkbox:hover {
+      border-color: var(--accent, #8b6dff);
+    }
+    .live-widget.live-checkbox .note-task-checkbox:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px var(--accent-glow, rgba(139, 109, 255, 0.22));
+    }
+    .live-widget.live-checkbox .note-task-checkbox:checked {
+      background: var(--accent, #8b6dff) !important;
+      border-color: var(--accent, #8b6dff) !important;
+    }
+    .live-widget.live-checkbox .note-task-checkbox::after {
+      content: "";
+      display: block;
+      width: 0.26em;
+      height: 0.5em;
+      border: solid #ffffff;
+      border-width: 0 0.12em 0.12em 0;
+      transform: translateY(-0.05em) rotate(45deg) scale(0);
+      transition: transform 0.12s ease;
+    }
+    .live-widget.live-checkbox .note-task-checkbox:checked::after {
+      transform: translateY(-0.05em) rotate(45deg) scale(1);
     }
     .live-widget.live-math {
       display: inline-flex;
@@ -282,7 +331,7 @@ export const createLiveWidget = (type, raw, contentHtml = '', options = {}) => {
     span.innerHTML = contentHtml;
   } else if (type === 'checkbox') {
     const isChecked = raw.includes('[x]') || raw.includes('[X]');
-    span.className = `live-widget live-checkbox inline-flex items-center justify-center align-middle pr-2 select-none ${baseCursor}`;
+    span.className = `live-widget live-checkbox select-none ${baseCursor}`;
     span.innerHTML = `<input type="checkbox" class="note-task-checkbox cursor-pointer" ${isChecked ? 'checked' : ''} />`;
     const cb = span.querySelector('input');
     cb.addEventListener('change', (e) => {
