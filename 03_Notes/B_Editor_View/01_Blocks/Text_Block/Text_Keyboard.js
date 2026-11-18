@@ -81,6 +81,11 @@ export const checkAutoCollapseTokensNearCaret = ({ editModeOptions, hideKatexPil
 
   if (!node || node.nodeType !== Node.TEXT_NODE) return;
 
+  // Inside an expanded raw block editor (code fence / display math) the content is
+  // plain raw text — token hydration here would corrupt the editor's structure.
+  const rawHost = node.parentElement ? node.parentElement.closest('[data-is-raw-block="true"]') : null;
+  if (rawHost) return;
+
   const text = node.nodeValue;
   const textBeforeCaret = text.substring(0, offset);
 
@@ -95,7 +100,9 @@ export const checkAutoCollapseTokensNearCaret = ({ editModeOptions, hideKatexPil
     { type: 'strike', regex: /(~~([^~]+)~~)\s*$/ },
     { type: 'color', regex: /(\\textcolor\{([#a-zA-Z0-9|]+)\}\{((?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})+)\})\s*$/ },
     { type: 'fig', regex: /(\\fig\{([^}]+)\})\s*$/ },
-    { type: 'wikilink', regex: /(\[\[([^\]\n\r]+)\]\])\s*$/ }
+    { type: 'cite', regex: /(\\cite\{([^}]*)\})\s*$/ },
+    { type: 'eq', regex: /(\\eq\{([^}]+)\})\s*$/ },
+    { type: 'wikilink', regex: /(\[\[([^\[\]\n\r]+)\]\])\s*$/ }
   ];
 
   for (let p of patterns) {
@@ -121,6 +128,8 @@ export const checkAutoCollapseTokensNearCaret = ({ editModeOptions, hideKatexPil
       else if (p.type === 'strike') contentVal = match[2] || fullToken.slice(2, -2);
       else if (p.type === 'color') contentVal = match[3] || '';
       else if (p.type === 'fig') contentVal = match[2] || fullToken.slice(5, -1);
+      else if (p.type === 'cite') contentVal = match[2] || fullToken.slice(6, -1);
+      else if (p.type === 'eq') contentVal = match[2] || fullToken.slice(5, -1);
       else if (p.type === 'wikilink') contentVal = match[2] || fullToken.slice(2, -2);
 
       const widget = createLiveWidget(widgetType, fullToken, contentVal, editModeOptions);
@@ -151,6 +160,12 @@ export const checkAutoBulletConversion = ({ liveSurface, editModeOptions, trigge
   if (!sel || sel.rangeCount === 0) return;
   const node = sel.anchorNode;
   if (!node) return;
+
+  // Raw block editors own their content — no bullet/heading auto conversion inside them.
+  const rawHost = node.nodeType === Node.ELEMENT_NODE
+    ? (node.getAttribute('data-is-raw-block') === 'true' ? node : node.closest?.('[data-is-raw-block="true"]'))
+    : (node.parentElement ? node.parentElement.closest('[data-is-raw-block="true"]') : null);
+  if (rawHost) return;
 
   const curLine = getContainingLine(node, liveSurface);
   if (!curLine) return;
@@ -323,6 +338,9 @@ export const tryCollapseTokenAtCaretOnEnter = ({ node, offset, editModeOptions, 
   if (offset >= 5 && text.substring(offset - 5, offset) === '\\fig{' && text[offset] === '}') {
     return exitEmptyWrapperWithSpace(offset + 1, offset + 1);
   }
+  if (offset >= 6 && text.substring(offset - 6, offset) === '\\cite{' && text[offset] === '}') {
+    return exitEmptyWrapperWithSpace(offset + 1, offset + 1);
+  }
   if (offset >= 2 && text.substring(offset - 2, offset) === '[[' && text.substring(offset, offset + 2) === ']]') {
     return exitEmptyWrapperWithSpace(offset + 2, offset + 2);
   }
@@ -452,6 +470,16 @@ export const tryCollapseTokenAtCaretOnEnter = ({ node, offset, editModeOptions, 
     const end = start + m[0].length;
     if (offset > start && offset <= end) {
       return collapseTokenAndInsertSpace(start, end, 'fig', m[0], m[1]);
+    }
+  }
+
+  // 8b. Bibliography Citation \cite{key1,key2}
+  const citeRegex = /\\cite\{([^}]*)\}/g;
+  while ((m = citeRegex.exec(text)) !== null) {
+    const start = m.index;
+    const end = start + m[0].length;
+    if (offset > start && offset <= end) {
+      return collapseTokenAndInsertSpace(start, end, 'cite', m[0], m[1]);
     }
   }
 
@@ -767,6 +795,8 @@ export const handleTextBlockKeyDown = (e, ctx) => {
         deleteBefore = colMatch[0].length; deleteAfter = 1;
       } else if (offset >= 5 && text.substring(offset - 5, offset) === '\\fig{' && text[offset] === '}') {
         deleteBefore = 5; deleteAfter = 1;
+      } else if (offset >= 6 && text.substring(offset - 6, offset) === '\\cite{' && text[offset] === '}') {
+        deleteBefore = 6; deleteAfter = 1;
       } else if (offset >= 2 && text.substring(offset - 2, offset) === '[[' && text.substring(offset, offset + 2) === ']]') {
         deleteBefore = 2; deleteAfter = 2;
       }
@@ -1134,7 +1164,22 @@ export const handleTextBlockKeyDown = (e, ctx) => {
       : (node.parentElement ? node.parentElement.closest('[data-is-raw-block="true"]') : null);
     if (rawBlockEl) {
       e.preventDefault();
-      document.execCommand('insertText', false, '\n');
+      // execCommand('insertText', '\n') paragraph-splits OUT of the nested raw editing
+      // host (cloning data-is-raw-block into an empty sibling) — insert a literal
+      // newline text node instead.
+      const selNow = window.getSelection();
+      if (selNow && selNow.rangeCount > 0) {
+        const range = selNow.getRangeAt(0);
+        range.deleteContents();
+        const nl = document.createTextNode('\n');
+        range.insertNode(nl);
+        range.setStartAfter(nl);
+        range.collapse(true);
+        selNow.removeAllRanges();
+        selNow.addRange(range);
+      } else {
+        document.execCommand('insertText', false, '\n');
+      }
       triggerUpdate?.();
       return;
     }

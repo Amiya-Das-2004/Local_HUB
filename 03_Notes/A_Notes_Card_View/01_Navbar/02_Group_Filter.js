@@ -5,6 +5,10 @@ let DropdownCols = 2;
 let IsDragging = false;
 let DraggedGroup = null;
 let TemporaryOrder = null;
+// The navbar (and its dropdown window) is re-mounted on every deck render; these module refs
+// let the document/window listeners be detached before the next set is attached.
+let GroupDocClickHandler = null;
+let GroupResizeHandler = null;
 
 // Returns the currently active folder/group filter name
 export function GetActiveGroup() {
@@ -492,11 +496,13 @@ export function InitGroupFilter(state, onGroupSelect, onOrderUpdate) {
     });
   }
 
-  document.addEventListener('click', (e) => {
+  if (GroupDocClickHandler) document.removeEventListener('click', GroupDocClickHandler);
+  GroupDocClickHandler = (e) => {
     if (dropdownWindow && !dropdownWindow.contains(e.target) && toggleBtn && !toggleBtn.contains(e.target)) {
       dropdownWindow.classList.add('hidden');
     }
-  });
+  };
+  document.addEventListener('click', GroupDocClickHandler);
 
   if (searchInput) {
     searchInput.addEventListener('input', () => {
@@ -527,11 +533,13 @@ export function InitGroupFilter(state, onGroupSelect, onOrderUpdate) {
     });
   }
 
-  window.addEventListener('resize', () => {
+  if (GroupResizeHandler) window.removeEventListener('resize', GroupResizeHandler);
+  GroupResizeHandler = () => {
     if (dropdownWindow && !dropdownWindow.classList.contains('hidden')) {
       RenderGroupsDropdownGrid(state, onGroupSelect, onOrderUpdate);
     }
-  });
+  };
+  window.addEventListener('resize', GroupResizeHandler);
 
   RenderGroupsDropdownGrid(state, onGroupSelect, onOrderUpdate);
 }

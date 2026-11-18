@@ -1,3 +1,5 @@
+import { ReadRecoverySnapshot } from './10_Recovery.js';
+
 // Save button svg logo
 export function GetSaveButtonHTML() {
   return `
@@ -37,7 +39,7 @@ export function GetSaveButtonHTML() {
         flex-shrink: 0;
       }
 
-      @media (max-width: 420px) {
+      @media (max-width: 440px) {
         .save-btn {
           height: 32px;
           padding: 0 10px;
@@ -45,15 +47,71 @@ export function GetSaveButtonHTML() {
         }
       }
 
-      @media (max-width: 320px) {
+      @media (max-width: 380px) {
         .save-btn span {
           display: none;
         }
         .save-btn {
           width: 32px;
+          height: 32px;
           padding: 0;
           justify-content: center;
         }
+      }
+
+      @media (max-width: 360px) {
+        .save-btn {
+          width: 28px;
+          height: 28px;
+          border-radius: 6px;
+        }
+        .save-btn svg {
+          width: 13px;
+          height: 13px;
+        }
+      }
+
+      .save-btn.has-unsaved {
+        position: relative;
+      }
+
+      .save-badge {
+        position: absolute;
+        top: -6px;
+        right: -6px;
+        min-width: 17px;
+        height: 17px;
+        padding: 0 4px;
+        border-radius: 9999px;
+        background: #f59e0b;
+        color: #0e1018;
+        font-size: 10px;
+        font-weight: 800;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+        border: 2px solid var(--surface, #181b27);
+        box-shadow: 0 0 10px rgba(245, 158, 11, 0.7);
+        pointer-events: none;
+        user-select: none;
+        box-sizing: border-box;
+        z-index: 5;
+      }
+
+      :root[data-theme="light"] .save-badge {
+        border-color: var(--surface, #ffffff);
+      }
+
+      .save-btn.has-unsaved .save-badge {
+        display: flex;
+        animation: saveBadgePop 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      }
+
+      @keyframes saveBadgePop {
+        0% { transform: scale(0.35); opacity: 0; }
+        100% { transform: scale(1); opacity: 1; }
       }
     </style>
 
@@ -63,6 +121,7 @@ export function GetSaveButtonHTML() {
         <polyline points="17 21 17 13 7 13 7 21" />
         <polyline points="7 3 7 8 15 8" />
       </svg>
+      <span class="save-badge" id="save-badge" aria-hidden="true"></span>
     </button>
   `;
 }
@@ -78,7 +137,15 @@ function syncAllStatesToDOM(doc) {
     const id = script.id;
     let foundData = null;
 
-    // 1. Check window state matching id (e.g. window.BookmarkState, window.NotesState, window.AppState, window[id])
+    // 1. Check window state matching id (e.g. window.BookmarkState, window.NotesState, window.AppState, window.RD, window[id])
+    if (id === 'RDData') {
+      if (window.RD && typeof window.RD.state === 'function') {
+        foundData = window.RD.state();
+      } else if (window.RDState) {
+        foundData = window.RDState.rd || window.RDState;
+      }
+    }
+
     const candidateKeys = [
       id,
       id + 'State',
@@ -86,36 +153,47 @@ function syncAllStatesToDOM(doc) {
       'App' + id,
       'AppState',
       'BookmarkState',
-      'NotesState'
+      'NotesState',
+      'ProfessorsState',
+      'RDState'
     ];
 
-    for (const key of candidateKeys) {
-      if (window[key] && typeof window[key] === 'object' && Object.keys(window[key]).length > 0) {
-        if (
-          key === id ||
-          key === id + 'State' ||
-          key === id.replace(/Data$/, '') + 'State' ||
-          (id === 'LandingPageData' && key === 'AppState') ||
-          (id === 'Bookmarks' && key === 'BookmarkState') ||
-          (id === 'NotesData' && key === 'NotesState')
-        ) {
-          foundData = window[key];
-          break;
+    if (!foundData) {
+      for (const key of candidateKeys) {
+        if (window[key] && typeof window[key] === 'object' && Object.keys(window[key]).length > 0) {
+          if (
+            key === id ||
+            key === id + 'State' ||
+            key === id.replace(/Data$/, '') + 'State' ||
+            (id === 'LandingPageData' && key === 'AppState') ||
+            (id === 'Bookmarks' && key === 'BookmarkState') ||
+            (id === 'NotesData' && key === 'NotesState') ||
+            (id === 'ProfessorsData' && key === 'ProfessorsState') ||
+            (id === 'RDData' && key === 'RDState')
+          ) {
+            foundData = (id === 'RDData' && window[key].rd) ? window[key].rd : window[key];
+            break;
+          }
         }
       }
     }
 
-    // 2. Check localStorage cache for latest edits only if not found in live window state
+    // 2. Fallback to this file's path-scoped recovery snapshot (sessionStorage)
+    //    only if not found in live window state. The old shared localStorage
+    //    keys are NOT read here anymore — they leaked data between different
+    //    LocalHUB files sharing one origin.
     if (!foundData) {
-      const cacheKeys = [id + '_Local_Cache', id.replace(/Data$/, '') + '_Local_Cache', id];
-      for (const ck of cacheKeys) {
+      const snap = ReadRecoverySnapshot(id);
+      if (snap && snap.data && typeof snap.data === 'object') {
+        foundData = (id === 'RDData' && snap.data.rd) ? snap.data.rd : snap.data;
+      }
+      if (!foundData && id === 'RDData') {
         try {
-          const cached = localStorage.getItem(ck);
-          if (cached) {
-            const parsed = JSON.parse(cached);
+          const rdRaw = localStorage.getItem('rd_library_v1');
+          if (rdRaw) {
+            const parsed = JSON.parse(rdRaw);
             if (parsed && typeof parsed === 'object') {
-              foundData = parsed;
-              break;
+              foundData = parsed.rd ? parsed.rd : parsed;
             }
           }
         } catch (e) { }
@@ -135,6 +213,8 @@ function syncAllStatesToDOM(doc) {
           if (window.NotesState && window.NotesState.vaultMeta) {
             window.NotesState.vaultMeta.lastSaved = now;
           }
+        } else if (id === 'RDData') {
+          cleanData.updatedAt = new Date().toISOString();
         } else {
           cleanData._lastSaved = now;
           if (id === 'Bookmarks' && window.BookmarkState) {
@@ -144,13 +224,17 @@ function syncAllStatesToDOM(doc) {
           }
         }
 
-        script.textContent = JSON.stringify(cleanData, null, 2);
+        // \u003c-escape `<` so vault data (note content can contain markup)
+        // can never close the host <script> block in the standalone file.
+        const safeJson = JSON.stringify(cleanData, null, 2).replace(/</g, '\\u003c');
+
+        script.textContent = safeJson;
 
         // Also update live in-memory document script tag
         if (typeof document !== 'undefined') {
           const liveScript = document.getElementById(id);
           if (liveScript && liveScript !== script) {
-            liveScript.textContent = JSON.stringify(cleanData, null, 2);
+            liveScript.textContent = safeJson;
           }
         }
       } catch (e) { }
@@ -189,6 +273,12 @@ export async function SaveAndDownloadApp() {
         code = code.replace(/^\s*export\s*\{[\s\S]*?\};?\s*$/gm, '');
         code = code.replace(/^\s*export\s+default\s+/gm, '');
         code = code.replace(/^\s*export\s+(async\s+)?(function|const|let|var|class)/gm, (m, p1, p2) => (p1 || '') + p2);
+        // Escape literal script-closers so embedded sources (templates in
+        // 04_Professors/Professors.js, the per-tab Data_IO builders, …) cannot
+        // terminate the host <script> block of the generated standalone.
+        // Source-level escape only: `\/` evaluates to `/`, so runtime strings
+        // and the per-tab builders' own generated HTML stay byte-identical.
+        code = code.replace(/<\/script/gi, '<\\/script');
         return `\n/* --- ${cleanPath} --- */\n${code}\n`;
       } catch (e) {
         console.warn(`[Bundler] Error reading ${filePath}:`, e);
@@ -202,7 +292,11 @@ export async function SaveAndDownloadApp() {
       '00_Components/03_Scrollbar.js',
       '00_Components/04_Import_Export.js',
       '00_Components/05_Save_Button.js',
-      '00_Components/06_Color_Selector.js'
+      '00_Components/06_Color_Selector.js',
+      '00_Components/07_Blob_Store.js',
+      '00_Components/08_Research_Library.js',
+      '00_Components/09_Icon_Button.js',
+      '00_Components/10_Recovery.js'
     ];
 
     const landingFiles = [
@@ -234,11 +328,13 @@ export async function SaveAndDownloadApp() {
     const noteFiles = [
       '03_Notes/00_State.js',
       '03_Notes/02_Utils.js',
+      '03_Notes/Writing_Engine/BibTeX_Parser.js',
+      '03_Notes/03_Library.js',
       '03_Notes/Writing_Engine/Bullet_Engine.js',
       '03_Notes/Writing_Engine/Block_Engine.js',
       '03_Notes/Writing_Engine/Numbering_Engine.js',
       '03_Notes/Writing_Engine/Math_Renderer.js',
-      '03_Notes/Writing_Engine/Tikz_Renderer.js',
+      '03_Notes/Writing_Engine/Tikz_Engine/Tikz_Renderer.js',
       '03_Notes/Writing_Engine/Code_Highlighter.js',
       '03_Notes/Writing_Engine/Link_Parser.js',
       '03_Notes/Writing_Engine/Highlight_Sync.js',
@@ -255,6 +351,10 @@ export async function SaveAndDownloadApp() {
       '03_Notes/B_Editor_View/01_Blocks/Text_Block/Text_Widgets.js',
       '03_Notes/B_Editor_View/01_Blocks/Text_Block/Text_Parser.js',
       '03_Notes/B_Editor_View/01_Blocks/Text_Block/Text_Keyboard.js',
+      '03_Notes/B_Editor_View/01_Blocks/Text_Block/Cite_Autocomplete.js',
+      '03_Notes/B_Editor_View/01_Blocks/Text_Block/Cite_Preview.js',
+      '03_Notes/B_Editor_View/01_Blocks/Text_Block/Wiki_Link_Autocomplete.js',
+      '03_Notes/B_Editor_View/01_Blocks/Text_Block/Wiki_Link_Popup.js',
       '03_Notes/B_Editor_View/01_Blocks/Text_Block/Text_Block_Markdown.js',
       '03_Notes/B_Editor_View/01_Blocks/Text_Block.js',
       '03_Notes/B_Editor_View/01_Blocks/Equation_Block.js',
@@ -265,6 +365,7 @@ export async function SaveAndDownloadApp() {
       '03_Notes/B_Editor_View/01_Blocks/Block_Block.js',
       '03_Notes/B_Editor_View/01_Blocks/Block_Dispatcher.js',
       '03_Notes/B_Editor_View/01_Blocks/Multi_Column_Block.js',
+      '03_Notes/B_Editor_View/01_Blocks/Orientation_Modal.js',
       '03_Notes/B_Editor_View/01_Blocks/Block_Item.js',
       '03_Notes/B_Editor_View/01_Doc_Header.js',
       '03_Notes/B_Editor_View/02_Sidebar/01_Sidebar_Logo.js',
@@ -274,6 +375,9 @@ export async function SaveAndDownloadApp() {
       '03_Notes/B_Editor_View/03_Floating_ToolBar/02_Note_Fonts.js',
       '03_Notes/B_Editor_View/03_Floating_ToolBar/03_Font_Size.js',
       '03_Notes/B_Editor_View/03_Floating_ToolBar/04_Macros_Modal.js',
+      '03_Notes/B_Editor_View/03_Floating_ToolBar/05_Citation_Style.js',
+      '03_Notes/B_Editor_View/03_Floating_ToolBar/06_Equation_Numbering.js',
+      '03_Notes/B_Editor_View/03_Floating_ToolBar/07_Figure_Numbering.js',
       '03_Notes/B_Editor_View/02_Floating_Toolbar.js',
       '03_Notes/B_Editor_View/03_Study_View.js',
       '03_Notes/B_Editor_View/04_LaTeX_Editor.js',
@@ -283,12 +387,82 @@ export async function SaveAndDownloadApp() {
       '03_Notes/A_Notes_Card_View/01_Navbar/04_Graph_Toggle.js',
       '03_Notes/A_Notes_Card_View/01_Navbar/05_Delete_Button.js',
       '03_Notes/A_Notes_Card_View/01_Navbar/06_Add_Edit_Button.js',
+      '03_Notes/A_Notes_Card_View/01_Navbar/07_Library_Button.js',
       '03_Notes/A_Notes_Card_View/01_Navbar.js',
       '03_Notes/A_Notes_Card_View/02_Notes_Card.js',
       '03_Notes/A_Notes_Card_View/A_Notes_Card_View.js',
+      '03_Notes/C_Graph_View/Graph_Data.js',
+      '03_Notes/C_Graph_View/Graph_Physics.js',
       '03_Notes/C_Graph_View/Graph_View.js',
       '03_Notes/01_Header.js',
       '03_Notes/Notes.js'
+    ];
+
+    const professorFiles = [
+      // Dependency-ordered: 04_Footer.js / 08_Paste_Import_Modal.js /
+      // 01_Save_Button.js (core PROFF_TEMPLATE saver) removed 2026-10-25 —
+      // IO lives in the header now (footer gone; Save is context-aware).
+      '04_Professors/00_State.js',
+      '04_Professors/01_Utils.js',
+      '04_Professors/02_Styles.js',
+      '04_Professors/03_Seed_Data.js',
+      '04_Professors/01_HTML_Page/01_Header.js',
+      '04_Professors/01_HTML_Page/02_Toolbar.js',
+      '04_Professors/01_HTML_Page/03_Theme_Toggle.js',
+      '04_Professors/02_Dashboard/01_Stats_Bar.js',
+      '04_Professors/02_Dashboard/02_Resume_Section.js',
+      '04_Professors/02_Dashboard/03_Heatmap.js',
+      '04_Professors/02_Dashboard/04_Tag_Bar.js',
+      '04_Professors/03_Professor_List/01_Prof_Cards.js',
+      '04_Professors/03_Professor_List/02_List_Actions.js',
+      '04_Professors/04_Modals/01_Modal_Core.js',
+      '04_Professors/04_Modals/02_Professor_Modal.js',
+      '04_Professors/04_Modals/03_Paper_Modal.js',
+      '04_Professors/04_Modals/04_Journal_Modal.js',
+      '04_Professors/04_Modals/05_Journal_Browser.js',
+      '04_Professors/04_Modals/06_Compare_Modal.js',
+      '04_Professors/04_Modals/07_Bulk_Add_Modal.js',
+      '04_Professors/04_Modals/09_Shortcuts_Modal.js',
+      '04_Professors/05_Data_IO/02_Export.js',
+      '04_Professors/05_Data_IO/03_Import.js',
+      '04_Professors/Professors.js'
+    ];
+
+    const rdFiles = [
+      // Dependency-ordered for the flat bundle: 00_State.js eagerly seeds the
+      // library at evaluation time, touching RD_LAYOUT/palettes from
+      // 03_Seed_Data.js and uid() from 01_Utils.js. In dev, ES module imports
+      // resolve lazily, but the concatenated bundle executes top-level code in
+      // list order — leaves must come first or const bindings hit the TDZ.
+      '05_R&D/01_Utils.js',
+      '05_R&D/03_Seed_Data.js',
+      '05_R&D/00_State.js',
+      '05_R&D/02_Styles.js',
+      '05_R&D/01_HTML_Page/01_Header.js',
+      '05_R&D/01_HTML_Page/02_Navbar.js',
+      '05_R&D/01_HTML_Page/03_Toolbar.js',
+      '05_R&D/01_HTML_Page/04_Footer.js',
+      '05_R&D/02_Bibtex_Doi/01_Bibtex.js',
+      '05_R&D/02_Bibtex_Doi/02_Doi.js',
+      '05_R&D/03_Views/01_List_View.js',
+      '05_R&D/03_Views/02_Timeline_View.js',
+      '05_R&D/03_Views/03_Map_View.js',
+      '05_R&D/02_Dashboard/03_Heatmap.js',
+      '05_R&D/02_Dashboard/01_Stats_Bar.js',
+      '05_R&D/02_Dashboard/02_Resume_Section.js',
+      '05_R&D/02_Dashboard/04_Tag_Bar.js',
+      '05_R&D/04_Modals/01_Modal_Core.js',
+      '05_R&D/04_Modals/02_Item_Modal.js',
+      '05_R&D/04_Modals/03_Drawer.js',
+      '05_R&D/04_Modals/04_Queue_Panel.js',
+      '05_R&D/04_Modals/05_Stats_Popover.js',
+      '05_R&D/04_Modals/06_Health_Modal.js',
+      '05_R&D/04_Modals/07_Help_Modal.js',
+      '05_R&D/04_Modals/08_Link_Modal.js',
+      '05_R&D/05_Data_IO/01_Save_Button.js',
+      '05_R&D/05_Data_IO/02_Export.js',
+      '05_R&D/05_Data_IO/03_Import.js',
+      '05_R&D/RD.js'
     ];
 
     const bundleGroup = async (files) => {
@@ -297,11 +471,13 @@ export async function SaveAndDownloadApp() {
       return out;
     };
 
-    const [bundledComponents, bundledLanding, bundledBookmarks, bundledNotes] = await Promise.all([
+    const [bundledComponents, bundledLanding, bundledBookmarks, bundledNotes, bundledProfessors, bundledRD] = await Promise.all([
       bundleGroup(componentFiles),
       bundleGroup(landingFiles),
       bundleGroup(bookmarkFiles),
-      bundleGroup(noteFiles)
+      bundleGroup(noteFiles),
+      bundleGroup(professorFiles),
+      bundleGroup(rdFiles)
     ]);
 
     const threeImportLine = 'imp' + 'ort * as THREE from \'https://unpkg.com/three@0.160.0/build/three.module.js\';';
@@ -341,23 +517,54 @@ ${bundledNotes}
 }
 
 /* ==========================================================================
+   PROFESSORS PAGE MODULE (ProffTrack)
+   ========================================================================== */
+function LoadProfessorsPage() {
+${bundledProfessors}
+  if (typeof initProfessorsApp === 'function') initProfessorsApp();
+}
+
+/* ==========================================================================
+   R&D LIBRARY MODULE
+   ========================================================================== */
+function LoadRDPage() {
+${bundledRD}
+  if (typeof initRDApp === 'function') initRDApp();
+}
+
+/* ==========================================================================
    MASTER ROUTER
    ========================================================================== */
-function handleRoute() {
-  const currentHash = (window.location.hash || '').trim();
+function handleRoute(forcedHash) {
+  const currentHash = (typeof forcedHash === 'string' ? forcedHash : (window.location.hash || '')).trim();
   const lowerHash = currentHash.toLowerCase();
+  if (lowerHash.startsWith('#fig-') || lowerHash.startsWith('#eq-')) {
+    return;
+  }
   const root = document.getElementById('root');
-  if (root) root.innerHTML = '';
+  if (root) {
+    root.innerHTML = '';
+    root.removeAttribute('data-theme');
+  }
+  document.body.classList.remove('prof-dark');
+  document.body.classList.remove('prof-light');
+  document.body.removeAttribute('data-theme');
+  document.documentElement.removeAttribute('data-theme');
 
   if (lowerHash.startsWith('#bookmarks')) {
     LoadBookmarkPage();
   } else if (lowerHash.startsWith('#notes')) {
     LoadNotesPage();
+  } else if (lowerHash.startsWith('#professors')) {
+    LoadProfessorsPage();
+  } else if (lowerHash.startsWith('#rd') || lowerHash.startsWith('#r&d')) {
+    LoadRDPage();
   } else {
     LoadLandingPage();
   }
 }
 
+window.handleLocalHubRoute = handleRoute;
 window.addEventListener('hashchange', handleRoute);
 handleRoute();
 `;
@@ -369,7 +576,10 @@ handleRoute();
         s.textContent.includes('handleRoute') ||
         s.textContent.includes('Bookmarks.js') ||
         s.textContent.includes('Main.js') ||
-        s.textContent.includes('initLandingPage')
+        s.textContent.includes('initLandingPage') ||
+        s.textContent.includes('RD.js') ||
+        s.textContent.includes('R&D.js') ||
+        s.textContent.includes('initRDApp')
       ) {
         const inlineScript = document.createElement('script');
         inlineScript.type = 'module';
@@ -380,8 +590,8 @@ handleRoute();
     }
   }
 
-  // Cleanup injected dev scripts and runtime containers before download
-  DocClone.querySelectorAll('script[src*="livepreview"], script[src*="livereload"]').forEach(s => s.remove());
+  // Cleanup injected dev scripts, runtime containers, and dynamic TikZ engine tags before download
+  DocClone.querySelectorAll('script[src*="livepreview"], script[src*="livereload"], #tikzjax-js, #tikzjax-css, script[src*="tikzjax"]').forEach(s => s.remove());
   ['#canvas-container', '#loading-container', '#root'].forEach(sel => {
     const el = DocClone.querySelector(sel);
     if (el) el.innerHTML = '';
@@ -401,6 +611,7 @@ handleRoute();
 
   // Clear unsaved working caches in localStorage (Option 1)
   ClearAllLocalCaches();
+  MarkUnsavedChanges(false);
 
   // Visual feedback on Save button
   const saveBtn = document.getElementById('save-btn');
@@ -416,14 +627,149 @@ handleRoute();
     `;
     setTimeout(() => {
       saveBtn.style.background = originalBg;
-      saveBtn.title = 'SAVE APPLICATION';
       saveBtn.innerHTML = originalHTML;
+      MarkUnsavedChanges(false, 0);
     }, 2000);
   }
 }
 
-// Clears all unsaved local cache keys from browser localStorage
-export function ClearAllLocalCaches() {
+// Global unsaved changes state tracker
+let isAppDirty = false;
+let appUnsavedCount = 0;
+
+export function HasUnsavedChanges() {
+  if (typeof window !== 'undefined') {
+    let hasProvider = false;
+    let anyDirty = false;
+
+    if (typeof window.HasUnsavedBookmarkChanges === 'function') {
+      hasProvider = true;
+      if (window.HasUnsavedBookmarkChanges()) anyDirty = true;
+    } else if (typeof window.__BOOKMARKS_UNSAVED__ === 'boolean') {
+      hasProvider = true;
+      if (window.__BOOKMARKS_UNSAVED__) anyDirty = true;
+    }
+
+    if (typeof window.HasUnsavedNotesChanges === 'function') {
+      hasProvider = true;
+      if (window.HasUnsavedNotesChanges()) anyDirty = true;
+    } else if (typeof window.__NOTES_UNSAVED__ === 'boolean') {
+      hasProvider = true;
+      if (window.__NOTES_UNSAVED__) anyDirty = true;
+    }
+
+    if (typeof window.HasUnsavedRDChanges === 'function') {
+      hasProvider = true;
+      if (window.HasUnsavedRDChanges()) anyDirty = true;
+    } else if (typeof window.__RD_UNSAVED__ === 'boolean') {
+      hasProvider = true;
+      if (window.__RD_UNSAVED__) anyDirty = true;
+    }
+
+    if (hasProvider) {
+      return anyDirty;
+    }
+
+    if (typeof window.__HAS_UNSAVED_CHANGES__ === 'boolean') {
+      return window.__HAS_UNSAVED_CHANGES__;
+    }
+  }
+  return isAppDirty;
+}
+
+export function GetUnsavedChangesCount() {
+  if (typeof window !== 'undefined') {
+    let total = 0;
+    let hasProvider = false;
+
+    if (typeof window.GetBookmarksUnsavedChangesCount === 'function') {
+      total += window.GetBookmarksUnsavedChangesCount();
+      hasProvider = true;
+    } else if (typeof window.__BOOKMARKS_UNSAVED_COUNT__ === 'number') {
+      total += window.__BOOKMARKS_UNSAVED_COUNT__;
+      hasProvider = true;
+    }
+
+    if (typeof window.GetNotesUnsavedChangesCount === 'function') {
+      total += window.GetNotesUnsavedChangesCount();
+      hasProvider = true;
+    } else if (typeof window.__NOTES_UNSAVED_COUNT__ === 'number') {
+      total += window.__NOTES_UNSAVED_COUNT__;
+      hasProvider = true;
+    }
+
+    if (typeof window.GetRDUnsavedChangesCount === 'function') {
+      total += window.GetRDUnsavedChangesCount();
+      hasProvider = true;
+    } else if (typeof window.__RD_UNSAVED_COUNT__ === 'number') {
+      total += window.__RD_UNSAVED_COUNT__;
+      hasProvider = true;
+    }
+
+    if (hasProvider) {
+      return total;
+    }
+  }
+  return appUnsavedCount;
+}
+
+export function MarkUnsavedChanges(isDirty = true, count = null) {
+  isAppDirty = Boolean(isDirty);
+  if (typeof count === 'number') {
+    appUnsavedCount = Math.max(0, count);
+  } else if (!isAppDirty) {
+    appUnsavedCount = 0;
+  } else {
+    appUnsavedCount = GetUnsavedChangesCount();
+    if (appUnsavedCount === 0 && isAppDirty) {
+      appUnsavedCount = 1;
+    }
+  }
+
+  if (typeof window !== 'undefined') {
+    window.__HAS_UNSAVED_CHANGES__ = isAppDirty;
+    window.__APP_UNSAVED_COUNT__ = appUnsavedCount;
+  }
+
+  const saveBtn = typeof document !== 'undefined' ? document.getElementById('save-btn') : null;
+  if (saveBtn) {
+    const badge = saveBtn.querySelector('.save-badge');
+    if (isAppDirty && appUnsavedCount > 0) {
+      saveBtn.classList.add('has-unsaved');
+      if (badge) {
+        badge.textContent = appUnsavedCount > 99 ? '99+' : String(appUnsavedCount);
+        badge.style.display = 'flex';
+      }
+      const changeText = appUnsavedCount === 1 ? '1 unsaved change' : `${appUnsavedCount} unsaved changes`;
+      saveBtn.title = `SAVE APPLICATION (${changeText})`;
+    } else {
+      saveBtn.classList.remove('has-unsaved');
+      if (badge) {
+        badge.textContent = '';
+        badge.style.display = 'none';
+      }
+      saveBtn.title = 'SAVE APPLICATION';
+    }
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.HasUnsavedChanges = HasUnsavedChanges;
+  window.GetUnsavedChangesCount = GetUnsavedChangesCount;
+  window.MarkUnsavedChanges = MarkUnsavedChanges;
+}
+
+// Deprecated refresh modal (kept as safe no-op for backward compatibility)
+export function ShowUnsavedRefreshModal() {
+  // Pure in-memory sessions rely on standard browser beforeunload navigation prompts
+}
+
+// Clears all unsaved local cache keys from browser localStorage.
+// preserveRecovery=true (boot sweep only) keeps the path-scoped sessionStorage
+// recovery snapshots alive — they must survive exits/reloads to be offerable;
+// the save flow (preserveRecovery=false default) clears them because the
+// edits are now permanent inside the downloaded file.
+export function ClearAllLocalCaches(preserveRecovery = false) {
   if (typeof localStorage === 'undefined') return;
   // 1. Clear known tab cache keys based on DOM data blocks
   if (typeof document !== 'undefined') {
@@ -436,7 +782,18 @@ export function ClearAllLocalCaches() {
       } catch (e) { }
     });
   }
-  // 2. Also sweep any key in localStorage ending with _Local_Cache
+
+  // 2. Clear known specific tab storage keys
+  try {
+    localStorage.removeItem('profftrack:v1');
+    localStorage.removeItem('rd_library_v1');
+    localStorage.removeItem('PapersData_Local_Cache');
+    localStorage.removeItem('NotesData_Local_Cache');
+    localStorage.removeItem('Bookmarks_Local_Cache');
+    localStorage.removeItem('LandingPageData_Local_Cache');
+  } catch (e) { }
+
+  // 3. Also sweep any key in localStorage ending with _Local_Cache or containing _Cache
   try {
     for (let i = localStorage.length - 1; i >= 0; i--) {
       const key = localStorage.key(i);
@@ -446,22 +803,89 @@ export function ClearAllLocalCaches() {
     }
   } catch (e) { }
 
-  // 3. Clear per-block undo/redo history stacks from memory
+  // 4. Clear per-block undo/redo history stacks from memory
   if (typeof window !== 'undefined' && window.__blockHistories) {
     try {
       window.__blockHistories.clear();
     } catch (e) { }
   }
 
+  // 5. Reset unsaved changes flag and baseline
+  isAppDirty = false;
+  appUnsavedCount = 0;
+  if (typeof window !== 'undefined') {
+    window.__HAS_UNSAVED_CHANGES__ = false;
+    window.__NOTES_UNSAVED__ = false;
+    window.__BOOKMARKS_UNSAVED__ = false;
+    window.__BOOKMARKS_UNSAVED_COUNT__ = 0;
+    window.__RD_UNSAVED__ = false;
+    window.__RD_UNSAVED_COUNT__ = 0;
+    if (!preserveRecovery) {
+      // Full clear (post-save): recovery snapshots die too — the downloaded
+      // file now contains the edits. The boot sweep (preserveRecovery=true)
+      // must NOT touch them.
+      if (typeof window.ClearNotesLocalCache === 'function') {
+        try { window.ClearNotesLocalCache(); } catch (e) { }
+      }
+      if (typeof window.ClearBookmarkLocalCache === 'function') {
+        try { window.ClearBookmarkLocalCache(); } catch (e) { }
+      }
+      if (typeof window.ClearRDLocalCache === 'function') {
+        try { window.ClearRDLocalCache(); } catch (e) { }
+      }
+    }
+  }
+  const saveBtn = typeof document !== 'undefined' ? document.getElementById('save-btn') : null;
+  if (saveBtn) {
+    saveBtn.classList.remove('has-unsaved');
+    const badge = saveBtn.querySelector('.save-badge');
+    if (badge) {
+      badge.textContent = '';
+      badge.style.display = 'none';
+    }
+    saveBtn.title = 'SAVE APPLICATION';
+  }
+
   console.log('[Save] All unsaved local caches flushed successfully.');
 }
 
-// Button Click Logic
+// Button Click & Lifecycle Guard Logic
 export function InitSaveButtonLogic() {
   const btn = document.getElementById('save-btn');
   if (btn) {
     btn.addEventListener('click', () => {
       SaveAndDownloadApp();
     });
+  }
+
+  // Restore unsaved indicator & badge if changes exist in active session
+  if (HasUnsavedChanges()) {
+    MarkUnsavedChanges(true, GetUnsavedChangesCount());
+  } else {
+    MarkUnsavedChanges(false, 0);
+  }
+
+  // Install navigation guards once per window
+  if (typeof window !== 'undefined' && !window.__UNSAVED_GUARD_INSTALLED__) {
+    window.__UNSAVED_GUARD_INSTALLED__ = true;
+
+    // Prompt on tab close / browser reload
+    window.addEventListener('beforeunload', (e) => {
+      if (window.__SUPPRESS_BEFOREUNLOAD__) return;
+      if (HasUnsavedChanges()) {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+      }
+    });
+
+    // NOTE: no pagehide wipe — sessionStorage recovery snapshots are per-tab
+    // and path-scoped, so they can never leak into another file, and wiping
+    // on exit destroyed the crash-recovery data right when it was needed.
+    // Legacy localStorage keys are purged on load by each tab's state module.
+
+    // Clean sweep on initial startup to ensure no stale cache from other files
+    // contaminates this session (recovery snapshots preserved)
+    ClearAllLocalCaches(true);
   }
 }

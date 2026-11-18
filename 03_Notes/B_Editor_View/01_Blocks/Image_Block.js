@@ -6,7 +6,7 @@
  */
 
 import { escapeHtml } from '../../02_Utils.js';
-import { applyFigureAttributes, formatFigureCaptionText, appendFigureCaption } from './Figure_Utils.js';
+import { applyFigureAttributes, formatFigureCaptionText, appendFigureCaption, renderInlineMathCaption } from './Figure_Utils.js';
 import { getBlockActionsHTML, initBlockActions } from './Block_Actions.js';
 
 /**
@@ -120,6 +120,8 @@ export function renderImageBlock(
   const tag = block.tag || '';
   const hasBorder = Boolean(block.hasBorder); // Default: false (OFF)
   const figNumber = figureInfo ? figureInfo.figNumber : null;
+  const figLabel = figureInfo ? (figureInfo.label || (figureInfo.figNumber !== null && figureInfo.figNumber !== undefined ? String(figureInfo.figNumber) : null)) : null;
+  const showCaptions = figureInfo ? figureInfo.showCaptions !== false : true;
   const rawWidth = (block.width !== undefined && block.width !== null && block.width !== '') ? block.width : 100;
   const parsedWidth = parseInt(rawWidth, 10);
   const fitPercent = (!isNaN(parsedWidth) && parsedWidth >= 10 && parsedWidth <= 100) ? parsedWidth : 100;
@@ -131,9 +133,20 @@ export function renderImageBlock(
     const wrap = document.createElement('figure');
     wrap.className = 'w-full flex flex-col items-center my-2 select-text';
 
-    applyFigureAttributes(wrap, { tag, figNumber });
+    applyFigureAttributes(wrap, { tag, figNumber, label: figLabel });
 
-    if (!url) {
+    const captionText = showCaptions ? formatFigureCaptionText({ caption, allowNumbering, figNumber, label: figLabel }) : '';
+    const frameClasses = `image-preview-fit-box overflow-hidden rounded-xl ${hasBorder ? 'border border-[var(--border)] bg-[var(--surface)] shadow-xs' : 'border border-transparent bg-transparent'} p-1.5 flex justify-center max-w-full transition-all`;
+
+    // Grid collage first — a grid-only block has no single url, so it must be checked
+    // before the empty-placeholder gate.
+    if (block.grid && block.gridOn) {
+      wrap.innerHTML = `
+        <div class="${frameClasses}" style="width: ${fitPercent}%;">
+          ${buildImageGridMarkup(normalizeGrid(block.grid), false)}
+        </div>
+      `;
+    } else if (!url) {
       wrap.innerHTML = `
         <div class="w-full p-8 rounded-xl border border-dashed border-[var(--border)] bg-[var(--surface)] text-center text-xs text-[var(--text-dim)] flex flex-col items-center justify-center gap-2 select-none">
           <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--text-dim)]"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
@@ -141,16 +154,14 @@ export function renderImageBlock(
         </div>
       `;
     } else {
-      const captionText = formatFigureCaptionText({ caption, allowNumbering, figNumber });
-
       wrap.innerHTML = `
-        <div class="overflow-hidden rounded-xl ${hasBorder ? 'border border-[var(--border)] bg-[var(--surface)] shadow-xs' : 'border border-transparent bg-transparent'} p-1.5 flex justify-center max-w-full transition-all" style="width: ${fitPercent}%;">
+        <div class="${frameClasses}" style="width: ${fitPercent}%;">
           <img src="${escapeHtml(url)}" alt="${escapeHtml(caption || 'Note Figure')}" class="w-full h-auto object-contain block rounded-lg transition-all" loading="lazy" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 100 60\\'><rect width=\\'100\\' height=\\'60\\' fill=\\'%23242840\\'/><text x=\\'50\\' y=\\'33\\' fill=\\'%23a0a4b8\\' font-size=\\'8\\' text-anchor=\\'middle\\'>Image failed to load</text></svg>'" />
         </div>
       `;
-      if (captionText) {
-        appendFigureCaption(wrap, captionText, 'mt-1.5');
-      }
+    }
+    if (captionText) {
+      appendFigureCaption(wrap, captionText, 'mt-1.5');
     }
 
     container.appendChild(wrap);
@@ -160,6 +171,7 @@ export function renderImageBlock(
   // =========================================================================
   // 2. EDIT MODE
   // =========================================================================
+  applyFigureAttributes(container, { tag, figNumber, label: figLabel });
   const editWrap = document.createElement('div');
   editWrap.className = 'flex flex-col gap-2 my-0.5 w-full';
 
@@ -169,9 +181,263 @@ export function renderImageBlock(
   let currentTag = tag;
   let currentBorderState = hasBorder;
   let currentFitPercent = fitPercent;
+  // NOTE: Wrap-Beside UI removed — side-by-side layout is owned by the Multi-Column
+  // orientation container. Legacy notes with block.wrap=true still render via the
+  // editor's wrap-row pairing pass.
+  let gridOn = Boolean(block.grid && block.gridOn);
+  let currentGrid = gridOn ? normalizeGrid(block.grid) : null;
+  let selectedCells = new Set();
+  let isMultiSelectActive = false;
+
+  function normalizeRatios(arr, len) {
+    const out = [];
+    for (let i = 0; i < len; i++) {
+      const v = Number(Array.isArray(arr) ? arr[i] : 1);
+      out.push(isFinite(v) && v > 0 ? v : 1);
+    }
+    return out;
+  }
+
+  function normalizeGrid(raw) {
+    const cols = Math.max(1, Math.min(6, Number(raw?.cols) || 2));
+    const rows = Math.max(1, Math.min(6, Number(raw?.rows) || 2));
+    const old = Array.isArray(raw?.cells) ? raw.cells : [];
+    const cells = [];
+    for (let i = 0; i < cols * rows; i++) {
+      const prev = old[i];
+      cells.push({
+        src: (prev && prev.src) ? prev.src : '',
+        caption: (prev && prev.caption) ? String(prev.caption) : '',
+        mw: (prev && !prev.gone) ? Math.max(1, Number(prev.mw) || 1) : 1,
+        mh: (prev && !prev.gone) ? Math.max(1, Number(prev.mh) || 1) : 1,
+        gone: Boolean(prev && prev.gone),
+        fitPercent: (prev && prev.fitPercent != null && !isNaN(Number(prev.fitPercent))) ? Math.max(10, Math.min(100, Number(prev.fitPercent))) : 100
+      });
+    }
+    return {
+      cols,
+      rows,
+      fit: raw?.fit === 'contain' ? 'contain' : 'cover',
+      colRatios: normalizeRatios(raw?.colRatios, cols),
+      rowRatios: normalizeRatios(raw?.rowRatios, rows),
+      cells
+    };
+  }
+
+  function getSelectedAtomicPoints(grid, selectedSet) {
+    if (!grid || !grid.cells) return [];
+    const points = [];
+    for (const idx of selectedSet) {
+      const cell = grid.cells[idx];
+      if (!cell || cell.gone) continue;
+      const r0 = Math.floor(idx / grid.cols);
+      const c0 = idx % grid.cols;
+      const mw = cell.mw || 1;
+      const mh = cell.mh || 1;
+      for (let r = 0; r < mh; r++) {
+        for (let c = 0; c < mw; c++) {
+          points.push({ r: r0 + r, c: c0 + c, cellIndex: idx });
+        }
+      }
+    }
+    return points;
+  }
+
+  function validateRectangularSelection(grid, selectedSet) {
+    if (!grid || !selectedSet || selectedSet.size < 2) return null;
+    const points = getSelectedAtomicPoints(grid, selectedSet);
+    if (points.length < 2) return null;
+
+    let rMin = Infinity, rMax = -Infinity;
+    let cMin = Infinity, cMax = -Infinity;
+    const pointSet = new Set();
+
+    for (const pt of points) {
+      rMin = Math.min(rMin, pt.r);
+      rMax = Math.max(rMax, pt.r);
+      cMin = Math.min(cMin, pt.c);
+      cMax = Math.max(cMax, pt.c);
+      const key = `${pt.r},${pt.c}`;
+      if (pointSet.has(key)) return null;
+      pointSet.add(key);
+    }
+
+    const expectedCount = (rMax - rMin + 1) * (cMax - cMin + 1);
+    if (points.length !== expectedCount) return null;
+
+    for (let r = rMin; r <= rMax; r++) {
+      for (let c = cMin; c <= cMax; c++) {
+        if (!pointSet.has(`${r},${c}`)) return null;
+      }
+    }
+
+    return {
+      rMin,
+      rMax,
+      cMin,
+      cMax,
+      width: cMax - cMin + 1,
+      height: rMax - rMin + 1
+    };
+  }
+
+  function mergeSelectedCells(rect) {
+    const g = currentGrid;
+    if (!g || !rect) return;
+    const { rMin, rMax, cMin, cMax, width, height } = rect;
+    const originIdx = rMin * g.cols + cMin;
+    const originCell = g.cells[originIdx];
+
+    let primarySrc = originCell?.src || '';
+    let primaryCaption = originCell?.caption || '';
+    let primaryFitPercent = originCell?.fitPercent || 100;
+
+    for (let r = rMin; r <= rMax; r++) {
+      for (let c = cMin; c <= cMax; c++) {
+        const idx = r * g.cols + c;
+        const cell = g.cells[idx];
+        if (!cell) continue;
+        if (!primarySrc && cell.src) {
+          primarySrc = cell.src;
+          primaryCaption = cell.caption || primaryCaption;
+          primaryFitPercent = cell.fitPercent || primaryFitPercent;
+        }
+      }
+    }
+
+    for (let r = rMin; r <= rMax; r++) {
+      for (let c = cMin; c <= cMax; c++) {
+        const idx = r * g.cols + c;
+        const cell = g.cells[idx];
+        if (!cell) continue;
+        if (r === rMin && c === cMin) {
+          cell.mw = width;
+          cell.mh = height;
+          cell.gone = false;
+          cell.src = primarySrc;
+          cell.caption = primaryCaption;
+          cell.fitPercent = primaryFitPercent;
+        } else {
+          cell.mw = 1;
+          cell.mh = 1;
+          cell.gone = true;
+          cell.src = '';
+          cell.caption = '';
+          cell.fitPercent = 100;
+        }
+      }
+    }
+
+    selectedCells.clear();
+    selectedCells.add(originIdx);
+    isMultiSelectActive = false;
+  }
+
+  function unmergeSelectedCells() {
+    const g = currentGrid;
+    if (!g || selectedCells.size === 0) return;
+    let didUnmerge = false;
+    for (const idx of Array.from(selectedCells)) {
+      const origin = findMergeOrigin(idx);
+      if (origin !== -1) {
+        const cell = g.cells[origin];
+        if (cell && (cell.mw > 1 || cell.mh > 1)) {
+          const mw = cell.mw;
+          const mh = cell.mh;
+          const r0 = Math.floor(origin / g.cols);
+          const c0 = origin % g.cols;
+          for (let r = 0; r < mh; r++) {
+            for (let c = 0; c < mw; c++) {
+              const t = g.cells[(r0 + r) * g.cols + (c0 + c)];
+              if (t) {
+                t.mw = 1;
+                t.mh = 1;
+                t.gone = false;
+                if ((r0 + r) * g.cols + (c0 + c) !== origin) {
+                  t.src = '';
+                  t.caption = '';
+                  t.fitPercent = 100;
+                }
+              }
+            }
+          }
+          didUnmerge = true;
+        }
+      }
+    }
+    if (didUnmerge) {
+      selectedCells.clear();
+      isMultiSelectActive = false;
+    }
+  }
+
+  function findMergeOrigin(idx) {
+    const g = currentGrid;
+    if (!g) return -1;
+    const cell = g.cells[idx];
+    if (cell && !cell.gone) {
+      return (cell.mw > 1 || cell.mh > 1) ? idx : -1;
+    }
+    const r = Math.floor(idx / g.cols), c = idx % g.cols;
+    for (let r0 = r; r0 >= 0; r0--) {
+      for (let c0 = c; c0 >= 0; c0--) {
+        const cand = g.cells[r0 * g.cols + c0];
+        if (cand && !cand.gone && (r0 + cand.mh) > r && (c0 + cand.mw) > c) {
+          return r0 * g.cols + c0;
+        }
+      }
+    }
+    return -1;
+  }
+
+  function buildImageGridMarkup(g, isEditView) {
+    const colsTemplate = normalizeRatios(g.colRatios, g.cols).map(r => `${r}fr`).join(' ');
+    const rowsTemplate = normalizeRatios(g.rowRatios, g.rows).map(r => `${r}fr`).join(' ');
+    const fitClass = g.fit === 'contain' ? 'object-contain' : 'object-cover';
+    let cellsHtml = '';
+    (g.cells || []).forEach((cell, i) => {
+      if (!cell || cell.gone) return;
+      const spanStyle = `grid-column: span ${cell.mw || 1}; grid-row: span ${cell.mh || 1};`;
+      const selected = isEditView && selectedCells.has(i);
+      const cellFit = (cell.fitPercent != null && !isNaN(Number(cell.fitPercent))) ? Math.max(10, Math.min(100, Number(cell.fitPercent))) : 100;
+      const imgHtml = cell.src
+        ? `<img src="${escapeHtml(cell.src)}" alt="Grid cell" class="${fitClass} block transition-all" style="width: ${cellFit}%; height: ${cellFit}%; max-width: 100%; max-height: 100%;" loading="lazy" />`
+        : `<div class="w-full h-full min-h-[90px] flex items-center justify-center text-[10px] text-[var(--text-dim)] border border-dashed border-[var(--border)] rounded ${isEditView ? 'cursor-pointer' : ''} select-none">empty</div>`;
+
+      const captionHtml = isEditView
+        ? `<div class="ig-cell-caption-wrap w-full px-1.5 py-0.5 bg-[var(--surface)] border-t border-[var(--border)]/60 select-none">
+            <input type="text" class="ig-cell-caption-input w-full text-[10.5px] text-center font-medium bg-transparent border-none outline-none text-[var(--text)] placeholder-[var(--text-dim)]" placeholder="(a) Subcaption..." value="${escapeHtml(cell.caption || '')}" data-cell-index="${i}" />
+          </div>`
+        : (cell.caption ? `
+          <figcaption class="ig-cell-caption-label w-full px-1.5 py-0.5 text-[10.5px] text-center text-[var(--text-secondary)] bg-[var(--surface)]/80 border-t border-[var(--border)]/40 select-text">
+            ${renderInlineMathCaption(cell.caption)}
+          </figcaption>` : '');
+
+      cellsHtml += `
+        <div class="ig-cell relative flex flex-col overflow-hidden rounded border border-[var(--border)]/70 bg-[var(--surface)] ${selected ? 'ring-2 ring-purple-500' : ''}" data-cell-index="${i}" style="${spanStyle}">
+          <div class="w-full flex-1 min-h-0 overflow-hidden flex items-center justify-center">
+            ${imgHtml}
+          </div>
+          ${captionHtml}
+        </div>
+      `;
+    });
+    return `<div class="image-grid-canvas w-full grid gap-1.5" style="grid-template-columns: ${colsTemplate}; grid-template-rows: ${rowsTemplate}; grid-auto-flow: dense;${isEditView ? ' min-height: 240px;' : ''}">${cellsHtml}</div>`;
+  }
 
   const renderEditMode = () => {
     const hasImage = Boolean(currentUrl);
+    let currentDisplayFit = currentFitPercent;
+    if (gridOn && currentGrid && selectedCells.size > 0) {
+      const firstIdx = selectedCells.values().next().value;
+      const cell = currentGrid.cells[firstIdx];
+      if (cell && cell.fitPercent != null) {
+        currentDisplayFit = cell.fitPercent;
+      }
+    }
+    const mergeRect = gridOn && currentGrid ? validateRectangularSelection(currentGrid, selectedCells) : null;
+    const canMerge = Boolean(mergeRect);
+    const canUnmerge = Boolean(gridOn && currentGrid && Array.from(selectedCells).some((idx) => findMergeOrigin(idx) !== -1));
 
     editWrap.innerHTML = `
       <!-- Top Row: Minimal Header & Action Controls -->
@@ -188,18 +454,75 @@ export function renderImageBlock(
           </button>
 
           <!-- Fit % Control Group -->
-          <div class="fit-control-wrap flex items-center gap-1 h-7 px-2 rounded-md border border-[var(--border)] bg-[var(--surface)] text-xs text-[var(--text-secondary)] select-none" title="Figure Width Percentage (10% - 100%)">
+          <div class="fit-control-wrap flex items-center gap-1 h-7 px-2 rounded-md border border-[var(--border)] bg-[var(--surface)] text-xs text-[var(--text-secondary)] select-none" title="${gridOn && selectedCells.size > 0 ? 'Selected Cell Image Fit (10% - 100%)' : 'Figure Width Percentage (10% - 100%)'}">
             <span class="text-[11px] font-semibold text-[var(--text-dim)] select-none">Fit:</span>
-            <input type="number" min="10" max="100" step="5" class="fit-percent-input w-11 h-5 text-center font-mono text-xs font-semibold text-[var(--text)] bg-transparent border-none outline-none p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" placeholder="50-100" value="${currentFitPercent}" />
+            <input type="number" min="10" max="100" step="5" class="fit-percent-input w-11 h-5 text-center font-mono text-xs font-semibold text-[var(--text)] bg-transparent border-none outline-none p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" placeholder="50-100" value="${currentDisplayFit}" />
             <span class="text-[11px] font-mono font-bold text-[var(--text-dim)] select-none">%</span>
           </div>
+
+          <!-- Wrap-Beside UI removed: layout is owned by the Multi-Column orientation container -->
+
+          <!-- Grid Collage Toggle -->
+          <button type="button" class="btn-grid-toggle h-7 px-2 py-0 text-xs font-semibold rounded-md border flex items-center justify-center gap-1 transition-all flex-shrink-0 cursor-pointer ${gridOn ? 'border-purple-500 bg-purple-500/15 text-purple-400 shadow-xs' : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-dim)] opacity-70'}" title="Grid Collage: turn this image block into an N×M cell collage (kept as a single figure)">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" class="flex-shrink-0"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect></svg>
+            <span>Grid</span>
+          </button>
         </div>
 
         ${getBlockActionsHTML({ index, totalBlocks })}
       </div>
 
-      <!-- State A: 3-in-1 Empty Ingestion Zone (Vanishes once image is loaded) -->
-      ${!hasImage ? `
+      ${gridOn ? `
+        <!-- Grid Collage Editor -->
+        <div class="grid-editor-zone flex flex-col gap-2.5 w-full pt-1">
+          <div class="flex items-center gap-2 flex-wrap text-xs text-[var(--text-secondary)] select-none">
+            <label class="flex items-center gap-1 cursor-pointer">Cols
+              <input type="number" min="1" max="6" class="grid-cols-input w-11 h-6 text-center font-mono text-xs font-semibold text-[var(--text)] rounded-md border border-[var(--border)] bg-[var(--surface)] outline-none focus:border-purple-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value="${currentGrid.cols}" />
+            </label>
+            <span class="text-[var(--text-dim)] font-mono">×</span>
+            <label class="flex items-center gap-1 cursor-pointer">Rows
+              <input type="number" min="1" max="6" class="grid-rows-input w-11 h-6 text-center font-mono text-xs font-semibold text-[var(--text)] rounded-md border border-[var(--border)] bg-[var(--surface)] outline-none focus:border-purple-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value="${currentGrid.rows}" />
+            </label>
+            <select class="grid-fit-select h-6 px-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] text-xs text-[var(--text)] outline-none cursor-pointer" title="How each image fills its cell">
+              <option value="cover" ${currentGrid.fit === 'cover' ? 'selected' : ''}>Fill cell (cover)</option>
+              <option value="contain" ${currentGrid.fit === 'contain' ? 'selected' : ''}>Fit inside (contain)</option>
+            </select>
+            <button type="button" class="btn-grid-multiselect h-7 px-2.5 py-0 text-[11px] font-semibold rounded-md border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${isMultiSelectActive ? 'border-purple-500 bg-purple-500/15 text-purple-300 shadow-xs' : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-dim)] hover:text-[var(--text)]'}" title="Multi-select grid cells (Click to select all cells, click cells to toggle selection)">
+              <span>Multi-select</span>
+              ${selectedCells.size > 0 ? `<span class="px-1 py-0.2 rounded-full text-[9px] font-mono bg-purple-500/30 text-purple-200">${selectedCells.size}</span>` : ''}
+            </button>
+            <button type="button" class="btn-grid-merge h-7 px-2.5 py-0 text-[11px] font-semibold rounded-md border flex items-center justify-center transition-all ${canMerge ? 'border-purple-500 bg-purple-500/15 text-purple-300 shadow-xs cursor-pointer hover:bg-purple-500/25' : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-dim)] opacity-40 cursor-not-allowed pointer-events-none'}" title="Merge the selected cells into one rectangle" ${canMerge ? '' : 'disabled'}>Merge</button>
+            <button type="button" class="btn-grid-unmerge h-7 px-2.5 py-0 text-[11px] font-semibold rounded-md border flex items-center justify-center transition-all ${canUnmerge ? 'border-purple-500 bg-purple-500/15 text-purple-300 shadow-xs cursor-pointer hover:bg-purple-500/25' : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-dim)] opacity-40 cursor-not-allowed pointer-events-none'}" title="Restore the selected merged region into individual cells" ${canUnmerge ? '' : 'disabled'}>Unmerge</button>
+            <span class="text-[10px] text-[var(--text-dim)] italic">Select adjacent cells/rectangle to merge. Drop images straight onto cells.</span>
+          </div>
+
+          <div class="grid-canvas-mount w-full"></div>
+
+          <div class="flex items-center gap-2 flex-wrap text-xs text-[var(--text-secondary)]">
+            <label class="flex items-center gap-1 cursor-pointer" title="Relative widths of the columns">Col ratios
+              <input type="text" class="grid-col-ratios w-24 h-6 text-center font-mono text-xs text-[var(--text)] rounded-md border border-[var(--border)] bg-[var(--surface)] outline-none focus:border-purple-500" value="${currentGrid.colRatios.join(':')}" placeholder="1:2:1" spellcheck="false" />
+            </label>
+            <label class="flex items-center gap-1 cursor-pointer" title="Relative heights of the rows">Row ratios
+              <input type="text" class="grid-row-ratios w-24 h-6 text-center font-mono text-xs text-[var(--text)] rounded-md border border-[var(--border)] bg-[var(--surface)] outline-none focus:border-purple-500" value="${currentGrid.rowRatios.join(':')}" placeholder="1:1" spellcheck="false" />
+            </label>
+            <button type="button" class="btn-grid-reset-ratios notes-ghost-btn h-6 px-2 py-0 text-[11px] font-semibold flex items-center gap-1" title="Reset grid row and column ratios to 1:1">
+              <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><polyline points="3 3 3 8 8 8"/></svg>
+              <span>Reset Ratios</span>
+            </button>
+          </div>
+
+          <div class="flex items-center gap-2 flex-wrap">
+            <input type="file" accept="image/*,.svg" class="grid-cell-file-input hidden" />
+            <button type="button" class="btn-grid-cell-upload notes-ghost-btn h-7 px-2.5 py-0 text-[11px] font-semibold flex items-center gap-1.5" title="Upload an image into the selected cell">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <span>Upload to Cell</span>
+            </button>
+            <input type="text" class="grid-cell-paste notes-search-input text-xs font-mono px-2.5 py-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] outline-none focus:border-purple-500 flex-1 min-w-[160px]" placeholder="Paste URL / Base64 / SVG for selected cell..." spellcheck="false" autocomplete="off" />
+            <button type="button" class="btn-grid-cell-remove notes-ghost-btn h-7 px-2.5 py-0 text-[11px] font-semibold" title="Remove the image from the selected cell">Clear Cell</button>
+          </div>
+        </div>
+      ` : (!hasImage ? `
+        <!-- State A: 3-in-1 Empty Ingestion Zone (Vanishes once image is loaded) -->
         <div class="image-ingestion-zone flex flex-col gap-2.5 w-full pt-1">
           <div class="flex items-center gap-2 w-full flex-wrap sm:flex-nowrap">
             <input type="file" accept="image/*,.svg" class="file-upload-input hidden" />
@@ -217,34 +540,68 @@ export function renderImageBlock(
           </div>
         </div>
       ` : `
-        <!-- State B: Image Preview & Caption Controls -->
+        <!-- State B: Image Preview (fields are shared below) -->
         <div class="image-active-zone flex flex-col gap-2.5 w-full pt-1">
           <div class="image-preview-card w-full p-3 rounded-xl ${currentBorderState ? 'border border-[var(--border)] bg-[var(--surface)] shadow-xs' : 'border border-transparent bg-transparent'} flex flex-col items-center justify-center overflow-hidden transition-all">
-            <div class="image-preview-fit-box flex justify-center max-w-full transition-all" style="width: ${currentFitPercent}%;">
+            <div class="image-preview-fit-box relative flex justify-center max-w-full transition-all group/fit" style="width: ${currentFitPercent}%;">
               <img src="${escapeHtml(currentUrl)}" alt="Figure Preview" class="w-full h-auto object-contain rounded-lg transition-all" onerror="this.parentElement.innerHTML='<span class=\\'text-amber-400 text-xs p-3\\'>Invalid image data</span>'" />
-            </div>
-          </div>
-
-          <div class="flex flex-col gap-2 w-full pt-1">
-            <div class="flex items-center gap-3 w-full flex-wrap">
-              <label class="flex items-center gap-1.5 text-xs text-[var(--text)] font-semibold cursor-pointer select-none">
-                <input type="checkbox" class="allow-numbering-cb w-4 h-4 rounded accent-purple-500 cursor-pointer" ${currentAllowNumbering ? 'checked' : ''} />
-                <span>Allow Numbering</span>
-              </label>
-              <div class="flex items-center gap-1.5 flex-1 min-w-[140px]">
-                <span class="text-[11px] font-mono text-[var(--text-dim)] select-none">Tag:</span>
-                <input type="text" class="tag-input text-xs font-mono px-2.5 py-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] outline-none focus:border-purple-500 text-[var(--text)] w-full transition-colors" placeholder="e.g. laser, optics, 1..." value="${escapeHtml(currentTag)}" />
+              <!-- Canva-Style Drag Resize Handle -->
+              <div class="image-resize-handle absolute top-0 -right-2.5 w-4 h-full cursor-ew-resize flex items-center justify-center group-hover/fit:opacity-100 opacity-60 hover:opacity-100 transition-opacity z-10 touch-none select-none" title="Drag to resize width (Double-click to reset 100%)">
+                <div class="w-1.5 h-10 bg-purple-500 rounded-full shadow-md hover:scale-110 active:scale-125 transition-transform"></div>
               </div>
             </div>
-
-            <textarea class="caption-input text-xs p-2.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] w-full outline-none focus:border-purple-500 text-[var(--text)] resize-y min-h-[44px] transition-colors" placeholder="Caption (optional)...">${escapeHtml(currentCaption)}</textarea>
           </div>
         </div>
-      `}
+      `)}
+
+      ${(gridOn || hasImage) ? `
+        <!-- Shared Figure Fields: numbering, tag, caption -->
+        <div class="flex flex-col gap-2 w-full pt-1">
+          <div class="flex items-center gap-3 w-full flex-wrap">
+            <label class="flex items-center gap-1.5 text-xs text-[var(--text)] font-semibold cursor-pointer select-none">
+              <input type="checkbox" class="allow-numbering-cb w-4 h-4 rounded accent-purple-500 cursor-pointer" ${currentAllowNumbering ? 'checked' : ''} />
+              <span>Allow Numbering</span>
+            </label>
+            <div class="flex items-center gap-1.5 flex-1 min-w-[140px]">
+              <span class="text-[11px] font-mono text-[var(--text-dim)] select-none">Tag:</span>
+              <input type="text" class="tag-input text-xs font-mono px-2.5 py-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] outline-none focus:border-purple-500 text-[var(--text)] w-full transition-colors" placeholder="e.g. laser, optics, 1..." value="${escapeHtml(currentTag)}" />
+            </div>
+          </div>
+
+          <textarea class="caption-input text-xs p-2.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] w-full outline-none focus:border-purple-500 text-[var(--text)] resize-y min-h-[44px] transition-colors" placeholder="Caption (optional)...">${escapeHtml(currentCaption)}</textarea>
+        </div>
+      ` : ''}
     `;
 
-    // Bind Ingestion Events (if empty)
-    if (!hasImage) {
+    // Canonical field persistence for every edit-mode mutation
+    // (wrap/wrapSide are legacy-only — no longer written by this block)
+    const commitFields = () => {
+      block.url = currentUrl;
+      block.content = currentUrl;
+      block.caption = currentCaption;
+      block.allowNumbering = currentAllowNumbering;
+      block.tag = currentTag;
+      block.hasBorder = currentBorderState;
+      block.width = currentFitPercent;
+      block.grid = currentGrid;
+      block.gridOn = gridOn && Boolean(currentGrid);
+      if (onUpdate) {
+        onUpdate({
+          url: currentUrl,
+          content: currentUrl,
+          caption: currentCaption,
+          allowNumbering: currentAllowNumbering,
+          tag: currentTag,
+          hasBorder: currentBorderState,
+          width: currentFitPercent,
+          grid: currentGrid,
+          gridOn: gridOn && Boolean(currentGrid)
+        });
+      }
+    };
+
+    // Bind Ingestion Events (single-image mode, still empty)
+    if (!gridOn && !hasImage) {
       const fileInput = editWrap.querySelector('.file-upload-input');
       const uploadBtn = editWrap.querySelector('.btn-upload');
       const pasteSlot = editWrap.querySelector('.paste-slot');
@@ -331,34 +688,38 @@ export function renderImageBlock(
           if (text) await applyNewImage(text);
         }
       });
-    } else {
-      // Bind Active State inputs
+    }
+
+    // Bind Shared Figure Fields (present in single-image preview AND grid modes)
+    {
       const allowNumberingCb = editWrap.querySelector('.allow-numbering-cb');
       const tagInput = editWrap.querySelector('.tag-input');
       const captionInput = editWrap.querySelector('.caption-input');
 
+      // Tag uniqueness among figure blocks (image/tikz namespace; equation tags are independent).
+      const isTagTaken = (value) => {
+        const v = String(value || '').trim().toLowerCase();
+        if (!v) return false;
+        return figureInfo && figureInfo.usedTags instanceof Set ? figureInfo.usedTags.has(v) : false;
+      };
+      const paintTagState = () => {
+        if (!tagInput) return false;
+        const dup = isTagTaken(tagInput.value);
+        tagInput.classList.toggle('border-red-500', dup);
+        tagInput.classList.toggle('text-red-400', dup);
+        tagInput.title = dup ? `Tag "${tagInput.value.trim()}" is already used by another figure — pick a different one` : '';
+        return !dup;
+      };
+      tagInput?.addEventListener('input', paintTagState);
+      paintTagState();
+
       const triggerFieldUpdate = () => {
         currentAllowNumbering = Boolean(allowNumberingCb?.checked);
-        currentTag = tagInput?.value.trim() || '';
-        currentCaption = captionInput?.value || '';
-
-        block.allowNumbering = currentAllowNumbering;
-        block.tag = currentTag;
-        block.caption = currentCaption;
-        block.hasBorder = currentBorderState;
-        block.width = currentFitPercent;
-
-        if (onUpdate) {
-          onUpdate({
-            url: currentUrl,
-            content: currentUrl,
-            caption: currentCaption,
-            allowNumbering: currentAllowNumbering,
-            tag: currentTag,
-            hasBorder: currentBorderState,
-            width: currentFitPercent
-          });
+        if (!isTagTaken(tagInput?.value)) {
+          currentTag = tagInput?.value.trim() || '';
         }
+        currentCaption = captionInput?.value || '';
+        commitFields();
       };
 
       allowNumberingCb?.addEventListener('change', triggerFieldUpdate);
@@ -366,24 +727,234 @@ export function renderImageBlock(
       captionInput?.addEventListener('input', triggerFieldUpdate);
     }
 
+    // Bind Grid Collage Editor
+    if (gridOn && currentGrid) {
+      const canvasMount = editWrap.querySelector('.grid-canvas-mount');
+      if (canvasMount) canvasMount.innerHTML = buildImageGridMarkup(currentGrid, true);
+
+      const applyGridCellImage = async (fileOrStr, idx) => {
+        if (!currentGrid || idx < 0) return;
+        const compressed = await processAndCompressImage(fileOrStr);
+        if (compressed) {
+          currentGrid.cells[idx].src = compressed;
+          commitFields();
+          renderEditMode();
+        }
+      };
+
+      canvasMount?.querySelectorAll('.ig-cell').forEach((cellEl) => {
+        const idx = Number(cellEl.getAttribute('data-cell-index'));
+        cellEl.addEventListener('click', (e) => {
+          if (e.target.closest('.ig-cell-caption-input')) return;
+          e.stopPropagation();
+          if (isMultiSelectActive || e.shiftKey || e.ctrlKey || e.metaKey) {
+            if (selectedCells.has(idx)) {
+              selectedCells.delete(idx);
+            } else {
+              selectedCells.add(idx);
+            }
+          } else {
+            selectedCells.clear();
+            selectedCells.add(idx);
+          }
+          renderEditMode();
+        });
+        ['dragenter', 'dragover'].forEach((n) => cellEl.addEventListener(n, (ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          cellEl.classList.add('ring-2', 'ring-cyan-400');
+        }));
+        ['dragleave', 'drop'].forEach((n) => cellEl.addEventListener(n, (ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          cellEl.classList.remove('ring-2', 'ring-cyan-400');
+        }));
+        cellEl.addEventListener('drop', async (ev) => {
+          const file = ev.dataTransfer?.files?.[0];
+          await applyGridCellImage(file || ev.dataTransfer?.getData('text'), idx);
+        });
+      });
+
+      canvasMount?.querySelectorAll('.ig-cell-caption-input').forEach((inputEl) => {
+        inputEl.addEventListener('click', (e) => e.stopPropagation());
+        inputEl.addEventListener('focus', (e) => e.stopPropagation());
+        inputEl.addEventListener('input', (e) => {
+          e.stopPropagation();
+          const cellIdx = Number(inputEl.getAttribute('data-cell-index'));
+          if (currentGrid && currentGrid.cells[cellIdx]) {
+            currentGrid.cells[cellIdx].caption = inputEl.value;
+            commitFields();
+          }
+        });
+      });
+
+      editWrap.querySelector('.btn-grid-multiselect')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const activeIndices = [];
+        currentGrid.cells.forEach((c, i) => {
+          if (c && !c.gone) activeIndices.push(i);
+        });
+        if (selectedCells.size === activeIndices.length && activeIndices.length > 0) {
+          selectedCells.clear();
+          isMultiSelectActive = false;
+        } else {
+          selectedCells.clear();
+          activeIndices.forEach((i) => selectedCells.add(i));
+          isMultiSelectActive = true;
+        }
+        renderEditMode();
+      });
+
+      editWrap.querySelector('.btn-grid-merge')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const rect = validateRectangularSelection(currentGrid, selectedCells);
+        if (rect) {
+          mergeSelectedCells(rect);
+          commitFields();
+          renderEditMode();
+        }
+      });
+
+      editWrap.querySelector('.btn-grid-unmerge')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        unmergeSelectedCells();
+        commitFields();
+        renderEditMode();
+      });
+
+      const colsInput = editWrap.querySelector('.grid-cols-input');
+      const rowsInput = editWrap.querySelector('.grid-rows-input');
+      const redimensionGrid = () => {
+        const c = Math.max(1, Math.min(6, parseInt(colsInput?.value, 10) || 2));
+        const r = Math.max(1, Math.min(6, parseInt(rowsInput?.value, 10) || 2));
+        if (colsInput) colsInput.value = c;
+        if (rowsInput) rowsInput.value = r;
+        currentGrid.cols = c;
+        currentGrid.rows = r;
+        currentGrid.colRatios = normalizeRatios(currentGrid.colRatios, c);
+        currentGrid.rowRatios = normalizeRatios(currentGrid.rowRatios, r);
+        const oldCells = (currentGrid.cells || []).map((cell) => (cell && !cell.gone) ? { src: cell.src || '', caption: cell.caption || '', fitPercent: cell.fitPercent || 100 } : { src: '', caption: '', fitPercent: 100 });
+        currentGrid.cells = [];
+        for (let i = 0; i < c * r; i++) {
+          const old = oldCells[i] || { src: '', caption: '', fitPercent: 100 };
+          currentGrid.cells.push({ src: old.src, caption: old.caption, fitPercent: old.fitPercent || 100, mw: 1, mh: 1, gone: false });
+        }
+        selectedCells.clear();
+        isMultiSelectActive = false;
+        commitFields();
+        renderEditMode();
+      };
+      colsInput?.addEventListener('change', redimensionGrid);
+      rowsInput?.addEventListener('change', redimensionGrid);
+
+      editWrap.querySelector('.grid-fit-select')?.addEventListener('change', (e) => {
+        e.stopPropagation();
+        currentGrid.fit = e.target.value === 'contain' ? 'contain' : 'cover';
+        commitFields();
+        renderEditMode();
+      });
+
+      const parseRatios = (str, len) => normalizeRatios(String(str).split(':').map((s) => Number(s.trim())), len);
+      editWrap.querySelector('.grid-col-ratios')?.addEventListener('change', (e) => {
+        currentGrid.colRatios = parseRatios(e.target.value, currentGrid.cols);
+        e.target.value = currentGrid.colRatios.join(':');
+        commitFields();
+        renderEditMode();
+      });
+      editWrap.querySelector('.grid-row-ratios')?.addEventListener('change', (e) => {
+        currentGrid.rowRatios = parseRatios(e.target.value, currentGrid.rows);
+        e.target.value = currentGrid.rowRatios.join(':');
+        commitFields();
+        renderEditMode();
+      });
+      editWrap.querySelector('.btn-grid-reset-ratios')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        currentGrid.colRatios = normalizeRatios([], currentGrid.cols);
+        currentGrid.rowRatios = normalizeRatios([], currentGrid.rows);
+        commitFields();
+        renderEditMode();
+      });
+
+      const gridFileInput = editWrap.querySelector('.grid-cell-file-input');
+      editWrap.querySelector('.btn-grid-cell-upload')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        gridFileInput?.click();
+      });
+      gridFileInput?.addEventListener('change', async (e) => {
+        const file = e.target.files?.[0];
+        const target = selectedCells.size > 0 ? selectedCells.values().next().value : Math.max(0, currentGrid.cells.findIndex((c) => !c.src && !c.gone));
+        if (file) await applyGridCellImage(file, target);
+        e.target.value = '';
+      });
+
+      const gridPasteSlot = editWrap.querySelector('.grid-cell-paste');
+      gridPasteSlot?.addEventListener('paste', async (e) => {
+        const items = e.clipboardData?.items;
+        if (items) {
+          for (const item of items) {
+            if (item.type.indexOf('image') !== -1) {
+              const file = item.getAsFile();
+              if (file) {
+                e.preventDefault();
+                const target = selectedCells.size > 0 ? selectedCells.values().next().value : Math.max(0, currentGrid.cells.findIndex((c) => !c.src && !c.gone));
+                await applyGridCellImage(file, target);
+                return;
+              }
+            }
+          }
+        }
+      });
+      gridPasteSlot?.addEventListener('change', async () => {
+        const val = gridPasteSlot.value.trim();
+        if (val) {
+          const target = selectedCells.size > 0 ? selectedCells.values().next().value : Math.max(0, currentGrid.cells.findIndex((c) => !c.src && !c.gone));
+          await applyGridCellImage(val, target);
+        }
+      });
+
+      editWrap.querySelector('.btn-grid-cell-remove')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (selectedCells.size > 0) {
+          selectedCells.forEach((idx) => {
+            const origin = findMergeOrigin(idx);
+            const targetIdx = origin >= 0 ? origin : idx;
+            if (currentGrid.cells[targetIdx]) {
+              currentGrid.cells[targetIdx].src = '';
+            }
+          });
+          commitFields();
+          renderEditMode();
+        }
+      });
+    }
+
     // Fit % Width Handling
     const fitInput = editWrap.querySelector('.fit-percent-input');
     const previewFitBox = editWrap.querySelector('.image-preview-fit-box');
 
     const updateFitWidth = (newVal) => {
-      currentFitPercent = newVal;
-      block.width = currentFitPercent;
-      if (previewFitBox) previewFitBox.style.width = `${currentFitPercent}%`;
-      if (onUpdate) {
-        onUpdate({
-          url: currentUrl,
-          content: currentUrl,
-          caption: currentCaption,
-          allowNumbering: currentAllowNumbering,
-          tag: currentTag,
-          hasBorder: currentBorderState,
-          width: currentFitPercent
+      if (gridOn && currentGrid && selectedCells.size > 0) {
+        selectedCells.forEach((idx) => {
+          const cell = currentGrid.cells[idx];
+          if (cell) {
+            cell.fitPercent = newVal;
+            const imgEl = editWrap.querySelector(`.ig-cell[data-cell-index="${idx}"] img`);
+            if (imgEl) {
+              imgEl.style.width = `${newVal}%`;
+              imgEl.style.height = `${newVal}%`;
+            }
+          }
         });
+        if (onUpdate) {
+          commitFields();
+        }
+      } else {
+        currentFitPercent = newVal;
+        block.width = currentFitPercent;
+        if (previewFitBox) previewFitBox.style.width = `${currentFitPercent}%`;
+        if (onUpdate) {
+          commitFields();
+        }
       }
     };
 
@@ -410,6 +981,72 @@ export function renderImageBlock(
       updateFitWidth(val);
     });
 
+    // Canva-Style Pointer Drag Resize Handle
+    const resizeHandle = editWrap.querySelector('.image-resize-handle');
+    if (resizeHandle && previewFitBox) {
+      let isDragging = false;
+      let startX = 0;
+      let startWidthPct = currentFitPercent;
+      let parentWidth = 1;
+
+      resizeHandle.addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+        if (fitInput) fitInput.value = 100;
+        updateFitWidth(100);
+      });
+
+      resizeHandle.addEventListener('pointerdown', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        isDragging = true;
+        resizeHandle.setPointerCapture(e.pointerId);
+        startX = e.clientX;
+        startWidthPct = currentFitPercent;
+        const parentCard = editWrap.querySelector('.image-preview-card');
+        parentWidth = parentCard ? parentCard.getBoundingClientRect().width : 600;
+        if (parentWidth <= 0) parentWidth = 1;
+        document.body.style.cursor = 'ew-resize';
+      });
+
+      resizeHandle.addEventListener('pointermove', (e) => {
+        if (!isDragging) return;
+        e.stopPropagation();
+        e.preventDefault();
+        const deltaX = (e.clientX - startX) * 2;
+        const deltaPct = (deltaX / parentWidth) * 100;
+        let newPct = Math.round(startWidthPct + deltaPct);
+        newPct = Math.max(10, Math.min(100, newPct));
+        if (fitInput) fitInput.value = newPct;
+        currentFitPercent = newPct;
+        block.width = newPct;
+        if (previewFitBox) previewFitBox.style.width = `${newPct}%`;
+      });
+
+      const stopDrag = (e) => {
+        if (!isDragging) return;
+        isDragging = false;
+        try { resizeHandle.releasePointerCapture(e.pointerId); } catch (_) {}
+        document.body.style.cursor = '';
+        updateFitWidth(currentFitPercent);
+      };
+
+      resizeHandle.addEventListener('pointerup', stopDrag);
+      resizeHandle.addEventListener('pointercancel', stopDrag);
+    }
+
+    // Grid Collage Toggle
+    editWrap.querySelector('.btn-grid-toggle')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      gridOn = !gridOn;
+      if (gridOn) {
+        currentGrid = normalizeGrid(currentGrid || block.grid || null);
+      }
+      selectedCells.clear();
+      isMultiSelectActive = false;
+      commitFields();
+      renderEditMode();
+    });
+
     // Border Toggle Action
     const borderToggleBtn = editWrap.querySelector('.btn-border-toggle');
     borderToggleBtn?.addEventListener('click', (e) => {
@@ -430,39 +1067,14 @@ export function renderImageBlock(
       }
 
       if (onUpdate) {
-        onUpdate({
-          url: currentUrl,
-          content: currentUrl,
-          caption: currentCaption,
-          allowNumbering: currentAllowNumbering,
-          tag: currentTag,
-          hasBorder: currentBorderState,
-          width: currentFitPercent
-        });
+        commitFields();
       }
     });
 
     // Top Right Action Buttons
     initBlockActions(editWrap, {
       onDone: () => {
-        block.url = currentUrl;
-        block.content = currentUrl;
-        block.caption = currentCaption;
-        block.allowNumbering = currentAllowNumbering;
-        block.tag = currentTag;
-        block.hasBorder = currentBorderState;
-        block.width = currentFitPercent;
-        if (onUpdate) {
-          onUpdate({
-            url: currentUrl,
-            content: currentUrl,
-            caption: currentCaption,
-            allowNumbering: currentAllowNumbering,
-            tag: currentTag,
-            hasBorder: currentBorderState,
-            width: currentFitPercent
-          });
-        }
+        commitFields();
         if (onDone) onDone();
       },
       onMoveUp,

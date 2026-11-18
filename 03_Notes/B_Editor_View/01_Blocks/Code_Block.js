@@ -9,7 +9,7 @@
  */
 
 import { highlightCode, ensureHighlightJsLoaded } from '../../Writing_Engine/Code_Highlighter.js';
-import { attachBlockHistory } from '../../Writing_Engine/Block_History.js';
+import { attachBlockHistory, recordBlockSnapshot } from '../../Writing_Engine/Block_History.js';
 import { escapeHtml } from '../../02_Utils.js';
 
 // Inject code card styling once
@@ -139,7 +139,7 @@ export function renderCodeBlock(
   ensureHighlightJsLoaded();
 
   const container = document.createElement('div');
-  container.className = 'w-full my-1.5';
+  container.className = 'w-full my-1';
 
   const card = document.createElement('div');
   card.className = 'notes-code-card w-full shadow-xs';
@@ -402,6 +402,8 @@ export function renderCodeBlock(
           currentCode = textarea.value;
           block.code = currentCode;
           block.content = currentCode;
+          // Tab edits set .value programmatically (no input event); keep them as distinct undo steps
+          recordBlockSnapshot(block.id, currentCode, textarea.selectionStart, textarea.selectionEnd, { immediate: true });
           autoResize();
           if (onUpdate) {
             onUpdate({ code: currentCode, content: currentCode, title: currentTitle, language });

@@ -4,13 +4,14 @@
  * template browser, template naming modal, and flexible \begin{tikzpicture}[...] support.
  */
 
-import { renderTikzToElement, getCachedTikzSvg, healTikzCode } from '../../Writing_Engine/Tikz_Renderer.js';
+import { renderTikzToElement, getCachedTikzSvg, healTikzCode } from '../../Writing_Engine/Tikz_Engine/Tikz_Renderer.js';
 import { escapeHtml } from '../../02_Utils.js';
 import { CreateColorSelector } from '../../../00_Components/06_Color_Selector.js';
 import { GetTikzTemplatesModalHTML, InitTikzTemplatesLogic } from './Tikz_Templates_Modal.js';
 import { getBlockActionsHTML, initBlockActions } from './Block_Actions.js';
 import { applyFigureAttributes, formatFigureCaptionText, appendFigureCaption } from './Figure_Utils.js';
 import { createCodeEditor } from './Block_Textarea.js';
+import { recordBlockSnapshot } from '../../Writing_Engine/Block_History.js';
 
 if (typeof document !== 'undefined' && !document.getElementById('tikz-block-animation-styles')) {
   const animStyle = document.createElement('style');
@@ -70,12 +71,14 @@ if (typeof document !== 'undefined' && !document.getElementById('tikz-block-anim
 
 export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onDone = null, onMoveUp = null, onMoveDown = null, onDelete = null, index = 0, totalBlocks = 1, figureInfo = null } = {}) {
   const container = document.createElement('div');
-  container.className = 'w-full my-1.5';
+  container.className = 'w-full my-1';
   const caption = block.caption || '';
   const allowNumbering = block.allowNumbering !== false;
   const tag = block.tag || '';
   const hasBorder = Boolean(block.hasBorder); // Default: false (OFF)
   const figNumber = figureInfo ? figureInfo.figNumber : null;
+  const figLabel = figureInfo ? (figureInfo.label || (figureInfo.figNumber !== null && figureInfo.figNumber !== undefined ? String(figureInfo.figNumber) : null)) : null;
+  const showCaptions = figureInfo ? figureInfo.showCaptions !== false : true;
 
   const tikzCode = block.code || block.content || String.raw`\begin{tikzpicture}[
     x=0.024cm,
@@ -109,10 +112,10 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
     wrap.className = `my-1 p-4 rounded-xl ${borderClasses} flex flex-col items-center justify-center w-full select-text transition-all box-border`;
     wrap.style.scrollbarWidth = 'thin';
 
-    applyFigureAttributes(wrap, { tag, figNumber });
+    applyFigureAttributes(wrap, { tag, figNumber, label: figLabel });
 
     const svgWrap = document.createElement('div');
-    svgWrap.className = 'flex flex-col items-center justify-center transition-all';
+    svgWrap.className = 'preview-inner flex flex-col items-center justify-center transition-all';
     svgWrap.style.width = `${fitPercent}%`;
     svgWrap.style.maxWidth = '100%';
     const cachedSvg = getCachedTikzSvg(tikzCode);
@@ -122,7 +125,7 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
     renderTikzToElement(tikzCode, svgWrap);
     wrap.appendChild(svgWrap);
 
-    const captionText = formatFigureCaptionText({ caption, allowNumbering, figNumber });
+    const captionText = showCaptions ? formatFigureCaptionText({ caption, allowNumbering, figNumber, label: figLabel }) : '';
     appendFigureCaption(wrap, captionText);
 
     container.appendChild(wrap);
@@ -130,12 +133,15 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
   }
 
   // 2. Edit Mode
+  applyFigureAttributes(container, { tag, figNumber, label: figLabel });
   const editWrap = document.createElement('div');
-  editWrap.className = 'tikz-edit-workspace flex flex-col gap-2 my-0.5 w-full relative';
+  editWrap.className = 'tikz-edit-workspace flex flex-col gap-1.5 my-0.5 w-full relative';
 
   let currentBorderState = hasBorder;
   let currentFitPercent = fitPercent;
-
+  // NOTE: Wrap-Beside UI removed — side-by-side layout is owned by the Multi-Column
+  // orientation container. Legacy notes with block.wrap=true still render via the
+  // editor's wrap-row pairing pass.
   editWrap.innerHTML = `
     <!-- Top Row: Title & Tools (Left) | Actions (Right) -->
     <div class="tikz-edit-header flex items-center justify-between gap-1.5 w-full pb-1.5 border-b border-[var(--border)] select-none flex-wrap">
@@ -157,6 +163,8 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
           <input type="number" min="10" max="100" step="5" class="fit-percent-input w-11 h-5 text-center font-mono text-xs font-semibold text-[var(--text)] bg-transparent border-none outline-none p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" placeholder="50-100" value="${currentFitPercent}" />
           <span class="text-[11px] font-mono font-bold text-[var(--text-dim)] select-none">%</span>
         </div>
+
+        <!-- Wrap-Beside UI removed: layout is owned by the Multi-Column orientation container -->
 
         <!-- Templates Dropdown Toggle -->
         <button type="button" class="btn-templates-toggle notes-ghost-btn h-7 px-2.5 py-0 text-[11px] font-medium flex items-center gap-1.5" title="Browse and insert TikZ templates">
@@ -231,6 +239,23 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
   const btnCompile = editWrap.querySelector('.btn-compile');
   const editorMount = editWrap.querySelector('.tikz-editor-mount');
 
+  // Tag uniqueness among figure blocks (image/tikz namespace; equation tags are independent).
+  const isTagTaken = (value) => {
+    const v = String(value || '').trim().toLowerCase();
+    if (!v) return false;
+    return figureInfo && figureInfo.usedTags instanceof Set ? figureInfo.usedTags.has(v) : false;
+  };
+  const paintTagState = () => {
+    if (!tagInput) return;
+    const dup = isTagTaken(tagInput.value);
+    tagInput.classList.toggle('border-red-500', dup);
+    tagInput.classList.toggle('text-red-400', dup);
+    tagInput.title = dup ? `Tag "${tagInput.value.trim()}" is already used by another figure — pick a different one` : '';
+    return !dup;
+  };
+  if (tagInput) tagInput.addEventListener('input', paintTagState);
+  paintTagState();
+
   const codeEditor = createCodeEditor({
     blockId: block.id,
     value: tikzCode,
@@ -266,6 +291,8 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
     let val = healTikzCode(rawVal);
     if (val !== rawVal) {
       codeEditor.setValue(val);
+      // Programmatic heal bypasses the input event; keep it as an undo step
+      recordBlockSnapshot(block.id, val, textarea.selectionStart, textarea.selectionEnd, { immediate: true });
     }
 
     if (showVisualFeedback && btnCompile) {
@@ -380,20 +407,20 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
     currentFitPercent = newVal;
     block.width = currentFitPercent;
     if (previewInner) previewInner.style.width = `${currentFitPercent}%`;
-    if (onUpdate) {
-      onUpdate({
-        code: textarea.value,
-        content: textarea.value,
-        allowNumbering: block.allowNumbering,
-        tag: block.tag,
-        caption: block.caption,
-        hasBorder: currentBorderState,
-        width: currentFitPercent
-      });
-    }
-  };
+      if (onUpdate) {
+        onUpdate({
+          code: textarea.value,
+          content: textarea.value,
+          allowNumbering: block.allowNumbering,
+          tag: block.tag,
+          caption: block.caption,
+          hasBorder: currentBorderState,
+          width: currentFitPercent
+        });
+      }
+    };
 
-  fitInput?.addEventListener('input', () => {
+    fitInput?.addEventListener('input', () => {
     const val = parseInt(fitInput.value, 10);
     if (!isNaN(val) && val >= 10 && val <= 100) {
       updateFitWidth(val);
@@ -448,7 +475,8 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
 
   const triggerMetaUpdate = () => {
     block.allowNumbering = Boolean(allowNumberingCb?.checked);
-    block.tag = tagInput?.value.trim() || '';
+    const candidateTag = tagInput?.value.trim() || '';
+    if (!isTagTaken(candidateTag)) block.tag = candidateTag;
     block.caption = captionInput?.value || '';
     block.hasBorder = currentBorderState;
     block.width = currentFitPercent;
@@ -522,7 +550,8 @@ export function renderTikzBlock(block, isEditing = false, onUpdate = null, { onD
       block.code = currentVal;
       block.content = currentVal;
       block.allowNumbering = Boolean(allowNumberingCb?.checked);
-      block.tag = tagInput?.value.trim() || '';
+      const candidateTag = tagInput?.value.trim() || '';
+      if (!isTagTaken(candidateTag)) block.tag = candidateTag;
       block.caption = captionInput?.value || '';
       block.hasBorder = currentBorderState;
       block.width = currentFitPercent;

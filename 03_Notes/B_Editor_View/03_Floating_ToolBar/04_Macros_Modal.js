@@ -12,6 +12,7 @@
 import { NotesState, SaveNotesState, DEFAULT_GLOBAL_MACROS } from '../../00_State.js';
 import { CreateColorSelector } from '../../../00_Components/06_Color_Selector.js';
 import { escapeHtml } from '../../02_Utils.js';
+import { bumpKatexMacroVersion } from '../../Writing_Engine/Math_Renderer.js';
 
 export function OpenMacrosModal({ note = null, onSave = null } = {}) {
   // Remove any existing macros modal
@@ -240,7 +241,8 @@ export function OpenMacrosModal({ note = null, onSave = null } = {}) {
       note.macros = { ...workingLocal };
     }
 
-    // 3. Persist State
+    // 3. Persist State (invalidates the KaTeX cache so equations re-render with the new macros)
+    bumpKatexMacroVersion();
     SaveNotesState();
 
     // 4. Notify Parent / Re-render canvas

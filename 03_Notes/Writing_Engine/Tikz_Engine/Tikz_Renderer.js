@@ -1,62 +1,137 @@
 /**
- * 03_Notes/Writing_Engine/Tikz_Renderer.js
+ * 03_Notes/Writing_Engine/Tikz_Engine/Tikz_Renderer.js
  * Isolated on-demand TikZJax SVG processor for Single Page Applications.
+ *
+ * Engine assets are fully local: Tikz_Engine/v1/tikzjax.js embeds the TeX WASM
+ * module and the 160MB core dump as base64 (no network fetches), and
+ * Tikz_Engine/v1/fonts.css embeds all BaKoMa fonts as data: URIs. The loader
+ * probes page-relative candidate locations and only falls back to the original
+ * tikzjax.com CDN when the local engine folder cannot be found (e.g. a
+ * standalone HTML carried away without its Tikz_Engine/ folder).
  */
+
+// Resolved against the PAGE URL, in order: dev master shell (repo root),
+// dev tab shell (03_Notes/Tab_Notes/), exported standalones (Standalone/),
+// and the "Tikz_Engine/ folder sits next to the HTML" portable case.
+const TIKZ_ENGINE_BASES = [
+  '03_Notes/Writing_Engine/Tikz_Engine/v1/',
+  '../Writing_Engine/Tikz_Engine/v1/',
+  '../03_Notes/Writing_Engine/Tikz_Engine/v1/',
+  'Tikz_Engine/v1/',
+  'https://tikzjax.com/v1/'
+];
+
+// Bumped whenever v1/tikzjax.js is re-patched (wasm/core re-embed, FS exposure, packages)
+// so browsers re-fetch the engine instead of serving a stale heuristic-cached copy.
+const TIKZ_ENGINE_VERSION = 'v2';
+
+let loadTikzEnginePromise = null;
 
 export function ensureTikzJaxLoaded(callback) {
   if (typeof window.__tikzjax_runner === 'function') {
     if (callback) callback();
-    return;
+    return Promise.resolve();
   }
 
-  if (!document.getElementById('tikzjax-css')) {
-    const link = document.createElement('link');
-    link.id = 'tikzjax-css';
-    link.rel = 'stylesheet';
-    link.href = 'https://tikzjax.com/v1/fonts.css';
-    document.head.appendChild(link);
-  }
-
-  if (!document.getElementById('tikzjax-js')) {
-    const script = document.createElement('script');
-    script.id = 'tikzjax-js';
-    script.src = 'https://tikzjax.com/v1/tikzjax.js';
-
-    script.onload = () => {
-      // tikzjax sets window.onload = async function() { ... }
-      if (typeof window.onload === 'function') {
-        window.__tikzjax_runner = window.onload;
-      }
+  if (loadTikzEnginePromise) {
+    return loadTikzEnginePromise.then(() => {
       if (callback) callback();
-    };
-
-    script.onerror = (e) => {
-      console.error('Failed to load TikZJax script from CDN:', e);
-    };
-
-    document.head.appendChild(script);
-  } else {
-    // Script tag already injected; poll until runner is defined
-    let attempts = 0;
-    const checkInterval = setInterval(() => {
-      attempts++;
-      if (typeof window.__tikzjax_runner === 'function') {
-        clearInterval(checkInterval);
-        if (callback) callback();
-      } else if (typeof window.onload === 'function') {
-        window.__tikzjax_runner = window.onload;
-        clearInterval(checkInterval);
-        if (callback) callback();
-      } else if (attempts > 40) {
-        clearInterval(checkInterval);
-        if (callback) callback();
-      }
-    }, 80);
+    }).catch(err => {
+      if (callback) callback(err);
+      throw err;
+    });
   }
+
+  loadTikzEnginePromise = new Promise((resolve, reject) => {
+    // 1. Purge any dead or uninitialized script/css tags left from exported HTML
+    if (typeof document !== 'undefined') {
+      const deadScript = document.getElementById('tikzjax-js');
+      if (deadScript && typeof window.__tikzjax_runner !== 'function') {
+        deadScript.remove();
+      }
+      const deadCss = document.getElementById('tikzjax-css');
+      if (deadCss && typeof window.__tikzjax_runner !== 'function') {
+        deadCss.remove();
+      }
+    }
+
+    let baseIndex = 0;
+    const tryNextBase = () => {
+      if (baseIndex >= TIKZ_ENGINE_BASES.length) {
+        loadTikzEnginePromise = null;
+        const errMsg = 'TikZ engine unavailable: local Tikz_Engine/ folder not found and the tikzjax.com CDN fallback failed.';
+        console.error(errMsg);
+        reject(new Error(errMsg));
+        return;
+      }
+
+      const base = TIKZ_ENGINE_BASES[baseIndex++];
+
+      if (!document.getElementById('tikzjax-css')) {
+        const link = document.createElement('link');
+        link.id = 'tikzjax-css';
+        link.rel = 'stylesheet';
+        link.href = base + 'fonts.css';
+        document.head.appendChild(link);
+      }
+
+      const script = document.createElement('script');
+      script.src = base + 'tikzjax.js?v=' + TIKZ_ENGINE_VERSION;
+
+      script.onload = () => {
+        script.id = 'tikzjax-js';
+        if (typeof window.onload === 'function') {
+          window.__tikzjax_runner = window.onload;
+          resolve();
+        } else if (typeof window.__tikzjax_runner === 'function') {
+          resolve();
+        } else {
+          // Poll briefly (max 600ms) in case window.onload takes a tick
+          let checks = 0;
+          const t = setInterval(() => {
+            checks++;
+            if (typeof window.onload === 'function') {
+              window.__tikzjax_runner = window.onload;
+              clearInterval(t);
+              resolve();
+            } else if (typeof window.__tikzjax_runner === 'function') {
+              clearInterval(t);
+              resolve();
+            } else if (checks > 12) {
+              clearInterval(t);
+              script.remove();
+              const cssLink = document.getElementById('tikzjax-css');
+              if (cssLink) cssLink.remove();
+              tryNextBase();
+            }
+          }, 50);
+        }
+      };
+
+      script.onerror = () => {
+        // This candidate does not resolve (unexpected shell depth, or standalone
+        // moved without its engine folder) — clean up and try the next base.
+        script.remove();
+        const cssLink = document.getElementById('tikzjax-css');
+        if (cssLink) cssLink.remove();
+        tryNextBase();
+      };
+
+      document.head.appendChild(script);
+    };
+
+    tryNextBase();
+  });
+
+  return loadTikzEnginePromise.then(() => {
+    if (callback) callback();
+  }).catch(err => {
+    if (callback) callback(err);
+  });
 }
 
-import { resolveThemeColors } from '../../00_Components/06_Color_Selector.js';
-import { NotesState } from '../00_State.js';
+import { resolveThemeColors } from '../../../00_Components/06_Color_Selector.js';
+import { NotesState } from '../../00_State.js';
 
 let activeTikzNoteContext = null;
 
@@ -96,12 +171,15 @@ export function clearTikzSvgCache() {
   } catch (e) {}
 }
 
-export function getCachedTikzSvg(code, theme = null) {
+export function getCachedTikzSvg(code, theme = null, preambleKey = '') {
   if (!code) return null;
   const isLight = (theme === 'light' || (theme === null && typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light'));
   const currentTheme = isLight ? 'light' : 'dark';
   const rawClean = code.trim();
-  const cacheKey = `${currentTheme}:::${TIKZ_CACHE_VERSION}:::${rawClean}`;
+  // The effective preamble (global + note-level TikZ macros) is part of the compiled script,
+  // so it MUST be part of the key or notes with different local macros share one compiled SVG.
+  const effPreambleKey = preambleKey || resolveThemeColors(getActiveTikzPreamble(null));
+  const cacheKey = `${currentTheme}:::${TIKZ_CACHE_VERSION}:::${effPreambleKey ? hashString(effPreambleKey) + ':::' : ''}${rawClean}`;
   if (tikzSvgCache.has(cacheKey)) {
     return tikzSvgCache.get(cacheKey);
   }
@@ -122,6 +200,12 @@ export function getCachedTikzSvg(code, theme = null) {
  */
 const activeTikzContainers = new Set();
 let themeChangeDebounceTimer = null;
+
+/**
+ * Sequential FIFO compile mutex queue: ensures only one TikZ diagram compiles in the
+ * single-threaded TeX WASM virtual filesystem (sample.tex, sample.dvi) at any given moment.
+ */
+let tikzCompileQueue = Promise.resolve();
 
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
   const themeObserver = new MutationObserver(() => {
@@ -196,9 +280,9 @@ export function getActiveTikzPreamble(note = null) {
   const parts = [];
 
   // 0. Core math punctuation fixes for TikZJax BaKoMa font engine:
-  // Remaps math comma and decimal point to use operators font (cmr10) instead of cmmi10 slot 59
-  parts.push('\\DeclareMathSymbol{,}{\\mathpunct}{operators}{"2C}');
-  parts.push('\\DeclareMathSymbol{.}{\\mathord}{operators}{"2E}');
+  // Remaps math comma and decimal point to use operators font (cmr10) instead of cmmi10 slot 59.
+  // \mathcode primitives only: \DeclareMathSymbol is preamble-only LaTeX, but the TikZJax engine
+  // injects \begin{document} ahead of this text — any preamble-only command here fatals the WASM core.
   parts.push('\\mathcode`,="602C');
   parts.push('\\mathcode`.="002E');
 
@@ -207,7 +291,7 @@ export function getActiveTikzPreamble(note = null) {
     parts.push(NotesState.globalMacros.tikz);
   } else {
     // Default fallback libraries
-    parts.push('\\usetikzlibrary{patterns, angles, calc, quotes, shapes, arrows, arrows.meta, positioning, intersections, fadings}');
+    parts.push('\\usetikzlibrary{patterns, angles, calc, quotes, shapes, shapes.geometric, shapes.misc, arrows, arrows.meta, positioning, intersections, fadings, decorations.pathmorphing, decorations.markings, fit, matrix, 3d, automata, trees, mindmap}');
   }
 
   // 2. Note-level local TikZ macros
@@ -290,7 +374,10 @@ function waitForTikzSvg(targetContainer, renderId, timeoutMs = 25000) {
 
     checkInterval = setInterval(() => {
       if (targetContainer.__tikzRenderId !== renderId) {
+        // A newer render superseded this one — settle the promise so the awaiting
+        // closure is released (and its onComplete can reset the UI) instead of hanging forever.
         cleanup();
+        resolve(null);
         return;
       }
 
@@ -305,7 +392,7 @@ function waitForTikzSvg(targetContainer, renderId, timeoutMs = 25000) {
       const script = targetContainer.querySelector('script[type="text/tikz"]');
       if (!script && !isSettled) {
         const divReplacement = targetContainer.querySelector('div.page') || targetContainer.querySelector('div[style*="display: flex"]');
-        if (divReplacement && !divReplacement.querySelector('svg') && (Date.now() - startTime > 1500)) {
+        if (divReplacement && !divReplacement.querySelector('svg') && (Date.now() - startTime > 8000)) {
           cleanup();
           reject(new Error('TikZ compilation completed but no SVG was generated. Please check syntax and semicolons.'));
           return;
@@ -314,7 +401,7 @@ function waitForTikzSvg(targetContainer, renderId, timeoutMs = 25000) {
 
       if (Date.now() - startTime > timeoutMs && !isSettled) {
         cleanup();
-        reject(new Error('TikZ compilation timed out. Please check your internet connection to tikzjax.com CDN.'));
+        reject(new Error('TikZ compilation timed out. The local TeX engine did not respond in time — press ↻ Retry, or simplify the diagram.'));
       }
     }, 100);
   });
@@ -483,10 +570,13 @@ export function renderTikzToElement(tikzCode, targetContainer, onComplete = null
     return;
   }
 
-  // 1. Instant Bi-Theme Cache Check
+  // 1. Instant Bi-Theme Cache Check.
+  // The effective preamble (global + note-level macros) is part of the compiled script, so it
+  // must be part of the key — otherwise notes with different local TikZ macros share one SVG.
   const isLight = (typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light');
   const currentTheme = isLight ? 'light' : 'dark';
-  const cacheKey = `${currentTheme}:::${TIKZ_CACHE_VERSION}:::${rawClean}`;
+  const basePreamble = resolveThemeColors(getActiveTikzPreamble(noteContext));
+  const cacheKey = `${currentTheme}:::${TIKZ_CACHE_VERSION}:::${hashString(basePreamble)}:::${rawClean}`;
 
   let cachedHtml = tikzSvgCache.get(cacheKey);
   if (!cachedHtml) {
@@ -515,7 +605,6 @@ export function renderTikzToElement(tikzCode, targetContainer, onComplete = null
 
   // 2. Resolve dual-theme colors (#Light|#Dark)
   const resolvedCode = resolveThemeColors(healedCode);
-  const basePreamble = resolveThemeColors(getActiveTikzPreamble(noteContext));
 
   // 3. Translate any raw #HEX colors to valid TikZ \definecolor names
   // In LaTeX/TikZ, raw '#' causes "Illegal parameter number in definition of \pgfkeyscurrentkey"
@@ -557,7 +646,30 @@ export function renderTikzToElement(tikzCode, targetContainer, onComplete = null
   whenConnected(targetContainer, () => {
     if (targetContainer.__tikzRenderId !== currentRenderId || !targetContainer.isConnected) return;
 
-    ensureTikzJaxLoaded(async () => {
+    tikzCompileQueue = tikzCompileQueue.catch(() => {}).then(async () => {
+      if (targetContainer.__tikzRenderId !== currentRenderId || !targetContainer.isConnected) return;
+
+      try {
+        await ensureTikzJaxLoaded();
+      } catch (loadErr) {
+        if (targetContainer.__tikzRenderId !== currentRenderId) return;
+        targetContainer.innerHTML = `
+          <div class="p-3 text-xs text-red-400 bg-red-950/20 border border-red-800/40 rounded-lg select-text text-center flex flex-col items-center gap-2">
+            <div><strong>TikZ Engine Unavailable:</strong> ${loadErr.message || 'Check network connection or local engine folder.'}</div>
+            <button type="button" class="tikz-retry-btn px-2.5 py-1 rounded-md border border-red-700/60 bg-red-900/30 hover:bg-red-900/60 text-red-200 text-[11px] font-semibold cursor-pointer transition-colors" title="Try loading again">↻ Retry Load</button>
+          </div>
+        `;
+        const retryBtn = targetContainer.querySelector('.tikz-retry-btn');
+        if (retryBtn) {
+          retryBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            renderTikzToElement(tikzCode, targetContainer, onComplete, noteContext);
+          });
+        }
+        if (onComplete) onComplete(false, loadErr);
+        return;
+      }
+
       if (targetContainer.__tikzRenderId !== currentRenderId || !targetContainer.isConnected) return;
 
       try {
@@ -571,14 +683,17 @@ export function renderTikzToElement(tikzCode, targetContainer, onComplete = null
         if (typeof runner === 'function') {
           window.__tikzjax_runner = runner;
           try {
-            runner();
+            const runnerPromise = runner();
+            if (runnerPromise && typeof runnerPromise.catch === 'function') {
+              runnerPromise.catch(e => console.warn('TikZJax background promise rejection handled:', e));
+            }
           } catch (e) {
             console.error('TikZJax runner invocation error:', e);
           }
         }
 
         // Asynchronously wait for TikzJax to finish compilation and mount the SVG
-        const svgEl = await waitForTikzSvg(targetContainer, currentRenderId, 25000);
+        const svgEl = await waitForTikzSvg(targetContainer, currentRenderId, 30000);
         if (targetContainer.__tikzRenderId !== currentRenderId) return;
 
         if (svgEl) {
@@ -643,10 +758,18 @@ export function renderTikzToElement(tikzCode, targetContainer, onComplete = null
         if (targetContainer.__tikzRenderId !== currentRenderId) return;
         console.error('TikzJax compilation error:', err);
         targetContainer.innerHTML = `
-          <div class="p-3 text-xs text-red-400 bg-red-950/20 border border-red-800/40 rounded-lg select-text text-center">
-            <strong>TikZ Compilation Failed:</strong> ${err.message || 'Check syntax and semicolons.'}
+          <div class="p-3 text-xs text-red-400 bg-red-950/20 border border-red-800/40 rounded-lg select-text text-center flex flex-col items-center gap-2">
+            <div><strong>TikZ Compilation Failed:</strong> ${err.message || 'Check syntax and semicolons.'}</div>
+            <button type="button" class="tikz-retry-btn px-2.5 py-1 rounded-md border border-red-700/60 bg-red-900/30 hover:bg-red-900/60 text-red-200 text-[11px] font-semibold cursor-pointer transition-colors" title="Try compiling again (large diagrams can take a while on the local TeX engine)">↻ Retry Compile</button>
           </div>
         `;
+        const retryBtn = targetContainer.querySelector('.tikz-retry-btn');
+        if (retryBtn) {
+          retryBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            renderTikzToElement(tikzCode, targetContainer, onComplete, noteContext);
+          });
+        }
         if (onComplete) onComplete(false, err);
       }
     });

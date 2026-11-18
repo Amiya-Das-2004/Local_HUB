@@ -14,6 +14,11 @@ export function CreateBlockItem({
   allNotes,
   prefix = '',
   figureInfo = null,
+  eqInfo = null,
+  figureMap = null,
+  eqMap = null,
+  prefixMap = null,
+  isDocked = false,
   note = null,
   pickerState = null,
   onPickBlock = null,
@@ -54,17 +59,27 @@ export function CreateBlockItem({
   } else {
     wrap.className = `notes-block-item group relative px-2.5 ${headingMargin} rounded-lg border transition-all duration-200 ease-out ${
       isEditing
-        ? 'border-purple-500 bg-[var(--surface)] shadow-lg py-2'
-        : (isEditMode ? 'border-transparent hover:border-[var(--border)] cursor-pointer py-0.5' : 'border-transparent py-0')
+        ? 'border-purple-500 bg-[var(--surface)] shadow-lg py-1'
+        : (isEditMode ? 'border-transparent hover:border-[var(--border)] cursor-pointer py-0' : 'border-transparent py-0')
     }`;
     wrap.style.transition = 'border-color 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1), padding 0.2s ease, background-color 0.2s ease';
 
     if (isEditMode) {
       wrap.addEventListener('click', (e) => {
         if (e.target.closest('button') || isEditing) return;
-        if (onSelect) onSelect();
+        // Hand the click point to the editor so it can restore the caret exactly where
+        // the user clicked when the block switches into edit mode.
+        if (onSelect) onSelect({ clientX: e.clientX, clientY: e.clientY });
       });
     }
+  }
+
+  // Docked badge: this block is referenced by a Callout / Multi-Column container
+  if (isDocked && isEditMode) {
+    const dockBadge = document.createElement('div');
+    dockBadge.className = 'absolute -top-2 left-3 px-2 py-0.5 rounded-full bg-purple-600/90 text-white font-bold text-[9px] shadow-sm z-10 select-none pointer-events-none';
+    dockBadge.textContent = '⧉ docked';
+    wrap.appendChild(dockBadge);
   }
 
   // Unified Action Parameters passed to each block's top toolbar
@@ -78,6 +93,11 @@ export function CreateBlockItem({
     index,
     totalBlocks,
     figureInfo,
+    eqInfo,
+    figureMap,
+    eqMap,
+    prefixMap,
+    isDocked,
     prefix,
     note,
     onConfigUpdate,

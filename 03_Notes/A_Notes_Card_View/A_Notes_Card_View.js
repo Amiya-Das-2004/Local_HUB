@@ -12,6 +12,7 @@ import {
   ClearSelectedNotes,
   GetSelectedNoteIds
 } from './01_Navbar/05_Delete_Button.js';
+import { OpenLibraryModal } from '../03_Library.js';
 
 // Re-export modal and action controls directly for master consumers
 export {
@@ -40,6 +41,9 @@ export function GetNotesCardViewHTML() {
 // Renders and initializes the complete Notes Card View inside target container
 export function RenderNotesCardView(mainContainer, state) {
   if (!mainContainer) return;
+
+  // Replace (not stack) — repeated hash-nav renders previously duplicated the whole deck
+  mainContainer.innerHTML = '';
 
   const deckWrapper = document.createElement('div');
   deckWrapper.innerHTML = GetNotesCardViewHTML();
@@ -86,6 +90,13 @@ export function RenderNotesCardView(mainContainer, state) {
     },
     onAddClick: () => {
       OpenNoteModal(null);
+    },
+    onLibraryClick: () => {
+      OpenLibraryModal({
+        onUpdate: () => {
+          RefreshCardsView();
+        }
+      });
     }
   });
 

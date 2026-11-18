@@ -24,14 +24,14 @@ export function initBookmarksApp() {
     <style>
       /* ===== BOOKMARKS PAGE THEME & BASE STYLES ===== */
       :root {
-        --bg: #0e1018;
-        --bg-secondary: #131521;
-        --header-bg: rgba(14, 16, 24, 0.85);
-        --surface: #181b27;
-        --card: #1c1f2e;
-        --card-hover: #242840;
-        --border: #2a2e40;
-        --border-light: #353a52;
+        --bg: #0b0d14;
+        --bg-secondary: #10131d;
+        --header-bg: rgba(11, 13, 20, 0.85);
+        --surface: #151824;
+        --card: #181b28;
+        --card-hover: #222638;
+        --border: #262a3d;
+        --border-light: #323750;
         --text: #e8eaf2;
         --text-secondary: #a0a4b8;
         --text-dim: #6b7088;
@@ -39,6 +39,8 @@ export function initBookmarksApp() {
         --accent-hover: #7c5cff;
         --accent-soft: rgba(139, 109, 255, 0.1);
         --accent-glow: rgba(139, 109, 255, 0.22);
+        --header-height: 74px;
+        --navbar-height: 76px;
         --green: #4ade80;
         --orange: #fb923c;
         --red: #f87171;
@@ -55,14 +57,44 @@ export function initBookmarksApp() {
         --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
       }
 
-      [data-theme="light"] {
-        --bg: #f3f4f8;
-        --header-bg: rgba(243, 244, 248, 0.85);
+      @media (max-width: 600px) {
+        :root {
+          --header-height: 66px;
+          --navbar-height: 70px;
+        }
+      }
+
+      @media (max-width: 440px) {
+        :root {
+          --header-height: 60px;
+          --navbar-height: 66px;
+        }
+      }
+
+      @media (max-width: 340px) {
+        :root {
+          --header-height: 56px;
+          --navbar-height: 62px;
+        }
+      }
+
+      #header-mount {
+        width: 100%;
+      }
+
+      #navbar-mount {
+        width: 100%;
+      }
+
+      :root[data-theme="light"] {
+        --bg: #f8f9fc;
+        --bg-secondary: #eef1f8;
+        --header-bg: rgba(248, 249, 252, 0.88);
         --surface: #ffffff;
         --card: #ffffff;
-        --card-hover: #f9faff;
-        --border: #e0e2ea;
-        --border-light: #ebeef4;
+        --card-hover: #f5f6fc;
+        --border: #e0e3ed;
+        --border-light: #eaedf6;
         --text: #1a1d2e;
         --text-secondary: #555870;
         --text-dim: #9499b0;
@@ -86,7 +118,11 @@ export function initBookmarksApp() {
       }
 
       body {
-        background: var(--bg, #0e1018);
+        background-color: var(--bg, #0b0d14);
+        background-image:
+          radial-gradient(circle at 85% 30%, rgba(139, 109, 255, 0.04), transparent 40%);
+        background-attachment: fixed;
+        background-repeat: no-repeat;
         color: var(--text, #e8eaf2);
         font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         min-height: 100vh;
@@ -104,13 +140,19 @@ export function initBookmarksApp() {
         width: 100%;
         max-width: 800px;
         margin: 0 auto;
-        padding: 24px 16px 40px;
+        padding: calc(var(--header-height, 74px) + var(--navbar-height, 76px) + 20px) 16px 40px;
         box-sizing: border-box;
       }
 
-      @media (max-width: 640px) {
+      @media (max-width: 600px) {
         .main-content {
-          padding: 16px 10px 40px;
+          padding: calc(var(--header-height, 66px) + var(--navbar-height, 70px) + 16px) 12px 40px;
+        }
+      }
+
+      @media (max-width: 440px) {
+        .main-content {
+          padding: calc(var(--header-height, 60px) + var(--navbar-height, 66px) + 12px) 8px 40px;
         }
       }
 
@@ -136,6 +178,15 @@ export function initBookmarksApp() {
         display: none !important;
       }
 
+      @media (max-width: 440px) {
+        .toast-notification {
+          left: 16px;
+          right: 16px;
+          bottom: 16px;
+          text-align: center;
+        }
+      }
+
       @keyframes fadeIn {
         from { opacity: 0; transform: translateY(8px); }
         to { opacity: 1; transform: translateY(0); }
@@ -143,9 +194,9 @@ export function initBookmarksApp() {
     </style>
 
     <div id="header-mount"></div>
+    <div id="navbar-mount"></div>
 
     <main class="main-content">
-      <div id="navbar-mount"></div>
       <div id="cards-mount"></div>
     </main>
 
@@ -201,6 +252,41 @@ export function initBookmarksApp() {
 
   // 4. Initial Render of Bookmark Cards
   RefreshView();
+
+  // 5. Dynamically synchronize header and navbar heights for sticky stacking
+  const header = document.querySelector('.app-header');
+  if (header) {
+    const updateHeaderH = () => {
+      const h = header.offsetHeight;
+      if (h > 0) document.documentElement.style.setProperty('--header-height', `${h}px`);
+    };
+    updateHeaderH();
+    if (window.ResizeObserver) {
+      new ResizeObserver(entries => {
+        for (const entry of entries) {
+          const h = entry.borderBoxSize ? entry.borderBoxSize[0].blockSize : header.offsetHeight;
+          if (h > 0) document.documentElement.style.setProperty('--header-height', `${h}px`);
+        }
+      }).observe(header);
+    }
+  }
+
+  const navbar = document.querySelector('.app-navbar');
+  if (navbar) {
+    const updateNavbarH = () => {
+      const h = navbar.offsetHeight;
+      if (h > 0) document.documentElement.style.setProperty('--navbar-height', `${h}px`);
+    };
+    updateNavbarH();
+    if (window.ResizeObserver) {
+      new ResizeObserver(entries => {
+        for (const entry of entries) {
+          const h = entry.borderBoxSize ? entry.borderBoxSize[0].blockSize : navbar.offsetHeight;
+          if (h > 0) document.documentElement.style.setProperty('--navbar-height', `${h}px`);
+        }
+      }).observe(navbar);
+    }
+  }
 }
 
 // Clean Window Registration for standalone compatibility

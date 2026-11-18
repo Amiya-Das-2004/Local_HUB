@@ -3,7 +3,7 @@
  * In-place Live Preview widget constructors and inline styles.
  */
 
-import { renderKatex, getActiveFigureTagMap } from '../../../Writing_Engine/Math_Renderer.js';
+import { renderKatex, getActiveFigureTagMap, getActiveEquationTagMap } from '../../../Writing_Engine/Math_Renderer.js';
 import { escapeHtml } from '../../../02_Utils.js';
 import { resolveThemeColors } from '../../../../00_Components/06_Color_Selector.js';
 
@@ -167,21 +167,106 @@ export const createLiveWidget = (type, raw, contentHtml = '', options = {}) => {
     span.setAttribute('data-fig-target', norm);
     span.setAttribute('data-fig-num', resolvedNum || '');
     span.innerHTML = `[${displayLabel}]`;
-  } else if (type === 'wikilink') {
-    const targetTitle = (contentHtml || '').trim();
-    const target = (allNotes || []).find(n =>
-      (n.title && n.title.toLowerCase() === targetTitle.toLowerCase()) ||
-      n.id === targetTitle ||
-      (n.slug && n.slug.toLowerCase() === targetTitle.toLowerCase())
-    );
-    span.className = `live-widget live-wikilink ${target ? 'text-purple-400 hover:text-purple-300 font-semibold underline decoration-dotted decoration-purple-500' : 'text-gray-400 italic'} inline-flex items-center align-middle cursor-pointer select-text`;
-    span.title = target ? `Jump to note: ${targetTitle}` : `Note "${targetTitle}" does not exist yet`;
-    span.textContent = targetTitle;
-    if (isViewMode && target) {
+  } else if (type === 'eq') {
+    // Equation reference \eq{name} / \eq{name:2} — label from computeEquationNumbers tag map
+    const norm = (contentHtml || '').trim().toLowerCase();
+    const eqMap = getActiveEquationTagMap ? getActiveEquationTagMap() : null;
+    const entry = eqMap ? (eqMap.get(norm) || null) : null;
+    const displayLabel = entry ? `(${entry.label})` : `(?)`;
+    span.className = `live-widget live-eq note-eq-citation font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 px-1.5 py-0.5 rounded border border-emerald-500/30 transition-colors inline-flex items-center align-middle gap-0.5 cursor-pointer select-text`;
+    span.setAttribute('data-eq-target', norm);
+    span.setAttribute('data-eq-block', entry ? (entry.blockId || '') : '');
+    span.innerHTML = displayLabel;
+  } else if (type === 'littex') {
+    // Inert LaTeX token outside math (\fig/\eq/\href/\url only function inside $...$)
+    span.className = `live-widget live-littex font-mono text-[11px] text-[var(--text-dim)] opacity-75 select-text align-middle break-all`;
+    span.title = 'Only works inside $...$ math — wrap it: $' + (raw || '') + '$';
+    span.innerHTML = escapeHtml(raw || contentHtml || '');
+  } else if (type === 'href' || type === 'url') {
+    // \href{url}{text} / \url{url} — external hyperlink (Overleaf-style), parsed from the raw token
+    let url = '';
+    let display = '';
+    if (type === 'href') {
+      const m = /^\s*\\href\{([^}]*)\}\{([\s\S]*)\}\s*$/.exec(raw || '');
+      url = m ? m[1].trim() : '';
+      display = (m && m[2]) ? m[2] : (contentHtml || url);
+    } else {
+      const m = /^\s*\\url\{([^}]*)\}\s*$/.exec(raw || '');
+      url = m ? m[1].trim() : (contentHtml || '').trim();
+      display = url;
+    }
+    // Scheme allow-list: bare domains get https:// prefixed, unknown schemes are neutralized
+    const safe = /^(https?:\/\/|mailto:|#|\/)/i.test(url)
+      ? url
+      : (/^[a-zA-Z][a-zA-Z0-9+.\-]*:/.test(url) ? '#' : 'https://' + url);
+    span.className = `live-widget live-href note-href-citation font-semibold text-sky-400 hover:text-sky-300 underline decoration-sky-500/60 decoration-dotted hover:decoration-solid transition-colors inline-flex items-center align-middle gap-0.5 cursor-pointer select-text${safe === '#' ? ' opacity-60' : ''}`;
+    span.setAttribute('data-href-url', safe);
+    span.title = safe === '#' ? 'Unsupported URL scheme' : safe;
+    if (safe === '#') {
+      span.innerHTML = `[${escapeHtml(display || 'link')}]`;
+    } else {
+      span.innerHTML = escapeHtml(display || safe);
       span.addEventListener('click', (e) => {
         e.stopPropagation();
-        window.location.hash = `#Notes?id=${encodeURIComponent(target.id)}`;
+        window.open(safe, '_blank', 'noopener');
       });
+    }
+  } else if (type === 'cite') {
+    // \cite{key} only resolves INSIDE $...$ math (renderKatex preprocessing) — outside
+    // math it stays an inert literal token, same as bare \fig / \eq / \href / \url.
+    span.className = `live-widget live-cite-raw live-littex font-mono text-[11px] text-[var(--text-dim)] opacity-75 select-text align-middle break-all ${baseCursor}`;
+    span.title = 'Only works inside $...$ math — wrap it: $' + (raw || '') + '$';
+    span.innerHTML = escapeHtml(raw || `\\cite{${contentHtml || ''}}`);
+  } else if (type === 'wikilink') {
+    // [[Note]] / [[Note^blockRef]] — click opens the draggable reading-mode popup,
+    // Ctrl+Click opens the note in a new browser tab, Alt+Click expands to raw text.
+    const inner = (contentHtml || '').trim();
+    const caretIdx = inner.indexOf('^');
+    const noteName = (caretIdx === -1 ? inner : inner.slice(0, caretIdx)).trim();
+    const blockRef = caretIdx !== -1 ? inner.slice(caretIdx + 1).trim() : '';
+    const target = (allNotes || []).find(n =>
+      (n.title && n.title.toLowerCase() === noteName.toLowerCase()) ||
+      n.id === noteName ||
+      (n.slug && n.slug.toLowerCase() === noteName.toLowerCase())
+    );
+    const resolved = !!target;
+
+    let refBadge = '';
+    let shortRef = '';
+    if (resolved && blockRef) {
+      const blocks = target.blocks || [];
+      const idx = blocks.findIndex(b => b && b.id === blockRef);
+      shortRef = idx !== -1 ? String(idx + 1) : (/^\d+$/.test(blockRef) ? blockRef : '');
+      if (shortRef) refBadge = ` <span class="text-[9px] font-mono opacity-60" title="Block ${shortRef}">¶${escapeHtml(shortRef)}</span>`;
+    }
+
+    span.className = `live-widget live-wikilink inline-flex items-center align-middle gap-0.5 select-text ${resolved
+      ? 'text-purple-400 hover:text-purple-300 font-semibold underline decoration-dotted decoration-purple-500 hover:decoration-solid cursor-pointer'
+      : 'text-gray-400 italic'}`;
+    span.title = resolved
+      ? `Click: open "${noteName}" in the reader popup • Ctrl+Click: new browser tab${blockRef ? ` • jumps to block ${shortRef || blockRef}` : ''}`
+      : `Note "${noteName}" does not exist yet`;
+    span.innerHTML = `${escapeHtml(noteName || '(empty)')}${refBadge}`;
+
+    if (resolved) {
+      span.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        if (e.ctrlKey || e.metaKey) {
+          // Lazy-loaded: importing the popup statically would create a module cycle
+          // (Text_Widgets → Wiki_Link_Popup → Block_Dispatcher → Text_Block → here)
+          import('./Wiki_Link_Popup.js').then((m) => {
+            if (e.ctrlKey || e.metaKey) window.open(m.wikiLinkTabUrl(target.id, blockRef), '_blank');
+            else m.openWikiNotePopup(target.id, blockRef);
+          });
+        } else if (e.altKey && !isViewMode && options.onExpand) {
+          options.onExpand(span);
+        } else {
+          import('./Wiki_Link_Popup.js').then((m) => m.openWikiNotePopup(target.id, blockRef));
+        }
+      });
+    } else if (isViewMode) {
+      span.addEventListener('click', (e) => e.stopPropagation());
     }
   } else if (type === 'bullet') {
     // Bullet marker vertically centered with vertical-align: middle
@@ -203,8 +288,12 @@ export const createLiveWidget = (type, raw, contentHtml = '', options = {}) => {
     });
   }
 
-  if (!isViewMode && onExpand) {
+  // Reference badges (\fig, \eq) navigate on click via the document-level citation
+  // handlers — they must NOT expand to raw tokens on click, so skip onExpand for them.
+  // Wikilinks own their click too (popup / Ctrl+Click new tab / Alt+Click raw edit).
+  if (!isViewMode && onExpand && type !== 'fig' && type !== 'eq' && type !== 'wikilink') {
     span.addEventListener('click', (e) => {
+      if (e.target.closest('a')) return;
       e.stopPropagation();
       onExpand(span);
     });

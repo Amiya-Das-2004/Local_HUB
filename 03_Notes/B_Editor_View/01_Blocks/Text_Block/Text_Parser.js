@@ -192,7 +192,7 @@ export const parseTextToFragment = (text, options = {}) => {
   const fragment = document.createDocumentFragment();
   if (!text) return fragment;
 
-  const tokenRegex = /((?<!\\)\$(?!\s)([^\$\n\r]+?)(?<!\s)\$)|(`([^`\n\r]+?)`)|(\*\*([^*]+?)\*\*)|((?:^|[^*])\*([^*\n\r]+?)\*(?!\*))|(\\underline\{([^}]+)\})|(~~([^~]+)~~)|(\\textcolor\{([#a-zA-Z0-9|]+)\}\{((?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})+)\})|(\\fig\{([^}]+)\})|(\[\[([^\]\n\r]+)\]\])|(<u>([\s\S]*?)<\/u>)|(<b>([\s\S]*?)<\/b>|<strong>([\s\S]*?)<\/strong>)|(<i>([\s\S]*?)<\/i>|<em>([\s\S]*?)<\/em>)|(<mark>([\s\S]*?)<\/mark>)|(<code>([\s\S]*?)<\/code>)|(\\textbf\{((?:[^{}]|\{[^{}]*\})+)\})/g;
+  const tokenRegex = /((?<!\\)\$(?!\s)([^\$\n\r]+?)(?<!\s)\$)|(`([^`\n\r]+?)`)|(\*\*([^*]+?)\*\*)|((?:^|[^*])\*([^*\n\r]+?)\*(?!\*))|(\\underline\{([^}]+)\})|(~~([^~]+)~~)|(\\textcolor\{([#a-zA-Z0-9|]+)\}\{((?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})+)\})|(\\fig\{([^}]+)\})|(\[\[([^\]\n\r]+)\]\])|(<u>([\s\S]*?)<\/u>)|(<b>([\s\S]*?)<\/b>|<strong>([\s\S]*?)<\/strong>)|(<i>([\s\S]*?)<\/i>|<em>([\s\S]*?)<\/em>)|(<mark>([\s\S]*?)<\/mark>)|(<code>([\s\S]*?)<\/code>)|(\\textbf\{((?:[^{}]|\{[^{}]*\})+)\})|(\\cite\{([^}]*)\})|(\\eq\{([^}]+)\})|(\\href\{([^}]+)\}\{((?:[^{}]|\{[^{}]*\})*)\})|(\\url\{([^}]+)\})/g;
 
   let lastIndex = 0;
   let match;
@@ -234,8 +234,17 @@ export const parseTextToFragment = (text, options = {}) => {
         parseSubFragment: (subText) => parseTextToFragment(subText, options)
       }));
     } else if (match[16]) {
-      // Fig Citation: \fig{...}
-      fragment.appendChild(createLiveWidget('fig', match[16], match[17], options));
+      // Fig Citation OUTSIDE math — inert (only functions inside $...$)
+      fragment.appendChild(createLiveWidget('littex', match[16], match[17], options));
+    } else if (match[36]) {
+      // Equation Reference OUTSIDE math — inert (only functions inside $...$)
+      fragment.appendChild(createLiveWidget('littex', match[36], match[37], options));
+    } else if (match[38]) {
+      // Hyperlink OUTSIDE math — inert (only functions inside $...$)
+      fragment.appendChild(createLiveWidget('littex', match[38], match[40], options));
+    } else if (match[41]) {
+      // Bare URL OUTSIDE math — inert (only functions inside $...$)
+      fragment.appendChild(createLiveWidget('littex', match[41], match[42], options));
     } else if (match[18]) {
       // WikiLink: [[title]]
       fragment.appendChild(createLiveWidget('wikilink', match[18], match[19], options));
@@ -261,6 +270,9 @@ export const parseTextToFragment = (text, options = {}) => {
     } else if (match[32]) {
       // LaTeX Bold: \textbf{...}
       fragment.appendChild(createLiveWidget('bold', match[32], match[33], options));
+    } else if (match[34]) {
+      // Bibliography Citation: \cite{key1,key2}
+      fragment.appendChild(createLiveWidget('cite', match[34], match[35], options));
     }
 
     lastIndex = matchEnd;
@@ -660,4 +672,104 @@ export const deleteSelectionAndHeal = (range, rootEl, editModeOptions = {}, trig
   rootEl.replaceChild(mergedLineEl, startLine);
   setCaretAtOffsetInLine(mergedLineEl, splitStart.beforeText.length);
   triggerUpdate?.();
+};
+
+// --- Click-position caret mapping -------------------------------------------------
+// Raw text length of a top-level surface child (live line, display math, code block...).
+const childRawLength = (childEl) => {
+  const raw = childEl.getAttribute && childEl.getAttribute('data-raw')
+    ? childEl.getAttribute('data-raw')
+    : getLineRawText(childEl);
+  return String(raw || '').length;
+};
+
+/**
+ * Computes the raw-text caret offset inside a live/view surface for a DOM caret point.
+ * Walks the surface tree, summing child raw lengths (+1 newline); plain container
+ * wrappers are descended into, live lines resolve via getLineCaretSplit, and block-level
+ * raw elements (display math, code fences) snap to their raw end.
+ */
+export const getRawCaretOffsetInSurface = (surface, node, offset) => {
+  const walk = (parentEl, base) => {
+    for (const child of parentEl.children) {
+      if (child.contains(node)) {
+        if (child.classList && child.classList.contains('live-line')) {
+          return base + getLineCaretSplit(child, node, offset).beforeText.length;
+        }
+        if (child.hasAttribute && child.hasAttribute('data-raw')) {
+          return base + childRawLength(child);
+        }
+        return walk(child, base);
+      }
+      base += childRawLength(child) + 1;
+    }
+    return base;
+  };
+  return walk(surface, 0);
+};
+
+/**
+ * Resolves a viewport point to the raw-text caret offset of the live surface under it.
+ * Returns null when the point carries no caret or no live surface can be found.
+ */
+export const getRawOffsetFromPoint = (x, y) => {
+  if (typeof document === 'undefined') return null;
+  let node = null, offset = 0;
+  if (document.caretRangeFromPoint) {
+    const range = document.caretRangeFromPoint(x, y);
+    if (range) { node = range.startContainer; offset = range.startOffset; }
+  } else if (document.caretPositionFromPoint) {
+    const pos = document.caretPositionFromPoint(x, y);
+    if (pos) { node = pos.offsetNode; offset = pos.offset; }
+  }
+  if (!node) return null;
+  const el = node.nodeType === Node.ELEMENT_NODE ? node : node.parentNode;
+  // The click may land in the view-mode surface (.obsidian-view-surface) or the live
+  // edit surface — both share the same line/raw structure.
+  const surface = el && el.closest ? el.closest('.obsidian-live-surface, .obsidian-view-surface') : null;
+  if (!surface) return null;
+  return getRawCaretOffsetInSurface(surface, node, offset);
+};
+
+/**
+ * Places the editable caret at a raw-text offset inside a live surface (inverse of
+ * getRawCaretOffsetInSurface), focuses it, and scrolls the caret line to the given
+ * viewport Y (the original click position) so editing continues exactly where clicked.
+ */
+export const placeCaretAtRawOffset = (surface, rawOffset, viewportY = null) => {
+  if (!surface) return;
+  const find = (parentEl, base) => {
+    for (const child of parentEl.children) {
+      const len = childRawLength(child);
+      if (child.classList && child.classList.contains('live-line')) {
+        if (rawOffset <= base + len) {
+          return { lineEl: child, offsetInLine: Math.max(0, rawOffset - base) };
+        }
+      } else if (!(child.hasAttribute && child.hasAttribute('data-raw'))) {
+        // Plain container (markdown root wrapper etc.): descend
+        const found = find(child, base);
+        if (found) return found;
+      }
+      base += len + 1;
+    }
+    return null;
+  };
+  const target = find(surface, 0);
+  surface.focus({ preventScroll: true });
+  if (target) {
+    setCaretAtOffsetInLine(target.lineEl, target.offsetInLine);
+    if (viewportY != null) {
+      const rect = target.lineEl.getBoundingClientRect();
+      window.scrollBy({ top: rect.top - viewportY, behavior: 'auto' });
+    } else {
+      target.lineEl.scrollIntoView({ block: 'nearest' });
+    }
+  } else if (viewportY != null) {
+    // Caret inside a block-level element (or past the end): keep the click in view only.
+    const last = surface.lastElementChild;
+    if (last) {
+      const rect = last.getBoundingClientRect();
+      window.scrollBy({ top: rect.top - viewportY, behavior: 'auto' });
+    }
+  }
 };
