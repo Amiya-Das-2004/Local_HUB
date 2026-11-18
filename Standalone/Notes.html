@@ -12561,6 +12561,13 @@ const createLiveWidget = (type, raw, contentHtml = '', options = {}) => {
   if (!isViewMode && onExpand && type !== 'fig' && type !== 'eq' && type !== 'wikilink') {
     span.addEventListener('click', (e) => {
       if (e.target.closest('a')) return;
+      // A click ON the task checkbox toggles it (handled by its change listener);
+      // expanding here would swap the widget for its stale raw `- [ ] ` text
+      // before the toggle is serialized, so the checkbox vanished and nothing saved.
+      if (type === 'checkbox' && e.target.tagName === 'INPUT') {
+        e.stopPropagation();
+        return;
+      }
       e.stopPropagation();
       onExpand(span);
     });
@@ -16752,8 +16759,40 @@ function renderObsidianMarkdown(markdownText = '', options = {}) {
   }
 
   const blocks = lexMarkdownBlocks(markdownText);
+
+  // View-mode task toggles: rebuild the markdown from the lexed blocks' raw text
+  // (the toggled task block has already rewritten its own `raw`). Serializing the
+  // rendered view DOM instead dropped every newline in the block. The lexer covers
+  // every source line, so joining raws round-trips; if it ever would not, only the
+  // toggled task line is patched in the original text.
+  let blockOptions = options;
+  if (options.isViewMode && typeof options.onCheckboxToggle === 'function') {
+    const userToggle = options.onCheckboxToggle;
+    const originalRaws = blocks.map(b => b.raw);
+    const roundTrips = originalRaws.join('\n') === markdownText;
+    blockOptions = {
+      ...options,
+      onCheckboxToggle: () => {
+        if (roundTrips) {
+          userToggle(blocks.map(b => b.raw).join('\n'));
+          return;
+        }
+        const lines = markdownText.split('\n');
+        blocks.forEach((b, i) => {
+          if (b.raw !== originalRaws[i]) {
+            const li = lines.indexOf(originalRaws[i]);
+            if (li !== -1) lines[li] = b.raw;
+            originalRaws[i] = b.raw;
+          }
+        });
+        markdownText = lines.join('\n');
+        userToggle(markdownText);
+      }
+    };
+  }
+
   blocks.forEach((blk) => {
-    container.appendChild(createLiveBlockElement(blk, options));
+    container.appendChild(createLiveBlockElement(blk, blockOptions));
   });
 
   return container;
@@ -21591,7 +21630,10 @@ function CreateBlockItem({
 
     if (isEditMode) {
       wrap.addEventListener('click', (e) => {
-        if (e.target.closest('button') || isEditing) return;
+        // Interactive controls inside a rendered block (task checkboxes, form fields,
+        // links) act in place — they must not flip the block into edit mode, which
+        // re-renders it (the checkbox jumped and the toggle was lost).
+        if (isEditing || e.target.closest('button, input, select, textarea, label, a[href], .live-checkbox')) return;
         // Hand the click point to the editor so it can restore the caret exactly where
         // the user clicked when the block switches into edit mode.
         if (onSelect) onSelect({ clientX: e.clientX, clientY: e.clientY });

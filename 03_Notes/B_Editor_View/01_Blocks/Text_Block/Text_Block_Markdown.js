@@ -623,8 +623,40 @@ export function renderObsidianMarkdown(markdownText = '', options = {}) {
   }
 
   const blocks = lexMarkdownBlocks(markdownText);
+
+  // View-mode task toggles: rebuild the markdown from the lexed blocks' raw text
+  // (the toggled task block has already rewritten its own `raw`). Serializing the
+  // rendered view DOM instead dropped every newline in the block. The lexer covers
+  // every source line, so joining raws round-trips; if it ever would not, only the
+  // toggled task line is patched in the original text.
+  let blockOptions = options;
+  if (options.isViewMode && typeof options.onCheckboxToggle === 'function') {
+    const userToggle = options.onCheckboxToggle;
+    const originalRaws = blocks.map(b => b.raw);
+    const roundTrips = originalRaws.join('\n') === markdownText;
+    blockOptions = {
+      ...options,
+      onCheckboxToggle: () => {
+        if (roundTrips) {
+          userToggle(blocks.map(b => b.raw).join('\n'));
+          return;
+        }
+        const lines = markdownText.split('\n');
+        blocks.forEach((b, i) => {
+          if (b.raw !== originalRaws[i]) {
+            const li = lines.indexOf(originalRaws[i]);
+            if (li !== -1) lines[li] = b.raw;
+            originalRaws[i] = b.raw;
+          }
+        });
+        markdownText = lines.join('\n');
+        userToggle(markdownText);
+      }
+    };
+  }
+
   blocks.forEach((blk) => {
-    container.appendChild(createLiveBlockElement(blk, options));
+    container.appendChild(createLiveBlockElement(blk, blockOptions));
   });
 
   return container;

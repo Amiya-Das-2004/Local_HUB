@@ -302,6 +302,13 @@ export const createLiveWidget = (type, raw, contentHtml = '', options = {}) => {
   if (!isViewMode && onExpand && type !== 'fig' && type !== 'eq' && type !== 'wikilink') {
     span.addEventListener('click', (e) => {
       if (e.target.closest('a')) return;
+      // A click ON the task checkbox toggles it (handled by its change listener);
+      // expanding here would swap the widget for its stale raw `- [ ] ` text
+      // before the toggle is serialized, so the checkbox vanished and nothing saved.
+      if (type === 'checkbox' && e.target.tagName === 'INPUT') {
+        e.stopPropagation();
+        return;
+      }
       e.stopPropagation();
       onExpand(span);
     });
