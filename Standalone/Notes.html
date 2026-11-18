@@ -8190,7 +8190,11 @@ function createHighlightedCodeBlock(code, language = 'javascript', title = '') {
 function parseWikiLinks(text = '', allNotes = []) {
   if (!text) return '';
 
-  return text.replace(/\[\[([^\]]+)\]\]/g, (match, targetTitle) => {
+  return text.replace(/\[\[([^\]]+)\]\]/g, (match, inner) => {
+    // [[Note^blockRef]] — same syntax the text-block widgets support
+    const caretIdx = inner.indexOf('^');
+    const targetTitle = (caretIdx === -1 ? inner : inner.slice(0, caretIdx)).trim();
+    const blockRef = caretIdx !== -1 ? inner.slice(caretIdx + 1).trim() : '';
     const target = (allNotes || []).find(n =>
       (n.title && n.title.toLowerCase() === targetTitle.toLowerCase()) ||
       n.id === targetTitle ||
@@ -8198,7 +8202,10 @@ function parseWikiLinks(text = '', allNotes = []) {
     );
 
     if (target) {
-      return `<a href="#Notes?id=${encodeURIComponent(target.id)}" class="notes-wikilink text-purple-400 hover:text-purple-300 font-semibold underline decoration-dotted decoration-purple-500">${escapeHtml(targetTitle)}</a>`;
+      // Plain click → reader popup (delegated handler in Wiki_Link_Popup.js);
+      // Ctrl/Cmd/middle click → browser opens the href in a new tab.
+      const href = `#Notes?id=${encodeURIComponent(target.id)}${blockRef ? `&goto=${encodeURIComponent(blockRef)}` : ''}`;
+      return `<a href="${href}" data-note-id="${escapeHtml(target.id)}" data-block-ref="${escapeHtml(blockRef)}" title="Click: open in reader popup • Ctrl+Click: new browser tab" class="notes-wikilink text-purple-400 hover:text-purple-300 font-semibold underline decoration-dotted decoration-purple-500">${escapeHtml(targetTitle)}</a>`;
     }
     return `<span class="notes-wikilink-unresolved text-gray-400 italic" title="Note does not exist yet">${escapeHtml(targetTitle)}</span>`;
   });
@@ -12501,21 +12508,29 @@ const createLiveWidget = (type, raw, contentHtml = '', options = {}) => {
     span.innerHTML = `${escapeHtml(noteName || '(empty)')}${refBadge}`;
 
     if (resolved) {
+      // Popup + tab URL come from Wiki_Link_Popup.js via `window` (registered at
+      // module load, see Notes.js). No dynamic import(): it breaks in the flat
+      // standalone bundle and would delay window.open past the user gesture.
+      const tabUrl = () => (typeof window.wikiLinkTabUrl === 'function')
+        ? window.wikiLinkTabUrl(target.id, blockRef)
+        : `${window.location.href.split('#')[0]}#Notes?id=${encodeURIComponent(target.id)}${blockRef ? `&goto=${encodeURIComponent(blockRef)}` : ''}`;
       span.addEventListener('click', (e) => {
         e.stopPropagation();
         e.preventDefault();
         if (e.ctrlKey || e.metaKey) {
-          // Lazy-loaded: importing the popup statically would create a module cycle
-          // (Text_Widgets → Wiki_Link_Popup → Block_Dispatcher → Text_Block → here)
-          import('./Wiki_Link_Popup.js').then((m) => {
-            if (e.ctrlKey || e.metaKey) window.open(m.wikiLinkTabUrl(target.id, blockRef), '_blank');
-            else m.openWikiNotePopup(target.id, blockRef);
-          });
+          window.open(tabUrl(), '_blank');
         } else if (e.altKey && !isViewMode && options.onExpand) {
           options.onExpand(span);
-        } else {
-          import('./Wiki_Link_Popup.js').then((m) => m.openWikiNotePopup(target.id, blockRef));
+        } else if (typeof window.openWikiNotePopup === 'function') {
+          window.openWikiNotePopup(target.id, blockRef);
         }
+      });
+      // Middle-click also opens the note in a new tab (browser-link behaviour).
+      span.addEventListener('auxclick', (e) => {
+        if (e.button !== 1) return;
+        e.stopPropagation();
+        e.preventDefault();
+        window.open(tabUrl(), '_blank');
       });
     } else if (isViewMode) {
       span.addEventListener('click', (e) => e.stopPropagation());
@@ -16084,6 +16099,32 @@ function openWikiNotePopup(noteId, blockRef = '') {
 }
 function closeWikiNotePopup() {
   if (wikiNotePanelEl) wikiNotePanelEl.style.display = 'none';
+}
+
+// Delegated handler for the anchor-style links that Link_Parser.js emits
+// (callout/theorem blocks): plain click → reader popup; Ctrl/Cmd/Shift/middle
+// click falls through to the browser, which opens the href in a new tab/window.
+function onWikiAnchorClick(e) {
+  const a = e.target && e.target.closest ? e.target.closest('a.notes-wikilink[data-note-id]') : null;
+  if (!a || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+  e.preventDefault();
+  e.stopPropagation();
+  openWikiNotePopup(a.getAttribute('data-note-id'), a.getAttribute('data-block-ref') || '');
+}
+
+// Window registration: text-block widgets call these through `window` so the
+// click stays synchronous (keeps Ctrl+Click's user activation for window.open)
+// and works in the flat standalone bundle, where dynamic import() of a module
+// path cannot resolve. Registering here also avoids the static import cycle
+// Text_Widgets → Wiki_Link_Popup → Block_Dispatcher → Text_Block → Text_Widgets.
+if (typeof window !== 'undefined') {
+  window.openWikiNotePopup = openWikiNotePopup;
+  window.closeWikiNotePopup = closeWikiNotePopup;
+  window.wikiLinkTabUrl = wikiLinkTabUrl;
+  if (!window.__WIKI_ANCHOR_CLICK_BOUND__) {
+    window.__WIKI_ANCHOR_CLICK_BOUND__ = true;
+    document.addEventListener('click', onWikiAnchorClick, true);
+  }
 }
 
 

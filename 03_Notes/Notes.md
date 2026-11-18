@@ -241,10 +241,11 @@ Module-level side effects: exports `window.SaveNotesState` / `flushNotesSave` / 
 | `./B_Editor_View/04_LaTeX_Editor.js` | `RenderLaTeXEditor` | `initNotesApp()` |
 | `./C_Graph_View/Graph_View.js` | `renderGraphView` | `initNotesApp()` |
 | `../00_Components/03_Scrollbar.js` | `InitScrollbar` | `initNotesApp()` |
+| `./B_Editor_View/01_Blocks/Text_Block/Wiki_Link_Popup.js` | *(side-effect import)* | Registers `window.openWikiNotePopup` / `window.wikiLinkTabUrl` and the delegated `a.notes-wikilink` click handler before any note renders. |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `initNotesApp()` | 22 - 433 | Master initialization function and route dispatcher for 03_Notes: injects universal 4px opposite-theme scrollbars, heading scroll-margin/scroll-padding offsets, parses hash parameters (`?id=`, `view=graph`, `view=study`), mounts header and modals, renders responsive drawer with clamp/webkit scrollbars, removes leftover floating text docks when outside an individual note, and renders Editor (`RenderLaTeXEditor` in edit or study mode), Graph, or Card Deck view. Exposes `window.initNotesApp` for standalone compatibility. |
+| `initNotesApp()` | 24 - 435 | Master initialization function and route dispatcher for 03_Notes: injects universal 4px opposite-theme scrollbars, heading scroll-margin/scroll-padding offsets, parses hash parameters (`?id=`, `view=graph`, `view=study`), mounts header and modals, renders responsive drawer with clamp/webkit scrollbars, removes leftover floating text docks when outside an individual note, and renders Editor (`RenderLaTeXEditor` in edit or study mode), Graph, or Card Deck view. Exposes `window.initNotesApp` for standalone compatibility. |
 
 ## Writing_Engine
 **BibTeX_Parser.js**
@@ -354,9 +355,9 @@ Module-level side effects: exports `window.SaveNotesState` / `flushNotesSave` / 
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `parseWikiLinks(text = '', allNotes = [])` | 8 - 24 | Parses [[Note Title]] wiki-link syntax in text, converting matches into clickable note navigation links or unresolved indicator spans. |
-| `extractOutgoingLinks(note)` | 25 - 39 | Scans all blocks within a note to extract a deduplicated array of outgoing [[wiki-link]] target note titles. |
-| `buildGraphData(allNotes = [])` | 40 - 72 | Legacy [[wiki-link]]-based graph data builder; currently has no consumer (the graph view now builds its model via `C_Graph_View/Graph_Data.js → BuildGraphModel` using folders + shared tags). |
+| `parseWikiLinks(text = '', allNotes = [])` | 8 - 30 | Parses `[[Note Title]]` / `[[Note^blockRef]]` wiki-link syntax into `a.notes-wikilink` anchors (`href="#Notes?id=…&goto=…"`, `data-note-id`, `data-block-ref`) — plain click opens the reader popup via the delegated handler in `Wiki_Link_Popup.js`, Ctrl/middle click opens a new browser tab — or unresolved indicator spans. |
+| `extractOutgoingLinks(note)` | 32 - 45 | Scans all blocks within a note to extract a deduplicated array of outgoing [[wiki-link]] target note titles. |
+| `buildGraphData(allNotes = [])` | 47 - 78 | Legacy [[wiki-link]]-based graph data builder; currently has no consumer (the graph view now builds its model via `C_Graph_View/Graph_Data.js → BuildGraphModel` using folders + shared tags). |
 
 **Math_Renderer.js**
 
@@ -1014,7 +1015,7 @@ Module-level document handlers (registered once, guarded by window flags): captu
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
 | `renderBulletIcon(prefix)` | 110 - 121 | Compiles and renders bullet icon markup for unordered, ordered, or custom LaTeX list markers. |
-| `createLiveWidget(type, raw, contentHtml, options)` | 122 - 304 | Creates live interactive inline DOM widgets with seamless text selection (select-text) for math ($...$), formatting (**bold**, *italic*, <u>underline</u>), code (`code`), or inert literal tokens (`littex`). `wikilink` (`[[Note]]` / `[[Note^blockRef]]`) renders a purple chip with a ¶index badge — click opens the draggable reading-mode popup (`Wiki_Link_Popup.js`, lazy import), Ctrl+Click opens the note in a new browser tab, Alt+Click expands to raw. \fig, \eq, \cite, \href, \url function ONLY inside $...$ math (rendered by renderKatex preprocessing as real links/badges with data attrs for the delegated navigation/preview handlers); bare occurrences render as dim literal `littex` tokens. |
+| `createLiveWidget(type, raw, contentHtml, options)` | 122 - 311 | Creates live interactive inline DOM widgets with seamless text selection (select-text) for math ($...$), formatting (**bold**, *italic*, <u>underline</u>), code (`code`), or inert literal tokens (`littex`). `wikilink` (`[[Note]]` / `[[Note^blockRef]]`) renders a purple chip with a ¶index badge — click opens the draggable reading-mode popup (`window.openWikiNotePopup`, registered by `Wiki_Link_Popup.js`), Ctrl/Cmd+Click or middle-click opens the note in a new browser tab synchronously (keeps the user gesture so the popup blocker allows it), Alt+Click expands to raw. \fig, \eq, \cite, \href, \url function ONLY inside $...$ math (rendered by renderKatex preprocessing as real links/badges with data attrs for the delegated navigation/preview handlers); bare occurrences render as dim literal `littex` tokens. |
 
 **Cite_Autocomplete.js**
 
@@ -1090,7 +1091,9 @@ Delegated document-level `mouseover`/`click` listeners (registered once, marker-
 | `makeWikiNoteDraggable(panel)` | 67 - 92 | Pointer-based header drag with viewport clamping. |
 | `renderWikiNoteBody(note, blockRef)` | 93 - 153 | Renders every block via `renderBlockContent` in view mode with per-block figure/eq/prefix maps (activating the shared `setActive*` maps so in-block math badges resolve); `blockRef` (block id or 1-based index) scroll-into-views and pulses that block. |
 | `openWikiNotePopup(noteId, blockRef)` | 154 - 199 | Opens/refocuses the draggable reading-mode panel: header (drag + ↗ tab + ✕ close), body via `renderWikiNoteBody`. |
-| `closeWikiNotePopup()` | 200 - 203 | Hides the panel (Esc also closes). |
+| `closeWikiNotePopup()` | 200 - 202 | Hides the panel (Esc also closes). |
+| `onWikiAnchorClick(e)` | 207 - 213 | Delegated capture-phase handler for Link_Parser's `a.notes-wikilink[data-note-id]` anchors (callout/theorem blocks): plain left-click → `openWikiNotePopup`; Ctrl/Cmd/Shift/Alt/middle click falls through so the browser opens the `#Notes?id=…&goto=…` href in a new tab. |
+| *(module side effect)* | 220 - 228 | Registers `window.openWikiNotePopup`, `window.closeWikiNotePopup`, `window.wikiLinkTabUrl` and binds `onWikiAnchorClick` once (`window.__WIKI_ANCHOR_CLICK_BOUND__`). Text_Widgets calls the popup through `window` so clicks stay synchronous and work in the flat standalone bundle (a dynamic `import()` of a module path cannot resolve there). Imported for side effects by `Notes.js`. |
 
 ## B_Editor_View/02_Sidebar
 **01_Sidebar_Logo.js**

@@ -249,21 +249,29 @@ export const createLiveWidget = (type, raw, contentHtml = '', options = {}) => {
     span.innerHTML = `${escapeHtml(noteName || '(empty)')}${refBadge}`;
 
     if (resolved) {
+      // Popup + tab URL come from Wiki_Link_Popup.js via `window` (registered at
+      // module load, see Notes.js). No dynamic import(): it breaks in the flat
+      // standalone bundle and would delay window.open past the user gesture.
+      const tabUrl = () => (typeof window.wikiLinkTabUrl === 'function')
+        ? window.wikiLinkTabUrl(target.id, blockRef)
+        : `${window.location.href.split('#')[0]}#Notes?id=${encodeURIComponent(target.id)}${blockRef ? `&goto=${encodeURIComponent(blockRef)}` : ''}`;
       span.addEventListener('click', (e) => {
         e.stopPropagation();
         e.preventDefault();
         if (e.ctrlKey || e.metaKey) {
-          // Lazy-loaded: importing the popup statically would create a module cycle
-          // (Text_Widgets → Wiki_Link_Popup → Block_Dispatcher → Text_Block → here)
-          import('./Wiki_Link_Popup.js').then((m) => {
-            if (e.ctrlKey || e.metaKey) window.open(m.wikiLinkTabUrl(target.id, blockRef), '_blank');
-            else m.openWikiNotePopup(target.id, blockRef);
-          });
+          window.open(tabUrl(), '_blank');
         } else if (e.altKey && !isViewMode && options.onExpand) {
           options.onExpand(span);
-        } else {
-          import('./Wiki_Link_Popup.js').then((m) => m.openWikiNotePopup(target.id, blockRef));
+        } else if (typeof window.openWikiNotePopup === 'function') {
+          window.openWikiNotePopup(target.id, blockRef);
         }
+      });
+      // Middle-click also opens the note in a new tab (browser-link behaviour).
+      span.addEventListener('auxclick', (e) => {
+        if (e.button !== 1) return;
+        e.stopPropagation();
+        e.preventDefault();
+        window.open(tabUrl(), '_blank');
       });
     } else if (isViewMode) {
       span.addEventListener('click', (e) => e.stopPropagation());

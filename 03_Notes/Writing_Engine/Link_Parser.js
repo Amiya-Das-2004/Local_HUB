@@ -8,7 +8,11 @@ import { escapeHtml } from '../02_Utils.js';
 export function parseWikiLinks(text = '', allNotes = []) {
   if (!text) return '';
 
-  return text.replace(/\[\[([^\]]+)\]\]/g, (match, targetTitle) => {
+  return text.replace(/\[\[([^\]]+)\]\]/g, (match, inner) => {
+    // [[Note^blockRef]] — same syntax the text-block widgets support
+    const caretIdx = inner.indexOf('^');
+    const targetTitle = (caretIdx === -1 ? inner : inner.slice(0, caretIdx)).trim();
+    const blockRef = caretIdx !== -1 ? inner.slice(caretIdx + 1).trim() : '';
     const target = (allNotes || []).find(n =>
       (n.title && n.title.toLowerCase() === targetTitle.toLowerCase()) ||
       n.id === targetTitle ||
@@ -16,7 +20,10 @@ export function parseWikiLinks(text = '', allNotes = []) {
     );
 
     if (target) {
-      return `<a href="#Notes?id=${encodeURIComponent(target.id)}" class="notes-wikilink text-purple-400 hover:text-purple-300 font-semibold underline decoration-dotted decoration-purple-500">${escapeHtml(targetTitle)}</a>`;
+      // Plain click → reader popup (delegated handler in Wiki_Link_Popup.js);
+      // Ctrl/Cmd/middle click → browser opens the href in a new tab.
+      const href = `#Notes?id=${encodeURIComponent(target.id)}${blockRef ? `&goto=${encodeURIComponent(blockRef)}` : ''}`;
+      return `<a href="${href}" data-note-id="${escapeHtml(target.id)}" data-block-ref="${escapeHtml(blockRef)}" title="Click: open in reader popup • Ctrl+Click: new browser tab" class="notes-wikilink text-purple-400 hover:text-purple-300 font-semibold underline decoration-dotted decoration-purple-500">${escapeHtml(targetTitle)}</a>`;
     }
     return `<span class="notes-wikilink-unresolved text-gray-400 italic" title="Note does not exist yet">${escapeHtml(targetTitle)}</span>`;
   });
