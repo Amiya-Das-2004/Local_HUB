@@ -16,6 +16,7 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 ├── Notes.js                                ← Master lifecycle orchestrator for card/editor/graph views
 ├── Notes.md                                ← This architecture & API reference
 ├── Notes_Issues_And_Fixes.md               ← Known issues (single-file storage limits) and the planned in-file fixes
+├── HANDOFF.md                              ← Start here in a new session: working rules, what's done, known gaps, how to test
 ├── Tab_Notes/                              ← Dedicated standalone single-tab runner and handler adapters
 │   ├── Notes.html                          ← Standalone single-tab HTML runner for Notes
 │   ├── Tab_Import_Export_Handler.js        ← Tab-isolated JSON backup and recovery adapter
