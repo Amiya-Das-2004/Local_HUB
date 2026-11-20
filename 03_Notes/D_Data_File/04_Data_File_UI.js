@@ -6,6 +6,7 @@
 
 import { escapeHtml } from '../02_Utils.js';
 import { HasEmbeddedNotes, IsAppOnlyHtml } from './01_Data_Payload.js';
+import { ExportEverythingAsHtml } from '../F_Share/03_Share_Export.js';
 import {
   GetDataFileState, OnDataFileStateChange, InitDataFileMode, ReconnectDataFile, OpenDataFile,
   CreateDataFile, ChooseBackupFolder, DisconnectDataFile, SaveNotesSmart
@@ -103,6 +104,7 @@ function buildDataFileMenuItems(state) {
     items.push({ label: 'Download app-only HTML (no notes inside)', run: () => DownloadAppOnlyHtml() });
     items.push({ label: 'Open another data file…', run: () => runDataFileAction(OpenDataFile, () => `Opened ${GetDataFileState().name}`) });
     items.push({ label: 'New empty data file…', run: () => runDataFileAction(() => CreateDataFile({ withCurrentNotes: false }), () => `Created ${GetDataFileState().name}`) });
+    items.push({ label: 'Export everything as one HTML', run: () => RunExportEverything() });
     items.push('sep');
     items.push({ label: state.backupDir ? `Backup folder: ${state.backupDir.name} (change…)` : 'Choose backup folder…', run: () => runDataFileAction(ChooseBackupFolder, 'Backups will also be written to that folder') });
     items.push({ label: 'Stop using this data file', run: () => runDataFileAction(DisconnectDataFile, 'Data file disconnected — Save downloads the HTML again') });
@@ -114,6 +116,7 @@ function buildDataFileMenuItems(state) {
     if (HasEmbeddedNotes()) items.push({ label: 'Move my notes to a data file…', run: () => MoveNotesToDataFileFlow() });
     items.push({ label: 'Open data file…', run: () => runDataFileAction(OpenDataFile, () => `Opened ${GetDataFileState().name}`) });
     items.push({ label: 'New empty data file…', run: () => runDataFileAction(() => CreateDataFile({ withCurrentNotes: false }), () => `Created ${GetDataFileState().name}`) });
+    items.push({ label: 'Export everything as one HTML', run: () => RunExportEverything() });
   }
   return items;
 }
@@ -211,6 +214,16 @@ function flashSaveButton(title) {
     btn.innerHTML = html;
     if (typeof window.MarkUnsavedChanges === 'function') window.MarkUnsavedChanges(false, 0);
   }, 1600);
+}
+
+/** Full standalone with every note embedded (backup / other browsers). */
+export async function RunExportEverything() {
+  try {
+    const fileName = await ExportEverythingAsHtml();
+    ShowDataFileToast(`Downloaded ${fileName} — all notes in one HTML`, 'info', 4200);
+  } catch (e) {
+    ShowDataFileToast(`Export failed: ${describeDataFileError(e) || 'unknown error'}`, 'error', 5000);
+  }
 }
 
 /** Downloads this app as an HTML that carries NO notes (they live in the data file). */

@@ -101,6 +101,12 @@ export async function InitDataFileMode() {
   }
   const [handle, backupDir] = await Promise.all([RecallHandle('dataFile'), RecallHandle('backupFolder')]);
   setDataFileState({ backupDir: backupDir || null });
+  // An "Export everything" HTML is a snapshot: show it as exported, never swap in the live file.
+  const meta = (window.NotesState && window.NotesState.vaultMeta) || {};
+  if (meta.exportedAt && Array.isArray(window.NotesState.notes) && window.NotesState.notes.length) {
+    setDataFileState({ status: 'embedded' });
+    return GetDataFileState();
+  }
   if (!handle) {
     setDataFileState({ status: 'embedded' });
     return GetDataFileState();

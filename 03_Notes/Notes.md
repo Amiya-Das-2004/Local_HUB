@@ -111,7 +111,7 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 ├── F_Share/                                ← Share / export as standalone HTML
 │   ├── 01_Share_Payload.js                 ← One-note payload: note + global macros + used TikZ fonts + cited bibliography
 │   ├── 02_Shared_View.js                   ← Read-only route guard + hidden editing controls for shared files
-│   └── 03_Share_Export.js                  ← "Share note as HTML" download
+│   └── 03_Share_Export.js                  ← "Share note as HTML" and "Export everything as one HTML" downloads
 │
 └── Writing_Engine/                         ← Core text, math, TikZ, and formatting compilers
     ├── BibTeX_Parser.js                    ← BibTeX (.bib) tokenizer, parser, and citation formatter
@@ -555,11 +555,11 @@ Two storage modes, one data format. **Data-file mode** (Chromium with the File S
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
 | `NOTES_DATA_FORMAT` | 13 - 13 | `'tixidian-notes'` (written to `vaultMeta.format`, with `formatVersion`). |
-| `BuildNotesPayload()` | 17 - 30 | Flushes pending edits and returns a deep copy of the live vault, stamped with format, version and `lastSaved` (drops the `appOnly` marker). |
-| `SerializeNotesPayload(payload)` | 33 - 35 | JSON text written to the data file (1-space indent). |
-| `ParseNotesDataText(text)` | 41 - 52 | Parses data-file text → `{ ok, payload }` or `{ ok: false, error }` (invalid JSON / no `notes` list). |
-| `IsAppOnlyHtml()` | 55 - 57 | True when this HTML was saved as app-only (`vaultMeta.appOnly`). |
-| `HasEmbeddedNotes()` | 60 - 62 | True when the HTML carries notes of its own. |
+| `BuildNotesPayload()` | 17 - 31 | Flushes pending edits and returns a deep copy of the live vault, stamped with format, version and `lastSaved` (drops the `appOnly` marker). Also drops `exportedAt` (a data file is never an export). |
+| `SerializeNotesPayload(payload)` | 34 - 36 | JSON text written to the data file (1-space indent). |
+| `ParseNotesDataText(text)` | 42 - 53 | Parses data-file text → `{ ok, payload }` or `{ ok: false, error }` (invalid JSON / no `notes` list). |
+| `IsAppOnlyHtml()` | 56 - 58 | True when this HTML was saved as app-only (`vaultMeta.appOnly`). |
+| `HasEmbeddedNotes()` | 61 - 63 | True when the HTML carries notes of its own. |
 
 **02_Handle_Store.js**
 
@@ -597,15 +597,15 @@ Two storage modes, one data format. **Data-file mode** (Chromium with the File S
 | `rerenderAfterLoad()` | 62 - 67 | After loading a file: apply its saved TikZ fonts, bust the KaTeX macro cache, reset the badge and re-run the current route. |
 | `ensureDataFilePermission(handle, { request })` | 69 - 75 | `queryPermission` → `'granted'`, else (when allowed) `requestPermission` (needs a user gesture). |
 | `loadDataFileFromHandle(handle)` | 78 - 87 | Reads, validates (`ParseNotesDataText`), `ApplyNotesPayload`, records `lastModified`, remembers the handle, re-renders. |
-| `InitDataFileMode()` | 94 - 119 | Once per Notes-page load: recall the handle → permission granted ⇒ load silently; otherwise `'needs-permission'`. |
-| `ReconnectDataFile()` | 122 - 127 | One-click re-grant + load of the remembered file. |
-| `OpenDataFile()` | 130 - 136 | Picker → (confirm if unsaved changes) → load. |
-| `CreateDataFile({ withCurrentNotes, suggestedName })` | 142 - 156 | Save picker → writes the current notes (or an empty vault) → load it. |
-| `ChooseBackupFolder()` | 159 - 164 | Optional folder (directory handle) where `<name>.backup.json` is written before every save. |
-| `writeBackupOfCurrentFile(handle)` | 166 - 183 | Copies the file's current contents to the IndexedDB backups and, if set, the backup folder. |
-| `SaveToDataFile()` | 186 - 210 | Permission → confirm when the file changed elsewhere since it was read (`lastModified`) → backup → `createWritable` write (Chrome swaps a temp file on close) → clear unsaved state. |
-| `DisconnectDataFile()` | 213 - 216 | Forgets the file in this browser; Save downloads the HTML again. |
-| `SaveNotesSmart()` | 223 - 232 | Save entry: `'data-file'` (written), `'cancelled'`, `'needs-reconnect'` (never writes the notes shown over a file it did not load), or `'embedded'` (caller downloads the HTML). |
+| `InitDataFileMode()` | 94 - 125 | Once per Notes-page load: recall the handle → permission granted ⇒ load silently; otherwise `'needs-permission'`. An "Export everything" HTML (`vaultMeta.exportedAt`, with notes) stays `'embedded'`: it shows the snapshot and never swaps in the live file. |
+| `ReconnectDataFile()` | 128 - 133 | One-click re-grant + load of the remembered file. |
+| `OpenDataFile()` | 136 - 142 | Picker → (confirm if unsaved changes) → load. |
+| `CreateDataFile({ withCurrentNotes, suggestedName })` | 148 - 162 | Save picker → writes the current notes (or an empty vault) → load it. |
+| `ChooseBackupFolder()` | 165 - 170 | Optional folder (directory handle) where `<name>.backup.json` is written before every save. |
+| `writeBackupOfCurrentFile(handle)` | 172 - 189 | Copies the file's current contents to the IndexedDB backups and, if set, the backup folder. |
+| `SaveToDataFile()` | 192 - 216 | Permission → confirm when the file changed elsewhere since it was read (`lastModified`) → backup → `createWritable` write (Chrome swaps a temp file on close) → clear unsaved state. |
+| `DisconnectDataFile()` | 219 - 222 | Forgets the file in this browser; Save downloads the HTML again. |
+| `SaveNotesSmart()` | 229 - 238 | Save entry: `'data-file'` (written), `'cancelled'`, `'needs-reconnect'` (never writes the notes shown over a file it did not load), or `'embedded'` (caller downloads the HTML). |
 
 Module side effect: registers `window.InitDataFileMode`, `window.SaveNotesSmart`, `window.GetDataFileState`.
 
@@ -615,26 +615,28 @@ Module side effect: registers `window.InitDataFileMode`, `window.SaveNotesSmart`
 | :--- | :--- | :--- |
 | `../02_Utils.js` | `escapeHtml` | chip, menu, dialog markup |
 | `./01_Data_Payload.js` | `HasEmbeddedNotes`, `IsAppOnlyHtml` | `buildDataFileMenuItems()`, `maybeOfferMoveToDataFile()`, `MountDataFileUI()` |
+| `../F_Share/03_Share_Export.js` | `ExportEverythingAsHtml` | `RunExportEverything()` |
 | `./03_Data_File_Mode.js` | `GetDataFileState`, `OnDataFileStateChange`, `InitDataFileMode`, `ReconnectDataFile`, `OpenDataFile`, `CreateDataFile`, `ChooseBackupFolder`, `DisconnectDataFile`, `SaveNotesSmart` | menu actions, `HandleNotesSave()`, `MountDataFileUI()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `GetDataFileSlotHTML()` | 60 - 62 | `<span id="notes-data-file-slot">` placed in the header before Save. |
-| `ShowDataFileToast(message, kind, ms)` | 64 - 71 | Bottom toast (`ok` / `error` / `info`). |
-| `runDataFileAction(fn, okMessage)` | 79 - 89 | Runs a menu action with success/error toasts (closing a picker is silent). |
-| `buildDataFileMenuItems(state)` | 99 - 119 | Menu per status — connected: Save, Download app-only HTML, Open another, New empty, backup folder, Stop using; needs-permission: Reconnect, Open another, Stop using; embedded: Move my notes to a data file… (when the HTML carries notes), Open data file, New empty data file. |
-| `dataFileMenuHead(state)` | 121 - 126 | One-sentence explanation of where the notes live (incl. the Brave flag hint when unsupported). |
-| `openDataFileMenu(chip)` / `closeDataFileMenu()` | 91 - 149 | Dropdown under the chip; closes on outside click. |
-| `renderDataFileChip(state)` | 151 - 163 | Chip: green dot + file name (connected), amber "Reconnect <name>", or grey "In this HTML". |
-| `ShowDataFileReconnect()` | 166 - 199 | Modal: "Open <name>" (one click), "Open a different file…", "Keep notes in this HTML instead" (declines: `DisconnectDataFile()` → embedded mode, Save downloads the HTML; the file is not asked for again), "Not now"; shows errors inline. |
-| `flashSaveButton(title)` | 201 - 214 | Green tick on the Save button after a data-file save. |
-| `DownloadAppOnlyHtml()` | 217 - 221 | Downloads `Notes.html` with NO notes inside (`SaveNotesStandalone({ appOnly: true, dataFileName, markSaved: false })`); the notes stay in the data file. |
-| `showDataFileDialog({ title, html, actions })` | 223 - 244 | Generic modal with primary/secondary actions; an action returning `false` keeps it open; errors show inline. |
-| `MoveNotesToDataFileFlow()` | 247 - 260 | Migration: writes all notes shown now (including unsaved edits) to a new data file via `CreateDataFile({ withCurrentNotes: true })`, connects to it, then offers "Download app-only HTML". |
-| `showAppOnlyWelcome(state)` | 263 - 263 | App-only HTML opened with no remembered data file: "Open your notes" (Open data file… / New empty data file… / Start without a data file); in browsers without the API it explains where the notes are and to use an "Export everything" copy. |
-| `maybeOfferMoveToDataFile(state)` | 286 - 298 | One-time, dismissible bar for HTMLs that still carry their notes (embedded mode, API available): "Move my notes to a data file" / "Not now" (remembered per HTML path in `localStorage`). |
-| `HandleNotesSave()` | 302 - 321 | Single save entry for the Save button and Ctrl+S: `SaveNotesSmart()` → toast / reconnect dialog / `window.SaveNotesStandalone()` fallback. |
-| `MountDataFileUI()` | 325 - 346 | Notes page only: renders the chip after each header mount; the first call subscribes to state, installs Ctrl+S, runs `InitDataFileMode()` and then shows the app-only welcome or the move offer. Skipped entirely in shared read-only files. |
+| `GetDataFileSlotHTML()` | 61 - 63 | `<span id="notes-data-file-slot">` placed in the header before Save. |
+| `ShowDataFileToast(message, kind, ms)` | 65 - 72 | Bottom toast (`ok` / `error` / `info`). |
+| `runDataFileAction(fn, okMessage)` | 80 - 90 | Runs a menu action with success/error toasts (closing a picker is silent). |
+| `buildDataFileMenuItems(state)` | 100 - 122 | Menu per status — connected: Save, Download app-only HTML, Open another, New empty, Export everything as one HTML, backup folder, Stop using; needs-permission: Reconnect, Open another, Stop using; embedded: Move my notes to a data file… (when the HTML carries notes), Open data file, New empty data file, Export everything as one HTML. |
+| `dataFileMenuHead(state)` | 124 - 129 | One-sentence explanation of where the notes live (incl. the Brave flag hint when unsupported). |
+| `openDataFileMenu(chip)` / `closeDataFileMenu()` | 92 - 152 | Dropdown under the chip; closes on outside click. |
+| `renderDataFileChip(state)` | 154 - 166 | Chip: green dot + file name (connected), amber "Reconnect <name>", or grey "In this HTML". |
+| `ShowDataFileReconnect()` | 169 - 202 | Modal: "Open <name>" (one click), "Open a different file…", "Keep notes in this HTML instead" (declines: `DisconnectDataFile()` → embedded mode, Save downloads the HTML; the file is not asked for again), "Not now"; shows errors inline. |
+| `flashSaveButton(title)` | 204 - 217 | Green tick on the Save button after a data-file save. |
+| `RunExportEverything()` | 220 - 227 | Menu action: `ExportEverythingAsHtml()` with a toast. |
+| `DownloadAppOnlyHtml()` | 230 - 234 | Downloads `Notes.html` with NO notes inside (`SaveNotesStandalone({ appOnly: true, dataFileName, markSaved: false })`); the notes stay in the data file. |
+| `showDataFileDialog({ title, html, actions })` | 236 - 257 | Generic modal with primary/secondary actions; an action returning `false` keeps it open; errors show inline. |
+| `MoveNotesToDataFileFlow()` | 260 - 273 | Migration: writes all notes shown now (including unsaved edits) to a new data file via `CreateDataFile({ withCurrentNotes: true })`, connects to it, then offers "Download app-only HTML". |
+| `showAppOnlyWelcome(state)` | 276 - 276 | App-only HTML opened with no remembered data file: "Open your notes" (Open data file… / New empty data file… / Start without a data file); in browsers without the API it explains where the notes are and to use an "Export everything" copy. |
+| `maybeOfferMoveToDataFile(state)` | 299 - 311 | One-time, dismissible bar for HTMLs that still carry their notes (embedded mode, API available): "Move my notes to a data file" / "Not now" (remembered per HTML path in `localStorage`). |
+| `HandleNotesSave()` | 315 - 334 | Single save entry for the Save button and Ctrl+S: `SaveNotesSmart()` → toast / reconnect dialog / `window.SaveNotesStandalone()` fallback. |
+| `MountDataFileUI()` | 338 - 359 | Notes page only: renders the chip after each header mount; the first call subscribes to state, installs Ctrl+S, runs `InitDataFileMode()` and then shows the app-only welcome or the move offer. Skipped entirely in shared read-only files. |
 
 Module side effects: injects `#data-file-ui-styles`; registers `window.HandleNotesSave`, `window.MountDataFileUI`.
 
@@ -829,11 +831,13 @@ Module side effects (shared files only): sets `window.__TIX_SHARED_READONLY__`, 
 | Import Location | Functions Imported | used in Functions |
 | :--- | :--- | :--- |
 | `./01_Share_Payload.js` | `BuildSharedNotePayload` | `ShareNoteAsHtml()` |
+| `../D_Data_File/01_Data_Payload.js` | `BuildNotesPayload` | `ExportEverythingAsHtml()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `shareFileName(title)` | 10 - 13 | Safe `<title>.html` file name. |
-| `ShareNoteAsHtml(noteId)` | 16 - 22 | `window.SaveNotesStandalone({ payload, fileName, markSaved: false })` — the user's own file, data file and unsaved state stay untouched. |
+| `shareFileName(title)` | 14 - 17 | Safe `<title>.html` file name. |
+| `ExportEverythingAsHtml()` | 20 - 30 | Full standalone with ALL notes (incl. unsaved edits), fonts, bibliography and macros — `Notes_export_<date>.html` — for backup or other browsers. Marked `vaultMeta.exportedAt` so opening it never auto-attaches to the data file. Data file and unsaved state untouched. |
+| `ShareNoteAsHtml(noteId)` | 33 - 39 | `window.SaveNotesStandalone({ payload, fileName, markSaved: false })` — the user's own file, data file and unsaved state stay untouched. |
 
 ## A_Notes_Card_View
 **01_Navbar.js**

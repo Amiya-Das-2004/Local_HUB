@@ -26,6 +26,7 @@ export function BuildNotesPayload() {
     lastSaved: Date.now()
   };
   delete payload.vaultMeta.appOnly;
+  delete payload.vaultMeta.exportedAt; // only "Export everything" HTMLs carry it
   return payload;
 }
 
