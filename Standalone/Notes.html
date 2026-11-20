@@ -2502,6 +2502,9 @@ async function SaveAndDownloadApp() {
       '03_Notes/B_Editor_View/04_LaTeX_Editor.js',
       '03_Notes/E_Note_Ops/01_Block_Clone.js',
       '03_Notes/E_Note_Ops/02_Wiki_Link_Rewrite.js',
+      '03_Notes/F_Share/01_Share_Payload.js',
+      '03_Notes/F_Share/02_Shared_View.js',
+      '03_Notes/F_Share/03_Share_Export.js',
       '03_Notes/E_Note_Ops/03_Note_Operations.js',
       '03_Notes/E_Note_Ops/04_Note_Picker.js',
       '03_Notes/E_Note_Ops/05_Note_Menu.js',
@@ -3948,6 +3951,9 @@ const tabModuleFiles = [
   '03_Notes/B_Editor_View/04_LaTeX_Editor.js',
   '03_Notes/E_Note_Ops/01_Block_Clone.js',
   '03_Notes/E_Note_Ops/02_Wiki_Link_Rewrite.js',
+  '03_Notes/F_Share/01_Share_Payload.js',
+  '03_Notes/F_Share/02_Shared_View.js',
+  '03_Notes/F_Share/03_Share_Export.js',
   '03_Notes/E_Note_Ops/03_Note_Operations.js',
   '03_Notes/E_Note_Ops/04_Note_Picker.js',
   '03_Notes/E_Note_Ops/05_Note_Menu.js',
@@ -18703,6 +18709,8 @@ function createTikzRenderPanel(block, { fitPercent = 100, hasBorder = false, get
 
   const refreshStatus = () => {
     if (busy) return;
+    // Shared read-only copy (F_Share/): show the saved diagram as it is — no notices, no compiling.
+    if (typeof window !== 'undefined' && window.__TIX_SHARED_READONLY__) { setStatus(null); return; }
     const code = currentCode().trim();
     if (lastError) {
       const head = block.svg
@@ -18756,6 +18764,7 @@ function createTikzRenderPanel(block, { fitPercent = 100, hasBorder = false, get
 
   /** Auto-compile when the saved SVG is missing or outdated (once per version per session). */
   function autoRender() {
+    if (typeof window !== 'undefined' && window.__TIX_SHARED_READONLY__) return;
     const code = currentCode();
     if (!code.trim()) return;
     const key = getTikzRenderKey(code);
@@ -24905,6 +24914,180 @@ function RewriteWikiLinks(fromNote, toNote, { blockIds = null, wholeNote = false
 }
 
 
+/* --- 03_Notes/F_Share/01_Share_Payload.js --- */
+/**
+ * 03_Notes/F_Share/01_Share_Payload.js
+ * Builds the data embedded in a "Share note as HTML" file: ONLY the shared note, the global
+ * macros, the TikZ fonts its saved SVGs use, and the bibliography entries it cites.
+ * [[wiki-links]] to notes that are not included become plain text.
+ */
+
+
+
+// Visits every string of an object (skips ids, SVGs, data URLs); fn may return a replacement.
+function walkShareStrings(obj, fn) {
+  const walk = (o) => {
+    Object.keys(o).forEach((k) => {
+      const v = o[k];
+      if (typeof v === 'string') {
+        if (k === 'id' || k === 'svg' || k === 'svgKey' || v.startsWith('data:') || v.startsWith('<svg')) return;
+        const next = fn(v, k);
+        if (typeof next === 'string' && next !== v) o[k] = next;
+      } else if (v && typeof v === 'object') {
+        walk(v);
+      }
+    });
+  };
+  walk(obj);
+}
+
+/** Citation keys used by \cite{a,b} anywhere in the note. */
+function CollectCitedKeys(note) {
+  const keys = new Set();
+  walkShareStrings(JSON.parse(JSON.stringify(note)), (text) => {
+    const re = /\\cite[tp]?\*?(?:\[[^\]]*\])?\{([^}]+)\}/g;
+    let m;
+    while ((m = re.exec(text)) !== null) m[1].split(',').map(k => k.trim().toLowerCase()).filter(Boolean).forEach(k => keys.add(k));
+  });
+  return keys;
+}
+
+/** Font families used by the note's saved TikZ SVGs. */
+function CollectNoteTikzFonts(note) {
+  const fonts = new Set();
+  (note.blocks || []).forEach(b => { if (b.type === 'tikz' && b.svg) getTikzSvgFontFamilies(b.svg).forEach(f => fonts.add(f)); });
+  return fonts;
+}
+
+// [[Other note]] / [[Other note^ref]] → "Other note" (links inside the shared note stay links).
+function flattenForeignWikiLinks(note) {
+  walkShareStrings(note, (text) => {
+    if (!text.includes('[[')) return text;
+    return text.replace(/\[\[([^\]]+)\]\]/g, (match, inner) => {
+      const caret = inner.indexOf('^');
+      const name = (caret === -1 ? inner : inner.slice(0, caret)).trim();
+      return NoteMatchesWikiRef(note, name) ? match : name;
+    });
+  });
+}
+
+/** @returns {Object} a complete vault payload containing only `noteId` */
+function BuildSharedNotePayload(noteId) {
+  const src = (NotesState.notes || []).find(n => n.id === noteId);
+  if (!src) throw new Error('Note not found.');
+  const note = JSON.parse(JSON.stringify(src));
+  flattenForeignWikiLinks(note);
+  const cited = CollectCitedKeys(note);
+  const fontsUsed = CollectNoteTikzFonts(note);
+  const allFonts = NotesState.tikzFonts || {};
+  const tikzFonts = {};
+  fontsUsed.forEach(f => { if (allFonts[f]) tikzFonts[f] = allFonts[f]; });
+  return {
+    vaultMeta: {
+      title: note.title || 'Shared note',
+      version: (NotesState.vaultMeta && NotesState.vaultMeta.version) || '1.0.0',
+      shared: { readOnly: true, noteId: note.id, sharedAt: Date.now() }
+    },
+    globalMacros: JSON.parse(JSON.stringify(NotesState.globalMacros || {})),
+    tableTemplates: [],
+    tikzTemplates: [],
+    tikzFonts,
+    bibliography: (NotesState.bibliography || []).filter(e => cited.has(String(e.key || '').trim().toLowerCase())).map(e => JSON.parse(JSON.stringify(e))),
+    citationStyle: NotesState.citationStyle || 'numeric',
+    folders: [note.folder || 'General'],
+    tags: Array.isArray(note.tags) ? note.tags.slice() : [],
+    notes: [note]
+  };
+}
+
+
+/* --- 03_Notes/F_Share/02_Shared_View.js --- */
+/**
+ * 03_Notes/F_Share/02_Shared_View.js
+ * Read-only mode of a shared-note HTML (vaultMeta.shared.readOnly): the file always shows
+ * its one note in study mode. Editing controls are hidden, task checkboxes cannot be ticked,
+ * and the data-file mode never starts (so opening it in your own browser cannot attach it to
+ * your data file). Runs at module load, before the first route is rendered.
+ */
+function GetSharedInfo() {
+  const meta = NotesState.vaultMeta || {};
+  return meta.shared && meta.shared.readOnly ? meta.shared : null;
+}
+function IsSharedReadOnly() {
+  return Boolean(GetSharedInfo());
+}
+
+function sharedStudyHash(info) {
+  return `#Notes?view=study&id=${encodeURIComponent(info.noteId)}`;
+}
+
+// Keeps the route on the shared note's study view (also for deep links like &goto=…).
+function enforceSharedRoute(info) {
+  const hash = window.location.hash || '';
+  const isStudyOfNote = /view=study/.test(hash) && hash.includes(`id=${encodeURIComponent(info.noteId)}`);
+  if (!isStudyOfNote) {
+    const goto = (hash.match(/[?&]goto=([^&]+)/) || [])[1];
+    history.replaceState(null, '', sharedStudyHash(info) + (goto ? `&goto=${goto}` : ''));
+  }
+}
+
+if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+  const info = GetSharedInfo();
+  if (info) {
+    window.__TIX_SHARED_READONLY__ = true;
+    enforceSharedRoute(info);
+    // Capture listener: runs before the page router's own hashchange listener.
+    window.addEventListener('hashchange', () => enforceSharedRoute(info), true);
+    const style = document.createElement('style');
+    style.id = 'shared-readonly-styles';
+    style.textContent = `
+      body.tix-shared-readonly #save-btn, body.tix-shared-readonly #btn-import, body.tix-shared-readonly #btn-export,
+      body.tix-shared-readonly #notes-data-file-slot, body.tix-shared-readonly .btn-back-to-notes,
+      body.tix-shared-readonly .btn-macros-toggle, body.tix-shared-readonly .btn-library-toggle,
+      body.tix-shared-readonly .btn-numbering-toggle, body.tix-shared-readonly .notes-study-toggle-btn { display: none !important; }
+      body.tix-shared-readonly .note-task-checkbox { pointer-events: none; }
+      .tix-shared-banner { position: fixed; left: 50%; top: calc(var(--notes-header-height, 74px) + 8px); transform: translateX(-50%);
+        z-index: 60; padding: 4px 12px; border-radius: 999px; font-size: 11.5px; font-weight: 600; color: var(--text-secondary, #a0a4b8);
+        background: var(--surface, #181b27); border: 1px solid var(--border, #2a2e40); pointer-events: none; }
+    `;
+    document.head.appendChild(style);
+    const applyBody = () => {
+      document.body.classList.add('tix-shared-readonly');
+      if (!document.querySelector('.tix-shared-banner')) {
+        const b = document.createElement('div');
+        b.className = 'tix-shared-banner';
+        b.textContent = 'Shared note · read-only';
+        document.body.appendChild(b);
+      }
+    };
+    if (document.body) applyBody(); else document.addEventListener('DOMContentLoaded', applyBody);
+  }
+}
+
+
+/* --- 03_Notes/F_Share/03_Share_Export.js --- */
+/**
+ * 03_Notes/F_Share/03_Share_Export.js
+ * "Share note as HTML": downloads ONE standalone HTML with the app and only that note
+ * (01_Share_Payload.js), opening read-only in study mode (02_Shared_View.js).
+ * The user's own file, data file and unsaved state are not touched.
+ */
+
+function shareFileName(title) {
+  const base = String(title || 'note').trim().replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, '_').slice(0, 60) || 'note';
+  return `${base}.html`;
+}
+
+/** @returns {Promise<string>} the downloaded file name */
+async function ShareNoteAsHtml(noteId) {
+  if (typeof window.SaveNotesStandalone !== 'function') throw new Error('Sharing is not available on this page.');
+  const payload = BuildSharedNotePayload(noteId);
+  const fileName = shareFileName(payload.notes[0].title);
+  await window.SaveNotesStandalone({ payload, fileName, markSaved: false });
+  return fileName;
+}
+
+
 /* --- 03_Notes/E_Note_Ops/03_Note_Operations.js --- */
 /**
  * 03_Notes/E_Note_Ops/03_Note_Operations.js
@@ -25145,6 +25328,7 @@ function PickFolder({ title = 'Move to folder', current = '' } = {}) {
 
 
 
+
 if (typeof document !== 'undefined' && !document.getElementById('note-menu-styles')) {
   const style = document.createElement('style');
   style.id = 'note-menu-styles';
@@ -25188,6 +25372,14 @@ async function RunMergeNote(note) {
   const renames = DescribeRenames(res.renamed);
   ShowStructureToast(`Merged ${res.moved} block${res.moved === 1 ? '' : 's'} into "${res.target.title}"${pick.deleteSource ? ' and deleted the source' : ''}.${renames ? ' ' + renames : ''}`, { kind: renames ? 'warn' : 'info', ms: renames ? 9000 : 6000 });
 }
+async function RunShareNote(note) {
+  try {
+    const fileName = await ShareNoteAsHtml(note.id);
+    ShowStructureToast(`Downloaded ${fileName} — a read-only copy of this note only`, { undo: false });
+  } catch (e) {
+    ShowStructureToast(`Could not share: ${e.message || e}`, { undo: false, kind: 'warn' });
+  }
+}
 
 /** Opens the menu next to `anchor` for `note`. */
 function OpenNoteActionsMenu(anchor, note) {
@@ -25198,7 +25390,8 @@ function OpenNoteActionsMenu(anchor, note) {
   [
     ['Duplicate note', () => RunDuplicateNote(note)],
     ['Move to folder…', () => RunMoveNoteToFolder(note)],
-    ['Merge into note…', () => RunMergeNote(note)]
+    ['Merge into note…', () => RunMergeNote(note)],
+    ['Share note as HTML', () => RunShareNote(note)]
   ].forEach(([label, run]) => {
     const b = document.createElement('button');
     b.type = 'button';
@@ -30890,6 +31083,8 @@ let dataFileUiWired = false;
 /** Called after every header mount on the Notes page (idempotent wiring, re-rendered chip). */
 function MountDataFileUI() {
   if (typeof window === 'undefined' || window.__LOCALHUB_PAGE__ !== 'notes') return;
+  // A shared-note HTML (F_Share/) is read-only: no data file, no saving.
+  if (window.__TIX_SHARED_READONLY__) return;
   renderDataFileChip();
   if (dataFileUiWired) return;
   dataFileUiWired = true;

@@ -101,6 +101,8 @@ export function createTikzRenderPanel(block, { fitPercent = 100, hasBorder = fal
 
   const refreshStatus = () => {
     if (busy) return;
+    // Shared read-only copy (F_Share/): show the saved diagram as it is — no notices, no compiling.
+    if (typeof window !== 'undefined' && window.__TIX_SHARED_READONLY__) { setStatus(null); return; }
     const code = currentCode().trim();
     if (lastError) {
       const head = block.svg
@@ -154,6 +156,7 @@ export function createTikzRenderPanel(block, { fitPercent = 100, hasBorder = fal
 
   /** Auto-compile when the saved SVG is missing or outdated (once per version per session). */
   function autoRender() {
+    if (typeof window !== 'undefined' && window.__TIX_SHARED_READONLY__) return;
     const code = currentCode();
     if (!code.trim()) return;
     const key = getTikzRenderKey(code);

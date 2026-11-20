@@ -108,6 +108,11 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 │   ├── 08_Block_Operations.js              ← Copy · Cut · Duplicate · Delete · Move to note… · Paste (undoable)
 │   └── 09_Block_Selection_Bar.js           ← Floating selection bar + Ctrl+C/X/V, Delete, Esc wiring
 │
+├── F_Share/                                ← Share / export as standalone HTML
+│   ├── 01_Share_Payload.js                 ← One-note payload: note + global macros + used TikZ fonts + cited bibliography
+│   ├── 02_Shared_View.js                   ← Read-only route guard + hidden editing controls for shared files
+│   └── 03_Share_Export.js                  ← "Share note as HTML" download
+│
 └── Writing_Engine/                         ← Core text, math, TikZ, and formatting compilers
     ├── BibTeX_Parser.js                    ← BibTeX (.bib) tokenizer, parser, and citation formatter
     ├── Block_Engine.js                     ← High-performance block differential updates
@@ -266,11 +271,12 @@ Module-level side effects: exports `window.SaveNotesState` / `flushNotesSave` / 
 | `./B_Editor_View/04_LaTeX_Editor.js` | `RenderLaTeXEditor` | `initNotesApp()` |
 | `./C_Graph_View/Graph_View.js` | `renderGraphView` | `initNotesApp()` |
 | `../00_Components/03_Scrollbar.js` | `InitScrollbar` | `initNotesApp()` |
+| `./F_Share/02_Shared_View.js` | *(side-effect import)* | Read-only route guard for shared-note HTML files (must load before the first route renders). |
 | `./B_Editor_View/01_Blocks/Text_Block/Wiki_Link_Popup.js` | *(side-effect import)* | Registers `window.openWikiNotePopup` / `window.wikiLinkTabUrl` and the delegated `a.notes-wikilink` click handler before any note renders. |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `initNotesApp()` | 24 - 435 | Master initialization function and route dispatcher for 03_Notes: injects universal 4px opposite-theme scrollbars, heading scroll-margin/scroll-padding offsets, parses hash parameters (`?id=`, `view=graph`, `view=study`), mounts header and modals, renders responsive drawer with clamp/webkit scrollbars, removes leftover floating text docks when outside an individual note, and renders Editor (`RenderLaTeXEditor` in edit or study mode), Graph, or Card Deck view. Exposes `window.initNotesApp` for standalone compatibility. |
+| `initNotesApp()` | 26 - 430 | Master initialization function and route dispatcher for 03_Notes: injects universal 4px opposite-theme scrollbars, heading scroll-margin/scroll-padding offsets, parses hash parameters (`?id=`, `view=graph`, `view=study`), mounts header and modals, renders responsive drawer with clamp/webkit scrollbars, removes leftover floating text docks when outside an individual note, and renders Editor (`RenderLaTeXEditor` in edit or study mode), Graph, or Card Deck view. Exposes `window.initNotesApp` for standalone compatibility. |
 
 ## Writing_Engine
 **BibTeX_Parser.js**
@@ -628,7 +634,7 @@ Module side effect: registers `window.InitDataFileMode`, `window.SaveNotesSmart`
 | `showAppOnlyWelcome(state)` | 263 - 263 | App-only HTML opened with no remembered data file: "Open your notes" (Open data file… / New empty data file… / Start without a data file); in browsers without the API it explains where the notes are and to use an "Export everything" copy. |
 | `maybeOfferMoveToDataFile(state)` | 286 - 298 | One-time, dismissible bar for HTMLs that still carry their notes (embedded mode, API available): "Move my notes to a data file" / "Not now" (remembered per HTML path in `localStorage`). |
 | `HandleNotesSave()` | 302 - 321 | Single save entry for the Save button and Ctrl+S: `SaveNotesSmart()` → toast / reconnect dialog / `window.SaveNotesStandalone()` fallback. |
-| `MountDataFileUI()` | 325 - 344 | Notes page only: renders the chip after each header mount; the first call subscribes to state, installs Ctrl+S, runs `InitDataFileMode()` and then shows the app-only welcome or the move offer. |
+| `MountDataFileUI()` | 325 - 346 | Notes page only: renders the chip after each header mount; the first call subscribes to state, installs Ctrl+S, runs `InitDataFileMode()` and then shows the app-only welcome or the move offer. Skipped entirely in shared read-only files. |
 
 Module side effects: injects `#data-file-ui-styles`; registers `window.HandleNotesSave`, `window.MountDataFileUI`.
 
@@ -704,14 +710,16 @@ Copy, move and merge of whole notes (C1) and of blocks (C2). Every operation rec
 | `./01_Block_Clone.js` | `DescribeRenames` | `RunMergeNote()` |
 | `./04_Note_Picker.js` | `PickNote`, `PickFolder` | `RunMoveNoteToFolder()`, `RunMergeNote()` |
 | `../Writing_Engine/Structure_History.js` | `ShowStructureToast`, `RefreshAfterStructureChange` | all actions |
+| `../F_Share/03_Share_Export.js` | `ShareNoteAsHtml` | `RunShareNote()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `closeNoteMenu()` / `onNoteMenuOutside(e)` | 25 - 31 | Closes the menu (also on outside click). |
-| `RunDuplicateNote(note)` | 33 - 38 | Duplicate + toast with Undo. |
-| `RunMoveNoteToFolder(note)` | 40 - 47 | Folder picker → move + toast. |
-| `RunMergeNote(note)` | 49 - 57 | Note picker (with "delete source") → merge; toast lists clash renames (warning style). |
-| `OpenNoteActionsMenu(anchor, note)` | 60 - 82 | Opens the "⋯" menu next to the card button. |
+| `closeNoteMenu()` / `onNoteMenuOutside(e)` | 26 - 32 | Closes the menu (also on outside click). |
+| `RunDuplicateNote(note)` | 34 - 39 | Duplicate + toast with Undo. |
+| `RunMoveNoteToFolder(note)` | 41 - 48 | Folder picker → move + toast. |
+| `RunMergeNote(note)` | 50 - 58 | Note picker (with "delete source") → merge; toast lists clash renames (warning style). |
+| `RunShareNote(note)` | 60 - 67 | "Share note as HTML" → downloads a read-only one-note HTML. |
+| `OpenNoteActionsMenu(anchor, note)` | 70 - 93 | Opens the "⋯" menu next to the card button: Duplicate note · Move to folder… · Merge into note… · Share note as HTML. |
 
 **06_Block_Selection.js**
 
@@ -784,6 +792,48 @@ Copy, move and merge of whole notes (C1) and of blocks (C2). Every operation rec
 | `onCopyOrCutSync(e, isCut)` | 110 - 117 | `copy`/`cut` events with a block selection: fills the internal clipboard synchronously and writes its text into `clipboardData`. |
 
 Module side effects (once): subscribes the bar; `keydown` (Esc clears, Delete/Backspace deletes the selection outside text fields); `copy`/`cut`; `paste` — inserts blocks when the clipboard text matches, also while editing a block of the note (fields outside the note keep normal paste). Imported for side effects by `04_LaTeX_Editor.js`.
+
+## F_Share
+**01_Share_Payload.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| `../00_State.js` | `NotesState` | `BuildSharedNotePayload()` |
+| `../E_Note_Ops/02_Wiki_Link_Rewrite.js` | `NoteMatchesWikiRef` | `flattenForeignWikiLinks()` |
+| `../Writing_Engine/Tikz_Engine/Tikz_Font_Store.js` | `getTikzSvgFontFamilies` | `CollectNoteTikzFonts()` |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `walkShareStrings(obj, fn)` | 13 - 27 | Visits every string (skips ids, SVGs, data URLs). |
+| `CollectCitedKeys(note)` | 30 - 36 | Citation keys from `\cite{a,b}` (also `\citet`/`\citep`, optional `[...]`). |
+| `CollectNoteTikzFonts(note)` | 41 - 45 | Font families used by the note's saved TikZ SVGs. |
+| `flattenForeignWikiLinks(note)` | 48 - 56 | `[[Other note]]` / `[[Other note^ref]]` → plain "Other note"; links into the shared note stay links. |
+| `BuildSharedNotePayload(noteId)` | 60 - 86 | Full vault object with ONLY that note, all global macros, only its TikZ fonts, only cited bibliography entries, its folder/tags, `vaultMeta.shared = { readOnly: true, noteId, sharedAt }`. |
+
+**02_Shared_View.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| `../00_State.js` | `NotesState` | `GetSharedInfo()` |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `GetSharedInfo()` / `IsSharedReadOnly()` | 11 - 18 | `vaultMeta.shared` when the file is a read-only shared note. |
+| `sharedStudyHash(info)` | 20 - 22 | `#Notes?view=study&id=<note>`. |
+| `enforceSharedRoute(info)` | 25 - 32 | Any other route (deck, edit, graph) is replaced by the shared note's study view (keeps `&goto=`). |
+
+Module side effects (shared files only): sets `window.__TIX_SHARED_READONLY__`, rewrites the initial route, adds a capture-phase `hashchange` guard (runs before the page router), injects `#shared-readonly-styles` (hides Save, Import/Export, data-file chip, back/macros/library/numbering/edit toggles; task checkboxes inert) and a "Shared note · read-only" badge. Data-file mode (`MountDataFileUI`) and TikZ compiling/notices (`Tikz_Render_Panel`) are disabled there. Imported for side effects by `Notes.js`.
+
+**03_Share_Export.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| `./01_Share_Payload.js` | `BuildSharedNotePayload` | `ShareNoteAsHtml()` |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `shareFileName(title)` | 10 - 13 | Safe `<title>.html` file name. |
+| `ShareNoteAsHtml(noteId)` | 16 - 22 | `window.SaveNotesStandalone({ payload, fileName, markSaved: false })` — the user's own file, data file and unsaved state stay untouched. |
 
 ## A_Notes_Card_View
 **01_Navbar.js**
@@ -1265,7 +1315,7 @@ Module side effects (once): subscribes the bar; `keydown` (Esc clears, Delete/Ba
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
 | `tikzAutoRenderAttempts` | 18 - 18 | Session set of `blockId:renderKey` versions already auto-compiled (prevents retry loops when offline or failing). |
-| `createTikzRenderPanel(block, { fitPercent, hasBorder, getCode, onSaved })` | 57 - 178 | Diagram area of a TikZ block: shows `block.svg` on a white `.tikz-paper` card (white in both themes; optional border) and a status line. `compile({ force })` renders the current code and, ONLY on success, stores `block.svg` + `block.svgKey`, saves state and calls `onSaved`; a failure keeps the saved SVG and shows `⚠ Render failed — showing the last saved diagram` with the TeX error lines and ↻ Retry (or `nothing could be drawn` when there is no saved SVG). `autoRender()` compiles once per version when the SVG is missing or outdated. Also shows an outdated notice with ↻ Re-render and a warning listing packages the online engine does not have. Returns `{ el, compile, autoRender, refreshStatus, setFit, setBorder }`. Injects `#tikz-render-panel-styles` once. |
+| `createTikzRenderPanel(block, { fitPercent, hasBorder, getCode, onSaved })` | 57 - 181 | Diagram area of a TikZ block: shows `block.svg` on a white `.tikz-paper` card (white in both themes; optional border) and a status line. `compile({ force })` renders the current code and, ONLY on success, stores `block.svg` + `block.svgKey`, saves state and calls `onSaved`; a failure keeps the saved SVG and shows `⚠ Render failed — showing the last saved diagram` with the TeX error lines and ↻ Retry (or `nothing could be drawn` when there is no saved SVG). `autoRender()` compiles once per version when the SVG is missing or outdated. Also shows an outdated notice with ↻ Re-render and a warning listing packages the online engine does not have. Returns `{ el, compile, autoRender, refreshStatus, setFit, setBorder }`. Injects `#tikz-render-panel-styles` once. In a shared read-only copy (`window.__TIX_SHARED_READONLY__`) it only shows the saved SVG: no notices, no auto-render. |
 
 **Tikz_Templates.js**
 

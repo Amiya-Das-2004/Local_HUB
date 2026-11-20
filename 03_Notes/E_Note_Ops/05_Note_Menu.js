@@ -8,6 +8,7 @@ import { DuplicateNote, MoveNoteToFolder, MergeNoteInto } from './03_Note_Operat
 import { DescribeRenames } from './01_Block_Clone.js';
 import { PickNote, PickFolder } from './04_Note_Picker.js';
 import { ShowStructureToast, RefreshAfterStructureChange } from '../Writing_Engine/Structure_History.js';
+import { ShareNoteAsHtml } from '../F_Share/03_Share_Export.js';
 
 if (typeof document !== 'undefined' && !document.getElementById('note-menu-styles')) {
   const style = document.createElement('style');
@@ -56,6 +57,15 @@ export async function RunMergeNote(note) {
   ShowStructureToast(`Merged ${res.moved} block${res.moved === 1 ? '' : 's'} into "${res.target.title}"${pick.deleteSource ? ' and deleted the source' : ''}.${renames ? ' ' + renames : ''}`, { kind: renames ? 'warn' : 'info', ms: renames ? 9000 : 6000 });
 }
 
+export async function RunShareNote(note) {
+  try {
+    const fileName = await ShareNoteAsHtml(note.id);
+    ShowStructureToast(`Downloaded ${fileName} — a read-only copy of this note only`, { undo: false });
+  } catch (e) {
+    ShowStructureToast(`Could not share: ${e.message || e}`, { undo: false, kind: 'warn' });
+  }
+}
+
 /** Opens the menu next to `anchor` for `note`. */
 export function OpenNoteActionsMenu(anchor, note) {
   closeNoteMenu();
@@ -65,7 +75,8 @@ export function OpenNoteActionsMenu(anchor, note) {
   [
     ['Duplicate note', () => RunDuplicateNote(note)],
     ['Move to folder…', () => RunMoveNoteToFolder(note)],
-    ['Merge into note…', () => RunMergeNote(note)]
+    ['Merge into note…', () => RunMergeNote(note)],
+    ['Share note as HTML', () => RunShareNote(note)]
   ].forEach(([label, run]) => {
     const b = document.createElement('button');
     b.type = 'button';

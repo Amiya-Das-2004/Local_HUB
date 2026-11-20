@@ -324,6 +324,8 @@ let dataFileUiWired = false;
 /** Called after every header mount on the Notes page (idempotent wiring, re-rendered chip). */
 export function MountDataFileUI() {
   if (typeof window === 'undefined' || window.__LOCALHUB_PAGE__ !== 'notes') return;
+  // A shared-note HTML (F_Share/) is read-only: no data file, no saving.
+  if (window.__TIX_SHARED_READONLY__) return;
   renderDataFileChip();
   if (dataFileUiWired) return;
   dataFileUiWired = true;
