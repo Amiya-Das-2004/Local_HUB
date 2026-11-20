@@ -163,6 +163,59 @@ function migrateOrientationContainers(note) {
   }
 }
 
+// ONE data format for both storage modes: the JSON inside <script id="NotesData"> and the
+// external data file (D_Data_File/) are the same object. Normalizes a parsed payload.
+export function normalizeNotesPayload(parsed) {
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+  return {
+    vaultMeta: (parsed.vaultMeta && typeof parsed.vaultMeta === 'object') ? parsed.vaultMeta : { title: "My Research & Notes Vault", version: "1.0.0", lastSaved: 0 },
+    globalMacros: parsed.globalMacros || { ...DEFAULT_GLOBAL_MACROS },
+    tableTemplates: Array.isArray(parsed.tableTemplates) ? parsed.tableTemplates : [],
+    tikzTemplates: Array.isArray(parsed.tikzTemplates) ? parsed.tikzTemplates : [],
+    tikzFonts: (parsed.tikzFonts && typeof parsed.tikzFonts === 'object') ? parsed.tikzFonts : {},
+    bibliography: Array.isArray(parsed.bibliography) ? parsed.bibliography : [],
+    citationStyle: typeof parsed.citationStyle === 'string' ? parsed.citationStyle : 'numeric',
+    folders: Array.isArray(parsed.folders) ? parsed.folders : [],
+    tags: Array.isArray(parsed.tags) ? parsed.tags : [],
+    notes: Array.isArray(parsed.notes) ? parsed.notes.map(sanitizeNote) : []
+  };
+}
+
+// Writes a normalized payload into the live NotesState (folders/tags derived when missing).
+function assignNotesPayload(payload) {
+  Object.assign(NotesState, {
+    vaultMeta: payload.vaultMeta,
+    globalMacros: payload.globalMacros || { ...DEFAULT_GLOBAL_MACROS },
+    tableTemplates: payload.tableTemplates || [],
+    tikzTemplates: payload.tikzTemplates || [],
+    tikzFonts: payload.tikzFonts || {},
+    bibliography: payload.bibliography || [],
+    citationStyle: payload.citationStyle || 'numeric',
+    folders: payload.folders.length > 0 ? payload.folders : Array.from(new Set(payload.notes.map(n => n.folder || 'General').filter(Boolean))),
+    tags: payload.tags.length > 0 ? payload.tags : Array.from(new Set(payload.notes.flatMap(n => n.tags || []).filter(Boolean))),
+    notes: payload.notes
+  });
+  mergeNoteMacrosIntoGlobal(NotesState);
+}
+
+/**
+ * Replaces the whole vault with a payload read from elsewhere (the external data file).
+ * The result is the new "saved" baseline: unsaved-change count resets to 0.
+ * @returns {boolean} false when the payload is not a notes vault
+ */
+export function ApplyNotesPayload(parsed) {
+  const payload = normalizeNotesPayload(parsed);
+  if (!payload) return false;
+  assignNotesPayload(payload);
+  if (typeof window !== 'undefined') window.NotesState = NotesState;
+  clearTimeout(notesSaveDebounceTimer);
+  const dataBlock = typeof document !== 'undefined' ? document.getElementById('NotesData') : null;
+  if (dataBlock) dataBlock.textContent = JSON.stringify(NotesState);
+  clearAllBlockHistory();
+  CaptureNotesBaseline(NotesState);
+  return true;
+}
+
 // Loads notes from HTML vault (#NotesData) and optionally recovers uncommitted edits from localStorage
 export function LoadNotesState(forceReload = false) {
   // Reuse in-memory state if already loaded to avoid multi-MB JSON parsing on every route change
@@ -181,21 +234,7 @@ export function LoadNotesState(forceReload = false) {
 
   if (dataBlock && typeof dataBlock.textContent === 'string' && dataBlock.textContent.trim()) {
     try {
-      const parsedDom = JSON.parse(dataBlock.textContent);
-      if (parsedDom && typeof parsedDom === 'object') {
-        domState = {
-          vaultMeta: parsedDom.vaultMeta || { title: "My Research & Notes Vault", version: "1.0.0", lastSaved: 0 },
-          globalMacros: parsedDom.globalMacros || { ...DEFAULT_GLOBAL_MACROS },
-          tableTemplates: Array.isArray(parsedDom.tableTemplates) ? parsedDom.tableTemplates : [],
-          tikzTemplates: Array.isArray(parsedDom.tikzTemplates) ? parsedDom.tikzTemplates : [],
-          tikzFonts: (parsedDom.tikzFonts && typeof parsedDom.tikzFonts === 'object') ? parsedDom.tikzFonts : {},
-          bibliography: Array.isArray(parsedDom.bibliography) ? parsedDom.bibliography : [],
-          citationStyle: typeof parsedDom.citationStyle === 'string' ? parsedDom.citationStyle : 'numeric',
-          folders: Array.isArray(parsedDom.folders) ? parsedDom.folders : [],
-          tags: Array.isArray(parsedDom.tags) ? parsedDom.tags : [],
-          notes: Array.isArray(parsedDom.notes) ? parsedDom.notes.map(sanitizeNote) : []
-        };
-      }
+      domState = normalizeNotesPayload(JSON.parse(dataBlock.textContent));
     } catch (e) {
       console.warn('Could not parse DOM NotesData from HTML:', e);
     }
@@ -214,19 +253,7 @@ export function LoadNotesState(forceReload = false) {
 
   // 3. Pure, clean load directly from HTML data vault (#NotesData)
   if (domState) {
-    Object.assign(NotesState, {
-      vaultMeta: domState.vaultMeta,
-      globalMacros: domState.globalMacros || { ...DEFAULT_GLOBAL_MACROS },
-      tableTemplates: domState.tableTemplates || [],
-      tikzTemplates: domState.tikzTemplates || [],
-      tikzFonts: domState.tikzFonts || {},
-      bibliography: domState.bibliography || [],
-      citationStyle: domState.citationStyle || 'numeric',
-      folders: domState.folders.length > 0 ? domState.folders : Array.from(new Set(domState.notes.map(n => n.folder || 'General').filter(Boolean))),
-      tags: domState.tags.length > 0 ? domState.tags : Array.from(new Set(domState.notes.flatMap(n => n.tags || []).filter(Boolean))),
-      notes: domState.notes
-    });
-    mergeNoteMacrosIntoGlobal(NotesState);
+    assignNotesPayload(domState);
     if (typeof window !== 'undefined') window.NotesState = NotesState;
     if (!isBaselineCaptured) {
       CaptureNotesBaseline(NotesState);

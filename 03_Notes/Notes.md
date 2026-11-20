@@ -91,6 +91,12 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 │   ├── Graph_Physics.js                    ← Alpha-cooled force simulation: repulsion, springs, collision separation
 │   └── Graph_View.js                       ← Canvas renderer: theme-aware orbs/labels, drag, pan/zoom, hover, fit-to-view
 │
+├── D_Data_File/                            ← Data-file mode: notes in ONE external JSON file (Chrome/Edge/Brave, File System Access API)
+│   ├── 01_Data_Payload.js                  ← The shared data format (same JSON as #NotesData): build / serialize / parse
+│   ├── 02_Handle_Store.js                  ← IndexedDB: remembered file + backup-folder handles, rolling backups (last 5)
+│   ├── 03_Data_File_Mode.js                ← Status machine; open / new / reconnect / save-in-place (+ backup) / disconnect
+│   └── 04_Data_File_UI.js                  ← Header chip + menu, one-click reconnect dialog, toasts, Save button + Ctrl+S entry point
+│
 └── Writing_Engine/                         ← Core text, math, TikZ, and formatting compilers
     ├── BibTeX_Parser.js                    ← BibTeX (.bib) tokenizer, parser, and citation formatter
     ├── Block_Engine.js                     ← High-performance block differential updates
@@ -125,19 +131,22 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 | `mergeOrderedLists(existing, derived)` | 68 - 72 | Merges a manually curated list (drag-reordered folders/tags — the ordering source of truth) with freshly derived values; existing entries keep their positions, only NEW values are appended. |
 | `sanitizeNote(n, idx = 0)` | 75 - 125 | Validates note object schema, fills missing fallback properties (id, slug, title, folder, tags, blocks, macros, autoNumbering), normalizes the Obsidian-style typed `properties` list (legacy `description` migrates in as a `Description` text property), passes through per-note numbering configs (`equationNumbering`, `figureNumbering`, `showFigureCaptions` — objects or legacy strings), prevents data corruption, and runs the orientation-container migration. |
 | `migrateOrientationContainers(note)` | 131 - 164 | One-time legacy migration: hoists Multi-Column `cols[]` embedded children to top-level blocks (inserted right after the container; empty padding text blocks are dropped) and rewrites them as non-destructive `members`/`rows` references. |
-| `LoadNotesState(forceReload = false)` | 167 - 255 | Reuses in-memory state when not stale to eliminate multi-MB JSON re-parsing on route changes (Object.assign-ing `window.NotesState` data in when it diverged), then reads and parses notes directly from the DOM script vault (#NotesData), purges legacy fixed-key caches, offers this file's path-scoped sessionStorage recovery snapshot (never auto-applied — Restore/Discard banner via `OfferRecoverySnapshot`), and calls `CaptureNotesBaseline(NotesState)` on first load. Also loads `tikzFonts` and runs `mergeNoteMacrosIntoGlobal()` before the baseline is captured. |
-| `mergeNoteMacrosIntoGlobal(state)` | 260 - 278 | Macros are global-only: appends every line of older files' per-note macros (`note.macros.equation` / `.tikz`) that the global set does not already contain (under a `% --- merged from note: <title> ---` marker), then clears the note's copy. Idempotent across reloads. |
-| `getBlockFingerprint(block)` | 299 - 309 | Stable JSON fingerprint of a block for baseline diffing; strips transient `_isEditing`/`_temp` fields and falls back to a string key when the block is not JSON-serializable. |
-| `CaptureNotesBaseline(state = NotesState)` | 311 - 349 | Captures initial/committed baseline snapshot of all note blocks (fingerprints via `getBlockFingerprint`) and metadata (title, folder, tags, description, order) for idempotent change diffing; mirrors the maps into `window.__NOTES_BASELINE_*`, resets unsaved status and badge count to 0. |
-| `CalculateNotesBlockChanges()` | 351 - 426 | Computes exact count of modified, added, deleted blocks across all notes, plus metadata changes (including deleted notes), comparing current state against the captured baseline snapshot. |
-| `GetNotesUnsavedChangesCount()` | 428 - 431 | Returns the exact number of unsaved block/metadata changes across all notes. |
-| `HasUnsavedNotesChanges()` | 433 - 437 | Returns boolean whether any uncommitted block or metadata changes exist. |
-| `SetNotesUnsavedChanges(dirty = true)` | 439 - 463 | Computes block diff and syncs unsaved state and count with `window.MarkUnsavedChanges(isDirty, overallCount)` (aggregated across all tabs via `window.HasUnsavedChanges`/`window.GetUnsavedChangesCount` when present) and global window flags. |
-| `persistNotesToStorageImmediate()` | 465 - 484 | Cancels any pending debounce and serializes `NotesState` into the live DOM `<script id="NotesData">` vault, then refreshes this file's path-scoped crash-recovery snapshot in sessionStorage (`WriteRecoverySnapshot` — survives reloads/crashes, never leaks into other files or tabs; localStorage is deliberately never written). |
-| `RestoreNotesFromSnapshot(snapData)` | 490 - 509 | Applies a user-approved recovery snapshot (Restore banner): sanitizes snapshot notes into `NotesState`, persists to the DOM vault, re-renders via `initNotesApp()`. The baseline is deliberately NOT recaptured so restored edits keep counting as unsaved until the next SAVE. |
-| `flushNotesSave()` | 512 - 514 | Immediately flushes any pending debounced state writes to DOM #NotesData. |
-| `SaveNotesState(newState = null, { immediate = false } = {})` | 541 - 565 | Re-derives active folder/tag lists through `mergeOrderedLists` (append-only, so drag order and intentionally-empty folders survive saves), updates unsaved change diff count, and persists the active working buffer to the DOM vault with debouncing (~280ms) or immediately. |
-| `ClearNotesLocalCache()` | 568 - 585 | Clears pending debounce, the legacy localStorage recovery cache, and this file's recovery snapshot (`ClearRecoverySnapshot`) after save/export, re-captures the baseline to reset change tracking to 0, and clears all per-block undo/redo history via `clearAllBlockHistory()`. |
+| `LoadNotesState(forceReload = false)` | 220 - 282 | Reuses in-memory state when not stale to eliminate multi-MB JSON re-parsing on route changes (Object.assign-ing `window.NotesState` data in when it diverged), then reads and parses notes directly from the DOM script vault (#NotesData), purges legacy fixed-key caches, offers this file's path-scoped sessionStorage recovery snapshot (never auto-applied — Restore/Discard banner via `OfferRecoverySnapshot`), and calls `CaptureNotesBaseline(NotesState)` on first load. Also loads `tikzFonts` and runs `mergeNoteMacrosIntoGlobal()` before the baseline is captured. |
+| `mergeNoteMacrosIntoGlobal(state)` | 287 - 305 | Macros are global-only: appends every line of older files' per-note macros (`note.macros.equation` / `.tikz`) that the global set does not already contain (under a `% --- merged from note: <title> ---` marker), then clears the note's copy. Idempotent across reloads. |
+| `normalizeNotesPayload(parsed)` | 168 - 182 | The ONE data format for both storage modes (embedded `#NotesData` and the external data file): normalizes a parsed vault object (defaults for every field, `sanitizeNote` on every note); `null` for non-objects. Used by `LoadNotesState` and `ApplyNotesPayload`. |
+| `assignNotesPayload(payload)` | 185 - 199 | Writes a normalized payload into the live `NotesState` (derives folders/tags when missing) and runs `mergeNoteMacrosIntoGlobal`. |
+| `ApplyNotesPayload(parsed)` | 206 - 217 | Replaces the whole vault with a payload read from the data file: assign, mirror into the DOM `#NotesData`, clear block undo history and re-capture the baseline (unsaved count → 0). Returns `false` for a non-vault object. |
+| `getBlockFingerprint(block)` | 326 - 336 | Stable JSON fingerprint of a block for baseline diffing; strips transient `_isEditing`/`_temp` fields and falls back to a string key when the block is not JSON-serializable. |
+| `CaptureNotesBaseline(state = NotesState)` | 338 - 376 | Captures initial/committed baseline snapshot of all note blocks (fingerprints via `getBlockFingerprint`) and metadata (title, folder, tags, description, order) for idempotent change diffing; mirrors the maps into `window.__NOTES_BASELINE_*`, resets unsaved status and badge count to 0. |
+| `CalculateNotesBlockChanges()` | 378 - 453 | Computes exact count of modified, added, deleted blocks across all notes, plus metadata changes (including deleted notes), comparing current state against the captured baseline snapshot. |
+| `GetNotesUnsavedChangesCount()` | 455 - 458 | Returns the exact number of unsaved block/metadata changes across all notes. |
+| `HasUnsavedNotesChanges()` | 460 - 464 | Returns boolean whether any uncommitted block or metadata changes exist. |
+| `SetNotesUnsavedChanges(dirty = true)` | 466 - 490 | Computes block diff and syncs unsaved state and count with `window.MarkUnsavedChanges(isDirty, overallCount)` (aggregated across all tabs via `window.HasUnsavedChanges`/`window.GetUnsavedChangesCount` when present) and global window flags. |
+| `persistNotesToStorageImmediate()` | 492 - 511 | Cancels any pending debounce and serializes `NotesState` into the live DOM `<script id="NotesData">` vault, then refreshes this file's path-scoped crash-recovery snapshot in sessionStorage (`WriteRecoverySnapshot` — survives reloads/crashes, never leaks into other files or tabs; localStorage is deliberately never written). |
+| `RestoreNotesFromSnapshot(snapData)` | 517 - 536 | Applies a user-approved recovery snapshot (Restore banner): sanitizes snapshot notes into `NotesState`, persists to the DOM vault, re-renders via `initNotesApp()`. The baseline is deliberately NOT recaptured so restored edits keep counting as unsaved until the next SAVE. |
+| `flushNotesSave()` | 539 - 541 | Immediately flushes any pending debounced state writes to DOM #NotesData. |
+| `SaveNotesState(newState = null, { immediate = false } = {})` | 568 - 592 | Re-derives active folder/tag lists through `mergeOrderedLists` (append-only, so drag order and intentionally-empty folders survive saves), updates unsaved change diff count, and persists the active working buffer to the DOM vault with debouncing (~280ms) or immediately. |
+| `ClearNotesLocalCache()` | 595 - 612 | Clears pending debounce, the legacy localStorage recovery cache, and this file's recovery snapshot (`ClearRecoverySnapshot`) after save/export, re-captures the baseline to reset change tracking to 0, and clears all per-block undo/redo history via `clearAllBlockHistory()`. |
 
 Module-level side effects: exports `window.SaveNotesState` / `flushNotesSave` / `ClearNotesLocalCache` / `CaptureNotesBaseline` / `CalculateNotesBlockChanges` / `GetNotesUnsavedChangesCount` / `HasUnsavedNotesChanges` / `SetNotesUnsavedChanges` for flat-bundle/standalone use, installs a one-shot `beforeunload` guard that prompts when `hasUnsavedNotesChanges` (or any tab's unsaved flag) is set, and runs `NotesState = LoadNotesState()` on import.
 
@@ -149,13 +158,14 @@ Module-level side effects: exports `window.SaveNotesState` / `flushNotesSave` / 
 | `../00_Components/02_Theme_Toggle.js` | `GetThemeToggleHTML`, `InitThemeToggleLogic` | `GetHeaderHTML()`, `InitHeader()` |
 | `../00_Components/04_Import_Export.js` | `GetImportButtonHTML`, `GetExportButtonHTML`, `InitImportExport` | `GetHeaderHTML()`, `InitHeader()` |
 | `../00_Components/05_Save_Button.js` | `GetSaveButtonHTML`, `InitSaveButtonLogic` | `GetHeaderHTML()`, `InitHeader()` |
+| `./D_Data_File/04_Data_File_UI.js` | `GetDataFileSlotHTML` | `GetHeaderHTML()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `GetCenterTitleHTML()` | 8 - 97 | RESERVED (not rendered): center title component (journal SVG icon + "texidian"). The header center is intentionally empty; deck navigation lives on the floating toolbar's Back button. |
-| `InitCenterTitleLogic()` | 98 - 112 | RESERVED (unused): legacy click-binding for the center title (floating-dock cleanup + `#Notes` route). |
-| `GetHeaderHTML()` | 113 - 229 | Returns complete sticky app header HTML markup, responsive styles, and slots for the logo (HyperLeaf `notes` variant — "Hyper" in text color/black, "Leaf" in green) and right-side utility buttons; header center intentionally empty. |
-| `InitHeader()` | 230 - 259 | Initializes click handlers and logic for all header controls (Logo, Import/Export, Save App, Theme Toggle) and dynamically syncs the header height to the `--notes-header-height` CSS variable. |
+| `GetCenterTitleHTML()` | 9 - 96 | RESERVED (not rendered): center title component (journal SVG icon + "texidian"). The header center is intentionally empty; deck navigation lives on the floating toolbar's Back button. |
+| `InitCenterTitleLogic()` | 99 - 111 | RESERVED (unused): legacy click-binding for the center title (floating-dock cleanup + `#Notes` route). |
+| `GetHeaderHTML()` | 114 - 229 | Returns complete sticky app header HTML markup, responsive styles, and slots for the logo (HyperLeaf `notes` variant — "Hyper" in text color/black, "Leaf" in green) and right-side utility buttons; header center intentionally empty. The right-side controls include the data-file slot (`#notes-data-file-slot`, filled by `MountDataFileUI`) just before the Save button. |
+| `InitHeader()` | 232 - 260 | Initializes click handlers and logic for all header controls (Logo, Import/Export, Save App, Theme Toggle) and dynamically syncs the header height to the `--notes-header-height` CSS variable. |
 
 **02_Utils.js**
 
@@ -209,8 +219,8 @@ Module-level side effects: exports `window.SaveNotesState` / `flushNotesSave` / 
 | `bundleTabFile(filePath)` | 143 - 167 | Fetches one modular JS file (resolved against the project root via `import.meta.url`), strips `import`/`export` statements, and returns a commented flat code chunk; missing files are skipped with a warning. |
 | `bundleTabGroup(files)` | 169 - 173 | Sequentially concatenates `bundleTabFile` output for a file list. |
 | `sharedComponentFiles` / `tabHandlerFiles` / `tabModuleFiles` | 175 - 262 | The tab bundler's three registration arrays: 7 shared `00_Components` files, the 3 `Tab_Notes` handler adapters, and the full 70-entry ordered Notes module graph (dependency-ordered: state → utils → engines → block infra → block renderers → text submodules → editor chrome → card view → graph → header → Notes.js). New Notes modules MUST be added here. |
-| `SaveNotesStandalone()` | 271 - 388 | Bundles `Notes.html` into a self-contained, standalone single-file HTML document: clones the document, syncs vaults via `syncTabStatesToDOM`, and (when not already standalone) flattens shared components + handlers + tab modules into one inline module that defines `LoadThisPage()` (boots `initNotesApp` + all three tab overrides) and a `handlePageRoute()` hash router, replacing the `#localhub-router` boot script. Inside an already-standalone file it just re-emits itself with fresh vault data. Cleans injected dev/live-reload and TikZ engine tags, empties runtime containers, downloads via blob, clears local caches, and flashes the Save button green for 2s. Before download it strips dev scripts and runtime TikZ elements (`#tikzjax-js`, `#tikzjax-css`, `#tikz-engine-host`, `#tikz-saved-fonts` — saved fonts already live in `#NotesData`). |
-| `InitTabSaveOverride()` | 392 - 439 | Swaps the shared Save-button binding (which would build the all-in-one app) for the per-tab `SaveNotesStandalone` by cloning the button, and provides a standalone implementation of `window.MarkUnsavedChanges(dirty, count)` driving the `.save-badge` unsaved-changes pill (restoring any count present on mount). |
+| `SaveNotesStandalone()` | 275 - 392 | Bundles `Notes.html` into a self-contained, standalone single-file HTML document: clones the document, syncs vaults via `syncTabStatesToDOM`, and (when not already standalone) flattens shared components + handlers + tab modules into one inline module that defines `LoadThisPage()` (boots `initNotesApp` + all three tab overrides) and a `handlePageRoute()` hash router, replacing the `#localhub-router` boot script. Inside an already-standalone file it just re-emits itself with fresh vault data. Cleans injected dev/live-reload and TikZ engine tags, empties runtime containers, downloads via blob, clears local caches, and flashes the Save button green for 2s. Before download it strips dev scripts and runtime TikZ elements (`#tikzjax-js`, `#tikzjax-css`, `#tikz-engine-host`, `#tikz-saved-fonts` — saved fonts already live in `#NotesData`). |
+| `InitTabSaveOverride()` | 396 - 450 | Swaps the shared Save-button binding (which would build the all-in-one app) for the per-tab `SaveNotesStandalone` by cloning the button, and provides a standalone implementation of `window.MarkUnsavedChanges(dirty, count)` driving the `.save-badge` unsaved-changes pill (restoring any count present on mount). The Save click goes to `window.HandleNotesSave` (data-file mode decides: overwrite the data file, ask to reconnect, or fall back to `SaveNotesStandalone`); it also exposes `window.SaveNotesStandalone` and calls `window.MountDataFileUI()` after every header mount. |
 
 **Tab_Notes/Tab_Logo_Handler.js**
 
@@ -496,6 +506,93 @@ Module-level document handlers (registered once, guarded by window flags): captu
 | `mountTikzSvg(target, svg)` | 86 - 103 | Inserts a saved SVG scaled to the container width with its natural aspect ratio (max width = natural size). |
 
 Module-level side effect: `applyStoredTikzFonts()` on load, so saved diagrams have their fonts before any engine is loaded.
+
+## D_Data_File
+**01_Data_Payload.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| `../00_State.js` | `NotesState`, `flushNotesSave` | `BuildNotesPayload()`, `IsAppOnlyHtml()`, `HasEmbeddedNotes()` |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `NOTES_DATA_FORMAT` | 13 - 13 | `'tixidian-notes'` (written to `vaultMeta.format`, with `formatVersion`). |
+| `BuildNotesPayload()` | 17 - 30 | Flushes pending edits and returns a deep copy of the live vault, stamped with format, version and `lastSaved` (drops the `appOnly` marker). |
+| `SerializeNotesPayload(payload)` | 33 - 35 | JSON text written to the data file (1-space indent). |
+| `ParseNotesDataText(text)` | 41 - 52 | Parses data-file text → `{ ok, payload }` or `{ ok: false, error }` (invalid JSON / no `notes` list). |
+| `IsAppOnlyHtml()` | 55 - 57 | True when this HTML was saved as app-only (`vaultMeta.appOnly`). |
+| `HasEmbeddedNotes()` | 60 - 62 | True when the HTML carries notes of its own. |
+
+**02_Handle_Store.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| *(None — IndexedDB only)* | — | — |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `openDataFileDb()` | 20 - 33 | Opens/creates IndexedDB `tixidian-data-file` (stores `handles`, `backups`). |
+| `dataFileTx(storeName, mode, fn)` | 35 - 45 | Runs `fn(store)` in a transaction; resolves on completion. |
+| `getTestHandleMap()` | 54 - 58 | Test seam: `window.__TIX_HANDLE_STORE_MEMORY__` (a `Map`) replaces IndexedDB for handles, because automated browsers cannot create real picker handles. |
+| `RememberHandle(key, handle)` | 61 - 65 | Stores the `'dataFile'` or `'backupFolder'` handle. |
+| `RecallHandle(key)` | 67 - 75 | Returns the remembered handle or `null`. |
+| `ForgetHandle(key)` | 77 - 81 | Removes a remembered handle. |
+| `AddDataFileBackup(fileName, text)` | 84 - 91 | Stores a previous version of the data file; keeps the newest 5 per file name. |
+| `ListDataFileBackups(fileName)` | 94 - 100 | Newest-first backup list (without text). |
+| `GetDataFileBackupText(id)` | 102 - 105 | Text of one backup. |
+
+**03_Data_File_Mode.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| `../00_State.js` | `ApplyNotesPayload`, `HasUnsavedNotesChanges` | `loadDataFileFromHandle()`, `hasUnsavedNotes()` |
+| `./01_Data_Payload.js` | `BuildNotesPayload`, `SerializeNotesPayload`, `ParseNotesDataText` | `CreateDataFile()`, `SaveToDataFile()`, `loadDataFileFromHandle()` |
+| `./02_Handle_Store.js` | `RememberHandle`, `RecallHandle`, `ForgetHandle`, `AddDataFileBackup` | `InitDataFileMode()`, `loadDataFileFromHandle()`, `ChooseBackupFolder()`, `writeBackupOfCurrentFile()`, `DisconnectDataFile()` |
+| `../Writing_Engine/Tikz_Engine/Tikz_Font_Store.js` | `applyStoredTikzFonts` | `rerenderAfterLoad()` |
+| `../Writing_Engine/Math_Renderer.js` | `bumpKatexMacroVersion` | `rerenderAfterLoad()` |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `dataFileState` | 25 - 32 | `{ status, handle, name, lastModified, backupDir, lastError }`. Status: `'unsupported'` (no API → embedded only), `'embedded'` (notes in this HTML), `'needs-permission'` (remembered file, one click to reopen), `'connected'` (Save overwrites the file). |
+| `IsDataFileSupported()` | 36 - 40 | `showOpenFilePicker` + `showSaveFilePicker` exist (Chrome/Edge; Brave only with `brave://flags/#file-system-access-api`). Works for pages opened via `file://`. |
+| `GetDataFileState()` / `OnDataFileStateChange(fn)` | 42 - 49 | Snapshot of the state; subscribe to changes (UI re-renders the chip). |
+| `rerenderAfterLoad()` | 62 - 67 | After loading a file: apply its saved TikZ fonts, bust the KaTeX macro cache, reset the badge and re-run the current route. |
+| `ensureDataFilePermission(handle, { request })` | 69 - 75 | `queryPermission` → `'granted'`, else (when allowed) `requestPermission` (needs a user gesture). |
+| `loadDataFileFromHandle(handle)` | 78 - 87 | Reads, validates (`ParseNotesDataText`), `ApplyNotesPayload`, records `lastModified`, remembers the handle, re-renders. |
+| `InitDataFileMode()` | 94 - 119 | Once per Notes-page load: recall the handle → permission granted ⇒ load silently; otherwise `'needs-permission'`. |
+| `ReconnectDataFile()` | 122 - 127 | One-click re-grant + load of the remembered file. |
+| `OpenDataFile()` | 130 - 136 | Picker → (confirm if unsaved changes) → load. |
+| `CreateDataFile({ withCurrentNotes, suggestedName })` | 142 - 156 | Save picker → writes the current notes (or an empty vault) → load it. |
+| `ChooseBackupFolder()` | 159 - 164 | Optional folder (directory handle) where `<name>.backup.json` is written before every save. |
+| `writeBackupOfCurrentFile(handle)` | 166 - 183 | Copies the file's current contents to the IndexedDB backups and, if set, the backup folder. |
+| `SaveToDataFile()` | 186 - 210 | Permission → confirm when the file changed elsewhere since it was read (`lastModified`) → backup → `createWritable` write (Chrome swaps a temp file on close) → clear unsaved state. |
+| `DisconnectDataFile()` | 213 - 216 | Forgets the file in this browser; Save downloads the HTML again. |
+| `SaveNotesSmart()` | 223 - 232 | Save entry: `'data-file'` (written), `'cancelled'`, `'needs-reconnect'` (never writes the notes shown over a file it did not load), or `'embedded'` (caller downloads the HTML). |
+
+Module side effect: registers `window.InitDataFileMode`, `window.SaveNotesSmart`, `window.GetDataFileState`.
+
+**04_Data_File_UI.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| `../02_Utils.js` | `escapeHtml` | chip, menu, dialog markup |
+| `./03_Data_File_Mode.js` | `GetDataFileState`, `OnDataFileStateChange`, `InitDataFileMode`, `ReconnectDataFile`, `OpenDataFile`, `CreateDataFile`, `ChooseBackupFolder`, `DisconnectDataFile`, `SaveNotesSmart` | menu actions, `HandleNotesSave()`, `MountDataFileUI()` |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `GetDataFileSlotHTML()` | 59 - 61 | `<span id="notes-data-file-slot">` placed in the header before Save. |
+| `ShowDataFileToast(message, kind, ms)` | 63 - 70 | Bottom toast (`ok` / `error` / `info`). |
+| `runDataFileAction(fn, okMessage)` | 78 - 88 | Runs a menu action with success/error toasts (closing a picker is silent). |
+| `buildDataFileMenuItems(state)` | 98 - 116 | Menu per status — connected: Save, Open another, New empty, backup folder, Stop using; needs-permission: Reconnect, Open another, Stop using; embedded: Open data file, New empty data file. |
+| `dataFileMenuHead(state)` | 118 - 123 | One-sentence explanation of where the notes live (incl. the Brave flag hint when unsupported). |
+| `openDataFileMenu(chip)` / `closeDataFileMenu()` | 90 - 146 | Dropdown under the chip; closes on outside click. |
+| `renderDataFileChip(state)` | 148 - 160 | Chip: green dot + file name (connected), amber "Reconnect <name>", or grey "In this HTML". |
+| `ShowDataFileReconnect()` | 163 - 194 | Modal: "Open <name>" (one click), "Open a different file…", "Not now"; shows errors inline. |
+| `flashSaveButton(title)` | 196 - 209 | Green tick on the Save button after a data-file save. |
+| `HandleNotesSave()` | 213 - 232 | Single save entry for the Save button and Ctrl+S: `SaveNotesSmart()` → toast / reconnect dialog / `window.SaveNotesStandalone()` fallback. |
+| `MountDataFileUI()` | 236 - 252 | Notes page only: renders the chip after each header mount; first call subscribes to state, installs Ctrl+S, and runs `InitDataFileMode()`. |
+
+Module side effects: injects `#data-file-ui-styles`; registers `window.HandleNotesSave`, `window.MountDataFileUI`.
 
 ## A_Notes_Card_View
 **01_Navbar.js**

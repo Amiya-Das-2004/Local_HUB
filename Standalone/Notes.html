@@ -2512,6 +2512,10 @@ async function SaveAndDownloadApp() {
       '03_Notes/C_Graph_View/Graph_Data.js',
       '03_Notes/C_Graph_View/Graph_Physics.js',
       '03_Notes/C_Graph_View/Graph_View.js',
+      '03_Notes/D_Data_File/01_Data_Payload.js',
+      '03_Notes/D_Data_File/02_Handle_Store.js',
+      '03_Notes/D_Data_File/03_Data_File_Mode.js',
+      '03_Notes/D_Data_File/04_Data_File_UI.js',
       '03_Notes/01_Header.js',
       '03_Notes/Notes.js'
     ];
@@ -3941,6 +3945,10 @@ const tabModuleFiles = [
   '03_Notes/C_Graph_View/Graph_Data.js',
   '03_Notes/C_Graph_View/Graph_Physics.js',
   '03_Notes/C_Graph_View/Graph_View.js',
+  '03_Notes/D_Data_File/01_Data_Payload.js',
+  '03_Notes/D_Data_File/02_Handle_Store.js',
+  '03_Notes/D_Data_File/03_Data_File_Mode.js',
+  '03_Notes/D_Data_File/04_Data_File_UI.js',
   '03_Notes/01_Header.js',
   '03_Notes/Notes.js'
 ];
@@ -4075,8 +4083,15 @@ function InitTabSaveOverride() {
     btn.replaceWith(clone);
     clone.addEventListener('click', (e) => {
       e.preventDefault();
-      SaveNotesStandalone();
+      // Data-file mode (D_Data_File/) decides: overwrite the data file in place, ask to
+      // reconnect it, or fall back to downloading this whole HTML (embedded mode).
+      if (typeof window.HandleNotesSave === 'function') window.HandleNotesSave();
+      else SaveNotesStandalone();
     });
+  }
+  if (typeof window !== 'undefined') {
+    window.SaveNotesStandalone = SaveNotesStandalone;
+    if (typeof window.MountDataFileUI === 'function') window.MountDataFileUI();
   }
 
   // Provide MarkUnsavedChanges for standalone Notes tab
@@ -4368,6 +4383,59 @@ function migrateOrientationContainers(note) {
   }
 }
 
+// ONE data format for both storage modes: the JSON inside <script id="NotesData"> and the
+// external data file (D_Data_File/) are the same object. Normalizes a parsed payload.
+function normalizeNotesPayload(parsed) {
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+  return {
+    vaultMeta: (parsed.vaultMeta && typeof parsed.vaultMeta === 'object') ? parsed.vaultMeta : { title: "My Research & Notes Vault", version: "1.0.0", lastSaved: 0 },
+    globalMacros: parsed.globalMacros || { ...DEFAULT_GLOBAL_MACROS },
+    tableTemplates: Array.isArray(parsed.tableTemplates) ? parsed.tableTemplates : [],
+    tikzTemplates: Array.isArray(parsed.tikzTemplates) ? parsed.tikzTemplates : [],
+    tikzFonts: (parsed.tikzFonts && typeof parsed.tikzFonts === 'object') ? parsed.tikzFonts : {},
+    bibliography: Array.isArray(parsed.bibliography) ? parsed.bibliography : [],
+    citationStyle: typeof parsed.citationStyle === 'string' ? parsed.citationStyle : 'numeric',
+    folders: Array.isArray(parsed.folders) ? parsed.folders : [],
+    tags: Array.isArray(parsed.tags) ? parsed.tags : [],
+    notes: Array.isArray(parsed.notes) ? parsed.notes.map(sanitizeNote) : []
+  };
+}
+
+// Writes a normalized payload into the live NotesState (folders/tags derived when missing).
+function assignNotesPayload(payload) {
+  Object.assign(NotesState, {
+    vaultMeta: payload.vaultMeta,
+    globalMacros: payload.globalMacros || { ...DEFAULT_GLOBAL_MACROS },
+    tableTemplates: payload.tableTemplates || [],
+    tikzTemplates: payload.tikzTemplates || [],
+    tikzFonts: payload.tikzFonts || {},
+    bibliography: payload.bibliography || [],
+    citationStyle: payload.citationStyle || 'numeric',
+    folders: payload.folders.length > 0 ? payload.folders : Array.from(new Set(payload.notes.map(n => n.folder || 'General').filter(Boolean))),
+    tags: payload.tags.length > 0 ? payload.tags : Array.from(new Set(payload.notes.flatMap(n => n.tags || []).filter(Boolean))),
+    notes: payload.notes
+  });
+  mergeNoteMacrosIntoGlobal(NotesState);
+}
+
+/**
+ * Replaces the whole vault with a payload read from elsewhere (the external data file).
+ * The result is the new "saved" baseline: unsaved-change count resets to 0.
+ * @returns {boolean} false when the payload is not a notes vault
+ */
+function ApplyNotesPayload(parsed) {
+  const payload = normalizeNotesPayload(parsed);
+  if (!payload) return false;
+  assignNotesPayload(payload);
+  if (typeof window !== 'undefined') window.NotesState = NotesState;
+  clearTimeout(notesSaveDebounceTimer);
+  const dataBlock = typeof document !== 'undefined' ? document.getElementById('NotesData') : null;
+  if (dataBlock) dataBlock.textContent = JSON.stringify(NotesState);
+  clearAllBlockHistory();
+  CaptureNotesBaseline(NotesState);
+  return true;
+}
+
 // Loads notes from HTML vault (#NotesData) and optionally recovers uncommitted edits from localStorage
 function LoadNotesState(forceReload = false) {
   // Reuse in-memory state if already loaded to avoid multi-MB JSON parsing on every route change
@@ -4386,21 +4454,7 @@ function LoadNotesState(forceReload = false) {
 
   if (dataBlock && typeof dataBlock.textContent === 'string' && dataBlock.textContent.trim()) {
     try {
-      const parsedDom = JSON.parse(dataBlock.textContent);
-      if (parsedDom && typeof parsedDom === 'object') {
-        domState = {
-          vaultMeta: parsedDom.vaultMeta || { title: "My Research & Notes Vault", version: "1.0.0", lastSaved: 0 },
-          globalMacros: parsedDom.globalMacros || { ...DEFAULT_GLOBAL_MACROS },
-          tableTemplates: Array.isArray(parsedDom.tableTemplates) ? parsedDom.tableTemplates : [],
-          tikzTemplates: Array.isArray(parsedDom.tikzTemplates) ? parsedDom.tikzTemplates : [],
-          tikzFonts: (parsedDom.tikzFonts && typeof parsedDom.tikzFonts === 'object') ? parsedDom.tikzFonts : {},
-          bibliography: Array.isArray(parsedDom.bibliography) ? parsedDom.bibliography : [],
-          citationStyle: typeof parsedDom.citationStyle === 'string' ? parsedDom.citationStyle : 'numeric',
-          folders: Array.isArray(parsedDom.folders) ? parsedDom.folders : [],
-          tags: Array.isArray(parsedDom.tags) ? parsedDom.tags : [],
-          notes: Array.isArray(parsedDom.notes) ? parsedDom.notes.map(sanitizeNote) : []
-        };
-      }
+      domState = normalizeNotesPayload(JSON.parse(dataBlock.textContent));
     } catch (e) {
       console.warn('Could not parse DOM NotesData from HTML:', e);
     }
@@ -4419,19 +4473,7 @@ function LoadNotesState(forceReload = false) {
 
   // 3. Pure, clean load directly from HTML data vault (#NotesData)
   if (domState) {
-    Object.assign(NotesState, {
-      vaultMeta: domState.vaultMeta,
-      globalMacros: domState.globalMacros || { ...DEFAULT_GLOBAL_MACROS },
-      tableTemplates: domState.tableTemplates || [],
-      tikzTemplates: domState.tikzTemplates || [],
-      tikzFonts: domState.tikzFonts || {},
-      bibliography: domState.bibliography || [],
-      citationStyle: domState.citationStyle || 'numeric',
-      folders: domState.folders.length > 0 ? domState.folders : Array.from(new Set(domState.notes.map(n => n.folder || 'General').filter(Boolean))),
-      tags: domState.tags.length > 0 ? domState.tags : Array.from(new Set(domState.notes.flatMap(n => n.tags || []).filter(Boolean))),
-      notes: domState.notes
-    });
-    mergeNoteMacrosIntoGlobal(NotesState);
+    assignNotesPayload(domState);
     if (typeof window !== 'undefined') window.NotesState = NotesState;
     if (!isBaselineCaptured) {
       CaptureNotesBaseline(NotesState);
@@ -28820,7 +28862,665 @@ function renderGraphView() {
 }
 
 
+/* --- 03_Notes/D_Data_File/01_Data_Payload.js --- */
+/**
+ * 03_Notes/D_Data_File/01_Data_Payload.js
+ * The ONE data format shared by both storage modes:
+ *   - embedded mode: the JSON inside <script id="NotesData"> of the HTML
+ *   - data-file mode: the external JSON file the user picked (e.g. MyNotes.json)
+ * Both hold the same object: { vaultMeta, globalMacros, tableTemplates, tikzTemplates,
+ * tikzFonts, bibliography, citationStyle, folders, tags, notes } (notes carry their
+ * blocks, saved TikZ SVGs and images).
+ */
+const NOTES_DATA_FORMAT = 'tixidian-notes';
+const NOTES_DATA_FORMAT_VERSION = 1;
+
+/** Deep copy of the live vault, stamped with format + save time. */
+function BuildNotesPayload() {
+  if (typeof flushNotesSave === 'function') flushNotesSave();
+  const payload = JSON.parse(JSON.stringify(NotesState));
+  delete payload._unsaved;
+  delete payload._savedAt;
+  payload.vaultMeta = {
+    ...(payload.vaultMeta || {}),
+    format: NOTES_DATA_FORMAT,
+    formatVersion: NOTES_DATA_FORMAT_VERSION,
+    lastSaved: Date.now()
+  };
+  delete payload.vaultMeta.appOnly;
+  return payload;
+}
+
+/** Text written to the data file. */
+function SerializeNotesPayload(payload) {
+  return JSON.stringify(payload, null, 1);
+}
+
+/**
+ * Parses data-file text.
+ * @returns {{ ok: true, payload: Object } | { ok: false, error: string }}
+ */
+function ParseNotesDataText(text) {
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch (e) {
+    return { ok: false, error: 'This file is not valid JSON.' };
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed) || !Array.isArray(parsed.notes)) {
+    return { ok: false, error: 'This JSON file is not a Tixidian notes file (no "notes" list).' };
+  }
+  return { ok: true, payload: parsed };
+}
+
+/** True when this HTML was saved as "app only" (its notes live in a data file). */
+function IsAppOnlyHtml() {
+  return Boolean(NotesState.vaultMeta && NotesState.vaultMeta.appOnly === true);
+}
+
+/** True when the HTML currently carries notes of its own. */
+function HasEmbeddedNotes() {
+  return !IsAppOnlyHtml() && Array.isArray(NotesState.notes) && NotesState.notes.length > 0;
+}
+
+
+/* --- 03_Notes/D_Data_File/02_Handle_Store.js --- */
+/**
+ * 03_Notes/D_Data_File/02_Handle_Store.js
+ * IndexedDB storage for the data-file mode:
+ *   - "handles": the remembered FileSystemFileHandle of the data file and the optional
+ *     backup-folder FileSystemDirectoryHandle (handles survive reloads; the browser
+ *     re-asks for permission with one click)
+ *   - "backups": rolling copies of the data file's previous contents (last 5 per file)
+ *
+ * Test seam: when window.__TIX_HANDLE_STORE_MEMORY__ is a Map, handles are kept there
+ * instead (automated browsers cannot create real picker handles, and fake handles
+ * cannot be stored in IndexedDB).
+ */
+
+const DATA_FILE_DB_NAME = 'tixidian-data-file';
+const DATA_FILE_DB_VERSION = 1;
+const DATA_FILE_BACKUPS_KEEP = 5;
+
+let dataFileDbPromise = null;
+
+function openDataFileDb() {
+  if (dataFileDbPromise) return dataFileDbPromise;
+  dataFileDbPromise = new Promise((resolve, reject) => {
+    const req = indexedDB.open(DATA_FILE_DB_NAME, DATA_FILE_DB_VERSION);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains('handles')) db.createObjectStore('handles');
+      if (!db.objectStoreNames.contains('backups')) db.createObjectStore('backups', { keyPath: 'id', autoIncrement: true });
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => { dataFileDbPromise = null; reject(req.error); };
+  });
+  return dataFileDbPromise;
+}
+
+function dataFileTx(storeName, mode, fn) {
+  return openDataFileDb().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, mode);
+    const store = tx.objectStore(storeName);
+    let result;
+    Promise.resolve(fn(store)).then(r => { result = r; });
+    tx.oncomplete = () => resolve(result);
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  }));
+}
+
+function dataFileRequest(req) {
+  return new Promise((resolve, reject) => {
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function getTestHandleMap() {
+  return (typeof window !== 'undefined' && window.__TIX_HANDLE_STORE_MEMORY__ instanceof Map)
+    ? window.__TIX_HANDLE_STORE_MEMORY__
+    : null;
+}
+
+/** key: 'dataFile' | 'backupFolder' */
+async function RememberHandle(key, handle) {
+  const mem = getTestHandleMap();
+  if (mem) { mem.set(key, handle); return; }
+  await dataFileTx('handles', 'readwrite', store => { store.put(handle, key); });
+}
+async function RecallHandle(key) {
+  const mem = getTestHandleMap();
+  if (mem) return mem.get(key) || null;
+  try {
+    return await dataFileTx('handles', 'readonly', store => dataFileRequest(store.get(key))) || null;
+  } catch (_) {
+    return null;
+  }
+}
+async function ForgetHandle(key) {
+  const mem = getTestHandleMap();
+  if (mem) { mem.delete(key); return; }
+  try { await dataFileTx('handles', 'readwrite', store => { store.delete(key); }); } catch (_) {}
+}
+
+/** Stores a previous version of a data file; keeps the newest DATA_FILE_BACKUPS_KEEP per file name. */
+async function AddDataFileBackup(fileName, text) {
+  await dataFileTx('backups', 'readwrite', store => { store.add({ fileName, savedAt: Date.now(), text }); });
+  const all = await ListDataFileBackups(fileName);
+  const extra = all.slice(DATA_FILE_BACKUPS_KEEP);
+  if (extra.length) {
+    await dataFileTx('backups', 'readwrite', store => { extra.forEach(b => store.delete(b.id)); });
+  }
+}
+
+/** Newest first: [{ id, fileName, savedAt, size }] (text omitted). */
+async function ListDataFileBackups(fileName) {
+  const all = await dataFileTx('backups', 'readonly', store => dataFileRequest(store.getAll()));
+  return (all || [])
+    .filter(b => !fileName || b.fileName === fileName)
+    .sort((a, b) => b.savedAt - a.savedAt)
+    .map(b => ({ id: b.id, fileName: b.fileName, savedAt: b.savedAt, size: (b.text || '').length }));
+}
+async function GetDataFileBackupText(id) {
+  const rec = await dataFileTx('backups', 'readonly', store => dataFileRequest(store.get(id)));
+  return rec ? rec.text : null;
+}
+
+
+/* --- 03_Notes/D_Data_File/03_Data_File_Mode.js --- */
+/**
+ * 03_Notes/D_Data_File/03_Data_File_Mode.js
+ * Data-file mode (Chrome / Edge / Brave with the File System Access API):
+ * the HTML is only the app, the notes live in ONE JSON file the user picked.
+ *
+ *   status  'unsupported'      browser has no File System Access API → embedded mode only
+ *           'embedded'         notes live inside this HTML (today's behaviour; Save downloads the HTML)
+ *           'needs-permission' a data file is remembered but the browser wants one click to reopen it
+ *           'connected'        notes were loaded from the data file; Save overwrites it in place
+ *
+ * Save in data-file mode: previous file contents → rolling backup (IndexedDB, plus
+ * "<name>.backup.json" in a chosen backup folder when one is set) → write the new JSON
+ * (Chrome writes to a temp file and swaps on close, so a crash never leaves half a file).
+ * Only active on the Notes page (window.__LOCALHUB_PAGE__ === 'notes').
+ */
+
+
+
+
+
+const DATA_FILE_PICKER_TYPES = [{ description: 'Tixidian notes (JSON)', accept: { 'application/json': ['.json'] } }];
+
+const dataFileState = {
+  status: 'embedded',
+  handle: null,
+  name: '',
+  lastModified: 0,   // of the file as we last read / wrote it (detects edits from elsewhere)
+  backupDir: null,
+  lastError: ''
+};
+const dataFileListeners = new Set();
+let dataFileInitStarted = false;
+function IsDataFileSupported() {
+  return typeof window !== 'undefined'
+    && typeof window.showOpenFilePicker === 'function'
+    && typeof window.showSaveFilePicker === 'function';
+}
+function GetDataFileState() {
+  return { ...dataFileState, supported: IsDataFileSupported() };
+}
+function OnDataFileStateChange(fn) {
+  dataFileListeners.add(fn);
+  return () => dataFileListeners.delete(fn);
+}
+
+function setDataFileState(patch) {
+  Object.assign(dataFileState, patch);
+  const snapshot = GetDataFileState();
+  dataFileListeners.forEach(fn => { try { fn(snapshot); } catch (e) { console.warn(e); } });
+}
+
+function hasUnsavedNotes() {
+  return (typeof HasUnsavedNotesChanges === 'function' && HasUnsavedNotesChanges()) || Boolean(window.__NOTES_UNSAVED__);
+}
+
+// Re-renders the current route with the newly loaded vault.
+function rerenderAfterLoad() {
+  applyStoredTikzFonts();
+  if (typeof bumpKatexMacroVersion === 'function') bumpKatexMacroVersion();
+  if (typeof window.MarkUnsavedChanges === 'function') window.MarkUnsavedChanges(false, 0);
+  window.dispatchEvent(new HashChangeEvent('hashchange'));
+}
+
+async function ensureDataFilePermission(handle, { request = true } = {}) {
+  if (!handle || typeof handle.queryPermission !== 'function') return true;
+  const opts = { mode: 'readwrite' };
+  if (await handle.queryPermission(opts) === 'granted') return true;
+  if (!request) return false;
+  return (await handle.requestPermission(opts)) === 'granted';
+}
+
+/** Reads + applies a data file. Throws with a readable message. */
+async function loadDataFileFromHandle(handle) {
+  const file = await handle.getFile();
+  const text = await file.text();
+  const parsed = ParseNotesDataText(text);
+  if (!parsed.ok) throw new Error(`${handle.name}: ${parsed.error}`);
+  if (!ApplyNotesPayload(parsed.payload)) throw new Error(`${handle.name} could not be loaded.`);
+  setDataFileState({ status: 'connected', handle, name: handle.name, lastModified: file.lastModified, lastError: '' });
+  await RememberHandle('dataFile', handle);
+  rerenderAfterLoad();
+}
+
+/**
+ * Called on every Notes-page boot (idempotent). Restores the remembered data file:
+ * permission still granted → loads silently; otherwise status 'needs-permission'
+ * (the UI asks for the one click that reconnects).
+ */
+async function InitDataFileMode() {
+  if (dataFileInitStarted) return GetDataFileState();
+  dataFileInitStarted = true;
+  if (typeof window === 'undefined' || window.__LOCALHUB_PAGE__ !== 'notes') return GetDataFileState();
+  if (!IsDataFileSupported()) {
+    setDataFileState({ status: 'unsupported' });
+    return GetDataFileState();
+  }
+  const [handle, backupDir] = await Promise.all([RecallHandle('dataFile'), RecallHandle('backupFolder')]);
+  setDataFileState({ backupDir: backupDir || null });
+  if (!handle) {
+    setDataFileState({ status: 'embedded' });
+    return GetDataFileState();
+  }
+  setDataFileState({ handle, name: handle.name });
+  try {
+    if (await ensureDataFilePermission(handle, { request: false })) {
+      await loadDataFileFromHandle(handle);
+    } else {
+      setDataFileState({ status: 'needs-permission' });
+    }
+  } catch (e) {
+    setDataFileState({ status: 'needs-permission', lastError: e.message || String(e) });
+  }
+  return GetDataFileState();
+}
+
+/** One click: re-grant access to the remembered file and load it. Must run from a user gesture. */
+async function ReconnectDataFile() {
+  const handle = dataFileState.handle || await RecallHandle('dataFile');
+  if (!handle) throw new Error('No data file is remembered in this browser.');
+  if (!(await ensureDataFilePermission(handle))) throw new Error(`Access to ${handle.name} was not allowed.`);
+  await loadDataFileFromHandle(handle);
+}
+
+/** Picks an existing data file and loads it. Must run from a user gesture. */
+async function OpenDataFile() {
+  const [handle] = await window.showOpenFilePicker({ types: DATA_FILE_PICKER_TYPES, multiple: false });
+  if (hasUnsavedNotes() && !window.confirm(`Open ${handle.name}? Your unsaved changes in the notes shown now will be discarded.`)) return false;
+  if (!(await ensureDataFilePermission(handle))) throw new Error(`Access to ${handle.name} was not allowed.`);
+  await loadDataFileFromHandle(handle);
+  return true;
+}
+
+/**
+ * Creates a new data file. withCurrentNotes=true writes the notes shown now (also used to
+ * move embedded notes out of the HTML); false starts an empty vault.
+ */
+async function CreateDataFile({ withCurrentNotes = true, suggestedName = 'MyNotes.json' } = {}) {
+  const handle = await window.showSaveFilePicker({ suggestedName, types: DATA_FILE_PICKER_TYPES });
+  let payload;
+  if (withCurrentNotes) {
+    payload = BuildNotesPayload();
+  } else {
+    if (hasUnsavedNotes() && !window.confirm('Start an empty notes file? Unsaved changes in the notes shown now will be discarded.')) return false;
+    payload = { ...BuildNotesPayload(), notes: [], folders: [], tags: [], bibliography: [] };
+  }
+  const writable = await handle.createWritable();
+  await writable.write(SerializeNotesPayload(payload));
+  await writable.close();
+  await loadDataFileFromHandle(handle);
+  return true;
+}
+
+/** Optional: a folder where "<name>.backup.json" is written before every save. */
+async function ChooseBackupFolder() {
+  if (typeof window.showDirectoryPicker !== 'function') throw new Error('This browser cannot pick folders.');
+  const dir = await window.showDirectoryPicker({ mode: 'readwrite' });
+  await RememberHandle('backupFolder', dir);
+  setDataFileState({ backupDir: dir });
+}
+
+async function writeBackupOfCurrentFile(handle) {
+  let previous = '';
+  try { previous = await (await handle.getFile()).text(); } catch (_) { return; }
+  if (!previous) return;
+  try { await AddDataFileBackup(handle.name, previous); } catch (e) { console.warn('Backup to IndexedDB failed:', e); }
+  const dir = dataFileState.backupDir;
+  if (dir) {
+    try {
+      if (await ensureDataFilePermission(dir)) {
+        const backupName = handle.name.replace(/\.json$/i, '') + '.backup.json';
+        const bh = await dir.getFileHandle(backupName, { create: true });
+        const w = await bh.createWritable();
+        await w.write(previous);
+        await w.close();
+      }
+    } catch (e) { console.warn('Backup to folder failed:', e); }
+  }
+}
+
+/** Overwrites the data file in place. Returns true when written. */
+async function SaveToDataFile() {
+  const handle = dataFileState.handle;
+  if (dataFileState.status !== 'connected' || !handle) throw new Error('No data file is open.');
+  if (!(await ensureDataFilePermission(handle))) throw new Error(`Access to ${handle.name} was not allowed — nothing was saved.`);
+
+  const current = await handle.getFile();
+  if (dataFileState.lastModified && current.lastModified > dataFileState.lastModified + 1000) {
+    const ok = window.confirm(`${handle.name} was changed outside this tab since it was opened (another tab, app or sync). Overwrite it with the notes shown here? A backup of the other version is kept.`);
+    if (!ok) return false;
+  }
+
+  await writeBackupOfCurrentFile(handle);
+  const writable = await handle.createWritable();
+  await writable.write(SerializeNotesPayload(BuildNotesPayload()));
+  await writable.close();
+  const written = await handle.getFile();
+  setDataFileState({ lastModified: written.lastModified, lastError: '' });
+
+  if (typeof window.ClearNotesLocalCache === 'function') window.ClearNotesLocalCache();
+  window.__NOTES_UNSAVED__ = false;
+  window.__HAS_UNSAVED_CHANGES__ = false;
+  window.__NOTES_UNSAVED_COUNT__ = 0;
+  if (typeof window.MarkUnsavedChanges === 'function') window.MarkUnsavedChanges(false, 0);
+  return true;
+}
+
+/** Stops using the data file in this browser (notes stay on screen; Save downloads the HTML again). */
+async function DisconnectDataFile() {
+  await ForgetHandle('dataFile');
+  setDataFileState({ status: IsDataFileSupported() ? 'embedded' : 'unsupported', handle: null, name: '', lastModified: 0 });
+}
+
+/**
+ * Save entry point for the Save button and Ctrl+S.
+ * @returns {Promise<'data-file'|'needs-reconnect'|'embedded'|'cancelled'>}
+ *   'embedded' → the caller downloads the full HTML as before (fallback mode).
+ */
+async function SaveNotesSmart() {
+  if (dataFileState.status === 'connected') {
+    return (await SaveToDataFile()) ? 'data-file' : 'cancelled';
+  }
+  if (dataFileState.status === 'needs-permission') {
+    // Never write the notes shown now over the remembered file: they are not its contents.
+    return 'needs-reconnect';
+  }
+  return 'embedded';
+}
+
+if (typeof window !== 'undefined') {
+  window.InitDataFileMode = InitDataFileMode;
+  window.SaveNotesSmart = SaveNotesSmart;
+  window.GetDataFileState = GetDataFileState;
+}
+
+
+/* --- 03_Notes/D_Data_File/04_Data_File_UI.js --- */
+/**
+ * 03_Notes/D_Data_File/04_Data_File_UI.js
+ * UI for the data-file mode: header chip + menu, reconnect dialog, toasts, and the
+ * single save entry point used by the Save button and Ctrl+S (HandleNotesSave).
+ */
+
+
+const DATA_FILE_SLOT_ID = 'notes-data-file-slot';
+
+if (typeof document !== 'undefined' && !document.getElementById('data-file-ui-styles')) {
+  const style = document.createElement('style');
+  style.id = 'data-file-ui-styles';
+  style.textContent = `
+    .df-chip { display: inline-flex; align-items: center; gap: 6px; height: 34px; max-width: 210px; padding: 0 10px;
+      border-radius: 9px; border: 1px solid var(--border, #2a2e40); background: var(--surface, #181b27);
+      color: var(--text-secondary, #a0a4b8); font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .df-chip:hover { color: var(--text, #e8eaf2); border-color: var(--accent, #8b6dff); }
+    .df-chip .df-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; background: #6b7088; }
+    .df-chip.is-connected .df-dot { background: #22c55e; }
+    .df-chip.is-attention { color: #f59e0b; border-color: rgba(245,158,11,0.5); }
+    .df-chip.is-attention .df-dot { background: #f59e0b; }
+    .df-chip .df-name { overflow: hidden; text-overflow: ellipsis; }
+    .df-menu { position: fixed; z-index: 120; min-width: 260px; max-width: 320px; padding: 6px; border-radius: 12px;
+      border: 1px solid var(--border, #2a2e40); background: var(--card, #1c1f2e); color: var(--text, #e8eaf2);
+      box-shadow: 0 18px 48px rgba(0,0,0,0.45); font-size: 12.5px; }
+    .df-menu .df-menu-head { padding: 6px 8px 8px; font-size: 11px; color: var(--text-dim, #6b7088); line-height: 1.45;
+      border-bottom: 1px solid var(--border, #2a2e40); margin-bottom: 4px; }
+    .df-menu .df-menu-head strong { color: var(--text, #e8eaf2); }
+    .df-menu button { display: block; width: 100%; text-align: left; padding: 7px 8px; border-radius: 7px; border: 0;
+      background: transparent; color: inherit; font: inherit; cursor: pointer; }
+    .df-menu button:hover { background: var(--accent-soft, rgba(139,109,255,0.1)); color: var(--accent, #8b6dff); }
+    .df-menu .df-sep { height: 1px; background: var(--border, #2a2e40); margin: 4px 2px; }
+    .df-overlay { position: fixed; inset: 0; z-index: 130; background: rgba(0,0,0,0.6); display: flex;
+      align-items: center; justify-content: center; padding: 16px; }
+    .df-dialog { width: 100%; max-width: 420px; border-radius: 16px; border: 1px solid var(--border, #2a2e40);
+      background: var(--card, #1c1f2e); color: var(--text, #e8eaf2); padding: 20px; box-shadow: 0 24px 64px rgba(0,0,0,0.6); }
+    .df-dialog h3 { margin: 0 0 6px; font-size: 16px; font-weight: 700; }
+    .df-dialog p { margin: 0 0 14px; font-size: 13px; line-height: 1.5; color: var(--text-secondary, #a0a4b8); }
+    .df-dialog .df-actions { display: flex; flex-direction: column; gap: 8px; }
+    .df-dialog .df-btn { height: 36px; border-radius: 9px; border: 1px solid var(--border, #2a2e40); background: var(--surface, #181b27);
+      color: var(--text, #e8eaf2); font-weight: 600; font-size: 13px; cursor: pointer; }
+    .df-dialog .df-btn.df-primary { background: var(--accent, #8b6dff); border-color: var(--accent, #8b6dff); color: #fff; }
+    .df-dialog .df-error { color: #f87171; font-size: 12px; margin-top: 10px; min-height: 1em; }
+    .df-toast { position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%); z-index: 140; padding: 9px 14px;
+      border-radius: 10px; font-size: 12.5px; font-weight: 600; color: #fff; background: #16a34a;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.35); max-width: min(92vw, 520px); }
+    .df-toast.is-error { background: #dc2626; }
+    .df-toast.is-info { background: #374151; }
+  `;
+  document.head.appendChild(style);
+}
+
+/** Header slot (placed before the Save button by 01_Header.js). */
+function GetDataFileSlotHTML() {
+  return `<span id="${DATA_FILE_SLOT_ID}" class="inline-flex"></span>`;
+}
+function ShowDataFileToast(message, kind = 'ok', ms = 2600) {
+  const t = document.createElement('div');
+  t.className = `df-toast${kind === 'error' ? ' is-error' : kind === 'info' ? ' is-info' : ''}`;
+  t.setAttribute('role', 'status');
+  t.textContent = message;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), ms);
+}
+
+function describeDataFileError(e) {
+  if (e && e.name === 'AbortError') return null; // user closed the picker
+  return (e && e.message) ? e.message : String(e);
+}
+
+// Runs a user-gesture action with toast feedback.
+async function runDataFileAction(fn, okMessage) {
+  try {
+    const result = await fn();
+    if (result !== false && okMessage) ShowDataFileToast(typeof okMessage === 'function' ? okMessage() : okMessage);
+    return result;
+  } catch (e) {
+    const msg = describeDataFileError(e);
+    if (msg) ShowDataFileToast(msg, 'error', 4200);
+    return false;
+  }
+}
+
+function closeDataFileMenu() {
+  document.querySelectorAll('.df-menu').forEach(m => m.remove());
+  document.removeEventListener('mousedown', onDocMouseDownForMenu, true);
+}
+function onDocMouseDownForMenu(e) {
+  if (!e.target.closest('.df-menu') && !e.target.closest('.df-chip')) closeDataFileMenu();
+}
+
+function buildDataFileMenuItems(state) {
+  const items = [];
+  if (state.status === 'connected') {
+    items.push({ label: `Save to ${state.name}  (Ctrl+S)`, run: () => HandleNotesSave() });
+    items.push({ label: 'Open another data file…', run: () => runDataFileAction(OpenDataFile, () => `Opened ${GetDataFileState().name}`) });
+    items.push({ label: 'New empty data file…', run: () => runDataFileAction(() => CreateDataFile({ withCurrentNotes: false }), () => `Created ${GetDataFileState().name}`) });
+    items.push('sep');
+    items.push({ label: state.backupDir ? `Backup folder: ${state.backupDir.name} (change…)` : 'Choose backup folder…', run: () => runDataFileAction(ChooseBackupFolder, 'Backups will also be written to that folder') });
+    items.push({ label: 'Stop using this data file', run: () => runDataFileAction(DisconnectDataFile, 'Data file disconnected — Save downloads the HTML again') });
+  } else if (state.status === 'needs-permission') {
+    items.push({ label: `Reconnect ${state.name}`, run: () => ShowDataFileReconnect() });
+    items.push({ label: 'Open another data file…', run: () => runDataFileAction(OpenDataFile, () => `Opened ${GetDataFileState().name}`) });
+    items.push({ label: 'Stop using this data file', run: () => runDataFileAction(DisconnectDataFile, 'Data file disconnected') });
+  } else if (state.status === 'embedded') {
+    items.push({ label: 'Open data file…', run: () => runDataFileAction(OpenDataFile, () => `Opened ${GetDataFileState().name}`) });
+    items.push({ label: 'New empty data file…', run: () => runDataFileAction(() => CreateDataFile({ withCurrentNotes: false }), () => `Created ${GetDataFileState().name}`) });
+  }
+  return items;
+}
+
+function dataFileMenuHead(state) {
+  if (state.status === 'connected') return `Notes are saved to <strong>${escapeHtml(state.name)}</strong>. Save overwrites that file; the previous version is kept as a backup.`;
+  if (state.status === 'needs-permission') return `Your notes are in <strong>${escapeHtml(state.name)}</strong>. The browser needs one click to open it again.`;
+  if (state.status === 'unsupported') return 'Notes are stored <strong>inside this HTML</strong>. Data files need Chrome or Edge (in Brave: enable <code>brave://flags/#file-system-access-api</code>).';
+  return 'Notes are stored <strong>inside this HTML</strong>; Save downloads a new copy of the file.';
+}
+
+function openDataFileMenu(chip) {
+  closeDataFileMenu();
+  const state = GetDataFileState();
+  const menu = document.createElement('div');
+  menu.className = 'df-menu';
+  menu.setAttribute('role', 'menu');
+  menu.innerHTML = `<div class="df-menu-head">${dataFileMenuHead(state)}</div>`;
+  buildDataFileMenuItems(state).forEach(item => {
+    if (item === 'sep') { const s = document.createElement('div'); s.className = 'df-sep'; menu.appendChild(s); return; }
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.setAttribute('role', 'menuitem');
+    b.textContent = item.label;
+    b.addEventListener('click', () => { closeDataFileMenu(); item.run(); });
+    menu.appendChild(b);
+  });
+  document.body.appendChild(menu);
+  const r = chip.getBoundingClientRect();
+  menu.style.top = `${Math.round(r.bottom + 6)}px`;
+  menu.style.left = `${Math.max(8, Math.min(window.innerWidth - menu.offsetWidth - 8, Math.round(r.right - menu.offsetWidth)))}px`;
+  setTimeout(() => document.addEventListener('mousedown', onDocMouseDownForMenu, true), 0);
+}
+
+function renderDataFileChip(state = GetDataFileState()) {
+  const slot = document.getElementById(DATA_FILE_SLOT_ID);
+  if (!slot) return;
+  let label = 'In this HTML';
+  let cls = '';
+  if (state.status === 'connected') { label = state.name; cls = 'is-connected'; }
+  else if (state.status === 'needs-permission') { label = `Reconnect ${state.name}`; cls = 'is-attention'; }
+  slot.innerHTML = `<button type="button" class="df-chip ${cls}" title="Where your notes are saved"><span class="df-dot"></span><span class="df-name">${escapeHtml(label)}</span></button>`;
+  slot.querySelector('.df-chip').addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (document.querySelector('.df-menu')) closeDataFileMenu(); else openDataFileMenu(e.currentTarget);
+  });
+}
+
+/** One-click reconnect dialog for a remembered data file. */
+function ShowDataFileReconnect() {
+  if (document.querySelector('.df-overlay')) return;
+  const state = GetDataFileState();
+  const overlay = document.createElement('div');
+  overlay.className = 'df-overlay';
+  overlay.innerHTML = `
+    <div class="df-dialog" role="dialog" aria-modal="true" aria-label="Open your notes file">
+      <h3>Open your notes</h3>
+      <p>Your notes are saved in <strong>${escapeHtml(state.name || 'your data file')}</strong>. Your browser needs one click to let this page read and save it again.</p>
+      <div class="df-actions">
+        <button type="button" class="df-btn df-primary" data-act="reconnect">Open ${escapeHtml(state.name || 'data file')}</button>
+        <button type="button" class="df-btn" data-act="other">Open a different file…</button>
+        <button type="button" class="df-btn" data-act="later">Not now</button>
+      </div>
+      <div class="df-error">${state.lastError ? escapeHtml(state.lastError) : ''}</div>
+    </div>`;
+  const errEl = overlay.querySelector('.df-error');
+  const close = () => overlay.remove();
+  overlay.addEventListener('click', async (e) => {
+    const act = e.target.closest('[data-act]')?.getAttribute('data-act');
+    if (!act) return;
+    try {
+      if (act === 'reconnect') { await ReconnectDataFile(); close(); ShowDataFileToast(`Opened ${GetDataFileState().name}`); }
+      else if (act === 'other') { if (await OpenDataFile()) { close(); ShowDataFileToast(`Opened ${GetDataFileState().name}`); } }
+      else close();
+    } catch (err) {
+      const msg = describeDataFileError(err);
+      if (msg) errEl.textContent = msg;
+    }
+  });
+  document.body.appendChild(overlay);
+}
+
+function flashSaveButton(title) {
+  const btn = document.getElementById('save-btn');
+  if (!btn) return;
+  const html = btn.innerHTML;
+  const bg = btn.style.background;
+  btn.style.background = '#16a34a';
+  btn.title = title;
+  btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+  setTimeout(() => {
+    btn.style.background = bg;
+    btn.innerHTML = html;
+    if (typeof window.MarkUnsavedChanges === 'function') window.MarkUnsavedChanges(false, 0);
+  }, 1600);
+}
+
+let dataFileSaveRunning = false;
+/** The Save button and Ctrl+S both land here. */
+async function HandleNotesSave() {
+  if (dataFileSaveRunning) return;
+  dataFileSaveRunning = true;
+  try {
+    const result = await SaveNotesSmart();
+    if (result === 'data-file') {
+      flashSaveButton(`Saved to ${GetDataFileState().name}`);
+      ShowDataFileToast(`Saved to ${GetDataFileState().name}`);
+    } else if (result === 'needs-reconnect') {
+      ShowDataFileReconnect();
+    } else if (result === 'embedded' && typeof window.SaveNotesStandalone === 'function') {
+      await window.SaveNotesStandalone();
+    }
+  } catch (e) {
+    const msg = describeDataFileError(e);
+    if (msg) ShowDataFileToast(`Not saved: ${msg}`, 'error', 5000);
+  } finally {
+    dataFileSaveRunning = false;
+  }
+}
+
+let dataFileUiWired = false;
+/** Called after every header mount on the Notes page (idempotent wiring, re-rendered chip). */
+function MountDataFileUI() {
+  if (typeof window === 'undefined' || window.__LOCALHUB_PAGE__ !== 'notes') return;
+  renderDataFileChip();
+  if (dataFileUiWired) return;
+  dataFileUiWired = true;
+  OnDataFileStateChange((state) => {
+    renderDataFileChip(state);
+    if (state.status === 'needs-permission') ShowDataFileReconnect();
+  });
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && (e.key === 's' || e.key === 'S')) {
+      e.preventDefault();
+      HandleNotesSave();
+    }
+  });
+  InitDataFileMode();
+}
+
+if (typeof window !== 'undefined') {
+  window.HandleNotesSave = HandleNotesSave;
+  window.MountDataFileUI = MountDataFileUI;
+}
+
+
 /* --- 03_Notes/01_Header.js --- */
+
 
 
 
@@ -29040,6 +29740,7 @@ function GetHeaderHTML() {
         <div class="header-right">
           ${GetImportButtonHTML()}
           ${GetExportButtonHTML()}
+          ${GetDataFileSlotHTML()}
           ${GetSaveButtonHTML()}
           ${GetThemeToggleHTML()}
         </div>

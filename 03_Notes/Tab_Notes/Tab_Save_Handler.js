@@ -262,6 +262,10 @@ const tabModuleFiles = [
   '03_Notes/C_Graph_View/Graph_Data.js',
   '03_Notes/C_Graph_View/Graph_Physics.js',
   '03_Notes/C_Graph_View/Graph_View.js',
+  '03_Notes/D_Data_File/01_Data_Payload.js',
+  '03_Notes/D_Data_File/02_Handle_Store.js',
+  '03_Notes/D_Data_File/03_Data_File_Mode.js',
+  '03_Notes/D_Data_File/04_Data_File_UI.js',
   '03_Notes/01_Header.js',
   '03_Notes/Notes.js'
 ];
@@ -396,8 +400,15 @@ export function InitTabSaveOverride() {
     btn.replaceWith(clone);
     clone.addEventListener('click', (e) => {
       e.preventDefault();
-      SaveNotesStandalone();
+      // Data-file mode (D_Data_File/) decides: overwrite the data file in place, ask to
+      // reconnect it, or fall back to downloading this whole HTML (embedded mode).
+      if (typeof window.HandleNotesSave === 'function') window.HandleNotesSave();
+      else SaveNotesStandalone();
     });
+  }
+  if (typeof window !== 'undefined') {
+    window.SaveNotesStandalone = SaveNotesStandalone;
+    if (typeof window.MountDataFileUI === 'function') window.MountDataFileUI();
   }
 
   // Provide MarkUnsavedChanges for standalone Notes tab

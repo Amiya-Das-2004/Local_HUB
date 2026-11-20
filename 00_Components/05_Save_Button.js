@@ -398,6 +398,10 @@ export async function SaveAndDownloadApp() {
       '03_Notes/C_Graph_View/Graph_Data.js',
       '03_Notes/C_Graph_View/Graph_Physics.js',
       '03_Notes/C_Graph_View/Graph_View.js',
+      '03_Notes/D_Data_File/01_Data_Payload.js',
+      '03_Notes/D_Data_File/02_Handle_Store.js',
+      '03_Notes/D_Data_File/03_Data_File_Mode.js',
+      '03_Notes/D_Data_File/04_Data_File_UI.js',
       '03_Notes/01_Header.js',
       '03_Notes/Notes.js'
     ];
