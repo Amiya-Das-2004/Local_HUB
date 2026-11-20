@@ -117,8 +117,22 @@ function buildDataFileMenuItems(state) {
     items.push({ label: 'Open data file…', run: () => runDataFileAction(OpenDataFile, () => `Opened ${GetDataFileState().name}`) });
     items.push({ label: 'New empty data file…', run: () => runDataFileAction(() => CreateDataFile({ withCurrentNotes: false }), () => `Created ${GetDataFileState().name}`) });
     items.push({ label: 'Export everything as one HTML', run: () => RunExportEverything() });
+  } else if (state.status === 'unsupported') {
+    // No File System Access API here: data files are impossible, but saving/exporting the HTML works.
+    items.push({ label: 'Save this HTML (download a copy)  (Ctrl+S)', run: () => HandleNotesSave() });
+    items.push({ label: 'Export everything as one HTML', run: () => RunExportEverything() });
+    items.push('sep');
+    items.push({ label: 'Copy the Brave setting address', run: () => copyBraveFlagAddress() });
   }
   return items;
+}
+
+// Pages cannot open brave:// links, so the address goes to the clipboard for pasting.
+async function copyBraveFlagAddress() {
+  const addr = 'brave://flags/#file-system-access-api';
+  let ok = false;
+  try { await navigator.clipboard.writeText(addr); ok = true; } catch (_) { ok = false; }
+  ShowDataFileToast(ok ? 'Copied — paste it into the address bar, set Enabled, restart Brave' : `Type ${addr} into the address bar`, 'info', 5000);
 }
 
 function dataFileMenuHead(state) {

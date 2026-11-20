@@ -669,20 +669,21 @@ Module side effect: registers `window.InitDataFileMode`, `window.SaveNotesSmart`
 | `GetDataFileSlotHTML()` | 61 - 63 | `<span id="notes-data-file-slot">` placed in the header before Save. |
 | `ShowDataFileToast(message, kind, ms)` | 65 - 72 | Bottom toast (`ok` / `error` / `info`). |
 | `runDataFileAction(fn, okMessage)` | 80 - 90 | Runs a menu action with success/error toasts (closing a picker is silent). |
-| `buildDataFileMenuItems(state)` | 100 - 122 | Menu per status — connected: Save, Download app-only HTML, Open another, New empty, Export everything as one HTML, backup folder, Stop using; needs-permission: Reconnect, Open another, Stop using; embedded: Move my notes to a data file… (when the HTML carries notes), Open data file, New empty data file, Export everything as one HTML. |
-| `dataFileMenuHead(state)` | 124 - 129 | One-sentence explanation of where the notes live (incl. the Brave flag hint when unsupported). |
-| `openDataFileMenu(chip)` / `closeDataFileMenu()` | 92 - 152 | Dropdown under the chip; closes on outside click. |
-| `renderDataFileChip(state)` | 154 - 166 | Chip: green dot + file name (connected), amber "Reconnect <name>", or grey "In this HTML". |
-| `ShowDataFileReconnect()` | 169 - 202 | Modal: "Open <name>" (one click), "Open a different file…", "Keep notes in this HTML instead" (declines: `DisconnectDataFile()` → embedded mode, Save downloads the HTML; the file is not asked for again), "Not now"; shows errors inline. |
-| `flashSaveButton(title)` | 204 - 217 | Green tick on the Save button after a data-file save. |
-| `RunExportEverything()` | 220 - 227 | Menu action: `ExportEverythingAsHtml()` with a toast. |
-| `DownloadAppOnlyHtml()` | 230 - 234 | Downloads `Notes.html` with NO notes inside (`SaveNotesStandalone({ appOnly: true, dataFileName, markSaved: false })`); the notes stay in the data file. |
-| `showDataFileDialog({ title, html, actions })` | 236 - 257 | Generic modal with primary/secondary actions; an action returning `false` keeps it open; errors show inline. |
-| `MoveNotesToDataFileFlow()` | 260 - 273 | Migration: writes all notes shown now (including unsaved edits) to a new data file via `CreateDataFile({ withCurrentNotes: true })`, connects to it, then offers "Download app-only HTML". |
-| `showAppOnlyWelcome(state)` | 276 - 276 | App-only HTML opened with no remembered data file: "Open your notes" (Open data file… / New empty data file… / Start without a data file); in browsers without the API it explains where the notes are and to use an "Export everything" copy. |
-| `maybeOfferMoveToDataFile(state)` | 299 - 311 | One-time, dismissible bar for HTMLs that still carry their notes (embedded mode, API available): "Move my notes to a data file" / "Not now" (remembered per HTML path in `localStorage`). |
-| `HandleNotesSave()` | 315 - 334 | Single save entry for the Save button and Ctrl+S: `SaveNotesSmart()` → toast / reconnect dialog / `window.SaveNotesStandalone()` fallback. |
-| `MountDataFileUI()` | 338 - 359 | Notes page only: renders the chip after each header mount; the first call subscribes to state, installs Ctrl+S, runs `InitDataFileMode()` and then shows the app-only welcome or the move offer. Skipped entirely in shared read-only files. |
+| `buildDataFileMenuItems(state)` | 100 - 128 | Menu per status — unsupported (no File System Access API, e.g. Brave without the flag, Firefox, Safari): Save this HTML, Export everything, Copy the Brave setting address; connected: Save, Download app-only HTML, Open another, New empty, Export everything as one HTML, backup folder, Stop using; needs-permission: Reconnect, Open another, Stop using; embedded: Move my notes to a data file… (when the HTML carries notes), Open data file, New empty data file, Export everything as one HTML. |
+| `copyBraveFlagAddress()` | 131 - 136 | Copies `brave://flags/#file-system-access-api` (pages cannot open `brave://` links) and toasts how to use it. |
+| `dataFileMenuHead(state)` | 138 - 143 | One-sentence explanation of where the notes live (incl. the Brave flag hint when unsupported). |
+| `openDataFileMenu(chip)` / `closeDataFileMenu()` | 92 - 166 | Dropdown under the chip; closes on outside click. |
+| `renderDataFileChip(state)` | 168 - 180 | Chip: green dot + file name (connected), amber "Reconnect <name>", or grey "In this HTML". |
+| `ShowDataFileReconnect()` | 183 - 216 | Modal: "Open <name>" (one click), "Open a different file…", "Keep notes in this HTML instead" (declines: `DisconnectDataFile()` → embedded mode, Save downloads the HTML; the file is not asked for again), "Not now"; shows errors inline. |
+| `flashSaveButton(title)` | 218 - 231 | Green tick on the Save button after a data-file save. |
+| `RunExportEverything()` | 234 - 241 | Menu action: `ExportEverythingAsHtml()` with a toast. |
+| `DownloadAppOnlyHtml()` | 244 - 248 | Downloads `Notes.html` with NO notes inside (`SaveNotesStandalone({ appOnly: true, dataFileName, markSaved: false })`); the notes stay in the data file. |
+| `showDataFileDialog({ title, html, actions })` | 250 - 271 | Generic modal with primary/secondary actions; an action returning `false` keeps it open; errors show inline. |
+| `MoveNotesToDataFileFlow()` | 274 - 287 | Migration: writes all notes shown now (including unsaved edits) to a new data file via `CreateDataFile({ withCurrentNotes: true })`, connects to it, then offers "Download app-only HTML". |
+| `showAppOnlyWelcome(state)` | 290 - 309 | App-only HTML opened with no remembered data file: "Open your notes" (Open data file… / New empty data file… / Start without a data file); in browsers without the API it explains where the notes are and to use an "Export everything" copy. |
+| `maybeOfferMoveToDataFile(state)` | 313 - 325 | One-time, dismissible bar for HTMLs that still carry their notes (embedded mode, API available): "Move my notes to a data file" / "Not now" (remembered per HTML path in `localStorage`). |
+| `HandleNotesSave()` | 329 - 348 | Single save entry for the Save button and Ctrl+S: `SaveNotesSmart()` → toast / reconnect dialog / `window.SaveNotesStandalone()` fallback. |
+| `MountDataFileUI()` | 352 - 373 | Notes page only: renders the chip after each header mount; the first call subscribes to state, installs Ctrl+S, runs `InitDataFileMode()` and then shows the app-only welcome or the move offer. Skipped entirely in shared read-only files. |
 
 Module side effects: injects `#data-file-ui-styles`; registers `window.HandleNotesSave`, `window.MountDataFileUI`.
 
