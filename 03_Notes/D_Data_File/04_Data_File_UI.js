@@ -172,6 +172,7 @@ export function ShowDataFileReconnect() {
       <div class="df-actions">
         <button type="button" class="df-btn df-primary" data-act="reconnect">Open ${escapeHtml(state.name || 'data file')}</button>
         <button type="button" class="df-btn" data-act="other">Open a different file…</button>
+        <button type="button" class="df-btn" data-act="embedded" title="Forget the data file in this browser; notes are kept inside this HTML and Save downloads the HTML">Keep notes in this HTML instead</button>
         <button type="button" class="df-btn" data-act="later">Not now</button>
       </div>
       <div class="df-error">${state.lastError ? escapeHtml(state.lastError) : ''}</div>
@@ -184,6 +185,7 @@ export function ShowDataFileReconnect() {
     try {
       if (act === 'reconnect') { await ReconnectDataFile(); close(); ShowDataFileToast(`Opened ${GetDataFileState().name}`); }
       else if (act === 'other') { if (await OpenDataFile()) { close(); ShowDataFileToast(`Opened ${GetDataFileState().name}`); } }
+      else if (act === 'embedded') { await DisconnectDataFile(); close(); ShowDataFileToast('Notes stay inside this HTML — Save downloads the HTML', 'info', 3600); }
       else close();
     } catch (err) {
       const msg = describeDataFileError(err);

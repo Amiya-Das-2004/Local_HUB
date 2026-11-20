@@ -73,6 +73,9 @@ function syncTabStatesToDOM(doc) {
         if (id === 'NotesData') {
           if (!cleanData.vaultMeta) cleanData.vaultMeta = {};
           cleanData.vaultMeta.lastSaved = now;
+          // Same data format as the external data file (D_Data_File/01_Data_Payload.js)
+          cleanData.vaultMeta.format = 'tixidian-notes';
+          cleanData.vaultMeta.formatVersion = 1;
           if (window.NotesState && window.NotesState.vaultMeta) {
             window.NotesState.vaultMeta.lastSaved = now;
           }
