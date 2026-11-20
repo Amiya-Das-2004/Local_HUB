@@ -102,7 +102,11 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 │   ├── 02_Wiki_Link_Rewrite.js             ← Retargets [[Note^block]] / [[Note]] links when blocks or notes move
 │   ├── 03_Note_Operations.js               ← Duplicate note, move to folder, merge into note (undoable)
 │   ├── 04_Note_Picker.js                   ← Note picker (search, position, delete-source) and folder picker modals
-│   └── 05_Note_Menu.js                     ← "⋯" menu on note cards: Duplicate · Move to folder… · Merge into note…
+│   ├── 05_Note_Menu.js                     ← "⋯" menu on note cards: Duplicate · Move to folder… · Merge into note…
+│   ├── 06_Block_Selection.js               ← Shift/Ctrl/Cmd+click block selection, left-edge checkboxes, editor context
+│   ├── 07_Block_Clipboard.js               ← Internal block clipboard (memory + localStorage) + plain markdown/LaTeX text
+│   ├── 08_Block_Operations.js              ← Copy · Cut · Duplicate · Delete · Move to note… · Paste (undoable)
+│   └── 09_Block_Selection_Bar.js           ← Floating selection bar + Ctrl+C/X/V, Delete, Esc wiring
 │
 └── Writing_Engine/                         ← Core text, math, TikZ, and formatting compilers
     ├── BibTeX_Parser.js                    ← BibTeX (.bib) tokenizer, parser, and citation formatter
@@ -639,15 +643,15 @@ Copy, move and merge of whole notes (C1) and of blocks (C2). Every operation rec
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `NewBlockId()` / `NewNoteId()` | 16 - 22 | `b_<time>_<rand>` / `note_<time>_<rand>`. |
-| `IsColumnsBlock(block)` | 24 - 26 | Multi-column container (`columns` / `multicolumn` / `multi-column`). |
-| `ExpandWithColumnMembers(selected, allBlocks)` | 38 - 42 | Adds the member blocks of selected containers, in document order. |
-| `CollectFigureTags(blocks)` | 45 - 49 | Lower-cased `block.tag` of image/TikZ blocks. |
-| `CollectEquationLabels(blocks)` | 52 - 62 | Lower-cased `\label{…}` names found in block text. |
-| `uniqueName(base, taken)` | 66 - 72 | `base-2`, `base-3`, … not yet taken. |
-| `renameReferencesInBlock(block, renames)` | 77 - 96 | Rewrites `\label{}` `\fig{}` `\eq{}` `\eqref{}` `\ref{}` in every string of a block (skips SVG/data payloads). |
-| `PrepareBlocksForTarget(blocks, targetBlocks, { freshIds })` | 104 - 149 | Deep copies (SVGs/images travel, no re-render), fresh or kept ids, container members remapped (non-included members dropped), clashing figure tags / equation labels renamed with `-2` and references inside the inserted blocks updated. Returns `{ blocks, idMap, renamed }`. |
-| `DescribeRenames(renamed)` | 169 - 173 | One-line notice text for renames. |
+| `NewBlockId()` / `NewNoteId()` | 19 - 25 | `b_<time>_<rand>` / `note_<time>_<rand>`. |
+| `IsColumnsBlock(block)` | 28 - 31 | Orientation container that references members by id: multi-column blocks, and callouts (`block`/`theorem`) with members. Equation labels are read from `content`, `tex` (equation blocks), `code`, `caption`, `title`. |
+| `ExpandWithColumnMembers(selected, allBlocks)` | 43 - 47 | Adds the member blocks of selected containers, in document order. |
+| `CollectFigureTags(blocks)` | 50 - 54 | Lower-cased `block.tag` of image/TikZ blocks. |
+| `CollectEquationLabels(blocks)` | 57 - 67 | Lower-cased `\label{…}` names found in block text. |
+| `uniqueName(base, taken)` | 71 - 77 | `base-2`, `base-3`, … not yet taken. |
+| `renameReferencesInBlock(block, renames)` | 82 - 101 | Rewrites `\label{}` `\fig{}` `\eq{}` `\eqref{}` `\ref{}` in every string of a block (skips SVG/data payloads). |
+| `PrepareBlocksForTarget(blocks, targetBlocks, { freshIds })` | 109 - 154 | Deep copies (SVGs/images travel, no re-render), fresh or kept ids, container members remapped (non-included members dropped), clashing figure tags / equation labels renamed with `-2` and references inside the inserted blocks updated. Returns `{ blocks, idMap, renamed }`. |
+| `DescribeRenames(renamed)` | 174 - 178 | One-line notice text for renames. |
 
 **02_Wiki_Link_Rewrite.js**
 
@@ -708,6 +712,78 @@ Copy, move and merge of whole notes (C1) and of blocks (C2). Every operation rec
 | `RunMoveNoteToFolder(note)` | 40 - 47 | Folder picker → move + toast. |
 | `RunMergeNote(note)` | 49 - 57 | Note picker (with "delete source") → merge; toast lists clash renames (warning style). |
 | `OpenNoteActionsMenu(anchor, note)` | 60 - 82 | Opens the "⋯" menu next to the card button. |
+
+**06_Block_Selection.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| *(None — the editor registers its context)* | — | — |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `SetBlockEditorContext(ctx)` / `GetBlockEditorContext()` / `ClearBlockEditorContext(noteId)` | 34 - 50 | The editor registers `{ note, container, isEditMode, getActiveIndex, rerender }` on every render and clears it on teardown; switching notes resets the selection. |
+| `OnBlockSelectionChange(fn)` | 52 - 55 | Subscribe to selection changes (the bar uses it). |
+| `ClearBlockSelection()` | 71 - 74 | Empties the selection. |
+| `IsBlockSelected(id)` / `GetSelectedBlockIds()` / `GetSelectedBlocks()` | 76 - 92 | Selection in document order. |
+| `SetSelectedBlockIds(ids)` | 94 - 98 | Replaces the selection (pasted/duplicated blocks stay selected). |
+| `toggleBlock(id)` / `selectRangeTo(id)` | 100 - 117 | Ctrl/Cmd toggle; Shift range from the anchor. |
+| `RefreshBlockSelectionMarks(container)` | 120 - 142 | Highlights selected blocks and shows a checkbox on every block's left edge while a selection exists (called after each `renderBlocks`). |
+| `onBlockContainerClickCapture(e)` | 146 - 167 | Capture-phase click: modifier click or checkbox → select (stops the click-to-edit); links, buttons, form fields, `[[wiki-links]]` and the block being edited keep their own behaviour; a plain click while selecting clears the selection. |
+| `AttachBlockSelection(container)` | 170 - 176 | Installs the handlers once per container (also suppresses Shift+click text selection). |
+
+**07_Block_Clipboard.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| *(None)* | — | — |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `BlocksToPlainText(blocks)` | 14 - 39 | Markdown/LaTeX per block type (heading `#`, equation `$$`, code fences, TikZ source, callout `>` quote, image placeholder; containers emit nothing). |
+| `SetBlockClipboard(blocks, sourceNote)` | 45 - 59 | Stores `{ format: 'tixidian-blocks', at, sourceNoteId, sourceTitle, blocks, text }` in memory and `localStorage` (other tabs); returns `{ text, storedAcrossTabs }` (false when too large for localStorage). |
+| `GetBlockClipboard()` | 62 - 68 | Newest of memory / localStorage. |
+| `ClipboardTextMatchesBlocks(systemText, payload)` | 73 - 77 | A paste inserts blocks only while the system clipboard still holds their text (otherwise the user copied something else). |
+| `WriteSystemClipboardText(text)` | 80 - 94 | `navigator.clipboard.writeText` with an `execCommand('copy')` fallback. |
+
+**08_Block_Operations.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| `../00_State.js` | `NotesState`, `SaveNotesState` | operations |
+| `../Writing_Engine/Structure_History.js` | `RecordStructureUndo`, `ShowStructureToast` | operations |
+| `./01_Block_Clone.js` | `PrepareBlocksForTarget`, `ExpandWithColumnMembers`, `IsColumnsBlock`, `DescribeRenames` | operations |
+| `./02_Wiki_Link_Rewrite.js` | `RewriteWikiLinks` | `MoveSelectedBlocksToNote()` |
+| `./04_Note_Picker.js` | `PickNote` | `MoveSelectedBlocksToNote()` |
+| `./06_Block_Selection.js` | `GetBlockEditorContext`, `GetSelectedBlocks`, `GetSelectedBlockIds`, `ClearBlockSelection`, `SetSelectedBlockIds` | operations |
+| `./07_Block_Clipboard.js` | `SetBlockClipboard`, `GetBlockClipboard`, `WriteSystemClipboardText` | copy / cut / paste |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `selectedWithMembers(note)` | 26 - 28 | Selection plus the member blocks of selected containers. |
+| `removeBlocksFromNote(note, ids)` | 31 - 38 | Removes blocks and every container reference (`members`/`rows`) to them. |
+| `finishBlockOp(message, renamed)` | 45 - 50 | Persist, re-render the editor (`ctx.rerender`), toast with Undo (warning style + rename list when tags/labels were renamed). |
+| `CopySelectedBlocks({ writeSystem, silent })` | 53 - 62 | Internal clipboard + system clipboard text; no undo needed. |
+| `CutSelectedBlocks({ writeSystem })` | 64 - 75 | Copy, then remove (undoable). |
+| `DuplicateSelectedBlocks()` | 77 - 88 | Fresh-id copies right after the last selected block (same-note tags → `-2`); copies become the selection. |
+| `DeleteSelectedBlocks()` | 90 - 99 | Removes the selected blocks (undoable). |
+| `MoveSelectedBlocksToNote()` | 101 - 120 | Note picker (start/end) → blocks keep their ids; links are retargeted BEFORE removal (index links resolved first); clashing tags/labels renamed in the target. |
+| `PasteBlocksFromClipboard()` | 127 - 143 | Fresh-id copies below the block being edited, else below the last selected block, else at the end; pasted blocks become the selection. |
+
+**09_Block_Selection_Bar.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| `./06_Block_Selection.js` | `OnBlockSelectionChange`, `GetSelectedBlockIds`, `ClearBlockSelection`, `GetBlockEditorContext` | bar, key/clipboard handlers |
+| `./08_Block_Operations.js` | `CopySelectedBlocks`, `CutSelectedBlocks`, `DuplicateSelectedBlocks`, `DeleteSelectedBlocks`, `MoveSelectedBlocksToNote`, `PasteBlocksFromClipboard` | bar buttons, handlers |
+| `./07_Block_Clipboard.js` | `ClipboardTextMatchesBlocks`, `GetBlockClipboard` | paste / copy handlers |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `renderBlockSelectionBar(ids)` | 36 - 64 | Floating bar under the header: "N selected · Copy · Cut · Duplicate · Move to note… · Delete · ✕". |
+| `isEditableElement(el)` / `editorActive()` | 66 - 76 | Guards: shortcuts act only in the edit-mode note editor and outside text fields. |
+| `onCopyOrCutSync(e, isCut)` | 110 - 117 | `copy`/`cut` events with a block selection: fills the internal clipboard synchronously and writes its text into `clipboardData`. |
+
+Module side effects (once): subscribes the bar; `keydown` (Esc clears, Delete/Backspace deletes the selection outside text fields); `copy`/`cut`; `paste` — inserts blocks when the clipboard text matches, also while editing a block of the note (fields outside the note keep normal paste). Imported for side effects by `04_LaTeX_Editor.js`.
 
 ## A_Notes_Card_View
 **01_Navbar.js**
@@ -922,10 +998,12 @@ Copy, move and merge of whole notes (C1) and of blocks (C2). Every operation rec
 | `./01_Blocks/Block_Item.js` | `CreateBlockItem` | `RenderLaTeXEditor()` |
 | `../02_Utils.js` | `escapeHtml` | `RenderLaTeXEditor()` |
 | `../Writing_Engine/Tikz_Engine/Tikz_Renderer.js` | `setActiveTikzNoteContext` | `RenderLaTeXEditor()` |
+| `../E_Note_Ops/06_Block_Selection.js` | `AttachBlockSelection`, `SetBlockEditorContext`, `ClearBlockEditorContext`, `RefreshBlockSelectionMarks` | `RenderLaTeXEditor()`, `renderBlocks()` |
+| `../E_Note_Ops/09_Block_Selection_Bar.js` | *(side-effect import)* | selection bar + clipboard/keyboard wiring |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `RenderLaTeXEditor(container, noteId, isEditMode = true)` | 26 - 795 | Master LaTeX editor module connecting sidebar outline, document header, reactive block deck, zero-lag in-place block activation/closing, isolated divider insertion, font customizer, and study mode rendering. Computes and distributes figure + equation + citation numbering maps (`computeEquationNumbers` per `note.equationNumbering`, `computeCitationNumbers` for first-appearance `\cite` numbers; activates them via `setActive*` on Math_Renderer), implements the legacy Wrap-Beside pairing pass (a `wrap: true` figure with Fit ≤ 60% consumes the next text/tikz/image block into a side-by-side `.notes-wrap-row`; the toggle UI was removed from TikZ/Image blocks — new layouts use the Multi-Column orientation container, but legacy `wrap: true` notes still render), uses parent-based single-block replacement for nested rows, and drives orientation containers — docked member blocks are skipped from the reading/study flow (`collectDockedIds()`), badged "⧉ docked" in edit view, and undocked automatically when deleted. The floating toolbar's citation-style/library callback (`onCiteStyleChange`) and equation-format callback bump the KaTeX macro version (`bumpKatexMacroVersion`) before re-rendering so in-math badges re-resolve. Click-to-edit captures the click point, computes the raw-text caret offset (`getRawOffsetFromPoint`), and after the in-place edit re-render restores the caret + scroll (`placeCaretAtRawOffset`) so editing continues exactly where clicked. |
+| `RenderLaTeXEditor(container, noteId, isEditMode = true)` | 28 - 814 | Master LaTeX editor module connecting sidebar outline, document header, reactive block deck, zero-lag in-place block activation/closing, isolated divider insertion, font customizer, and study mode rendering. Computes and distributes figure + equation + citation numbering maps (`computeEquationNumbers` per `note.equationNumbering`, `computeCitationNumbers` for first-appearance `\cite` numbers; activates them via `setActive*` on Math_Renderer), implements the legacy Wrap-Beside pairing pass (a `wrap: true` figure with Fit ≤ 60% consumes the next text/tikz/image block into a side-by-side `.notes-wrap-row`; the toggle UI was removed from TikZ/Image blocks — new layouts use the Multi-Column orientation container, but legacy `wrap: true` notes still render), uses parent-based single-block replacement for nested rows, and drives orientation containers — docked member blocks are skipped from the reading/study flow (`collectDockedIds()`), badged "⧉ docked" in edit view, and undocked automatically when deleted. The floating toolbar's citation-style/library callback (`onCiteStyleChange`) and equation-format callback bump the KaTeX macro version (`bumpKatexMacroVersion`) before re-rendering so in-math badges re-resolve. Click-to-edit captures the click point, computes the raw-text caret offset (`getRawOffsetFromPoint`), and after the in-place edit re-render restores the caret + scroll (`placeCaretAtRawOffset`) so editing continues exactly where clicked. Multi-block selection: in edit mode the blocks container gets `AttachBlockSelection`, every `renderBlocks()` ends with `RefreshBlockSelectionMarks`, and the editor registers `SetBlockEditorContext({ note, container, isEditMode, getActiveIndex, rerender })` (rerender resets the active block); teardown calls `ClearBlockEditorContext`. |
 
 ## B_Editor_View/01_Blocks
 **Block_Actions.js**

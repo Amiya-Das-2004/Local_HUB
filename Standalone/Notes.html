@@ -2505,6 +2505,10 @@ async function SaveAndDownloadApp() {
       '03_Notes/E_Note_Ops/03_Note_Operations.js',
       '03_Notes/E_Note_Ops/04_Note_Picker.js',
       '03_Notes/E_Note_Ops/05_Note_Menu.js',
+      '03_Notes/E_Note_Ops/06_Block_Selection.js',
+      '03_Notes/E_Note_Ops/07_Block_Clipboard.js',
+      '03_Notes/E_Note_Ops/08_Block_Operations.js',
+      '03_Notes/E_Note_Ops/09_Block_Selection_Bar.js',
       '03_Notes/A_Notes_Card_View/01_Navbar/01_Card_View_Toggle.js',
       '03_Notes/A_Notes_Card_View/01_Navbar/02_Group_Filter.js',
       '03_Notes/A_Notes_Card_View/01_Navbar/03_Search_Bar.js',
@@ -3947,6 +3951,10 @@ const tabModuleFiles = [
   '03_Notes/E_Note_Ops/03_Note_Operations.js',
   '03_Notes/E_Note_Ops/04_Note_Picker.js',
   '03_Notes/E_Note_Ops/05_Note_Menu.js',
+  '03_Notes/E_Note_Ops/06_Block_Selection.js',
+  '03_Notes/E_Note_Ops/07_Block_Clipboard.js',
+  '03_Notes/E_Note_Ops/08_Block_Operations.js',
+  '03_Notes/E_Note_Ops/09_Block_Selection_Bar.js',
   '03_Notes/A_Notes_Card_View/01_Navbar/01_Card_View_Toggle.js',
   '03_Notes/A_Notes_Card_View/01_Navbar/02_Group_Filter.js',
   '03_Notes/A_Notes_Card_View/01_Navbar/03_Search_Bar.js',
@@ -23967,6 +23975,8 @@ function RenderLaTeXEditor(container, noteId, isEditMode = true) {
   const blocksContainer = document.createElement('div');
   blocksContainer.className = 'space-y-0.5';
   paper.appendChild(blocksContainer);
+  // Multi-block selection (Shift/Ctrl/Cmd+click) — E_Note_Ops/06_Block_Selection.js
+  if (isEditMode) AttachBlockSelection(blocksContainer);
 
   // Core Block Insertion Method
   function insertBlock(type, level = null, targetIndex = -1) {
@@ -24478,6 +24488,7 @@ function RenderLaTeXEditor(container, noteId, isEditMode = true) {
       }
     }
     blocksContainer.appendChild(fragment);
+    RefreshBlockSelectionMarks(blocksContainer);
   }
 
   // Bottom Floating Dock Toolbar (Sidebar Toggle, Study Toggle, Note Fonts, Font Size, Macros)
@@ -24612,11 +24623,26 @@ function RenderLaTeXEditor(container, noteId, isEditMode = true) {
     }
     document.removeEventListener('click', onDocClick);
     document.removeEventListener('keydown', onDocKeyDown);
+    ClearBlockEditorContext(note.id);
     if (container.__themeObserver) {
       container.__themeObserver.disconnect();
       container.__themeObserver = null;
     }
   };
+
+  // Context for block selection / copy / paste / move (E_Note_Ops/06–09).
+  SetBlockEditorContext({
+    note,
+    container: blocksContainer,
+    isEditMode,
+    getActiveIndex: () => activeBlockIndex,
+    rerender: () => {
+      activeBlockIndex = -1;
+      activeSelectorIndex = -1;
+      renderBlocks();
+      refreshSidebar();
+    }
+  });
 
   renderBlocks();
 }
@@ -24637,14 +24663,20 @@ function RenderLaTeXEditor(container, noteId, isEditMode = true) {
 
 const FIGURE_BLOCK_TYPES = new Set(['image', 'tikz']);
 const COLUMN_BLOCK_TYPES = new Set(['columns', 'multicolumn', 'multi-column']);
+const CALLOUT_BLOCK_TYPES = new Set(['block', 'theorem']);
+// Fields that can hold LaTeX labels (equation blocks keep their source in `tex`).
+const LABEL_TEXT_FIELDS = ['content', 'tex', 'code', 'caption', 'title'];
 function NewBlockId() {
   return `b_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 function NewNoteId() {
   return `note_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
+
+/** Orientation containers reference member blocks by id: multi-column blocks and callouts with members. */
 function IsColumnsBlock(block) {
-  return Boolean(block && COLUMN_BLOCK_TYPES.has(block.type));
+  if (!block) return false;
+  return COLUMN_BLOCK_TYPES.has(block.type) || (CALLOUT_BLOCK_TYPES.has(block.type) && Array.isArray(block.members) && block.members.length > 0);
 }
 
 function columnMemberIds(block) {
@@ -24674,7 +24706,7 @@ function CollectFigureTags(blocks) {
 function CollectEquationLabels(blocks) {
   const out = new Set();
   (blocks || []).forEach(b => {
-    ['content', 'code', 'caption', 'title'].forEach(k => {
+    LABEL_TEXT_FIELDS.forEach(k => {
       const v = b[k];
       if (typeof v !== 'string' || !v.includes('\\label')) return;
       const re = /\\label\{([^}]+)\}/g;
@@ -24762,7 +24794,7 @@ function PrepareBlocksForTarget(blocks, targetBlocks = [], { freshIds = true } =
   const eqRenames = [];
   const seenEq = new Set();
   const rawLabels = [];
-  clones.forEach(b => ['content', 'code', 'caption', 'title'].forEach(k => {
+  clones.forEach(b => LABEL_TEXT_FIELDS.forEach(k => {
     const v = b[k];
     if (typeof v !== 'string' || !v.includes('\\label')) return;
     const re = /\\label\{([^}]+)\}/g;
@@ -25180,6 +25212,534 @@ function OpenNoteActionsMenu(anchor, note) {
   menu.style.top = `${Math.round(Math.min(window.innerHeight - menu.offsetHeight - 8, r.bottom + 4))}px`;
   menu.style.left = `${Math.round(Math.max(8, Math.min(window.innerWidth - menu.offsetWidth - 8, r.right - menu.offsetWidth)))}px`;
   setTimeout(() => document.addEventListener('mousedown', onNoteMenuOutside, true), 0);
+}
+
+
+/* --- 03_Notes/E_Note_Ops/06_Block_Selection.js --- */
+/**
+ * 03_Notes/E_Note_Ops/06_Block_Selection.js
+ * Multi-block selection in the note editor (edit mode):
+ *   Shift+click        selects the range from the last clicked block
+ *   Ctrl/Cmd+click     toggles one block
+ *   checkbox (left)    shown on every block while a selection exists; toggles that block
+ *   Esc                clears (handled by 09_Block_Selection_Bar.js)
+ * Clicks on links, buttons, form fields and the block being edited keep their own behaviour
+ * (Ctrl+click on a [[wiki-link]] still opens a new tab).
+ *
+ * The editor (B_Editor_View/04_LaTeX_Editor.js) registers its context here on every render:
+ * the open note, the blocks container, the active (edited) block index and a re-render hook.
+ */
+
+const blockSelection = { noteId: null, ids: new Set(), anchorId: null };
+const blockSelectionListeners = new Set();
+let blockEditorContext = null;
+
+if (typeof document !== 'undefined' && !document.getElementById('block-selection-styles')) {
+  const style = document.createElement('style');
+  style.id = 'block-selection-styles';
+  style.textContent = `
+    .notes-block-item.is-block-selected { background: var(--accent-soft, rgba(139,109,255,0.10)) !important;
+      border-color: var(--accent, #8b6dff) !important; box-shadow: inset 3px 0 0 var(--accent, #8b6dff); }
+    .has-block-selection .notes-block-item[data-block-id] { position: relative; }
+    .blk-sel-check { position: absolute; left: -22px; top: 8px; width: 16px; height: 16px; margin: 0; cursor: pointer;
+      accent-color: var(--accent, #8b6dff); z-index: 5; }
+    @media (max-width: 700px) { .blk-sel-check { left: 2px; top: 2px; } }
+  `;
+  document.head.appendChild(style);
+}
+
+/** Called by the editor after it (re)renders. isEditMode=false disables selection. */
+function SetBlockEditorContext(ctx) {
+  blockEditorContext = ctx;
+  if (!ctx || !ctx.note || blockSelection.noteId !== ctx.note.id) {
+    resetBlockSelection();
+  }
+}
+function GetBlockEditorContext() {
+  return blockEditorContext;
+}
+function ClearBlockEditorContext(noteId) {
+  if (blockEditorContext && (!noteId || (blockEditorContext.note && blockEditorContext.note.id === noteId))) {
+    blockEditorContext = null;
+    resetBlockSelection();
+  }
+}
+function OnBlockSelectionChange(fn) {
+  blockSelectionListeners.add(fn);
+  return () => blockSelectionListeners.delete(fn);
+}
+
+function emitBlockSelection() {
+  const snapshot = GetSelectedBlockIds();
+  blockSelectionListeners.forEach(fn => { try { fn(snapshot); } catch (e) { console.warn(e); } });
+  if (blockEditorContext && blockEditorContext.container) RefreshBlockSelectionMarks(blockEditorContext.container);
+}
+
+function resetBlockSelection() {
+  const had = blockSelection.ids.size > 0;
+  blockSelection.ids = new Set();
+  blockSelection.anchorId = null;
+  blockSelection.noteId = blockEditorContext && blockEditorContext.note ? blockEditorContext.note.id : null;
+  if (had) emitBlockSelection();
+}
+function ClearBlockSelection() {
+  resetBlockSelection();
+  emitBlockSelection();
+}
+function IsBlockSelected(id) {
+  return blockSelection.ids.has(id);
+}
+
+/** Selected ids in document order. */
+function GetSelectedBlockIds() {
+  const note = blockEditorContext && blockEditorContext.note;
+  if (!note) return [];
+  return (note.blocks || []).map(b => b.id).filter(id => blockSelection.ids.has(id));
+}
+
+/** Selected block objects in document order. */
+function GetSelectedBlocks() {
+  const note = blockEditorContext && blockEditorContext.note;
+  if (!note) return [];
+  return (note.blocks || []).filter(b => blockSelection.ids.has(b.id));
+}
+function SetSelectedBlockIds(ids) {
+  blockSelection.ids = new Set(ids);
+  blockSelection.anchorId = ids.length ? ids[ids.length - 1] : null;
+  emitBlockSelection();
+}
+
+function toggleBlock(id) {
+  if (blockSelection.ids.has(id)) blockSelection.ids.delete(id);
+  else blockSelection.ids.add(id);
+  blockSelection.anchorId = id;
+  emitBlockSelection();
+}
+
+function selectRangeTo(id) {
+  const note = blockEditorContext && blockEditorContext.note;
+  const order = (note && note.blocks || []).map(b => b.id);
+  const anchor = blockSelection.anchorId && order.includes(blockSelection.anchorId) ? blockSelection.anchorId : id;
+  const a = order.indexOf(anchor);
+  const b = order.indexOf(id);
+  const [from, to] = a <= b ? [a, b] : [b, a];
+  for (let i = from; i <= to; i++) blockSelection.ids.add(order[i]);
+  blockSelection.anchorId = anchor;
+  emitBlockSelection();
+}
+
+/** Marks selected blocks and shows/hides the left-edge checkboxes. */
+function RefreshBlockSelectionMarks(container) {
+  if (!container) return;
+  const active = blockSelection.ids.size > 0;
+  container.classList.toggle('has-block-selection', active);
+  container.querySelectorAll('.notes-block-item[data-block-id]').forEach(el => {
+    const id = el.getAttribute('data-block-id');
+    const on = blockSelection.ids.has(id);
+    el.classList.toggle('is-block-selected', on);
+    let cb = el.querySelector(':scope > .blk-sel-check');
+    if (active && !cb) {
+      cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.className = 'blk-sel-check';
+      cb.title = 'Select block';
+      cb.setAttribute('aria-label', 'Select block');
+      el.prepend(cb);
+    } else if (!active && cb) {
+      cb.remove();
+      cb = null;
+    }
+    if (cb) cb.checked = on;
+  });
+}
+
+const SELECTION_IGNORE = 'a, button, input:not(.blk-sel-check), select, textarea, label, .live-wikilink, [contenteditable="true"], .obsidian-live-surface';
+
+function onBlockContainerClickCapture(e) {
+  const ctx = blockEditorContext;
+  if (!ctx || !ctx.isEditMode) return;
+  const item = e.target.closest('.notes-block-item[data-block-id]');
+  if (!item || !ctx.container.contains(item)) return;
+  const id = item.getAttribute('data-block-id');
+  const isCheckbox = e.target.classList && e.target.classList.contains('blk-sel-check');
+  const modifier = e.shiftKey || e.ctrlKey || e.metaKey;
+  if (!isCheckbox && !modifier) {
+    // Plain click on a block while selecting: leave selection mode, then edit as usual.
+    if (blockSelection.ids.size) ClearBlockSelection();
+    return;
+  }
+  if (!isCheckbox && e.target.closest(SELECTION_IGNORE)) return;
+  const active = typeof ctx.getActiveIndex === 'function' ? ctx.getActiveIndex() : -1;
+  const blocks = ctx.note.blocks || [];
+  if (!isCheckbox && active !== -1 && blocks[active] && blocks[active].id === id) return; // block being edited
+  e.preventDefault();
+  e.stopPropagation();
+  if (e.shiftKey && !isCheckbox) selectRangeTo(id);
+  else toggleBlock(id);
+}
+
+/** Installs the click handling on the editor's blocks container (once per container). */
+function AttachBlockSelection(container) {
+  if (!container || container.__blockSelectionAttached) return;
+  container.__blockSelectionAttached = true;
+  container.addEventListener('click', onBlockContainerClickCapture, true);
+  // Shift+click would otherwise also select page text.
+  container.addEventListener('mousedown', (e) => { if (e.shiftKey && e.target.closest('.notes-block-item') && !e.target.closest(SELECTION_IGNORE)) e.preventDefault(); }, true);
+}
+
+
+/* --- 03_Notes/E_Note_Ops/07_Block_Clipboard.js --- */
+/**
+ * 03_Notes/E_Note_Ops/07_Block_Clipboard.js
+ * Tixidian's internal block clipboard: the copied blocks (with saved TikZ SVGs and images)
+ * live in memory AND localStorage (so another tab of the same file can paste them).
+ * The system clipboard gets plain markdown/LaTeX of the same blocks; a paste only inserts
+ * blocks when the system clipboard still holds that text (otherwise the user has copied
+ * something else since, and normal paste behaviour wins).
+ */
+
+const BLOCK_CLIPBOARD_KEY = 'tixidian-block-clipboard';
+let blockClipboardMemory = null;
+
+/** Plain markdown / LaTeX for the system clipboard. */
+function BlocksToPlainText(blocks) {
+  return (blocks || []).map((b) => {
+    switch (b.type) {
+      case 'heading': {
+        const level = parseInt(String(b.level || 'h1').replace(/\D/g, ''), 10) || 1;
+        return `${'#'.repeat(Math.min(6, level))} ${b.title || ''}`.trim();
+      }
+      case 'equation': return `$$\n${b.tex || b.content || ''}\n$$`;
+      case 'code': return '```' + (b.language || '') + '\n' + (b.code || b.content || '') + '\n```';
+      case 'tikz': return b.code || b.content || '';
+      case 'image': return b.url && !String(b.url).startsWith('data:') ? `![${b.caption || ''}](${b.url})` : `[image${b.caption ? ': ' + b.caption : ''}]`;
+      case 'block':
+      case 'theorem': {
+        const head = `> **${b.env || 'Note'}${b.title ? ': ' + b.title : ''}**`;
+        const body = String(b.content || '').split('\n').map(l => `> ${l}`).join('\n');
+        return body.trim() !== '>' ? `${head}\n${body}` : head;
+      }
+      case 'columns':
+      case 'multicolumn':
+      case 'multi-column':
+        return '';
+      default:
+        return b.content || b.title || '';
+    }
+  }).filter(t => t !== '').join('\n\n');
+}
+
+/**
+ * Stores blocks on the internal clipboard.
+ * @returns {{ text: string, storedAcrossTabs: boolean }}
+ */
+function SetBlockClipboard(blocks, sourceNote) {
+  const payload = {
+    format: 'tixidian-blocks',
+    version: 1,
+    at: Date.now(),
+    sourceNoteId: sourceNote ? sourceNote.id : null,
+    sourceTitle: sourceNote ? sourceNote.title : '',
+    blocks: JSON.parse(JSON.stringify(blocks || [])),
+    text: BlocksToPlainText(blocks)
+  };
+  blockClipboardMemory = payload;
+  let storedAcrossTabs = true;
+  try { localStorage.setItem(BLOCK_CLIPBOARD_KEY, JSON.stringify(payload)); } catch (_) { storedAcrossTabs = false; }
+  return { text: payload.text, storedAcrossTabs };
+}
+
+/** Newest of memory / localStorage (another tab may have copied later). */
+function GetBlockClipboard() {
+  let stored = null;
+  try { stored = JSON.parse(localStorage.getItem(BLOCK_CLIPBOARD_KEY) || 'null'); } catch (_) { stored = null; }
+  const mem = blockClipboardMemory;
+  if (stored && stored.format === 'tixidian-blocks' && (!mem || stored.at > mem.at)) return stored;
+  return mem;
+}
+
+const normalizeClipText = (t) => String(t || '').replace(/\r\n/g, '\n').trim();
+
+/** True when the system clipboard text still corresponds to the internal clipboard. */
+function ClipboardTextMatchesBlocks(systemText, payload = GetBlockClipboard()) {
+  if (!payload) return false;
+  if (systemText === null || systemText === undefined) return true; // no access to the system text
+  return normalizeClipText(systemText) === normalizeClipText(payload.text);
+}
+
+/** Writes text to the system clipboard (best effort). */
+async function WriteSystemClipboardText(text) {
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(text); return true; }
+  } catch (_) { /* fall through */ }
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;opacity:0;left:-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    ta.remove();
+    return ok;
+  } catch (_) { return false; }
+}
+
+
+/* --- 03_Notes/E_Note_Ops/08_Block_Operations.js --- */
+/**
+ * 03_Notes/E_Note_Ops/08_Block_Operations.js
+ * Operations on the selected blocks of the open note (06_Block_Selection.js):
+ *   Copy · Cut · Duplicate · Delete · Move to note… · Paste
+ * Selecting a multi-column container / callout with members includes its member blocks.
+ * Copies (copy/paste, duplicate) get fresh ids; Move keeps ids and retargets links.
+ * Figure tags / equation labels that clash in the target get "-2" (with a notice).
+ * Everything except Copy records a structural undo snapshot.
+ */
+
+
+
+
+
+
+
+const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+function currentEditorNote() {
+  const ctx = GetBlockEditorContext();
+  return ctx && ctx.isEditMode ? ctx.note : null;
+}
+
+function selectedWithMembers(note) {
+  return ExpandWithColumnMembers(GetSelectedBlocks(), note.blocks || []);
+}
+
+// Removes blocks and every container reference to them.
+function removeBlocksFromNote(note, ids) {
+  note.blocks = (note.blocks || []).filter(b => !ids.has(b.id));
+  note.blocks.forEach(b => {
+    if (!IsColumnsBlock(b) && !Array.isArray(b.members)) return;
+    if (Array.isArray(b.members)) b.members = b.members.filter(id => !ids.has(id));
+    if (Array.isArray(b.rows)) b.rows = b.rows.map(r => (Array.isArray(r) ? r.filter(id => !ids.has(id)) : [])).filter(r => r.length);
+  });
+}
+
+function rerenderEditor() {
+  const ctx = GetBlockEditorContext();
+  if (ctx && typeof ctx.rerender === 'function') ctx.rerender();
+}
+
+function finishBlockOp(message, renamed = []) {
+  SaveNotesState(null, { immediate: true });
+  rerenderEditor();
+  const renames = DescribeRenames(renamed);
+  ShowStructureToast(renames ? `${message} ${renames}` : message, { kind: renames ? 'warn' : 'info', ms: renames ? 9000 : 6000 });
+}
+
+/** @returns {Promise<string|null>} the plain text put on the clipboard */
+async function CopySelectedBlocks({ writeSystem = true, silent = false } = {}) {
+  const note = currentEditorNote();
+  if (!note) return null;
+  const blocks = selectedWithMembers(note);
+  if (!blocks.length) return null;
+  const { text, storedAcrossTabs } = SetBlockClipboard(blocks, note);
+  if (writeSystem) await WriteSystemClipboardText(text);
+  if (!silent) ShowStructureToast(`Copied ${plural(blocks.length, 'block')}${storedAcrossTabs ? '' : ' (this tab only — too large to share across tabs)'} — paste with Ctrl+V in any note`, { undo: false });
+  return text;
+}
+async function CutSelectedBlocks({ writeSystem = true } = {}) {
+  const note = currentEditorNote();
+  if (!note) return null;
+  const blocks = selectedWithMembers(note);
+  if (!blocks.length) return null;
+  const text = await CopySelectedBlocks({ writeSystem, silent: true });
+  RecordStructureUndo(`Cut ${plural(blocks.length, 'block')}`);
+  removeBlocksFromNote(note, new Set(blocks.map(b => b.id)));
+  ClearBlockSelection();
+  finishBlockOp(`Cut ${plural(blocks.length, 'block')} — paste with Ctrl+V`);
+  return text;
+}
+function DuplicateSelectedBlocks() {
+  const note = currentEditorNote();
+  if (!note) return;
+  const blocks = selectedWithMembers(note);
+  if (!blocks.length) return;
+  RecordStructureUndo(`Duplicate ${plural(blocks.length, 'block')}`);
+  const prepared = PrepareBlocksForTarget(blocks, note.blocks, { freshIds: true });
+  const lastIdx = Math.max(...blocks.map(b => note.blocks.indexOf(b)));
+  note.blocks.splice(lastIdx + 1, 0, ...prepared.blocks);
+  SetSelectedBlockIds(prepared.blocks.map(b => b.id));
+  finishBlockOp(`Duplicated ${plural(blocks.length, 'block')}`, prepared.renamed);
+}
+function DeleteSelectedBlocks() {
+  const note = currentEditorNote();
+  if (!note) return;
+  const ids = GetSelectedBlockIds();
+  if (!ids.length) return;
+  RecordStructureUndo(`Delete ${plural(ids.length, 'block')}`);
+  removeBlocksFromNote(note, new Set(ids));
+  ClearBlockSelection();
+  finishBlockOp(`Deleted ${plural(ids.length, 'block')}`);
+}
+async function MoveSelectedBlocksToNote() {
+  const note = currentEditorNote();
+  if (!note) return;
+  const blocks = selectedWithMembers(note);
+  if (!blocks.length) return;
+  const pick = await PickNote({ title: `Move ${plural(blocks.length, 'block')} to…`, confirmLabel: 'Move', excludeIds: [note.id], showPosition: true });
+  if (!pick) return;
+  const target = (NotesState.notes || []).find(n => n.id === pick.noteId);
+  if (!target) return;
+  RecordStructureUndo(`Move ${plural(blocks.length, 'block')} to "${target.title || 'Untitled'}"`);
+  const prepared = PrepareBlocksForTarget(blocks, target.blocks || [], { freshIds: false });
+  const ids = new Set(blocks.map(b => b.id));
+  RewriteWikiLinks(note, target, { blockIds: ids });  // before the blocks leave (index links resolve now)
+  removeBlocksFromNote(note, ids);
+  if (!Array.isArray(target.blocks)) target.blocks = [];
+  if (pick.position === 'start') target.blocks.unshift(...prepared.blocks);
+  else target.blocks.push(...prepared.blocks);
+  ClearBlockSelection();
+  finishBlockOp(`Moved ${plural(blocks.length, 'block')} to "${target.title || 'Untitled'}"`, prepared.renamed);
+}
+
+/**
+ * Inserts the clipboard blocks with fresh ids: below the block being edited, else below the
+ * last selected block, else at the end of the note.
+ * @returns {boolean} true when something was pasted
+ */
+function PasteBlocksFromClipboard() {
+  const ctx = GetBlockEditorContext();
+  const note = currentEditorNote();
+  const payload = GetBlockClipboard();
+  if (!note || !payload || !Array.isArray(payload.blocks) || !payload.blocks.length) return false;
+  let index = note.blocks.length;
+  const active = typeof ctx.getActiveIndex === 'function' ? ctx.getActiveIndex() : -1;
+  const selected = GetSelectedBlockIds();
+  if (active !== -1 && active < note.blocks.length) index = active + 1;
+  else if (selected.length) index = note.blocks.findIndex(b => b.id === selected[selected.length - 1]) + 1;
+  RecordStructureUndo(`Paste ${plural(payload.blocks.length, 'block')}`);
+  const prepared = PrepareBlocksForTarget(payload.blocks, note.blocks, { freshIds: true });
+  note.blocks.splice(index, 0, ...prepared.blocks);
+  SetSelectedBlockIds(prepared.blocks.map(b => b.id));
+  finishBlockOp(`Pasted ${plural(prepared.blocks.length, 'block')}${payload.sourceTitle && payload.sourceNoteId !== note.id ? ` from "${payload.sourceTitle}"` : ''}`, prepared.renamed);
+  return true;
+}
+
+
+/* --- 03_Notes/E_Note_Ops/09_Block_Selection_Bar.js --- */
+/**
+ * 03_Notes/E_Note_Ops/09_Block_Selection_Bar.js
+ * Floating bar shown while blocks are selected:
+ *   "N selected · Copy · Cut · Duplicate · Move to note… · Delete · ✕ (Esc)"
+ * plus the keyboard / clipboard wiring:
+ *   Ctrl/Cmd+C / X   (copy / cut events) — when blocks are selected and focus is not in a text field
+ *   Ctrl/Cmd+V       (paste event)       — inserts copied blocks when the system clipboard still
+ *                                          holds their text (in the note being edited too)
+ *   Delete/Backspace — deletes the selected blocks;  Esc — clears the selection
+ */
+
+
+
+if (typeof document !== 'undefined' && !document.getElementById('block-selection-bar-styles')) {
+  const style = document.createElement('style');
+  style.id = 'block-selection-bar-styles';
+  style.textContent = `
+    .bsel-bar { position: fixed; left: 50%; top: calc(var(--notes-header-height, 74px) + 10px); transform: translateX(-50%); z-index: 90;
+      display: flex; align-items: center; gap: 4px; padding: 6px 8px; border-radius: 12px; border: 1px solid var(--accent, #8b6dff);
+      background: var(--card, #1c1f2e); color: var(--text, #e8eaf2); box-shadow: 0 14px 36px rgba(0,0,0,0.4); font-size: 12.5px;
+      max-width: calc(100vw - 24px); flex-wrap: wrap; justify-content: center; }
+    .bsel-bar .bsel-count { font-weight: 700; padding: 0 8px 0 4px; color: var(--accent, #8b6dff); white-space: nowrap; }
+    .bsel-bar button { height: 28px; padding: 0 10px; border-radius: 8px; border: 1px solid transparent; background: transparent;
+      color: inherit; font: inherit; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .bsel-bar button:hover { background: var(--accent-soft, rgba(139,109,255,0.12)); border-color: var(--border, #2a2e40); }
+    .bsel-bar button.bsel-danger:hover { color: #f87171; }
+    .bsel-bar .bsel-sep { width: 1px; height: 18px; background: var(--border, #2a2e40); margin: 0 2px; }
+  `;
+  document.head.appendChild(style);
+}
+
+let blockBarEl = null;
+
+function renderBlockSelectionBar(ids) {
+  if (!ids.length) { if (blockBarEl) { blockBarEl.remove(); blockBarEl = null; } return; }
+  if (!blockBarEl) {
+    blockBarEl = document.createElement('div');
+    blockBarEl.className = 'bsel-bar';
+    blockBarEl.setAttribute('role', 'toolbar');
+    blockBarEl.setAttribute('aria-label', 'Selected blocks');
+    blockBarEl.innerHTML = `
+      <span class="bsel-count"></span>
+      <button type="button" data-op="copy" title="Copy (Ctrl+C)">Copy</button>
+      <button type="button" data-op="cut" title="Cut (Ctrl+X)">Cut</button>
+      <button type="button" data-op="duplicate" title="Duplicate below">Duplicate</button>
+      <button type="button" data-op="move" title="Move to another note">Move to note…</button>
+      <button type="button" data-op="delete" class="bsel-danger" title="Delete (Del)">Delete</button>
+      <span class="bsel-sep"></span>
+      <button type="button" data-op="clear" title="Clear selection (Esc)">✕</button>`;
+    blockBarEl.addEventListener('click', (e) => {
+      const op = e.target.closest('[data-op]')?.getAttribute('data-op');
+      if (op === 'copy') CopySelectedBlocks();
+      else if (op === 'cut') CutSelectedBlocks();
+      else if (op === 'duplicate') DuplicateSelectedBlocks();
+      else if (op === 'move') MoveSelectedBlocksToNote();
+      else if (op === 'delete') DeleteSelectedBlocks();
+      else if (op === 'clear') ClearBlockSelection();
+    });
+    document.body.appendChild(blockBarEl);
+  }
+  blockBarEl.querySelector('.bsel-count').textContent = `${ids.length} selected`;
+}
+
+function isEditableElement(el) {
+  if (!el) return false;
+  if (el.isContentEditable) return true;
+  const tag = (el.tagName || '').toLowerCase();
+  return (tag === 'textarea' || tag === 'select' || (tag === 'input' && !['checkbox', 'radio', 'button'].includes(el.type)));
+}
+
+function editorActive() {
+  const ctx = GetBlockEditorContext();
+  return Boolean(ctx && ctx.isEditMode && ctx.container && ctx.container.isConnected);
+}
+
+if (typeof document !== 'undefined' && !window.__BLOCK_SELECTION_BAR_WIRED__) {
+  window.__BLOCK_SELECTION_BAR_WIRED__ = true;
+  OnBlockSelectionChange(renderBlockSelectionBar);
+
+  document.addEventListener('keydown', (e) => {
+    if (!editorActive() || !GetSelectedBlockIds().length) return;
+    if (document.querySelector('.np-overlay')) return; // picker open
+    if (e.key === 'Escape') { ClearBlockSelection(); return; }
+    if ((e.key === 'Delete' || e.key === 'Backspace') && !isEditableElement(document.activeElement)) {
+      e.preventDefault();
+      DeleteSelectedBlocks();
+    }
+  });
+
+  document.addEventListener('copy', (e) => onCopyOrCutSync(e, false));
+  document.addEventListener('cut', (e) => onCopyOrCutSync(e, true));
+
+  document.addEventListener('paste', (e) => {
+    if (!editorActive() || !GetBlockClipboard()) return;
+    const ctx = GetBlockEditorContext();
+    const target = document.activeElement;
+    // Text fields outside the note (search boxes, dialogs) keep normal paste.
+    if (isEditableElement(target) && !(ctx.container.contains(target))) return;
+    const text = e.clipboardData ? e.clipboardData.getData('text/plain') : null;
+    if (!ClipboardTextMatchesBlocks(text)) return;
+    e.preventDefault();
+    PasteBlocksFromClipboard();
+  });
+}
+
+// copy/cut handler: the internal clipboard is filled synchronously (SetBlockClipboard inside
+// CopySelectedBlocks runs before its first await), so its text can go into clipboardData now.
+function onCopyOrCutSync(e, isCut) {
+  if (!editorActive() || !GetSelectedBlockIds().length || isEditableElement(document.activeElement)) return;
+  e.preventDefault();
+  const op = isCut ? CutSelectedBlocks({ writeSystem: false }) : CopySelectedBlocks({ writeSystem: false });
+  const payload = GetBlockClipboard();
+  if (payload && e.clipboardData) e.clipboardData.setData('text/plain', payload.text);
+  return op;
 }
 
 

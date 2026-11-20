@@ -22,6 +22,8 @@ import { getRawOffsetFromPoint, placeCaretAtRawOffset } from './01_Blocks/Text_B
 import { escapeHtml } from '../02_Utils.js';
 import { setActiveNoteContext, setActiveFigureTagMap, setActiveEquationTagMap, setActiveCitationMap } from '../Writing_Engine/Math_Renderer.js';
 import { setActiveTikzNoteContext } from '../Writing_Engine/Tikz_Engine/Tikz_Renderer.js';
+import { AttachBlockSelection, SetBlockEditorContext, ClearBlockEditorContext, RefreshBlockSelectionMarks } from '../E_Note_Ops/06_Block_Selection.js';
+import '../E_Note_Ops/09_Block_Selection_Bar.js';
 
 export function RenderLaTeXEditor(container, noteId, isEditMode = true) {
   if (!container) return;
@@ -139,6 +141,8 @@ export function RenderLaTeXEditor(container, noteId, isEditMode = true) {
   const blocksContainer = document.createElement('div');
   blocksContainer.className = 'space-y-0.5';
   paper.appendChild(blocksContainer);
+  // Multi-block selection (Shift/Ctrl/Cmd+click) — E_Note_Ops/06_Block_Selection.js
+  if (isEditMode) AttachBlockSelection(blocksContainer);
 
   // Core Block Insertion Method
   function insertBlock(type, level = null, targetIndex = -1) {
@@ -650,6 +654,7 @@ export function RenderLaTeXEditor(container, noteId, isEditMode = true) {
       }
     }
     blocksContainer.appendChild(fragment);
+    RefreshBlockSelectionMarks(blocksContainer);
   }
 
   // Bottom Floating Dock Toolbar (Sidebar Toggle, Study Toggle, Note Fonts, Font Size, Macros)
@@ -784,11 +789,26 @@ export function RenderLaTeXEditor(container, noteId, isEditMode = true) {
     }
     document.removeEventListener('click', onDocClick);
     document.removeEventListener('keydown', onDocKeyDown);
+    ClearBlockEditorContext(note.id);
     if (container.__themeObserver) {
       container.__themeObserver.disconnect();
       container.__themeObserver = null;
     }
   };
+
+  // Context for block selection / copy / paste / move (E_Note_Ops/06–09).
+  SetBlockEditorContext({
+    note,
+    container: blocksContainer,
+    isEditMode,
+    getActiveIndex: () => activeBlockIndex,
+    rerender: () => {
+      activeBlockIndex = -1;
+      activeSelectorIndex = -1;
+      renderBlocks();
+      refreshSidebar();
+    }
+  });
 
   renderBlocks();
 }

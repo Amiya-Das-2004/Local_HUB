@@ -12,6 +12,9 @@
 
 const FIGURE_BLOCK_TYPES = new Set(['image', 'tikz']);
 const COLUMN_BLOCK_TYPES = new Set(['columns', 'multicolumn', 'multi-column']);
+const CALLOUT_BLOCK_TYPES = new Set(['block', 'theorem']);
+// Fields that can hold LaTeX labels (equation blocks keep their source in `tex`).
+const LABEL_TEXT_FIELDS = ['content', 'tex', 'code', 'caption', 'title'];
 
 export function NewBlockId() {
   return `b_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -21,8 +24,10 @@ export function NewNoteId() {
   return `note_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
+/** Orientation containers reference member blocks by id: multi-column blocks and callouts with members. */
 export function IsColumnsBlock(block) {
-  return Boolean(block && COLUMN_BLOCK_TYPES.has(block.type));
+  if (!block) return false;
+  return COLUMN_BLOCK_TYPES.has(block.type) || (CALLOUT_BLOCK_TYPES.has(block.type) && Array.isArray(block.members) && block.members.length > 0);
 }
 
 function columnMemberIds(block) {
@@ -52,7 +57,7 @@ export function CollectFigureTags(blocks) {
 export function CollectEquationLabels(blocks) {
   const out = new Set();
   (blocks || []).forEach(b => {
-    ['content', 'code', 'caption', 'title'].forEach(k => {
+    LABEL_TEXT_FIELDS.forEach(k => {
       const v = b[k];
       if (typeof v !== 'string' || !v.includes('\\label')) return;
       const re = /\\label\{([^}]+)\}/g;
@@ -140,7 +145,7 @@ export function PrepareBlocksForTarget(blocks, targetBlocks = [], { freshIds = t
   const eqRenames = [];
   const seenEq = new Set();
   const rawLabels = [];
-  clones.forEach(b => ['content', 'code', 'caption', 'title'].forEach(k => {
+  clones.forEach(b => LABEL_TEXT_FIELDS.forEach(k => {
     const v = b[k];
     if (typeof v !== 'string' || !v.includes('\\label')) return;
     const re = /\\label\{([^}]+)\}/g;
