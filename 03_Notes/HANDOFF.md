@@ -43,13 +43,13 @@ single-HTML, Overleaf + Obsidian style notes app.
   note, delete. Clashing tags/labels get `-2`; links are rewritten when blocks move; everything
   can be undone (toast Undo or Ctrl+Z outside text fields).
 - **B1–B2 (`F_Share/`):** share one note as a read-only HTML; export everything as one HTML.
+  The shared view's bottom dock shows only Sidebar + Fonts (no empty separators).
 
 ## Known gaps
 
 - The real file-picker dialogs and the browser's permission prompt were never tested (headless
   tests used a stand-in). Do one manual round in Chrome: Open data file → Save → close → reopen.
 - Brave needs `brave://flags/#file-system-access-api` turned on for data files.
-- The shared read-only view shows empty separators in the bottom toolbar.
 - The demo note in the root `Index.html` still mentions the old `v1` engine.
 - `Notes_Issues_And_Fixes.md` Issue 1 (images into an internal asset store) is still open.
 

@@ -45,6 +45,10 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
       body.tix-shared-readonly #notes-data-file-slot, body.tix-shared-readonly .btn-back-to-notes,
       body.tix-shared-readonly .btn-macros-toggle, body.tix-shared-readonly .btn-library-toggle,
       body.tix-shared-readonly .btn-numbering-toggle, body.tix-shared-readonly .notes-study-toggle-btn { display: none !important; }
+      body.tix-shared-readonly .notes-floating-toolbar .nft-divider,
+      body.tix-shared-readonly .notes-floating-toolbar .nft-numbering-wrap,
+      body.tix-shared-readonly .notes-floating-toolbar > :has(> .notes-study-toggle-btn) { display: none !important; }
+      body.tix-shared-readonly .notes-floating-toolbar { padding-left: 6px; padding-right: 6px; }
       body.tix-shared-readonly .note-task-checkbox { pointer-events: none; }
       .tix-shared-banner { position: fixed; left: 50%; top: calc(var(--notes-header-height, 74px) + 8px); transform: translateX(-50%);
         z-index: 60; padding: 4px 12px; border-radius: 999px; font-size: 11.5px; font-weight: 600; color: var(--text-secondary, #a0a4b8);

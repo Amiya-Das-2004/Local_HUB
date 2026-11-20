@@ -825,7 +825,7 @@ Module side effects (once): subscribes the bar; `keydown` (Esc clears, Delete/Ba
 | `sharedStudyHash(info)` | 20 - 22 | `#Notes?view=study&id=<note>`. |
 | `enforceSharedRoute(info)` | 25 - 32 | Any other route (deck, edit, graph) is replaced by the shared note's study view (keeps `&goto=`). |
 
-Module side effects (shared files only): sets `window.__TIX_SHARED_READONLY__`, rewrites the initial route, adds a capture-phase `hashchange` guard (runs before the page router), injects `#shared-readonly-styles` (hides Save, Import/Export, data-file chip, back/macros/library/numbering/edit toggles; task checkboxes inert) and a "Shared note · read-only" badge. Data-file mode (`MountDataFileUI`) and TikZ compiling/notices (`Tikz_Render_Panel`) are disabled there. Imported for side effects by `Notes.js`.
+Module side effects (shared files only): sets `window.__TIX_SHARED_READONLY__`, rewrites the initial route, adds a capture-phase `hashchange` guard (runs before the page router), injects `#shared-readonly-styles` (hides Save, Import/Export, data-file chip, back/macros/library/numbering/edit toggles plus the toolbar dividers and the empty study-toggle / numbering wrappers, so the dock shows only Sidebar + Fonts with no gaps; task checkboxes inert) and a "Shared note · read-only" badge. Data-file mode (`MountDataFileUI`) and TikZ compiling/notices (`Tikz_Render_Panel`) are disabled there. Imported for side effects by `Notes.js`.
 
 **03_Share_Export.js**
 
