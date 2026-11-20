@@ -5,6 +5,7 @@
  */
 
 import { escapeHtml } from '../02_Utils.js';
+import { HasEmbeddedNotes, IsAppOnlyHtml } from './01_Data_Payload.js';
 import {
   GetDataFileState, OnDataFileStateChange, InitDataFileMode, ReconnectDataFile, OpenDataFile,
   CreateDataFile, ChooseBackupFolder, DisconnectDataFile, SaveNotesSmart
@@ -99,6 +100,7 @@ function buildDataFileMenuItems(state) {
   const items = [];
   if (state.status === 'connected') {
     items.push({ label: `Save to ${state.name}  (Ctrl+S)`, run: () => HandleNotesSave() });
+    items.push({ label: 'Download app-only HTML (no notes inside)', run: () => DownloadAppOnlyHtml() });
     items.push({ label: 'Open another data file…', run: () => runDataFileAction(OpenDataFile, () => `Opened ${GetDataFileState().name}`) });
     items.push({ label: 'New empty data file…', run: () => runDataFileAction(() => CreateDataFile({ withCurrentNotes: false }), () => `Created ${GetDataFileState().name}`) });
     items.push('sep');
@@ -109,6 +111,7 @@ function buildDataFileMenuItems(state) {
     items.push({ label: 'Open another data file…', run: () => runDataFileAction(OpenDataFile, () => `Opened ${GetDataFileState().name}`) });
     items.push({ label: 'Stop using this data file', run: () => runDataFileAction(DisconnectDataFile, 'Data file disconnected') });
   } else if (state.status === 'embedded') {
+    if (HasEmbeddedNotes()) items.push({ label: 'Move my notes to a data file…', run: () => MoveNotesToDataFileFlow() });
     items.push({ label: 'Open data file…', run: () => runDataFileAction(OpenDataFile, () => `Opened ${GetDataFileState().name}`) });
     items.push({ label: 'New empty data file…', run: () => runDataFileAction(() => CreateDataFile({ withCurrentNotes: false }), () => `Created ${GetDataFileState().name}`) });
   }
@@ -210,6 +213,90 @@ function flashSaveButton(title) {
   }, 1600);
 }
 
+/** Downloads this app as an HTML that carries NO notes (they live in the data file). */
+export async function DownloadAppOnlyHtml() {
+  if (typeof window.SaveNotesStandalone !== 'function') { ShowDataFileToast('Saving the app is not available on this page.', 'error'); return; }
+  await window.SaveNotesStandalone({ appOnly: true, dataFileName: GetDataFileState().name, markSaved: false });
+  ShowDataFileToast('App-only HTML downloaded — use it in place of your old Notes.html', 'info', 4200);
+}
+
+function showDataFileDialog({ title, html, actions }) {
+  document.querySelectorAll('.df-overlay').forEach(o => o.remove());
+  const overlay = document.createElement('div');
+  overlay.className = 'df-overlay';
+  overlay.innerHTML = `<div class="df-dialog" role="dialog" aria-modal="true" aria-label="${escapeHtml(title)}"><h3>${escapeHtml(title)}</h3><p>${html}</p><div class="df-actions"></div><div class="df-error"></div></div>`;
+  const box = overlay.querySelector('.df-actions');
+  const errEl = overlay.querySelector('.df-error');
+  actions.forEach((a, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = `df-btn${i === 0 ? ' df-primary' : ''}`;
+    b.setAttribute('data-act', a.id);
+    b.textContent = a.label;
+    b.addEventListener('click', async () => {
+      try { if ((await a.run()) !== false) overlay.remove(); }
+      catch (e) { const m = describeDataFileError(e); if (m) errEl.textContent = m; }
+    });
+    box.appendChild(b);
+  });
+  document.body.appendChild(overlay);
+  return overlay;
+}
+
+/** Embedded notes → new data file, then offer the app-only HTML. */
+export async function MoveNotesToDataFileFlow() {
+  const moved = await runDataFileAction(() => CreateDataFile({ withCurrentNotes: true, suggestedName: 'MyNotes.json' }));
+  if (!moved) return false;
+  const name = GetDataFileState().name;
+  showDataFileDialog({
+    title: 'Your notes are now in a data file',
+    html: `All notes were written to <strong>${escapeHtml(name)}</strong>; Save (Ctrl+S) now updates that file in place. The HTML you opened still holds an old copy of the notes — download the app-only HTML and use it in place of it.`,
+    actions: [
+      { id: 'app-only', label: 'Download app-only HTML', run: () => DownloadAppOnlyHtml() },
+      { id: 'later', label: 'Later', run: () => true }
+    ]
+  });
+  return true;
+}
+
+// App-only HTML opened without a remembered data file (new browser / profile).
+function showAppOnlyWelcome(state) {
+  const fileName = (window.NotesState && window.NotesState.vaultMeta && window.NotesState.vaultMeta.dataFileName) || 'your data file';
+  if (state.status === 'unsupported') {
+    showDataFileDialog({
+      title: 'This HTML holds no notes',
+      html: `It is the Tixidian app; the notes live in <strong>${escapeHtml(fileName)}</strong>, which needs Chrome or Edge (or Brave with <code>brave://flags/#file-system-access-api</code>). To use another browser, open an "Export everything as one HTML" copy instead.`,
+      actions: [{ id: 'ok', label: 'OK', run: () => true }]
+    });
+    return;
+  }
+  showDataFileDialog({
+    title: 'Open your notes',
+    html: `This HTML is the Tixidian app; your notes are in <strong>${escapeHtml(fileName)}</strong>. Pick that file to continue.`,
+    actions: [
+      { id: 'open', label: 'Open data file…', run: () => OpenDataFile() },
+      { id: 'new', label: 'New empty data file…', run: () => CreateDataFile({ withCurrentNotes: false }) },
+      { id: 'later', label: 'Start without a data file', run: () => true }
+    ]
+  });
+}
+
+const MOVE_OFFER_DISMISS_KEY = `tix-move-offer-dismissed:${typeof location !== 'undefined' ? location.pathname : ''}`;
+// One-time, dismissible offer for HTMLs that still carry their notes.
+function maybeOfferMoveToDataFile(state) {
+  if (state.status !== 'embedded' || !HasEmbeddedNotes()) return;
+  try { if (localStorage.getItem(MOVE_OFFER_DISMISS_KEY)) return; } catch (_) { return; }
+  const bar = document.createElement('div');
+  bar.className = 'df-toast is-info df-move-offer';
+  bar.style.display = 'flex'; bar.style.alignItems = 'center'; bar.style.gap = '10px';
+  bar.innerHTML = '<span>Keep your notes in one data file and save in place (no more downloaded copies)?</span>';
+  const mk = (label, fn) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = label; b.style.cssText = 'border:1px solid rgba(255,255,255,.4);background:transparent;color:#fff;border-radius:7px;padding:3px 9px;font-weight:700;cursor:pointer;white-space:nowrap'; b.addEventListener('click', fn); bar.appendChild(b); };
+  const dismiss = () => { try { localStorage.setItem(MOVE_OFFER_DISMISS_KEY, '1'); } catch (_) {} bar.remove(); };
+  mk('Move my notes to a data file', () => { dismiss(); MoveNotesToDataFileFlow(); });
+  mk('Not now', dismiss);
+  document.body.appendChild(bar);
+}
+
 let dataFileSaveRunning = false;
 /** The Save button and Ctrl+S both land here. */
 export async function HandleNotesSave() {
@@ -250,7 +337,10 @@ export function MountDataFileUI() {
       HandleNotesSave();
     }
   });
-  InitDataFileMode();
+  InitDataFileMode().then((state) => {
+    if (IsAppOnlyHtml() && (state.status === 'embedded' || state.status === 'unsupported')) showAppOnlyWelcome(state);
+    else maybeOfferMoveToDataFile(state);
+  });
 }
 
 if (typeof window !== 'undefined') {

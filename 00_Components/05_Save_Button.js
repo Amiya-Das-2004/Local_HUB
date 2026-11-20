@@ -599,7 +599,7 @@ handleRoute();
   }
 
   // Cleanup injected dev scripts, runtime containers, and dynamic TikZ engine tags before download
-  DocClone.querySelectorAll('script[src*="livepreview"], script[src*="livereload"], #tikzjax-js, #tikzjax-css, script[src*="tikzjax"], #tikz-engine-host, #tikz-saved-fonts').forEach(s => s.remove());
+  DocClone.querySelectorAll('script[src*="livepreview"], script[src*="livereload"], #tikzjax-js, #tikzjax-css, script[src*="tikzjax"], #tikz-engine-host, #tikz-saved-fonts, .df-overlay, .df-toast, .df-menu').forEach(s => s.remove());
   ['#canvas-container', '#loading-container', '#root'].forEach(sel => {
     const el = DocClone.querySelector(sel);
     if (el) el.innerHTML = '';

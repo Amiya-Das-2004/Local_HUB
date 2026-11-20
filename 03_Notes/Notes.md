@@ -219,8 +219,8 @@ Module-level side effects: exports `window.SaveNotesState` / `flushNotesSave` / 
 | `bundleTabFile(filePath)` | 146 - 170 | Fetches one modular JS file (resolved against the project root via `import.meta.url`), strips `import`/`export` statements, and returns a commented flat code chunk; missing files are skipped with a warning. |
 | `bundleTabGroup(files)` | 172 - 176 | Sequentially concatenates `bundleTabFile` output for a file list. |
 | `sharedComponentFiles` / `tabHandlerFiles` / `tabModuleFiles` | 178 - 274 | The tab bundler's three registration arrays: 8 shared `00_Components` files, the 3 `Tab_Notes` handler adapters, and the full ordered ordered Notes module graph (dependency-ordered: state → utils → engines → block infra → block renderers → text submodules → editor chrome → card view → graph → header → Notes.js). New Notes modules MUST be added here. |
-| `SaveNotesStandalone()` | 278 - 395 | Bundles `Notes.html` into a self-contained, standalone single-file HTML document: clones the document, syncs vaults via `syncTabStatesToDOM`, and (when not already standalone) flattens shared components + handlers + tab modules into one inline module that defines `LoadThisPage()` (boots `initNotesApp` + all three tab overrides) and a `handlePageRoute()` hash router, replacing the `#localhub-router` boot script. Inside an already-standalone file it just re-emits itself with fresh vault data. Cleans injected dev/live-reload and TikZ engine tags, empties runtime containers, downloads via blob, clears local caches, and flashes the Save button green for 2s. Before download it strips dev scripts and runtime TikZ elements (`#tikzjax-js`, `#tikzjax-css`, `#tikz-engine-host`, `#tikz-saved-fonts` — saved fonts already live in `#NotesData`). |
-| `InitTabSaveOverride()` | 399 - 453 | Swaps the shared Save-button binding (which would build the all-in-one app) for the per-tab `SaveNotesStandalone` by cloning the button, and provides a standalone implementation of `window.MarkUnsavedChanges(dirty, count)` driving the `.save-badge` unsaved-changes pill (restoring any count present on mount). The Save click goes to `window.HandleNotesSave` (data-file mode decides: overwrite the data file, ask to reconnect, or fall back to `SaveNotesStandalone`); it also exposes `window.SaveNotesStandalone` and calls `window.MountDataFileUI()` after every header mount. |
+| `SaveNotesStandalone(options = {})` | 284 - 434 | Bundles `Notes.html` into a self-contained, standalone single-file HTML document: clones the document, syncs vaults via `syncTabStatesToDOM`, and (when not already standalone) flattens shared components + handlers + tab modules into one inline module that defines `LoadThisPage()` (boots `initNotesApp` + all three tab overrides) and a `handlePageRoute()` hash router, replacing the `#localhub-router` boot script. Inside an already-standalone file it just re-emits itself with fresh vault data. Cleans injected dev/live-reload and TikZ engine tags, empties runtime containers, downloads via blob, clears local caches, and flashes the Save button green for 2s. Before download it strips dev scripts and runtime TikZ elements (`#tikzjax-js`, `#tikzjax-css`, `#tikz-engine-host`, `#tikz-saved-fonts` — saved fonts already live in `#NotesData`). Options: `appOnly` (#NotesData becomes an empty vault marked `vaultMeta.appOnly` + `dataFileName` — the notes live in the data file), `payload` (embed this vault instead of the live one — share/export), `fileName`, `markSaved` (only a full embedded save clears the unsaved state). A full save drops a stale `appOnly` marker. Transient UI (`.df-overlay`, `.df-toast`, `.df-menu`) is stripped from the clone. |
+| `InitTabSaveOverride()` | 438 - 492 | Swaps the shared Save-button binding (which would build the all-in-one app) for the per-tab `SaveNotesStandalone` by cloning the button, and provides a standalone implementation of `window.MarkUnsavedChanges(dirty, count)` driving the `.save-badge` unsaved-changes pill (restoring any count present on mount). The Save click goes to `window.HandleNotesSave` (data-file mode decides: overwrite the data file, ask to reconnect, or fall back to `SaveNotesStandalone`); it also exposes `window.SaveNotesStandalone` and calls `window.MountDataFileUI()` after every header mount. |
 
 **Tab_Notes/Tab_Logo_Handler.js**
 
@@ -578,21 +578,27 @@ Module side effect: registers `window.InitDataFileMode`, `window.SaveNotesSmart`
 | Import Location | Functions Imported | used in Functions |
 | :--- | :--- | :--- |
 | `../02_Utils.js` | `escapeHtml` | chip, menu, dialog markup |
+| `./01_Data_Payload.js` | `HasEmbeddedNotes`, `IsAppOnlyHtml` | `buildDataFileMenuItems()`, `maybeOfferMoveToDataFile()`, `MountDataFileUI()` |
 | `./03_Data_File_Mode.js` | `GetDataFileState`, `OnDataFileStateChange`, `InitDataFileMode`, `ReconnectDataFile`, `OpenDataFile`, `CreateDataFile`, `ChooseBackupFolder`, `DisconnectDataFile`, `SaveNotesSmart` | menu actions, `HandleNotesSave()`, `MountDataFileUI()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `GetDataFileSlotHTML()` | 59 - 61 | `<span id="notes-data-file-slot">` placed in the header before Save. |
-| `ShowDataFileToast(message, kind, ms)` | 63 - 70 | Bottom toast (`ok` / `error` / `info`). |
-| `runDataFileAction(fn, okMessage)` | 78 - 88 | Runs a menu action with success/error toasts (closing a picker is silent). |
-| `buildDataFileMenuItems(state)` | 98 - 116 | Menu per status — connected: Save, Open another, New empty, backup folder, Stop using; needs-permission: Reconnect, Open another, Stop using; embedded: Open data file, New empty data file. |
-| `dataFileMenuHead(state)` | 118 - 123 | One-sentence explanation of where the notes live (incl. the Brave flag hint when unsupported). |
-| `openDataFileMenu(chip)` / `closeDataFileMenu()` | 90 - 146 | Dropdown under the chip; closes on outside click. |
-| `renderDataFileChip(state)` | 148 - 160 | Chip: green dot + file name (connected), amber "Reconnect <name>", or grey "In this HTML". |
-| `ShowDataFileReconnect()` | 163 - 196 | Modal: "Open <name>" (one click), "Open a different file…", "Keep notes in this HTML instead" (declines: `DisconnectDataFile()` → embedded mode, Save downloads the HTML; the file is not asked for again), "Not now"; shows errors inline. |
-| `flashSaveButton(title)` | 198 - 211 | Green tick on the Save button after a data-file save. |
-| `HandleNotesSave()` | 215 - 234 | Single save entry for the Save button and Ctrl+S: `SaveNotesSmart()` → toast / reconnect dialog / `window.SaveNotesStandalone()` fallback. |
-| `MountDataFileUI()` | 238 - 254 | Notes page only: renders the chip after each header mount; first call subscribes to state, installs Ctrl+S, and runs `InitDataFileMode()`. |
+| `GetDataFileSlotHTML()` | 60 - 62 | `<span id="notes-data-file-slot">` placed in the header before Save. |
+| `ShowDataFileToast(message, kind, ms)` | 64 - 71 | Bottom toast (`ok` / `error` / `info`). |
+| `runDataFileAction(fn, okMessage)` | 79 - 89 | Runs a menu action with success/error toasts (closing a picker is silent). |
+| `buildDataFileMenuItems(state)` | 99 - 119 | Menu per status — connected: Save, Download app-only HTML, Open another, New empty, backup folder, Stop using; needs-permission: Reconnect, Open another, Stop using; embedded: Move my notes to a data file… (when the HTML carries notes), Open data file, New empty data file. |
+| `dataFileMenuHead(state)` | 121 - 126 | One-sentence explanation of where the notes live (incl. the Brave flag hint when unsupported). |
+| `openDataFileMenu(chip)` / `closeDataFileMenu()` | 91 - 149 | Dropdown under the chip; closes on outside click. |
+| `renderDataFileChip(state)` | 151 - 163 | Chip: green dot + file name (connected), amber "Reconnect <name>", or grey "In this HTML". |
+| `ShowDataFileReconnect()` | 166 - 199 | Modal: "Open <name>" (one click), "Open a different file…", "Keep notes in this HTML instead" (declines: `DisconnectDataFile()` → embedded mode, Save downloads the HTML; the file is not asked for again), "Not now"; shows errors inline. |
+| `flashSaveButton(title)` | 201 - 214 | Green tick on the Save button after a data-file save. |
+| `DownloadAppOnlyHtml()` | 217 - 221 | Downloads `Notes.html` with NO notes inside (`SaveNotesStandalone({ appOnly: true, dataFileName, markSaved: false })`); the notes stay in the data file. |
+| `showDataFileDialog({ title, html, actions })` | 223 - 244 | Generic modal with primary/secondary actions; an action returning `false` keeps it open; errors show inline. |
+| `MoveNotesToDataFileFlow()` | 247 - 260 | Migration: writes all notes shown now (including unsaved edits) to a new data file via `CreateDataFile({ withCurrentNotes: true })`, connects to it, then offers "Download app-only HTML". |
+| `showAppOnlyWelcome(state)` | 263 - 263 | App-only HTML opened with no remembered data file: "Open your notes" (Open data file… / New empty data file… / Start without a data file); in browsers without the API it explains where the notes are and to use an "Export everything" copy. |
+| `maybeOfferMoveToDataFile(state)` | 286 - 298 | One-time, dismissible bar for HTMLs that still carry their notes (embedded mode, API available): "Move my notes to a data file" / "Not now" (remembered per HTML path in `localStorage`). |
+| `HandleNotesSave()` | 302 - 321 | Single save entry for the Save button and Ctrl+S: `SaveNotesSmart()` → toast / reconnect dialog / `window.SaveNotesStandalone()` fallback. |
+| `MountDataFileUI()` | 325 - 344 | Notes page only: renders the chip after each header mount; the first call subscribes to state, installs Ctrl+S, runs `InitDataFileMode()` and then shows the app-only welcome or the move offer. |
 
 Module side effects: injects `#data-file-ui-styles`; registers `window.HandleNotesSave`, `window.MountDataFileUI`.
 

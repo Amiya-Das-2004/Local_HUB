@@ -275,10 +275,48 @@ const tabModuleFiles = [
 
 // Compiles THIS tab into one standalone HTML file and downloads it.
 // Inside an already-standalone file it just re-emits itself with fresh vault data.
-export async function SaveNotesStandalone() {
+// options:
+//   appOnly   — the HTML carries NO notes (they live in the data file, D_Data_File/);
+//               #NotesData becomes an empty vault marked vaultMeta.appOnly
+//   payload   — embed this vault object instead of the live one (share / export)
+//   fileName  — download name (default Notes.html)
+//   markSaved — clear the unsaved-changes state afterwards (only a full embedded save does)
+export async function SaveNotesStandalone(options = {}) {
+  const appOnly = Boolean(options && options.appOnly);
+  const payloadOverride = (options && options.payload) || null;
+  const fileName = (options && options.fileName) || TAB_OUTPUT_NAME;
+  const markSaved = (options && typeof options.markSaved === 'boolean') ? options.markSaved : (!appOnly && !payloadOverride);
   const DocClone = document.documentElement.cloneNode(true);
 
   syncTabStatesToDOM(DocClone);
+
+  const notesDataEl = DocClone.querySelector('script#NotesData');
+  if (notesDataEl && (appOnly || payloadOverride)) {
+    let vault;
+    if (payloadOverride) {
+      vault = JSON.parse(JSON.stringify(payloadOverride));
+    } else {
+      const live = JSON.parse(notesDataEl.textContent || '{}');
+      vault = {
+        vaultMeta: { ...(live.vaultMeta || {}), appOnly: true, dataFileName: options.dataFileName || '' },
+        globalMacros: live.globalMacros || {},
+        tableTemplates: [], tikzTemplates: [], tikzFonts: {}, bibliography: [],
+        citationStyle: live.citationStyle || 'numeric', folders: [], tags: [], notes: []
+      };
+    }
+    vault.vaultMeta = { ...(vault.vaultMeta || {}), format: 'tixidian-notes', formatVersion: 1 };
+    notesDataEl.textContent = JSON.stringify(vault, null, 2);
+  } else if (notesDataEl) {
+    // A full save carries notes: it is no longer an app-only file.
+    try {
+      const live = JSON.parse(notesDataEl.textContent || '{}');
+      if (live.vaultMeta && live.vaultMeta.appOnly) {
+        delete live.vaultMeta.appOnly;
+        delete live.vaultMeta.dataFileName;
+        notesDataEl.textContent = JSON.stringify(live, null, 2);
+      }
+    } catch (e) { }
+  }
 
   const isStandalone = typeof window !== 'undefined' && window.__IS_STANDALONE__ === true;
 
@@ -354,7 +392,7 @@ handlePageRoute();
   }
 
   // Cleanup injected dev scripts, runtime containers, and dynamic TikZ engine tags before download
-  DocClone.querySelectorAll('script[src*="livepreview"], script[src*="livereload"], #tikzjax-js, #tikzjax-css, script[src*="tikzjax"], #tikz-engine-host, #tikz-saved-fonts').forEach(s => s.remove());
+  DocClone.querySelectorAll('script[src*="livepreview"], script[src*="livereload"], #tikzjax-js, #tikzjax-css, script[src*="tikzjax"], #tikz-engine-host, #tikz-saved-fonts, .df-overlay, .df-toast, .df-menu').forEach(s => s.remove());
   ['#canvas-container', '#loading-container', '#root'].forEach(sel => {
     const el = DocClone.querySelector(sel);
     if (el) el.innerHTML = '';
@@ -365,12 +403,13 @@ handlePageRoute();
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = TAB_OUTPUT_NAME;
+  link.download = fileName;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 
+  if (!markSaved) return;
   clearAllTabLocalCaches();
 
   const saveBtn = document.getElementById('save-btn');
