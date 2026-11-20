@@ -2457,6 +2457,7 @@ async function SaveAndDownloadApp() {
       '03_Notes/Writing_Engine/Highlight_Sync.js',
       '03_Notes/Writing_Engine/Table_Parser.js',
       '03_Notes/Writing_Engine/Block_History.js',
+      '03_Notes/Writing_Engine/Structure_History.js',
       '03_Notes/B_Editor_View/01_Blocks/Block_Actions.js',
       '03_Notes/B_Editor_View/01_Blocks/Figure_Utils.js',
       '03_Notes/B_Editor_View/01_Blocks/Block_Textarea.js',
@@ -2499,6 +2500,11 @@ async function SaveAndDownloadApp() {
       '03_Notes/B_Editor_View/02_Floating_Toolbar.js',
       '03_Notes/B_Editor_View/03_Study_View.js',
       '03_Notes/B_Editor_View/04_LaTeX_Editor.js',
+      '03_Notes/E_Note_Ops/01_Block_Clone.js',
+      '03_Notes/E_Note_Ops/02_Wiki_Link_Rewrite.js',
+      '03_Notes/E_Note_Ops/03_Note_Operations.js',
+      '03_Notes/E_Note_Ops/04_Note_Picker.js',
+      '03_Notes/E_Note_Ops/05_Note_Menu.js',
       '03_Notes/A_Notes_Card_View/01_Navbar/01_Card_View_Toggle.js',
       '03_Notes/A_Notes_Card_View/01_Navbar/02_Group_Filter.js',
       '03_Notes/A_Notes_Card_View/01_Navbar/03_Search_Bar.js',
@@ -3893,6 +3899,7 @@ const tabModuleFiles = [
   '03_Notes/Writing_Engine/Highlight_Sync.js',
   '03_Notes/Writing_Engine/Table_Parser.js',
   '03_Notes/Writing_Engine/Block_History.js',
+  '03_Notes/Writing_Engine/Structure_History.js',
   '03_Notes/B_Editor_View/01_Blocks/Block_Actions.js',
   '03_Notes/B_Editor_View/01_Blocks/Figure_Utils.js',
   '03_Notes/B_Editor_View/01_Blocks/Block_Textarea.js',
@@ -3935,6 +3942,11 @@ const tabModuleFiles = [
   '03_Notes/B_Editor_View/02_Floating_Toolbar.js',
   '03_Notes/B_Editor_View/03_Study_View.js',
   '03_Notes/B_Editor_View/04_LaTeX_Editor.js',
+  '03_Notes/E_Note_Ops/01_Block_Clone.js',
+  '03_Notes/E_Note_Ops/02_Wiki_Link_Rewrite.js',
+  '03_Notes/E_Note_Ops/03_Note_Operations.js',
+  '03_Notes/E_Note_Ops/04_Note_Picker.js',
+  '03_Notes/E_Note_Ops/05_Note_Menu.js',
   '03_Notes/A_Notes_Card_View/01_Navbar/01_Card_View_Toggle.js',
   '03_Notes/A_Notes_Card_View/01_Navbar/02_Group_Filter.js',
   '03_Notes/A_Notes_Card_View/01_Navbar/03_Search_Bar.js',
@@ -9723,6 +9735,119 @@ function clearAllBlockHistory() {
  */
 function getBlockHistory(blockId) {
   return blockHistories.get(blockId) || null;
+}
+
+
+/* --- 03_Notes/Writing_Engine/Structure_History.js --- */
+/**
+ * 03_Notes/Writing_Engine/Structure_History.js
+ * Undo for STRUCTURAL changes (duplicate / move / merge / delete notes, copy / cut / paste /
+ * move / delete blocks). Each operation records a snapshot of the vault's notes, folders and
+ * tags BEFORE it runs; Undo restores that snapshot.
+ *
+ * Text edits inside a block keep their own per-block history (Block_History.js); this stack
+ * only answers Ctrl+Z when the focus is NOT in an editable field.
+ */
+
+const STRUCTURE_UNDO_LIMIT = 20;
+const structureUndoStack = [];
+
+if (typeof document !== 'undefined' && !document.getElementById('structure-history-styles')) {
+  const style = document.createElement('style');
+  style.id = 'structure-history-styles';
+  style.textContent = `
+    .sh-toast { position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%); z-index: 140; display: flex;
+      align-items: center; gap: 12px; padding: 9px 12px 9px 14px; border-radius: 10px; font-size: 12.5px; font-weight: 600;
+      color: #fff; background: #374151; box-shadow: 0 10px 30px rgba(0,0,0,0.35); max-width: min(92vw, 560px); }
+    .sh-toast.is-warn { background: #b45309; }
+    .sh-toast button { border: 1px solid rgba(255,255,255,0.45); background: transparent; color: #fff; border-radius: 7px;
+      padding: 3px 10px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+  `;
+  document.head.appendChild(style);
+}
+
+/** Call BEFORE a structural change. */
+function RecordStructureUndo(label) {
+  structureUndoStack.push({
+    label,
+    at: Date.now(),
+    snapshot: JSON.stringify({ notes: NotesState.notes, folders: NotesState.folders, tags: NotesState.tags })
+  });
+  if (structureUndoStack.length > STRUCTURE_UNDO_LIMIT) structureUndoStack.shift();
+}
+function CanUndoStructure() {
+  return structureUndoStack.length > 0;
+}
+
+// Re-renders the current route; leaves a note that no longer exists.
+function rerenderAfterStructureChange() {
+  const hash = window.location.hash || '';
+  const m = hash.match(/[?&]id=([^&]+)/);
+  if (m) {
+    const id = decodeURIComponent(m[1]);
+    if (!(NotesState.notes || []).some(n => n.id === id)) {
+      window.location.hash = '#Notes';
+      return;
+    }
+  }
+  window.dispatchEvent(new HashChangeEvent('hashchange'));
+}
+
+/** Restores the vault to before the last structural change. Returns its label or null. */
+function UndoStructureChange() {
+  const entry = structureUndoStack.pop();
+  if (!entry) return null;
+  const snap = JSON.parse(entry.snapshot);
+  NotesState.notes = snap.notes;
+  NotesState.folders = snap.folders;
+  NotesState.tags = snap.tags;
+  if (typeof window !== 'undefined') window.NotesState = NotesState;
+  SaveNotesState(null, { immediate: true });
+  rerenderAfterStructureChange();
+  ShowStructureToast(`Undone: ${entry.label}`, { undo: false });
+  return entry.label;
+}
+
+/** Bottom toast; with an Undo button by default. kind: 'info' | 'warn' */
+function ShowStructureToast(message, { undo = true, kind = 'info', ms = 6000 } = {}) {
+  document.querySelectorAll('.sh-toast').forEach(t => t.remove());
+  const t = document.createElement('div');
+  t.className = `sh-toast${kind === 'warn' ? ' is-warn' : ''}`;
+  t.setAttribute('role', 'status');
+  const span = document.createElement('span');
+  span.textContent = message;
+  t.appendChild(span);
+  if (undo && CanUndoStructure()) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = 'Undo';
+    b.addEventListener('click', () => { t.remove(); UndoStructureChange(); });
+    t.appendChild(b);
+  }
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), ms);
+}
+
+/** Re-renders after a structural change (exported for operation modules). */
+function RefreshAfterStructureChange() {
+  rerenderAfterStructureChange();
+}
+
+function isEditableTarget(el) {
+  if (!el) return false;
+  if (el.isContentEditable) return true;
+  const tag = (el.tagName || '').toLowerCase();
+  return tag === 'textarea' || tag === 'input' || tag === 'select';
+}
+
+if (typeof document !== 'undefined' && !window.__STRUCTURE_UNDO_KEYS__) {
+  window.__STRUCTURE_UNDO_KEYS__ = true;
+  document.addEventListener('keydown', (e) => {
+    if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey || (e.key !== 'z' && e.key !== 'Z')) return;
+    if (isEditableTarget(document.activeElement) || !CanUndoStructure()) return;
+    e.preventDefault();
+    UndoStructureChange();
+  });
 }
 
 
@@ -24497,6 +24622,567 @@ function RenderLaTeXEditor(container, noteId, isEditMode = true) {
 }
 
 
+/* --- 03_Notes/E_Note_Ops/01_Block_Clone.js --- */
+/**
+ * 03_Notes/E_Note_Ops/01_Block_Clone.js
+ * Prepares blocks for insertion into a (target) note — shared by note duplicate/merge and
+ * block copy/paste/move:
+ *   - deep copies (saved TikZ SVGs and images travel inside the block; no re-render)
+ *   - fresh block ids (copies) or kept ids (moves), with multi-column containers' member
+ *     ids remapped (members that are not part of the set are dropped)
+ *   - figure tags (block.tag) and equation labels (\label{...}) that clash with the target
+ *     get a "-2" (then "-3"...) suffix; references to them INSIDE the inserted blocks
+ *     (\fig{} \eq{} \eqref{} \ref{} \label{}) follow the rename
+ */
+
+const FIGURE_BLOCK_TYPES = new Set(['image', 'tikz']);
+const COLUMN_BLOCK_TYPES = new Set(['columns', 'multicolumn', 'multi-column']);
+function NewBlockId() {
+  return `b_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+function NewNoteId() {
+  return `note_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+function IsColumnsBlock(block) {
+  return Boolean(block && COLUMN_BLOCK_TYPES.has(block.type));
+}
+
+function columnMemberIds(block) {
+  const ids = new Set(Array.isArray(block.members) ? block.members : []);
+  (Array.isArray(block.rows) ? block.rows : []).forEach(r => (Array.isArray(r) ? r : []).forEach(id => ids.add(id)));
+  return ids;
+}
+
+/**
+ * Adds the member blocks of any multi-column container in `selected` (looked up in
+ * `allBlocks`), keeping document order.
+ */
+function ExpandWithColumnMembers(selected, allBlocks) {
+  const wanted = new Set(selected.map(b => b.id));
+  selected.forEach(b => { if (IsColumnsBlock(b)) columnMemberIds(b).forEach(id => wanted.add(id)); });
+  return (allBlocks || []).filter(b => wanted.has(b.id));
+}
+
+/** Lower-cased figure tags used by blocks. */
+function CollectFigureTags(blocks) {
+  const out = new Set();
+  (blocks || []).forEach(b => { if (FIGURE_BLOCK_TYPES.has(b.type) && b.tag && String(b.tag).trim()) out.add(String(b.tag).trim().toLowerCase()); });
+  return out;
+}
+
+/** Equation labels (\label{x}) used anywhere in blocks' text. */
+function CollectEquationLabels(blocks) {
+  const out = new Set();
+  (blocks || []).forEach(b => {
+    ['content', 'code', 'caption', 'title'].forEach(k => {
+      const v = b[k];
+      if (typeof v !== 'string' || !v.includes('\\label')) return;
+      const re = /\\label\{([^}]+)\}/g;
+      let m;
+      while ((m = re.exec(v)) !== null) out.add(m[1].trim().toLowerCase());
+    });
+  });
+  return out;
+}
+
+function uniqueName(base, taken) {
+  let n = 2;
+  let candidate = `${base}-${n}`;
+  while (taken.has(candidate.toLowerCase())) { n += 1; candidate = `${base}-${n}`; }
+  taken.add(candidate.toLowerCase());
+  return candidate;
+}
+
+const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// Applies label/tag renames to every string of a block (skips image data / SVG payloads).
+function renameReferencesInBlock(block, renames) {
+  if (!renames.length) return;
+  const walk = (obj) => {
+    Object.keys(obj).forEach((k) => {
+      const v = obj[k];
+      if (typeof v === 'string') {
+        if (k === 'svg' || k === 'svgKey' || k === 'id' || v.startsWith('data:') || v.startsWith('<svg')) return;
+        let next = v;
+        renames.forEach(({ from, to }) => {
+          const re = new RegExp(`\\\\(label|fig|eq|eqref|ref)\\{${escapeRegExp(from)}\\}`, 'g');
+          next = next.replace(re, (_, cmd) => `\\${cmd}{${to}}`);
+        });
+        obj[k] = next;
+      } else if (v && typeof v === 'object') {
+        walk(v);
+      }
+    });
+  };
+  walk(block);
+}
+
+/**
+ * @param {Object[]} blocks        blocks to insert (not modified)
+ * @param {Object[]} targetBlocks  blocks already in the target note (for clash checks)
+ * @param {{ freshIds?: boolean }} opts  freshIds=false keeps ids (moves)
+ * @returns {{ blocks: Object[], idMap: Map<string,string>, renamed: {kind:string, from:string, to:string}[] }}
+ */
+function PrepareBlocksForTarget(blocks, targetBlocks = [], { freshIds = true } = {}) {
+  const clones = JSON.parse(JSON.stringify(blocks || []));
+  const idMap = new Map();
+  clones.forEach(b => {
+    const oldId = b.id;
+    const newId = freshIds || !oldId ? NewBlockId() : oldId;
+    if (oldId) idMap.set(oldId, newId);
+    b.id = newId;
+    delete b._isEditing;
+  });
+
+  // Multi-column containers: point at the inserted members, drop members that were not inserted.
+  clones.forEach(b => {
+    if (!IsColumnsBlock(b)) return;
+    const map = (id) => idMap.get(id);
+    if (Array.isArray(b.members)) b.members = b.members.map(map).filter(Boolean);
+    if (Array.isArray(b.rows)) b.rows = b.rows.map(r => (Array.isArray(r) ? r.map(map).filter(Boolean) : [])).filter(r => r.length);
+  });
+
+  // Tag / label clashes with the target note.
+  const takenFig = CollectFigureTags(targetBlocks);
+  const takenEq = CollectEquationLabels(targetBlocks);
+  const renamed = [];
+  const figRenames = [];
+  clones.forEach(b => {
+    if (!FIGURE_BLOCK_TYPES.has(b.type) || !b.tag || !String(b.tag).trim()) return;
+    const tag = String(b.tag).trim();
+    if (takenFig.has(tag.toLowerCase())) {
+      const to = uniqueName(tag, takenFig);
+      figRenames.push({ from: tag, to });
+      renamed.push({ kind: 'figure', from: tag, to });
+      b.tag = to;
+    } else {
+      takenFig.add(tag.toLowerCase());
+    }
+  });
+  const eqRenames = [];
+  const seenEq = new Set();
+  const rawLabels = [];
+  clones.forEach(b => ['content', 'code', 'caption', 'title'].forEach(k => {
+    const v = b[k];
+    if (typeof v !== 'string' || !v.includes('\\label')) return;
+    const re = /\\label\{([^}]+)\}/g;
+    let m;
+    while ((m = re.exec(v)) !== null) rawLabels.push(m[1].trim());
+  }));
+  rawLabels.forEach(label => {
+    const key = label.toLowerCase();
+    if (seenEq.has(key)) return;
+    seenEq.add(key);
+    if (takenEq.has(key)) {
+      const to = uniqueName(label, takenEq);
+      eqRenames.push({ from: label, to });
+      renamed.push({ kind: 'equation', from: label, to });
+    } else {
+      takenEq.add(key);
+    }
+  });
+  const allRenames = [...figRenames, ...eqRenames];
+  clones.forEach(b => renameReferencesInBlock(b, allRenames));
+
+  return { blocks: clones, idMap, renamed };
+}
+
+/** Human summary of renames for notices. */
+function DescribeRenames(renamed) {
+  if (!renamed || !renamed.length) return '';
+  const parts = renamed.slice(0, 4).map(r => `${r.kind === 'figure' ? 'figure tag' : 'equation label'} "${r.from}" → "${r.to}"`);
+  return `Renamed to avoid clashes: ${parts.join(', ')}${renamed.length > 4 ? ` (+${renamed.length - 4} more)` : ''}.`;
+}
+
+
+/* --- 03_Notes/E_Note_Ops/02_Wiki_Link_Rewrite.js --- */
+/**
+ * 03_Notes/E_Note_Ops/02_Wiki_Link_Rewrite.js
+ * Keeps [[wiki-links]] pointing at the right place when blocks or whole notes move.
+ *
+ *   [[Note]]          whole-note link   → retargeted only when the whole note moved/merged away
+ *   [[Note^blockId]]  block link        → retargeted when that block moved
+ *   [[Note^3]]        1-based index     → converted to the block's id FIRST (using the positions
+ *                                          before the change), then handled like a block link,
+ *                                          so links to blocks that stay behind survive shifting too
+ */
+function NoteMatchesWikiRef(note, ref) {
+  if (!note || !ref) return false;
+  const r = String(ref).trim().toLowerCase();
+  return (note.title && note.title.trim().toLowerCase() === r)
+    || note.id === ref.trim()
+    || (note.slug && note.slug.toLowerCase() === r);
+}
+
+// Applies fn to every string in obj (skips ids, saved SVGs and data URLs).
+function mapNoteStrings(obj, fn) {
+  let changed = 0;
+  const walk = (o) => {
+    Object.keys(o).forEach((k) => {
+      const v = o[k];
+      if (typeof v === 'string') {
+        if (k === 'id' || k === 'svg' || k === 'svgKey' || v.startsWith('data:') || v.startsWith('<svg') || !v.includes('[[')) return;
+        const next = fn(v);
+        if (next !== v) { o[k] = next; changed += 1; }
+      } else if (v && typeof v === 'object') {
+        walk(v);
+      }
+    });
+  };
+  walk(obj);
+  return changed;
+}
+
+/**
+ * Rewrites links across the whole vault. Call BEFORE removing blocks from `fromNote`
+ * (index links are resolved against its current block order).
+ * @param {Object} fromNote
+ * @param {Object} toNote
+ * @param {{ blockIds?: Set<string>|null, wholeNote?: boolean, idMap?: Map<string,string> }} opts
+ *   blockIds  ids of blocks moving to toNote (null = none)
+ *   wholeNote also retarget plain [[fromNote]] links (note merged + deleted)
+ *   idMap     old → new id when moved blocks got new ids
+ * @returns {number} number of text fields changed
+ */
+function RewriteWikiLinks(fromNote, toNote, { blockIds = null, wholeNote = false, idMap = null } = {}) {
+  if (!fromNote || !toNote) return 0;
+  const fromBlocks = (fromNote.blocks || []).slice();
+  const toTitle = toNote.title || toNote.id;
+  const fromTitle = fromNote.title || fromNote.id;
+  let changed = 0;
+  (NotesState.notes || []).forEach(note => {
+    changed += mapNoteStrings(note, (text) => text.replace(/\[\[([^\]]+)\]\]/g, (match, inner) => {
+      const caret = inner.indexOf('^');
+      const name = (caret === -1 ? inner : inner.slice(0, caret)).trim();
+      let ref = caret === -1 ? '' : inner.slice(caret + 1).trim();
+      if (!NoteMatchesWikiRef(fromNote, name)) return match;
+      if (!ref) return wholeNote ? `[[${toTitle}]]` : match;
+      if (/^\d+$/.test(ref)) {
+        const blk = fromBlocks[parseInt(ref, 10) - 1];
+        if (blk && blk.id) ref = blk.id;
+      }
+      const moved = wholeNote || (blockIds && blockIds.has(ref));
+      if (moved) {
+        const newRef = (idMap && idMap.get(ref)) || ref;
+        return `[[${toTitle}^${newRef}]]`;
+      }
+      return `[[${fromTitle}^${ref}]]`;
+    }));
+  });
+  return changed;
+}
+
+
+/* --- 03_Notes/E_Note_Ops/03_Note_Operations.js --- */
+/**
+ * 03_Notes/E_Note_Ops/03_Note_Operations.js
+ * Whole-note operations. Each records a structural undo snapshot first (Ctrl+Z / toast Undo).
+ *   DuplicateNote   deep copy, new note + block ids, title "… (copy)", placed after the original
+ *   MoveNoteToFolder
+ *   MergeNoteInto   appends all blocks to a target note; optionally deletes the source
+ *                   (kept source ⇒ blocks are copies with fresh ids; deleted source ⇒ blocks
+ *                   keep their ids and links to the source are retargeted)
+ */
+function FindNoteById(id) {
+  return (NotesState.notes || []).find(n => n.id === id) || null;
+}
+
+function uniqueSlug(base) {
+  const taken = new Set((NotesState.notes || []).map(n => (n.slug || '').toLowerCase()));
+  const clean = (base || 'note').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'note';
+  let slug = clean;
+  let n = 2;
+  while (taken.has(slug)) { slug = `${clean}-${n}`; n += 1; }
+  return slug;
+}
+
+function ensureFolderListed(folder) {
+  if (!folder) return;
+  if (!Array.isArray(NotesState.folders)) NotesState.folders = [];
+  if (!NotesState.folders.includes(folder)) NotesState.folders.push(folder);
+}
+
+/** @returns {Object|null} the new note */
+function DuplicateNote(noteId) {
+  const src = FindNoteById(noteId);
+  if (!src) return null;
+  RecordStructureUndo(`Duplicate "${src.title || 'Untitled'}"`);
+  const copy = JSON.parse(JSON.stringify(src));
+  copy.id = NewNoteId();
+  copy.title = `${src.title || 'Untitled Note'} (copy)`;
+  copy.slug = uniqueSlug(copy.title);
+  copy.blocks = PrepareBlocksForTarget(src.blocks || [], [], { freshIds: true }).blocks;
+  copy.meta = { ...(copy.meta || {}), created: new Date().toISOString().slice(0, 10) };
+  const idx = NotesState.notes.indexOf(src);
+  NotesState.notes.splice(idx + 1, 0, copy);
+  SaveNotesState(null, { immediate: true });
+  return copy;
+}
+function MoveNoteToFolder(noteId, folder) {
+  const note = FindNoteById(noteId);
+  const target = String(folder || '').trim();
+  if (!note || !target || note.folder === target) return false;
+  RecordStructureUndo(`Move "${note.title || 'Untitled'}" to ${target}`);
+  note.folder = target;
+  ensureFolderListed(target);
+  SaveNotesState(null, { immediate: true });
+  return true;
+}
+
+/**
+ * @returns {{ target: Object, renamed: Object[], moved: number } | null}
+ */
+function MergeNoteInto(sourceId, targetId, { deleteSource = false } = {}) {
+  const src = FindNoteById(sourceId);
+  const target = FindNoteById(targetId);
+  if (!src || !target || src === target) return null;
+  RecordStructureUndo(`Merge "${src.title || 'Untitled'}" into "${target.title || 'Untitled'}"`);
+  const prepared = PrepareBlocksForTarget(src.blocks || [], target.blocks || [], { freshIds: !deleteSource });
+  if (deleteSource) {
+    // Links to the source (whole note and its blocks) now point at the target.
+    RewriteWikiLinks(src, target, { wholeNote: true, idMap: prepared.idMap });
+  }
+  target.blocks = [...(target.blocks || []), ...prepared.blocks];
+  if (deleteSource) {
+    NotesState.notes = NotesState.notes.filter(n => n !== src);
+  }
+  SaveNotesState(null, { immediate: true });
+  return { target, renamed: prepared.renamed, moved: prepared.blocks.length };
+}
+
+
+/* --- 03_Notes/E_Note_Ops/04_Note_Picker.js --- */
+/**
+ * 03_Notes/E_Note_Ops/04_Note_Picker.js
+ * Small modal pickers used by note and block operations:
+ *   PickNote({ title, confirmLabel, excludeIds, showPosition, showDeleteSource })
+ *     → Promise<{ noteId, position: 'end'|'start', deleteSource: boolean } | null>
+ *   PickFolder({ title, current }) → Promise<string|null>   (existing folder or a new name)
+ */
+
+
+if (typeof document !== 'undefined' && !document.getElementById('note-picker-styles')) {
+  const style = document.createElement('style');
+  style.id = 'note-picker-styles';
+  style.textContent = `
+    .np-overlay { position: fixed; inset: 0; z-index: 135; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; padding: 16px; }
+    .np-dialog { width: 100%; max-width: 440px; max-height: min(80vh, 620px); display: flex; flex-direction: column; border-radius: 16px;
+      border: 1px solid var(--border, #2a2e40); background: var(--card, #1c1f2e); color: var(--text, #e8eaf2); box-shadow: 0 24px 64px rgba(0,0,0,0.6); overflow: hidden; }
+    .np-head { padding: 16px 18px 10px; }
+    .np-head h3 { margin: 0 0 10px; font-size: 15px; font-weight: 700; }
+    .np-search { width: 100%; box-sizing: border-box; height: 34px; padding: 0 10px; border-radius: 9px; border: 1px solid var(--border, #2a2e40);
+      background: var(--surface, #181b27); color: var(--text, #e8eaf2); font-size: 13px; outline: none; }
+    .np-search:focus { border-color: var(--accent, #8b6dff); }
+    .np-list { overflow-y: auto; padding: 4px 10px; flex: 1; min-height: 80px; }
+    .np-item { display: flex; flex-direction: column; width: 100%; text-align: left; padding: 7px 9px; border-radius: 8px; border: 1px solid transparent;
+      background: transparent; color: inherit; cursor: pointer; font: inherit; }
+    .np-item:hover { background: var(--accent-soft, rgba(139,109,255,0.1)); }
+    .np-item.is-selected { border-color: var(--accent, #8b6dff); background: var(--accent-soft, rgba(139,109,255,0.1)); }
+    .np-item .np-title { font-size: 13px; font-weight: 600; }
+    .np-item .np-sub { font-size: 11px; color: var(--text-dim, #6b7088); }
+    .np-empty { padding: 14px; text-align: center; font-size: 12px; color: var(--text-dim, #6b7088); }
+    .np-opts { padding: 8px 18px; display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; border-top: 1px solid var(--border, #2a2e40); }
+    .np-opts label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+    .np-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 18px 16px; }
+    .np-btn { height: 34px; padding: 0 14px; border-radius: 9px; border: 1px solid var(--border, #2a2e40); background: var(--surface, #181b27);
+      color: var(--text, #e8eaf2); font-weight: 600; font-size: 13px; cursor: pointer; }
+    .np-btn.np-primary { background: var(--accent, #8b6dff); border-color: var(--accent, #8b6dff); color: #fff; }
+    .np-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  `;
+  document.head.appendChild(style);
+}
+
+function openPickerShell(title) {
+  const overlay = document.createElement('div');
+  overlay.className = 'np-overlay';
+  overlay.innerHTML = `
+    <div class="np-dialog" role="dialog" aria-modal="true" aria-label="${escapeHtml(title)}">
+      <div class="np-head"><h3>${escapeHtml(title)}</h3><input type="search" class="np-search" placeholder="Search…" autocomplete="off" /></div>
+      <div class="np-list" role="listbox"></div>
+      <div class="np-opts" hidden></div>
+      <div class="np-foot"><button type="button" class="np-btn" data-act="cancel">Cancel</button><button type="button" class="np-btn np-primary" data-act="ok" disabled>OK</button></div>
+    </div>`;
+  document.body.appendChild(overlay);
+  return overlay;
+}
+function PickNote({ title = 'Choose a note', confirmLabel = 'Choose', excludeIds = [], showPosition = false, showDeleteSource = false } = {}) {
+  return new Promise((resolve) => {
+    const overlay = openPickerShell(title);
+    const list = overlay.querySelector('.np-list');
+    const search = overlay.querySelector('.np-search');
+    const okBtn = overlay.querySelector('[data-act="ok"]');
+    const opts = overlay.querySelector('.np-opts');
+    okBtn.textContent = confirmLabel;
+    const exclude = new Set(excludeIds);
+    let selectedId = null;
+
+    if (showPosition || showDeleteSource) {
+      opts.hidden = false;
+      opts.innerHTML = `
+        ${showPosition ? `<label><input type="radio" name="np-pos" value="end" checked /> Add at the end of the note</label>
+        <label><input type="radio" name="np-pos" value="start" /> Add at the start of the note</label>` : ''}
+        ${showDeleteSource ? '<label><input type="checkbox" class="np-delete-source" /> Delete the source note afterwards</label>' : ''}`;
+    }
+
+    const render = () => {
+      const q = search.value.trim().toLowerCase();
+      const notes = (NotesState.notes || []).filter(n => !exclude.has(n.id)
+        && (!q || (n.title || '').toLowerCase().includes(q) || (n.folder || '').toLowerCase().includes(q)));
+      list.innerHTML = notes.length ? '' : '<div class="np-empty">No matching notes.</div>';
+      notes.forEach(n => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = `np-item${n.id === selectedId ? ' is-selected' : ''}`;
+        b.setAttribute('role', 'option');
+        b.dataset.noteId = n.id;
+        b.innerHTML = `<span class="np-title">${escapeHtml(n.title || 'Untitled Note')}</span><span class="np-sub">${escapeHtml(n.folder || 'General')} · ${(n.blocks || []).length} blocks</span>`;
+        b.addEventListener('click', () => { selectedId = n.id; okBtn.disabled = false; render(); });
+        b.addEventListener('dblclick', () => { selectedId = n.id; finish(true); });
+        list.appendChild(b);
+      });
+    };
+
+    const finish = (confirmed) => {
+      const result = confirmed && selectedId ? {
+        noteId: selectedId,
+        position: (opts.querySelector('input[name="np-pos"]:checked') || {}).value || 'end',
+        deleteSource: Boolean(opts.querySelector('.np-delete-source')?.checked)
+      } : null;
+      overlay.remove();
+      resolve(result);
+    };
+    okBtn.addEventListener('click', () => finish(true));
+    overlay.querySelector('[data-act="cancel"]').addEventListener('click', () => finish(false));
+    overlay.addEventListener('mousedown', (e) => { if (e.target === overlay) finish(false); });
+    overlay.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); finish(false); } });
+    search.addEventListener('input', render);
+    render();
+    search.focus();
+  });
+}
+function PickFolder({ title = 'Move to folder', current = '' } = {}) {
+  return new Promise((resolve) => {
+    const overlay = openPickerShell(title);
+    const list = overlay.querySelector('.np-list');
+    const search = overlay.querySelector('.np-search');
+    const okBtn = overlay.querySelector('[data-act="ok"]');
+    search.placeholder = 'Folder name (pick or type a new one)…';
+    okBtn.textContent = 'Move';
+    let selected = '';
+
+    const folders = () => Array.from(new Set([...(NotesState.folders || []), ...(NotesState.notes || []).map(n => n.folder || 'General')])).filter(Boolean);
+    const render = () => {
+      const q = search.value.trim();
+      const ql = q.toLowerCase();
+      const items = folders().filter(f => !ql || f.toLowerCase().includes(ql));
+      if (q && !folders().some(f => f.toLowerCase() === ql)) items.unshift(q);
+      list.innerHTML = items.length ? '' : '<div class="np-empty">Type a folder name.</div>';
+      items.forEach(f => {
+        const isNew = !folders().includes(f);
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = `np-item${f === selected ? ' is-selected' : ''}`;
+        b.dataset.folder = f;
+        b.innerHTML = `<span class="np-title">${escapeHtml(f)}</span><span class="np-sub">${isNew ? 'New folder' : (f === current ? 'Current folder' : `${(NotesState.notes || []).filter(n => (n.folder || 'General') === f).length} notes`)}</span>`;
+        b.addEventListener('click', () => { selected = f; okBtn.disabled = f === current; render(); });
+        list.appendChild(b);
+      });
+    };
+    const finish = (confirmed) => { overlay.remove(); resolve(confirmed && selected && selected !== current ? selected : null); };
+    okBtn.addEventListener('click', () => finish(true));
+    overlay.querySelector('[data-act="cancel"]').addEventListener('click', () => finish(false));
+    overlay.addEventListener('mousedown', (e) => { if (e.target === overlay) finish(false); });
+    overlay.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { e.stopPropagation(); finish(false); }
+      if (e.key === 'Enter' && search.value.trim()) { selected = search.value.trim(); finish(true); }
+    });
+    search.addEventListener('input', render);
+    render();
+    search.focus();
+  });
+}
+
+
+/* --- 03_Notes/E_Note_Ops/05_Note_Menu.js --- */
+/**
+ * 03_Notes/E_Note_Ops/05_Note_Menu.js
+ * "⋯" menu on a note card: Duplicate note · Move to folder… · Merge into note…
+ * Every action is undoable (toast Undo button or Ctrl+Z outside text fields).
+ */
+
+
+
+
+if (typeof document !== 'undefined' && !document.getElementById('note-menu-styles')) {
+  const style = document.createElement('style');
+  style.id = 'note-menu-styles';
+  style.textContent = `
+    .nm-menu { position: fixed; z-index: 125; min-width: 200px; padding: 5px; border-radius: 11px; border: 1px solid var(--border, #2a2e40);
+      background: var(--card, #1c1f2e); color: var(--text, #e8eaf2); box-shadow: 0 16px 40px rgba(0,0,0,0.45); font-size: 12.5px; }
+    .nm-menu button { display: block; width: 100%; text-align: left; padding: 7px 9px; border: 0; border-radius: 7px; background: transparent;
+      color: inherit; font: inherit; cursor: pointer; }
+    .nm-menu button:hover { background: var(--accent-soft, rgba(139,109,255,0.1)); color: var(--accent, #8b6dff); }
+  `;
+  document.head.appendChild(style);
+}
+
+function closeNoteMenu() {
+  document.querySelectorAll('.nm-menu').forEach(m => m.remove());
+  document.removeEventListener('mousedown', onNoteMenuOutside, true);
+}
+function onNoteMenuOutside(e) {
+  if (!e.target.closest('.nm-menu')) closeNoteMenu();
+}
+async function RunDuplicateNote(note) {
+  const copy = DuplicateNote(note.id);
+  if (!copy) return;
+  RefreshAfterStructureChange();
+  ShowStructureToast(`Duplicated as "${copy.title}"`);
+}
+async function RunMoveNoteToFolder(note) {
+  const folder = await PickFolder({ title: `Move "${note.title || 'Untitled'}" to folder`, current: note.folder || 'General' });
+  if (!folder) return;
+  if (MoveNoteToFolder(note.id, folder)) {
+    RefreshAfterStructureChange();
+    ShowStructureToast(`Moved to ${folder}`);
+  }
+}
+async function RunMergeNote(note) {
+  const pick = await PickNote({ title: `Merge "${note.title || 'Untitled'}" into…`, confirmLabel: 'Merge', excludeIds: [note.id], showDeleteSource: true });
+  if (!pick) return;
+  const res = MergeNoteInto(note.id, pick.noteId, { deleteSource: pick.deleteSource });
+  if (!res) return;
+  RefreshAfterStructureChange();
+  const renames = DescribeRenames(res.renamed);
+  ShowStructureToast(`Merged ${res.moved} block${res.moved === 1 ? '' : 's'} into "${res.target.title}"${pick.deleteSource ? ' and deleted the source' : ''}.${renames ? ' ' + renames : ''}`, { kind: renames ? 'warn' : 'info', ms: renames ? 9000 : 6000 });
+}
+
+/** Opens the menu next to `anchor` for `note`. */
+function OpenNoteActionsMenu(anchor, note) {
+  closeNoteMenu();
+  const menu = document.createElement('div');
+  menu.className = 'nm-menu';
+  menu.setAttribute('role', 'menu');
+  [
+    ['Duplicate note', () => RunDuplicateNote(note)],
+    ['Move to folder…', () => RunMoveNoteToFolder(note)],
+    ['Merge into note…', () => RunMergeNote(note)]
+  ].forEach(([label, run]) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.setAttribute('role', 'menuitem');
+    b.textContent = label;
+    b.addEventListener('click', (e) => { e.stopPropagation(); closeNoteMenu(); run(); });
+    menu.appendChild(b);
+  });
+  document.body.appendChild(menu);
+  const r = anchor.getBoundingClientRect();
+  menu.style.top = `${Math.round(Math.min(window.innerHeight - menu.offsetHeight - 8, r.bottom + 4))}px`;
+  menu.style.left = `${Math.round(Math.max(8, Math.min(window.innerWidth - menu.offsetWidth - 8, r.right - menu.offsetWidth)))}px`;
+  setTimeout(() => document.addEventListener('mousedown', onNoteMenuOutside, true), 0);
+}
+
+
 /* --- 03_Notes/A_Notes_Card_View/01_Navbar/01_Card_View_Toggle.js --- */
 let CurrentView = localStorage.getItem('List_Card_View') || 'Grid_Card_View';
 
@@ -27314,6 +28000,7 @@ function InitNavbar(state, { onViewChange, onGroupSelect, onOrderUpdate, onSearc
 
 
 
+
 // Returns complete stylesheet for cards container, group titles, card items, and empty state
 function GetNotesCardsContainerStyles() {
   return `
@@ -27886,6 +28573,11 @@ function CreateCardElement(note, { isSelected = false, onRefresh = null } = {}) 
       </div>
 
       <div class="note-card-actions">
+        <button class="note-card-action-btn more-btn" type="button" title="More: duplicate, move to folder, merge" aria-haspopup="menu">
+          <svg viewBox="0 0 24 24" fill="currentColor" stroke="none">
+            <circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/>
+          </svg>
+        </button>
         <button class="note-card-action-btn edit-btn" type="button" title="Edit note card" data-note-id="${escapeHtml(String(note.id))}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
@@ -27945,6 +28637,16 @@ function CreateCardElement(note, { isSelected = false, onRefresh = null } = {}) 
       e.preventDefault();
       e.stopPropagation();
       OpenNoteModal(note);
+    });
+  }
+
+  // More menu: duplicate / move to folder / merge (E_Note_Ops/05_Note_Menu.js)
+  const moreBtn = card.querySelector('.note-card-action-btn.more-btn');
+  if (moreBtn) {
+    moreBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      OpenNoteActionsMenu(moreBtn, note);
     });
   }
 

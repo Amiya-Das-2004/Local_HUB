@@ -97,10 +97,18 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 │   ├── 03_Data_File_Mode.js                ← Status machine; open / new / reconnect / save-in-place (+ backup) / disconnect
 │   └── 04_Data_File_UI.js                  ← Header chip + menu, one-click reconnect dialog, toasts, Save button + Ctrl+S entry point
 │
+├── E_Note_Ops/                             ← Copy / move / merge of notes and blocks
+│   ├── 01_Block_Clone.js                   ← Deep copies with fresh/kept ids, column-member remap, tag/label clash renames (-2)
+│   ├── 02_Wiki_Link_Rewrite.js             ← Retargets [[Note^block]] / [[Note]] links when blocks or notes move
+│   ├── 03_Note_Operations.js               ← Duplicate note, move to folder, merge into note (undoable)
+│   ├── 04_Note_Picker.js                   ← Note picker (search, position, delete-source) and folder picker modals
+│   └── 05_Note_Menu.js                     ← "⋯" menu on note cards: Duplicate · Move to folder… · Merge into note…
+│
 └── Writing_Engine/                         ← Core text, math, TikZ, and formatting compilers
     ├── BibTeX_Parser.js                    ← BibTeX (.bib) tokenizer, parser, and citation formatter
     ├── Block_Engine.js                     ← High-performance block differential updates
     ├── Block_History.js                    ← Undo/redo history stack per block and document
+    ├── Structure_History.js                ← Undo for structural changes (note/block copy, move, merge, delete): snapshots + Ctrl+Z + Undo toast
     ├── Bullet_Engine.js                    ← Smart nested list and bullet indentation logic
     ├── Code_Highlighter.js                 ← Lightweight regex-based syntax highlighter
     ├── Highlight_Sync.js                   ← Bi-directional textarea overlay highlight synchronizer
@@ -310,6 +318,24 @@ Module-level side effects: exports `window.SaveNotesState` / `flushNotesSave` / 
 | `attachBlockHistory(element, config)` | 229 - 316 | Binds input listeners and intercepts Ctrl+Z and Ctrl+Y/Ctrl+Shift+Z on an editor/textarea/contenteditable element, restoring text and caret (via `setCaretAtTextOffset`) after each undo/redo. |
 | `clearAllBlockHistory()` | 317 - 326 | Clears all in-memory per-block history stacks upon standalone HTML file save and download. |
 | `getBlockHistory(blockId)` | 327 - 330 | Retrieves the raw history stack object for a given block ID. |
+
+**Structure_History.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| `../00_State.js` | `NotesState`, `SaveNotesState` | `RecordStructureUndo()`, `UndoStructureChange()`, `rerenderAfterStructureChange()` |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `RecordStructureUndo(label)` | 31 - 38 | Call BEFORE a structural change: snapshots `notes`, `folders`, `tags` (last 20 kept). |
+| `CanUndoStructure()` | 40 - 42 | True when a snapshot is available. |
+| `rerenderAfterStructureChange()` | 45 - 56 | Re-runs the current route; leaves a note route whose note no longer exists. |
+| `UndoStructureChange()` | 59 - 71 | Restores the last snapshot, persists immediately, re-renders and toasts "Undone: …". |
+| `ShowStructureToast(message, { undo, kind, ms })` | 74 - 91 | Bottom toast (`info` / `warn`) with an Undo button while a snapshot exists. |
+| `RefreshAfterStructureChange()` | 94 - 96 | Exported re-render for operation modules. |
+| `isEditableTarget(el)` | 98 - 103 | Inputs, textareas and contenteditable keep their own (per-block) undo. |
+
+Module side effects: injects `#structure-history-styles`; one global Ctrl/Cmd+Z listener that undoes the last structural change when the focus is NOT in an editable field.
 
 **Bullet_Engine.js**
 
@@ -602,6 +628,87 @@ Module side effect: registers `window.InitDataFileMode`, `window.SaveNotesSmart`
 
 Module side effects: injects `#data-file-ui-styles`; registers `window.HandleNotesSave`, `window.MountDataFileUI`.
 
+## E_Note_Ops
+Copy, move and merge of whole notes (C1) and of blocks (C2). Every operation records a structural undo snapshot first (`Writing_Engine/Structure_History.js`). Copies get fresh block ids; moves keep ids so `[[Note^blockId]]` links only need their note retargeted.
+
+**01_Block_Clone.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| *(None — pure helpers)* | — | — |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `NewBlockId()` / `NewNoteId()` | 16 - 22 | `b_<time>_<rand>` / `note_<time>_<rand>`. |
+| `IsColumnsBlock(block)` | 24 - 26 | Multi-column container (`columns` / `multicolumn` / `multi-column`). |
+| `ExpandWithColumnMembers(selected, allBlocks)` | 38 - 42 | Adds the member blocks of selected containers, in document order. |
+| `CollectFigureTags(blocks)` | 45 - 49 | Lower-cased `block.tag` of image/TikZ blocks. |
+| `CollectEquationLabels(blocks)` | 52 - 62 | Lower-cased `\label{…}` names found in block text. |
+| `uniqueName(base, taken)` | 66 - 72 | `base-2`, `base-3`, … not yet taken. |
+| `renameReferencesInBlock(block, renames)` | 77 - 96 | Rewrites `\label{}` `\fig{}` `\eq{}` `\eqref{}` `\ref{}` in every string of a block (skips SVG/data payloads). |
+| `PrepareBlocksForTarget(blocks, targetBlocks, { freshIds })` | 104 - 149 | Deep copies (SVGs/images travel, no re-render), fresh or kept ids, container members remapped (non-included members dropped), clashing figure tags / equation labels renamed with `-2` and references inside the inserted blocks updated. Returns `{ blocks, idMap, renamed }`. |
+| `DescribeRenames(renamed)` | 169 - 173 | One-line notice text for renames. |
+
+**02_Wiki_Link_Rewrite.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| `../00_State.js` | `NotesState` | `RewriteWikiLinks()` |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `NoteMatchesWikiRef(note, ref)` | 14 - 20 | Link target resolution: title (case-insensitive), id or slug. |
+| `mapNoteStrings(obj, fn)` | 23 - 39 | Applies `fn` to every string containing `[[` (skips ids, SVGs, data URLs). |
+| `RewriteWikiLinks(fromNote, toNote, { blockIds, wholeNote, idMap })` | 52 - 76 | Across the vault, BEFORE blocks leave `fromNote`: index links (`[[Note^3]]`) are first converted to block ids using the current order; links to moved blocks (or every link when `wholeNote`) are retargeted to `toNote` (new ids via `idMap`). |
+
+**03_Note_Operations.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| `../00_State.js` | `NotesState`, `SaveNotesState` | all operations |
+| `../Writing_Engine/Structure_History.js` | `RecordStructureUndo` | all operations |
+| `./01_Block_Clone.js` | `PrepareBlocksForTarget`, `NewNoteId` | `DuplicateNote()`, `MergeNoteInto()` |
+| `./02_Wiki_Link_Rewrite.js` | `RewriteWikiLinks` | `MergeNoteInto()` |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `FindNoteById(id)` | 16 - 18 | Note lookup. |
+| `uniqueSlug(base)` | 20 - 27 | Slug not used by another note. |
+| `ensureFolderListed(folder)` | 29 - 33 | Adds a new folder to `NotesState.folders`. |
+| `DuplicateNote(noteId)` | 36 - 50 | Deep copy with new note + block ids, title "… (copy)", unique slug, placed right after the original. |
+| `MoveNoteToFolder(noteId, folder)` | 52 - 61 | Changes the folder (new folders are listed). |
+| `MergeNoteInto(sourceId, targetId, { deleteSource })` | 66 - 82 | Appends all source blocks to the target. Kept source ⇒ copies (fresh ids); deleted source ⇒ ids kept and every link to the source (whole note, blocks, index links) retargeted. Tag/label clashes renamed. Returns `{ target, renamed, moved }`. |
+
+**04_Note_Picker.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| `../00_State.js` | `NotesState` | `PickNote()`, `PickFolder()` |
+| `../02_Utils.js` | `escapeHtml` | markup |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `openPickerShell(title)` | 43 - 55 | Modal skeleton (search, list, options, Cancel/OK). |
+| `PickNote({ title, confirmLabel, excludeIds, showPosition, showDeleteSource })` | 57 - 111 | Searchable note list (title/folder); optional position (end/start) and "Delete the source note afterwards". Resolves `{ noteId, position, deleteSource }` or `null`. |
+| `PickFolder({ title, current })` | 113 - 153 | Existing folders plus a "New folder" entry for the typed name; Enter confirms. Resolves the folder or `null`. |
+
+**05_Note_Menu.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| `./03_Note_Operations.js` | `DuplicateNote`, `MoveNoteToFolder`, `MergeNoteInto` | `RunDuplicateNote()`, `RunMoveNoteToFolder()`, `RunMergeNote()` |
+| `./01_Block_Clone.js` | `DescribeRenames` | `RunMergeNote()` |
+| `./04_Note_Picker.js` | `PickNote`, `PickFolder` | `RunMoveNoteToFolder()`, `RunMergeNote()` |
+| `../Writing_Engine/Structure_History.js` | `ShowStructureToast`, `RefreshAfterStructureChange` | all actions |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `closeNoteMenu()` / `onNoteMenuOutside(e)` | 25 - 31 | Closes the menu (also on outside click). |
+| `RunDuplicateNote(note)` | 33 - 38 | Duplicate + toast with Undo. |
+| `RunMoveNoteToFolder(note)` | 40 - 47 | Folder picker → move + toast. |
+| `RunMergeNote(note)` | 49 - 57 | Note picker (with "delete source") → merge; toast lists clash renames (warning style). |
+| `OpenNoteActionsMenu(anchor, note)` | 60 - 82 | Opens the "⋯" menu next to the card button. |
+
 ## A_Notes_Card_View
 **01_Navbar.js**
 
@@ -631,15 +738,16 @@ Module side effects: injects `#data-file-ui-styles`; registers `window.HandleNot
 | `./01_Navbar/03_Search_Bar.js` | `GetSearchQuery`, `FilterNotesByQuery` | `RenderNotesGrid()` |
 | `./01_Navbar/05_Delete_Button.js` | `DeleteNoteById`, `GetSelectedNoteIds`, `ToggleNoteSelection` | `CreateCardElement()`, `RenderNotesGrid()` |
 | `./01_Navbar/06_Add_Edit_Button.js` | `OpenNoteModal` | `CreateCardElement()` |
+| `../E_Note_Ops/05_Note_Menu.js` | `OpenNoteActionsMenu` | `CreateCardElement()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `GetNotesCardsContainerStyles()` | 10 - 529 | Returns complete responsive stylesheet for card grid containers, group sections (with collapse chevron animation), section headers, card items, hover animations, and empty state. |
-| `GetNotesCardsContainerHTML()` | 532 - 537 | Injects cards stylesheet and returns the #notes-cards-container mounting element. |
-| `CreateCardElement(note, options)` | 540 - 665 | Creates an interactive note card DOM element with title, selection checkbox, edit (carrying `data-note-id` for the modal's delegated handler)/delete buttons, Obsidian-style typed properties block, tags, task-checkbox syncing, and navigation to LaTeX editor. |
-| `getNotesCollapsedGroups()` / `saveNotesCollapsedGroups(list)` | 670 - 685 | localStorage read/write of the collapsed group-section list (`Notes_Collapsed_Groups`). |
-| `toggleGroupCollapsed(groupName, isCollapsed)` | 687 - 696 | Adds/removes a group from the persisted collapsed set. |
-| `RenderNotesGrid(container, state)` | 699 - 823 | Groups notes by folder (section order follows `state.folders`, alphabetical fallback), applies search and view filters, renders collapsible group sections (click/Enter toggles collapse; collapsed state persisted per group and auto-expanded while searching) with count badges, and mounts cards into grid or list layouts with empty state handling. |
+| `GetNotesCardsContainerStyles()` | 11 - 530 | Returns complete responsive stylesheet for card grid containers, group sections (with collapse chevron animation), section headers, card items, hover animations, and empty state. |
+| `GetNotesCardsContainerHTML()` | 533 - 538 | Injects cards stylesheet and returns the #notes-cards-container mounting element. |
+| `CreateCardElement(note, options)` | 541 - 681 | Creates an interactive note card DOM element with title, selection checkbox, edit (carrying `data-note-id` for the modal's delegated handler)/delete buttons, Obsidian-style typed properties block, tags, task-checkbox syncing, and navigation to LaTeX editor. The action row has a "⋯" (`.more-btn`) button opening `OpenNoteActionsMenu` (Duplicate · Move to folder… · Merge into note…). |
+| `getNotesCollapsedGroups()` / `saveNotesCollapsedGroups(list)` | 686 - 701 | localStorage read/write of the collapsed group-section list (`Notes_Collapsed_Groups`). |
+| `toggleGroupCollapsed(groupName, isCollapsed)` | 703 - 712 | Adds/removes a group from the persisted collapsed set. |
+| `RenderNotesGrid(container, state)` | 715 - 839 | Groups notes by folder (section order follows `state.folders`, alphabetical fallback), applies search and view filters, renders collapsible group sections (click/Enter toggles collapse; collapsed state persisted per group and auto-expanded while searching) with count badges, and mounts cards into grid or list layouts with empty state handling. |
 
 **A_Notes_Card_View.js**
 
