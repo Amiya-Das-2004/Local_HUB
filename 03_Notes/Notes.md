@@ -106,10 +106,7 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
         ├── Tikz_Source_Converter.js        ← Block code + global preamble → engine input; accepts a bare tikzpicture or a full Overleaf document
         ├── Tikz_Engine_Loader.js           ← Loads the CDN engine on demand; queued compile → SVG string or TeX error lines
         ├── Tikz_Font_Store.js              ← Saves the TeX web fonts used by SVGs into the file (NotesState.tikzFonts) for offline viewing
-        ├── Tikz_Renderer.js                ← Front-end: render key, renderTikzToSvg, mountTikzSvg, healTikzCode
-        ├── packages/                       ← Legacy notes about the removed v1 engine's package support (reference only)
-        ├── obsidian-tikzjax-main/          ← Reference copy of the Obsidian TikZJax plugin (not loaded by the app)
-        └── tikzjax-master/                 ← Reference copy of the original TikZJax sources (not loaded by the app)
+        └── Tikz_Renderer.js                ← Front-end: render key, renderTikzToSvg, mountTikzSvg, healTikzCode
 ```
 
 ---
