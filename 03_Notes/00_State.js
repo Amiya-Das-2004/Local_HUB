@@ -1,5 +1,7 @@
 import { clearAllBlockHistory } from './Writing_Engine/Block_History.js';
-import { OfferRecoverySnapshot, WriteRecoverySnapshot, ClearRecoverySnapshot, PurgeLegacyRecoveryKeys } from '../00_Components/10_Recovery.js';
+import { OfferRecoverySnapshot, WriteRecoverySnapshot, ReadRecoverySnapshot, ClearRecoverySnapshot, PurgeLegacyRecoveryKeys } from '../00_Components/10_Recovery.js';
+import { InstallAssetSerializer, StateWithoutAssets, LoadAssets, TakeSessionAssetsIfChanged, MarkAssetsSaved } from './Writing_Engine/Asset_Store.js';
+import { MigrateInlineImages } from './Writing_Engine/Asset_Migrate.js';
 
 export const DEFAULT_GLOBAL_MACROS = {
   equation: `\\newcommand{\\mb}[1]{\\mathbf{#1}}
@@ -60,6 +62,7 @@ export let NotesState = (typeof window !== 'undefined' && window.NotesState && A
       tags: [],
       notes: []
     };
+InstallAssetSerializer(NotesState);
 if (typeof window !== 'undefined') {
   window.NotesState = NotesState;
 }
@@ -177,7 +180,9 @@ export function normalizeNotesPayload(parsed) {
     citationStyle: typeof parsed.citationStyle === 'string' ? parsed.citationStyle : 'numeric',
     folders: Array.isArray(parsed.folders) ? parsed.folders : [],
     tags: Array.isArray(parsed.tags) ? parsed.tags : [],
-    notes: Array.isArray(parsed.notes) ? parsed.notes.map(sanitizeNote) : []
+    notes: Array.isArray(parsed.notes) ? parsed.notes.map(sanitizeNote) : [],
+    // Images (Writing_Engine/Asset_Store.js): { hash: dataUrl }, referenced by blocks as asset:<hash>
+    assets: (parsed.assets && typeof parsed.assets === 'object' && !Array.isArray(parsed.assets)) ? parsed.assets : {}
   };
 }
 
@@ -195,6 +200,11 @@ function assignNotesPayload(payload) {
     tags: payload.tags.length > 0 ? payload.tags : Array.from(new Set(payload.notes.flatMap(n => n.tags || []).filter(Boolean))),
     notes: payload.notes
   });
+  delete NotesState.assets;
+  // Images live in the asset store, not in NotesState; older files' inline images move there.
+  LoadAssets(payload.assets, { fromFile: true });
+  MigrateInlineImages(NotesState, { fromFile: true });
+  InstallAssetSerializer(NotesState);
   mergeNoteMacrosIntoGlobal(NotesState);
 }
 
@@ -210,10 +220,22 @@ export function ApplyNotesPayload(parsed) {
   if (typeof window !== 'undefined') window.NotesState = NotesState;
   clearTimeout(notesSaveDebounceTimer);
   const dataBlock = typeof document !== 'undefined' ? document.getElementById('NotesData') : null;
-  if (dataBlock) dataBlock.textContent = JSON.stringify(NotesState);
+  if (dataBlock) dataBlock.textContent = JSON.stringify(StateWithoutAssets(NotesState));
   clearAllBlockHistory();
   CaptureNotesBaseline(NotesState);
   return true;
+}
+
+// A payload copied straight into NotesState (JSON import, older code paths) may carry
+// `assets` and inline images: move them into the asset store. Cheap when there is nothing.
+function absorbStrayAssets(state) {
+  if (!state || typeof state !== 'object') return;
+  if (Object.prototype.hasOwnProperty.call(state, 'assets')) {
+    LoadAssets(state.assets, { fromFile: false });
+    delete state.assets;
+  }
+  MigrateInlineImages(state, { fromFile: false });
+  InstallAssetSerializer(state);
 }
 
 // Loads notes from HTML vault (#NotesData) and optionally recovers uncommitted edits from localStorage
@@ -226,6 +248,7 @@ export function LoadNotesState(forceReload = false) {
     if (typeof window !== 'undefined' && window.NotesState && NotesState !== window.NotesState) {
       Object.assign(NotesState, window.NotesState);
     }
+    absorbStrayAssets(NotesState);
     return NotesState;
   }
 
@@ -495,19 +518,41 @@ function persistNotesToStorageImmediate() {
     notesSaveDebounceTimer = null;
   }
 
+  // Safety net: an inline data URL that arrived some other way (import, old clipboard,
+  // a new block type) moves into the asset store before anything is written.
+  absorbStrayAssets(NotesState);
+
   // 1. Write to live in-memory DOM <script id="NotesData">
   const dataBlock = typeof document !== 'undefined' ? document.getElementById('NotesData') : null;
+  //    Images are left out (asset store); every file serializer adds them via NotesState.toJSON.
+  const withoutAssets = StateWithoutAssets(NotesState);
   if (dataBlock) {
-    dataBlock.textContent = JSON.stringify(NotesState, null, 2);
+    dataBlock.textContent = JSON.stringify(withoutAssets, null, 2);
   }
 
   // 2. Keep this file's path-scoped crash-recovery snapshot in sessionStorage
   //    in sync with the working buffer (survives reloads/crashes, never leaks
-  //    into other files or tabs).
-  WriteRecoverySnapshot('NotesData', NotesState);
+  //    into other files or tabs). Note text only; images added this session get
+  //    their own snapshot, rewritten only when an image is added.
+  let recoveryOk = WriteRecoverySnapshot('NotesData', withoutAssets) !== false;
+  const newAssets = TakeSessionAssetsIfChanged();
+  if (newAssets) {
+    recoveryOk = (Object.keys(newAssets).length ? WriteRecoverySnapshot('NotesAssets', newAssets) !== false : (ClearRecoverySnapshot('NotesAssets'), true)) && recoveryOk;
+  }
+  if (!recoveryOk) warnRecoveryFailed();
 
   // Pure in-memory session: do NOT persist unsaved working notes buffer to browser localStorage.
   // This ensures zero cross-file cache contamination between different standalone LocalHUB files.
+}
+
+// Visible (once per session) instead of silent: the browser refused the recovery snapshot.
+let recoveryWarningShown = false;
+function warnRecoveryFailed() {
+  if (recoveryWarningShown || typeof window === 'undefined') return;
+  recoveryWarningShown = true;
+  const msg = 'Crash recovery is off for this session: the browser has no room for the backup copy. Save often.';
+  if (typeof window.ShowStructureToast === 'function') window.ShowStructureToast(msg, { undo: false, kind: 'warn', ms: 12000 });
+  else console.warn('[Notes] ' + msg);
 }
 
 // Applies a user-approved recovery snapshot (Restore banner) to the live state:
@@ -516,6 +561,8 @@ function persistNotesToStorageImmediate() {
 // restored edits keep counting as unsaved until the next SAVE.
 function RestoreNotesFromSnapshot(snapData) {
   if (!snapData || typeof snapData !== 'object') return;
+  const assetSnap = ReadRecoverySnapshot('NotesAssets');
+  if (assetSnap) LoadAssets(assetSnap.data);
   Object.assign(NotesState, {
     vaultMeta: snapData.vaultMeta || NotesState.vaultMeta,
     globalMacros: snapData.globalMacros || NotesState.globalMacros,
@@ -527,6 +574,7 @@ function RestoreNotesFromSnapshot(snapData) {
     tags: Array.isArray(snapData.tags) ? snapData.tags : NotesState.tags,
     notes: Array.isArray(snapData.notes) ? snapData.notes.map(sanitizeNote) : NotesState.notes
   });
+  MigrateInlineImages(NotesState, { fromFile: false }); // snapshots from older builds
   if (typeof window !== 'undefined') window.NotesState = NotesState;
   persistNotesToStorageImmediate();
   SetNotesUnsavedChanges(true);
@@ -566,7 +614,7 @@ if (typeof window !== 'undefined' && !window.__NOTES_BEFOREUNLOAD_INSTALLED__) {
 
 // Persists active notes, syncs folder/tag lists, and updates HTML vault in-memory with debouncing
 export function SaveNotesState(newState = null, { immediate = false } = {}) {
-  if (newState) NotesState = newState;
+  if (newState) NotesState = InstallAssetSerializer(newState);
 
   // Sync folders and tags to currently active notes.
   // The existing lists are the ordering source of truth (drag-reorder writes them directly);
@@ -606,6 +654,8 @@ export function ClearNotesLocalCache() {
     console.warn('Failed to clear NotesData_Local_Cache:', e);
   }
   ClearRecoverySnapshot('NotesData');
+  ClearRecoverySnapshot('NotesAssets');
+  MarkAssetsSaved();
   if (typeof clearAllBlockHistory === 'function') {
     clearAllBlockHistory();
   }

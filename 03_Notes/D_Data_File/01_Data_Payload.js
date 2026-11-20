@@ -4,8 +4,8 @@
  *   - embedded mode: the JSON inside <script id="NotesData"> of the HTML
  *   - data-file mode: the external JSON file the user picked (e.g. MyNotes.json)
  * Both hold the same object: { vaultMeta, globalMacros, tableTemplates, tikzTemplates,
- * tikzFonts, bibliography, citationStyle, folders, tags, notes } (notes carry their
- * blocks, saved TikZ SVGs and images).
+ * tikzFonts, bibliography, citationStyle, folders, tags, notes, assets } (notes carry
+ * blocks + saved TikZ SVGs; images sit once in `assets`, see Writing_Engine/Asset_Store.js).
  */
 
 import { NotesState, flushNotesSave } from '../00_State.js';

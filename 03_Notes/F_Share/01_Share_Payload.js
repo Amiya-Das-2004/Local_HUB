@@ -8,6 +8,7 @@
 import { NotesState } from '../00_State.js';
 import { NoteMatchesWikiRef } from '../E_Note_Ops/02_Wiki_Link_Rewrite.js';
 import { getTikzSvgFontFamilies } from '../Writing_Engine/Tikz_Engine/Tikz_Font_Store.js';
+import { CollectBlockAssets } from '../Writing_Engine/Asset_Store.js';
 
 // Visits every string of an object (skips ids, SVGs, data URLs); fn may return a replacement.
 function walkShareStrings(obj, fn) {
@@ -15,7 +16,7 @@ function walkShareStrings(obj, fn) {
     Object.keys(o).forEach((k) => {
       const v = o[k];
       if (typeof v === 'string') {
-        if (k === 'id' || k === 'svg' || k === 'svgKey' || v.startsWith('data:') || v.startsWith('<svg')) return;
+        if (k === 'id' || k === 'svg' || k === 'svgKey' || v.startsWith('data:') || v.startsWith('asset:') || v.startsWith('<svg')) return;
         const next = fn(v, k);
         if (typeof next === 'string' && next !== v) o[k] = next;
       } else if (v && typeof v === 'object') {
@@ -81,6 +82,7 @@ export function BuildSharedNotePayload(noteId) {
     citationStyle: NotesState.citationStyle || 'numeric',
     folders: [note.folder || 'General'],
     tags: Array.isArray(note.tags) ? note.tags.slice() : [],
-    notes: [note]
+    notes: [note],
+    assets: CollectBlockAssets(note.blocks) // only this note's images
   };
 }

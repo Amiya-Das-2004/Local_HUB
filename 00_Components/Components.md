@@ -206,12 +206,12 @@ Consumed by `02_Bookmarks/00_State.js` and `03_Notes/00_State.js` (offer on load
 | :--- | :--- | :--- |
 | `LOCALHUB_RECOVERY_PREFIX` | 21 - 21 | Key namespace constant (`LocalHub_Recovery::`). |
 | `GetRecoveryScopeKey(baseKey)` | 39 - 45 | Builds the file-scoped storage key: `prefix + baseKey + '::' + location.pathname`. |
-| `ReadRecoverySnapshot(baseKey)` | 49 - 63 | Reads `{ data, savedAt }` for this file's snapshot; returns `null` when absent; corrupt payloads are removed instead of retried. |
-| `WriteRecoverySnapshot(baseKey, data)` | 68 - 77 | Best-effort snapshot write (quota exhaustion degrades silently — recovery is insurance, not storage). |
-| `ClearRecoverySnapshot(baseKey)` | 81 - 87 | Removes this file's snapshot for a vault (call after a successful Save/Export). |
-| `PurgeLegacyRecoveryKeys()` | 89 - 94 | One-time-per-load cleanup of the old shared-origin fixed keys (`*_Local_Cache` family). |
-| `ensureRecoveryBannerStyles()` | 96 - 137 | Injects (id-guarded) the theme-aware banner stylesheet (fixed top-center card, Restore/Discard buttons). |
-| `OfferRecoverySnapshot({ baseKey, label, onRestore })` | 153 - 219 | Non-blocking recovery offer: once per vault per page session; mounts the banner (DOM-ready deferred); Restore → `onRestore(data)` then snapshot cleared (failure keeps the snapshot); Discard → snapshot cleared; auto-hides after 45s WITHOUT discarding (next load offers again). Never auto-applies. |
+| `ReadRecoverySnapshot(baseKey)` | 49 - 64 | Reads `{ data, savedAt }` for this file's snapshot; returns `null` when absent; corrupt payloads are removed instead of retried. |
+| `WriteRecoverySnapshot(baseKey, data)` | 69 - 83 | Best-effort snapshot write. Returns `true` on success; on quota exhaustion it removes any stale copy of that snapshot, logs once and returns `false` so the caller can warn the user (Notes shows a toast). |
+| `ClearRecoverySnapshot(baseKey)` | 86 - 91 | Removes this file's snapshot for a vault (call after a successful Save/Export). |
+| `PurgeLegacyRecoveryKeys()` | 94 - 99 | One-time-per-load cleanup of the old shared-origin fixed keys (`*_Local_Cache` family). |
+| `ensureRecoveryBannerStyles()` | 101 - 151 | Injects (id-guarded) the theme-aware banner stylesheet (fixed top-center card, Restore/Discard buttons). |
+| `OfferRecoverySnapshot({ baseKey, label, onRestore })` | 158 - 214 | Non-blocking recovery offer: once per vault per page session; mounts the banner (DOM-ready deferred); Restore → `onRestore(data)` then snapshot cleared (failure keeps the snapshot); Discard → snapshot cleared; auto-hides after 45s WITHOUT discarding (next load offers again). Never auto-applies. |
 
 Integration contract per tab state module: `Load*State()` calls `PurgeLegacyRecoveryKeys()` + `OfferRecoverySnapshot({ baseKey, onRestore })`; the debounced persist path calls `WriteRecoverySnapshot(baseKey, state)`; `Clear*LocalCache()` (save/export path) calls `ClearRecoverySnapshot(baseKey)`. Restore handlers must NOT recapture the baseline — restored edits must keep counting as unsaved until the next SAVE.
 

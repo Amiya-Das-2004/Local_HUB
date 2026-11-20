@@ -90,6 +90,9 @@ export function ShowStructureToast(message, { undo = true, kind = 'info', ms = 6
   setTimeout(() => t.remove(), ms);
 }
 
+// 00_State.js uses it for warnings without importing this module (it imports 00_State.js).
+if (typeof window !== 'undefined') window.ShowStructureToast = ShowStructureToast;
+
 /** Re-renders after a structural change (exported for operation modules). */
 export function RefreshAfterStructureChange() {
   rerenderAfterStructureChange();

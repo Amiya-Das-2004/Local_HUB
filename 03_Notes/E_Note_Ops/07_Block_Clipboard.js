@@ -7,6 +7,9 @@
  * something else since, and normal paste behaviour wins).
  */
 
+import { CollectBlockAssets, LoadAssets, IsAssetRef } from '../Writing_Engine/Asset_Store.js';
+import { MigrateBlockImages } from '../Writing_Engine/Asset_Migrate.js';
+
 const BLOCK_CLIPBOARD_KEY = 'tixidian-block-clipboard';
 let blockClipboardMemory = null;
 
@@ -21,7 +24,7 @@ export function BlocksToPlainText(blocks) {
       case 'equation': return `$$\n${b.tex || b.content || ''}\n$$`;
       case 'code': return '```' + (b.language || '') + '\n' + (b.code || b.content || '') + '\n```';
       case 'tikz': return b.code || b.content || '';
-      case 'image': return b.url && !String(b.url).startsWith('data:') ? `![${b.caption || ''}](${b.url})` : `[image${b.caption ? ': ' + b.caption : ''}]`;
+      case 'image': return b.url && !String(b.url).startsWith('data:') && !IsAssetRef(b.url) ? `![${b.caption || ''}](${b.url})` : `[image${b.caption ? ': ' + b.caption : ''}]`;
       case 'block':
       case 'theorem': {
         const head = `> **${b.env || 'Note'}${b.title ? ': ' + b.title : ''}**`;
@@ -50,6 +53,7 @@ export function SetBlockClipboard(blocks, sourceNote) {
     sourceNoteId: sourceNote ? sourceNote.id : null,
     sourceTitle: sourceNote ? sourceNote.title : '',
     blocks: JSON.parse(JSON.stringify(blocks || [])),
+    assets: CollectBlockAssets(blocks), // images travel with the blocks (other tabs/files lack them)
     text: BlocksToPlainText(blocks)
   };
   blockClipboardMemory = payload;
@@ -63,8 +67,12 @@ export function GetBlockClipboard() {
   let stored = null;
   try { stored = JSON.parse(localStorage.getItem(BLOCK_CLIPBOARD_KEY) || 'null'); } catch (_) { stored = null; }
   const mem = blockClipboardMemory;
-  if (stored && stored.format === 'tixidian-blocks' && (!mem || stored.at > mem.at)) return stored;
-  return mem;
+  const pick = (stored && stored.format === 'tixidian-blocks' && (!mem || stored.at > mem.at)) ? stored : mem;
+  if (pick) {
+    LoadAssets(pick.assets);
+    MigrateBlockImages(pick.blocks);
+  }
+  return pick;
 }
 
 const normalizeClipText = (t) => String(t || '').replace(/\r\n/g, '\n').trim();

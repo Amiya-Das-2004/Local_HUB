@@ -115,6 +115,8 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 │   └── 03_Share_Export.js                  ← "Share note as HTML" and "Export everything as one HTML" downloads
 │
 └── Writing_Engine/                         ← Core text, math, TikZ, and formatting compilers
+    ├── Asset_Store.js                      ← Image store: each image once by content hash, blocks hold asset:<hash>, files get only referenced images
+    ├── Asset_Migrate.js                    ← Moves older files' inline data-URL images into the asset store (idempotent, on load)
     ├── BibTeX_Parser.js                    ← BibTeX (.bib) tokenizer, parser, and citation formatter
     ├── Block_Engine.js                     ← High-performance block differential updates
     ├── Block_History.js                    ← Undo/redo history stack per block and document
@@ -140,31 +142,35 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 | Import Location | Functions Imported | used in Functions |
 | :--- | :--- | :--- |
 | `./Writing_Engine/Block_History.js` | `clearAllBlockHistory` | `ClearNotesLocalCache()` |
-| `../00_Components/10_Recovery.js` | `OfferRecoverySnapshot`, `WriteRecoverySnapshot`, `ClearRecoverySnapshot`, `PurgeLegacyRecoveryKeys` | `LoadNotesState()`, `persistNotesToStorageImmediate()`, `RestoreNotesFromSnapshot()`, `ClearNotesLocalCache()` |
+| `../00_Components/10_Recovery.js` | `OfferRecoverySnapshot`, `WriteRecoverySnapshot`, `ReadRecoverySnapshot`, `ClearRecoverySnapshot`, `PurgeLegacyRecoveryKeys` | `LoadNotesState()`, `persistNotesToStorageImmediate()`, `RestoreNotesFromSnapshot()`, `ClearNotesLocalCache()` |
+| `./Writing_Engine/Asset_Store.js` | `InstallAssetSerializer`, `StateWithoutAssets`, `LoadAssets`, `TakeSessionAssetsIfChanged`, `MarkAssetsSaved` | `NotesState` init, `assignNotesPayload()`, `absorbStrayAssets()`, `ApplyNotesPayload()`, `persistNotesToStorageImmediate()`, `RestoreNotesFromSnapshot()`, `SaveNotesState()`, `ClearNotesLocalCache()` |
+| `./Writing_Engine/Asset_Migrate.js` | `MigrateInlineImages` | `assignNotesPayload()`, `absorbStrayAssets()`, `RestoreNotesFromSnapshot()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `DEFAULT_GLOBAL_MACROS` | 4 - 46 | Default LaTeX macros dictionary containing predefined equation shortcuts (`\mb`, `\cancelto`, `\comment`, `\R`, `\C`, `\N`, `\Z`) and TikZ styles/libraries. |
-| `NotesState` | 49 - 65 | Central in-memory reactive state object holding vault metadata, global macros, table templates, tikz templates, saved TikZ fonts (`tikzFonts`: family → woff2 data URI, shared by every saved diagram), bibliography entries, citation style, folders, tags, and notes; hydrated from `window.NotesState` when a prior shell already loaded one and re-synced to `window` on init. |
-| `mergeOrderedLists(existing, derived)` | 68 - 72 | Merges a manually curated list (drag-reordered folders/tags — the ordering source of truth) with freshly derived values; existing entries keep their positions, only NEW values are appended. |
-| `sanitizeNote(n, idx = 0)` | 75 - 125 | Validates note object schema, fills missing fallback properties (id, slug, title, folder, tags, blocks, macros, autoNumbering), normalizes the Obsidian-style typed `properties` list (legacy `description` migrates in as a `Description` text property), passes through per-note numbering configs (`equationNumbering`, `figureNumbering`, `showFigureCaptions` — objects or legacy strings), prevents data corruption, and runs the orientation-container migration. |
-| `migrateOrientationContainers(note)` | 131 - 164 | One-time legacy migration: hoists Multi-Column `cols[]` embedded children to top-level blocks (inserted right after the container; empty padding text blocks are dropped) and rewrites them as non-destructive `members`/`rows` references. |
-| `LoadNotesState(forceReload = false)` | 220 - 282 | Reuses in-memory state when not stale to eliminate multi-MB JSON re-parsing on route changes (Object.assign-ing `window.NotesState` data in when it diverged), then reads and parses notes directly from the DOM script vault (#NotesData), purges legacy fixed-key caches, offers this file's path-scoped sessionStorage recovery snapshot (never auto-applied — Restore/Discard banner via `OfferRecoverySnapshot`), and calls `CaptureNotesBaseline(NotesState)` on first load. Also loads `tikzFonts` and runs `mergeNoteMacrosIntoGlobal()` before the baseline is captured. |
-| `mergeNoteMacrosIntoGlobal(state)` | 287 - 305 | Macros are global-only: appends every line of older files' per-note macros (`note.macros.equation` / `.tikz`) that the global set does not already contain (under a `% --- merged from note: <title> ---` marker), then clears the note's copy. Idempotent across reloads. |
-| `normalizeNotesPayload(parsed)` | 168 - 182 | The ONE data format for both storage modes (embedded `#NotesData` and the external data file): normalizes a parsed vault object (defaults for every field, `sanitizeNote` on every note); `null` for non-objects. Used by `LoadNotesState` and `ApplyNotesPayload`. |
-| `assignNotesPayload(payload)` | 185 - 199 | Writes a normalized payload into the live `NotesState` (derives folders/tags when missing) and runs `mergeNoteMacrosIntoGlobal`. |
-| `ApplyNotesPayload(parsed)` | 206 - 217 | Replaces the whole vault with a payload read from the data file: assign, mirror into the DOM `#NotesData`, clear block undo history and re-capture the baseline (unsaved count → 0). Returns `false` for a non-vault object. |
-| `getBlockFingerprint(block)` | 326 - 336 | Stable JSON fingerprint of a block for baseline diffing; strips transient `_isEditing`/`_temp` fields and falls back to a string key when the block is not JSON-serializable. |
-| `CaptureNotesBaseline(state = NotesState)` | 338 - 376 | Captures initial/committed baseline snapshot of all note blocks (fingerprints via `getBlockFingerprint`) and metadata (title, folder, tags, description, order) for idempotent change diffing; mirrors the maps into `window.__NOTES_BASELINE_*`, resets unsaved status and badge count to 0. |
-| `CalculateNotesBlockChanges()` | 378 - 453 | Computes exact count of modified, added, deleted blocks across all notes, plus metadata changes (including deleted notes), comparing current state against the captured baseline snapshot. |
-| `GetNotesUnsavedChangesCount()` | 455 - 458 | Returns the exact number of unsaved block/metadata changes across all notes. |
-| `HasUnsavedNotesChanges()` | 460 - 464 | Returns boolean whether any uncommitted block or metadata changes exist. |
-| `SetNotesUnsavedChanges(dirty = true)` | 466 - 490 | Computes block diff and syncs unsaved state and count with `window.MarkUnsavedChanges(isDirty, overallCount)` (aggregated across all tabs via `window.HasUnsavedChanges`/`window.GetUnsavedChangesCount` when present) and global window flags. |
-| `persistNotesToStorageImmediate()` | 492 - 511 | Cancels any pending debounce and serializes `NotesState` into the live DOM `<script id="NotesData">` vault, then refreshes this file's path-scoped crash-recovery snapshot in sessionStorage (`WriteRecoverySnapshot` — survives reloads/crashes, never leaks into other files or tabs; localStorage is deliberately never written). |
-| `RestoreNotesFromSnapshot(snapData)` | 517 - 536 | Applies a user-approved recovery snapshot (Restore banner): sanitizes snapshot notes into `NotesState`, persists to the DOM vault, re-renders via `initNotesApp()`. The baseline is deliberately NOT recaptured so restored edits keep counting as unsaved until the next SAVE. |
-| `flushNotesSave()` | 539 - 541 | Immediately flushes any pending debounced state writes to DOM #NotesData. |
-| `SaveNotesState(newState = null, { immediate = false } = {})` | 568 - 592 | Re-derives active folder/tag lists through `mergeOrderedLists` (append-only, so drag order and intentionally-empty folders survive saves), updates unsaved change diff count, and persists the active working buffer to the DOM vault with debouncing (~280ms) or immediately. |
-| `ClearNotesLocalCache()` | 595 - 612 | Clears pending debounce, the legacy localStorage recovery cache, and this file's recovery snapshot (`ClearRecoverySnapshot`) after save/export, re-captures the baseline to reset change tracking to 0, and clears all per-block undo/redo history via `clearAllBlockHistory()`. |
+| `DEFAULT_GLOBAL_MACROS` | 6 - 47 | Default LaTeX macros dictionary containing predefined equation shortcuts (`\mb`, `\cancelto`, `\comment`, `\R`, `\C`, `\N`, `\Z`) and TikZ styles/libraries. |
+| `NotesState` | 51 - 68 | Central in-memory reactive state object holding vault metadata, global macros, table templates, tikz templates, saved TikZ fonts (`tikzFonts`: family → woff2 data URI, shared by every saved diagram), bibliography entries, citation style, folders, tags, and notes; hydrated from `window.NotesState` when a prior shell already loaded one and re-synced to `window` on init. Images are NOT part of it (asset store); a non-enumerable `toJSON` (`InstallAssetSerializer`) makes every `JSON.stringify(NotesState)` add `assets` = the images still referenced. |
+| `mergeOrderedLists(existing, derived)` | 71 - 75 | Merges a manually curated list (drag-reordered folders/tags — the ordering source of truth) with freshly derived values; existing entries keep their positions, only NEW values are appended. |
+| `sanitizeNote(n, idx = 0)` | 78 - 128 | Validates note object schema, fills missing fallback properties (id, slug, title, folder, tags, blocks, macros, autoNumbering), normalizes the Obsidian-style typed `properties` list (legacy `description` migrates in as a `Description` text property), passes through per-note numbering configs (`equationNumbering`, `figureNumbering`, `showFigureCaptions` — objects or legacy strings), prevents data corruption, and runs the orientation-container migration. |
+| `migrateOrientationContainers(note)` | 134 - 167 | One-time legacy migration: hoists Multi-Column `cols[]` embedded children to top-level blocks (inserted right after the container; empty padding text blocks are dropped) and rewrites them as non-destructive `members`/`rows` references. |
+| `LoadNotesState(forceReload = false)` | 242 - 305 | Reuses in-memory state when not stale to eliminate multi-MB JSON re-parsing on route changes (Object.assign-ing `window.NotesState` data in when it diverged), then reads and parses notes directly from the DOM script vault (#NotesData), purges legacy fixed-key caches, offers this file's path-scoped sessionStorage recovery snapshot (never auto-applied — Restore/Discard banner via `OfferRecoverySnapshot`), and calls `CaptureNotesBaseline(NotesState)` on first load. Also loads `tikzFonts` and runs `mergeNoteMacrosIntoGlobal()` before the baseline is captured. |
+| `mergeNoteMacrosIntoGlobal(state)` | 310 - 328 | Macros are global-only: appends every line of older files' per-note macros (`note.macros.equation` / `.tikz`) that the global set does not already contain (under a `% --- merged from note: <title> ---` marker), then clears the note's copy. Idempotent across reloads. |
+| `normalizeNotesPayload(parsed)` | 171 - 187 | The ONE data format for both storage modes (embedded `#NotesData` and the external data file): normalizes a parsed vault object (defaults for every field, `sanitizeNote` on every note, `assets` map passed through); `null` for non-objects. Used by `LoadNotesState` and `ApplyNotesPayload`. |
+| `assignNotesPayload(payload)` | 190 - 209 | Writes a normalized payload into the live `NotesState` (derives folders/tags when missing), loads `payload.assets` into the asset store (as already-saved), migrates inline data-URL images to `asset:` refs (`MigrateInlineImages`), re-installs the asset serializer and runs `mergeNoteMacrosIntoGlobal`. |
+| `absorbStrayAssets(state)` | 231 - 239 | A payload copied straight into `NotesState` (JSON Import, older code) may carry `assets` or inline images: moves them into the asset store. Called on every `LoadNotesState` reuse and before every persist. |
+| `ApplyNotesPayload(parsed)` | 216 - 227 | Replaces the whole vault with a payload read from the data file: assign, mirror into the DOM `#NotesData`, clear block undo history and re-capture the baseline (unsaved count → 0). Returns `false` for a non-vault object. |
+| `getBlockFingerprint(block)` | 349 - 359 | Stable JSON fingerprint of a block for baseline diffing; strips transient `_isEditing`/`_temp` fields and falls back to a string key when the block is not JSON-serializable. |
+| `CaptureNotesBaseline(state = NotesState)` | 361 - 399 | Captures initial/committed baseline snapshot of all note blocks (fingerprints via `getBlockFingerprint`) and metadata (title, folder, tags, description, order) for idempotent change diffing; mirrors the maps into `window.__NOTES_BASELINE_*`, resets unsaved status and badge count to 0. |
+| `CalculateNotesBlockChanges()` | 401 - 476 | Computes exact count of modified, added, deleted blocks across all notes, plus metadata changes (including deleted notes), comparing current state against the captured baseline snapshot. |
+| `GetNotesUnsavedChangesCount()` | 478 - 481 | Returns the exact number of unsaved block/metadata changes across all notes. |
+| `HasUnsavedNotesChanges()` | 483 - 487 | Returns boolean whether any uncommitted block or metadata changes exist. |
+| `SetNotesUnsavedChanges(dirty = true)` | 489 - 513 | Computes block diff and syncs unsaved state and count with `window.MarkUnsavedChanges(isDirty, overallCount)` (aggregated across all tabs via `window.HasUnsavedChanges`/`window.GetUnsavedChangesCount` when present) and global window flags. |
+| `persistNotesToStorageImmediate()` | 515 - 546 | Cancels any pending debounce, absorbs stray images into the asset store, serializes `NotesState` WITHOUT images into the live DOM `<script id="NotesData">` vault, then refreshes this file's path-scoped crash-recovery snapshots in sessionStorage: `NotesData` (note text only, small) and — only when an image was added — `NotesAssets` (images added this session). A refused write shows a one-time warning toast (`warnRecoveryFailed`) instead of failing silently; localStorage is deliberately never written. |
+| `warnRecoveryFailed()` | 550 - 556 | Once per session: "Crash recovery is off for this session …" via `window.ShowStructureToast` (console fallback). |
+| `RestoreNotesFromSnapshot(snapData)` | 562 - 584 | Applies a user-approved recovery snapshot (Restore banner): loads the `NotesAssets` snapshot into the asset store, sanitizes snapshot notes into `NotesState` (migrating inline images from older snapshots), persists to the DOM vault, re-renders via `initNotesApp()`. The baseline is deliberately NOT recaptured so restored edits keep counting as unsaved until the next SAVE. |
+| `flushNotesSave()` | 587 - 589 | Immediately flushes any pending debounced state writes to DOM #NotesData. |
+| `SaveNotesState(newState = null, { immediate = false } = {})` | 616 - 640 | A replacement state gets the asset serializer. Re-derives active folder/tag lists through `mergeOrderedLists` (append-only, so drag order and intentionally-empty folders survive saves), updates unsaved change diff count, and persists the active working buffer to the DOM vault with debouncing (~280ms) or immediately. |
+| `ClearNotesLocalCache()` | 643 - 662 | Clears pending debounce, the legacy localStorage recovery cache, and this file's recovery snapshots (`NotesData` + `NotesAssets`) after save/export, marks session images as saved (`MarkAssetsSaved`), re-captures the baseline to reset change tracking to 0, and clears all per-block undo/redo history via `clearAllBlockHistory()`. |
 
 Module-level side effects: exports `window.SaveNotesState` / `flushNotesSave` / `ClearNotesLocalCache` / `CaptureNotesBaseline` / `CalculateNotesBlockChanges` / `GetNotesUnsavedChangesCount` / `HasUnsavedNotesChanges` / `SetNotesUnsavedChanges` for flat-bundle/standalone use, installs a one-shot `beforeunload` guard that prompts when `hasUnsavedNotesChanges` (or any tab's unsaved flag) is set, and runs `NotesState = LoadNotesState()` on import.
 
@@ -236,9 +242,9 @@ Module-level side effects: exports `window.SaveNotesState` / `flushNotesSave` / 
 | `clearAllTabLocalCaches()` | 105 - 142 | Clears every `*_Local_Cache` localStorage key (plus ProffTrack/RD/Papers keys), resets `window.__NOTES_UNSAVED__`/`__HAS_UNSAVED_CHANGES__`/`__NOTES_UNSAVED_COUNT__`, calls `window.ClearNotesLocalCache()`, and resets the unsaved badge via `MarkUnsavedChanges(false, 0)`. |
 | `bundleTabFile(filePath)` | 146 - 170 | Fetches one modular JS file (resolved against the project root via `import.meta.url`), strips `import`/`export` statements, and returns a commented flat code chunk; missing files are skipped with a warning. |
 | `bundleTabGroup(files)` | 172 - 176 | Sequentially concatenates `bundleTabFile` output for a file list. |
-| `sharedComponentFiles` / `tabHandlerFiles` / `tabModuleFiles` | 178 - 274 | The tab bundler's three registration arrays: 8 shared `00_Components` files, the 3 `Tab_Notes` handler adapters, and the full ordered ordered Notes module graph (dependency-ordered: state → utils → engines → block infra → block renderers → text submodules → editor chrome → card view → graph → header → Notes.js). New Notes modules MUST be added here. |
-| `SaveNotesStandalone(options = {})` | 284 - 434 | Bundles `Notes.html` into a self-contained, standalone single-file HTML document: clones the document, syncs vaults via `syncTabStatesToDOM`, and (when not already standalone) flattens shared components + handlers + tab modules into one inline module that defines `LoadThisPage()` (boots `initNotesApp` + all three tab overrides) and a `handlePageRoute()` hash router, replacing the `#localhub-router` boot script. Inside an already-standalone file it just re-emits itself with fresh vault data. Cleans injected dev/live-reload and TikZ engine tags, empties runtime containers, downloads via blob, clears local caches, and flashes the Save button green for 2s. Before download it strips dev scripts and runtime TikZ elements (`#tikzjax-js`, `#tikzjax-css`, `#tikz-engine-host`, `#tikz-saved-fonts` — saved fonts already live in `#NotesData`). Options: `appOnly` (#NotesData becomes an empty vault marked `vaultMeta.appOnly` + `dataFileName` — the notes live in the data file), `payload` (embed this vault instead of the live one — share/export), `fileName`, `markSaved` (only a full embedded save clears the unsaved state). A full save drops a stale `appOnly` marker. Transient UI (`.df-overlay`, `.df-toast`, `.df-menu`) is stripped from the clone. |
-| `InitTabSaveOverride()` | 438 - 492 | Swaps the shared Save-button binding (which would build the all-in-one app) for the per-tab `SaveNotesStandalone` by cloning the button, and provides a standalone implementation of `window.MarkUnsavedChanges(dirty, count)` driving the `.save-badge` unsaved-changes pill (restoring any count present on mount). The Save click goes to `window.HandleNotesSave` (data-file mode decides: overwrite the data file, ask to reconnect, or fall back to `SaveNotesStandalone`); it also exposes `window.SaveNotesStandalone` and calls `window.MountDataFileUI()` after every header mount. |
+| `sharedComponentFiles` / `tabHandlerFiles` / `tabModuleFiles` | 178 - 289 | The tab bundler's three registration arrays: 8 shared `00_Components` files, the 3 `Tab_Notes` handler adapters, and the full ordered ordered Notes module graph (dependency-ordered: state → utils → engines → block infra → block renderers → text submodules → editor chrome → card view → graph → header → Notes.js). New Notes modules MUST be added here. `Writing_Engine/Asset_Store.js` and `Asset_Migrate.js` come BEFORE `00_State.js` (it uses them at load). |
+| `SaveNotesStandalone(options = {})` | 299 - 449 | Bundles `Notes.html` into a self-contained, standalone single-file HTML document: clones the document, syncs vaults via `syncTabStatesToDOM`, and (when not already standalone) flattens shared components + handlers + tab modules into one inline module that defines `LoadThisPage()` (boots `initNotesApp` + all three tab overrides) and a `handlePageRoute()` hash router, replacing the `#localhub-router` boot script. Inside an already-standalone file it just re-emits itself with fresh vault data. Cleans injected dev/live-reload and TikZ engine tags, empties runtime containers, downloads via blob, clears local caches, and flashes the Save button green for 2s. Before download it strips dev scripts and runtime TikZ elements (`#tikzjax-js`, `#tikzjax-css`, `#tikz-engine-host`, `#tikz-saved-fonts` — saved fonts already live in `#NotesData`). Options: `appOnly` (#NotesData becomes an empty vault marked `vaultMeta.appOnly` + `dataFileName` — the notes live in the data file), `payload` (embed this vault instead of the live one — share/export), `fileName`, `markSaved` (only a full embedded save clears the unsaved state). A full save drops a stale `appOnly` marker. Transient UI (`.df-overlay`, `.df-toast`, `.df-menu`) is stripped from the clone. |
+| `InitTabSaveOverride()` | 453 - 507 | Swaps the shared Save-button binding (which would build the all-in-one app) for the per-tab `SaveNotesStandalone` by cloning the button, and provides a standalone implementation of `window.MarkUnsavedChanges(dirty, count)` driving the `.save-badge` unsaved-changes pill (restoring any count present on mount). The Save click goes to `window.HandleNotesSave` (data-file mode decides: overwrite the data file, ask to reconnect, or fall back to `SaveNotesStandalone`); it also exposes `window.SaveNotesStandalone` and calls `window.MountDataFileUI()` after every header mount. |
 
 **Tab_Notes/Tab_Logo_Handler.js**
 
@@ -280,6 +286,45 @@ Module-level side effects: exports `window.SaveNotesState` / `flushNotesSave` / 
 | `initNotesApp()` | 26 - 430 | Master initialization function and route dispatcher for 03_Notes: injects universal 4px opposite-theme scrollbars, heading scroll-margin/scroll-padding offsets, parses hash parameters (`?id=`, `view=graph`, `view=study`), mounts header and modals, renders responsive drawer with clamp/webkit scrollbars, removes leftover floating text docks when outside an individual note, and renders Editor (`RenderLaTeXEditor` in edit or study mode), Graph, or Card Deck view. Exposes `window.initNotesApp` for standalone compatibility. |
 
 ## Writing_Engine
+**Asset_Store.js** *(pure; bundled before `00_State.js`)*
+
+Images are stored ONCE by content hash in memory, outside `NotesState`. Image blocks (`url`/`content`) and image-grid cells (`grid.cells[].src`) hold `asset:<hash>`. Files carry `assets: { hash: dataUrl }` next to `notes` (same key in `#NotesData`, the data file, exports and shared notes) with only the images the notes still reference — unused images are dropped on save, while the in-memory copy stays so undo keeps working.
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| *(None — pure module)* | — | — |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `ASSET_REF_PREFIX` | 15 - 15 | `'asset:'`. |
+| `IsAssetRef(value)` / `AssetRefHash(ref)` | 22 - 28 | Ref test / hash part of a ref. |
+| `cyrb53(str, seed)` | 31 - 41 | Fast synchronous 53-bit string hash. |
+| `HashAssetData(dataUrl)` | 43 - 45 | Two-seed cyrb53 → 26 hex chars (the asset key). |
+| `PutAsset(value, { fromFile })` | 51 - 59 | Stores a data URL once, returns its `asset:<hash>`; any other value passes through. `fromFile` = already saved (migration), so recovery skips it. |
+| `LoadAssets(map, { fromFile })` | 65 - 76 | Adds a `{ hash: dataUrl }` map (file, recovery snapshot, block clipboard). |
+| `GetAssetData(value)` | 79 - 82 | Data URL of a ref (`''` when unknown); non-refs unchanged. |
+| `dataUrlToBlob(dataUrl)` | 84 - 96 | base64 / URL-encoded data URL → `Blob`. |
+| `ResolveAssetUrl(value)` | 99 - 113 | `<img src>` for a ref: one cached object URL per image (data-URL fallback); non-refs unchanged. |
+| `ForEachBlockImageField(block, fn)` | 116 - 131 | Visits an image block's `url`, `content` and grid-cell `src`; `fn` may return a replacement. |
+| `CollectBlockAssets(blocks)` | 134 - 143 | `{ hash: dataUrl }` of the images those blocks reference (share, clipboard). |
+| `CollectReferencedAssets(state)` | 146 - 150 | Same over every note (what a save writes). |
+| `InstallAssetSerializer(state)` | 153 - 161 | Non-enumerable `toJSON` → `{ ...state, assets: CollectReferencedAssets(state) }`; so Save, data file, Export and the hub's Save button all write images without knowing about the store. |
+| `StateWithoutAssets(state)` | 164 - 168 | Shallow copy without `toJSON`/`assets` for hot paths (live `#NotesData`, recovery snapshot). |
+| `TakeSessionAssetsIfChanged()` | 171 - 177 | Images added this session, or `null` when none were added since the last call (recovery snapshot `NotesAssets`). |
+| `MarkAssetsSaved()` | 180 - 183 | After a save: nothing is session-only any more. |
+| `GetAssetStats()` | 185 - 189 | `{ count, bytes, sessionNew }` (for a future storage meter, Issue 6). |
+
+**Asset_Migrate.js** *(bundled before `00_State.js`)*
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| `./Asset_Store.js` | `PutAsset`, `ForEachBlockImageField` | `MigrateInlineImages()`, `MigrateBlockImages()` |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `MigrateInlineImages(state, { fromFile })` | 12 - 22 | Replaces inline `data:` images in every note's image blocks / grid cells by `asset:` refs (identical images collapse into one). Idempotent; runs before the baseline, so it is not an unsaved change. |
+| `MigrateBlockImages(blocks)` | 25 - 28 | Same for a loose block list (block clipboard from an older build). |
+
 **BibTeX_Parser.js**
 
 | Import Location | Functions Imported | used in Functions |
@@ -343,10 +388,10 @@ Module-level side effects: exports `window.SaveNotesState` / `flushNotesSave` / 
 | `rerenderAfterStructureChange()` | 45 - 56 | Re-runs the current route; leaves a note route whose note no longer exists. |
 | `UndoStructureChange()` | 59 - 71 | Restores the last snapshot, persists immediately, re-renders and toasts "Undone: …". |
 | `ShowStructureToast(message, { undo, kind, ms })` | 74 - 91 | Bottom toast (`info` / `warn`) with an Undo button while a snapshot exists. |
-| `RefreshAfterStructureChange()` | 94 - 96 | Exported re-render for operation modules. |
-| `isEditableTarget(el)` | 98 - 103 | Inputs, textareas and contenteditable keep their own (per-block) undo. |
+| `RefreshAfterStructureChange()` | 97 - 99 | Exported re-render for operation modules. |
+| `isEditableTarget(el)` | 101 - 106 | Inputs, textareas and contenteditable keep their own (per-block) undo. |
 
-Module side effects: injects `#structure-history-styles`; one global Ctrl/Cmd+Z listener that undoes the last structural change when the focus is NOT in an editable field.
+Module side effects: injects `#structure-history-styles`; sets `window.ShowStructureToast` (used by `00_State.js` warnings without an import cycle); one global Ctrl/Cmd+Z listener that undoes the last structural change when the focus is NOT in an editable field.
 
 **Bullet_Engine.js**
 
@@ -746,15 +791,16 @@ Copy, move and merge of whole notes (C1) and of blocks (C2). Every operation rec
 
 | Import Location | Functions Imported | used in Functions |
 | :--- | :--- | :--- |
-| *(None)* | — | — |
+| `../Writing_Engine/Asset_Store.js` | `CollectBlockAssets`, `LoadAssets`, `IsAssetRef` | `SetBlockClipboard()`, `GetBlockClipboard()`, `BlocksToPlainText()` |
+| `../Writing_Engine/Asset_Migrate.js` | `MigrateBlockImages` | `GetBlockClipboard()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `BlocksToPlainText(blocks)` | 14 - 39 | Markdown/LaTeX per block type (heading `#`, equation `$$`, code fences, TikZ source, callout `>` quote, image placeholder; containers emit nothing). |
-| `SetBlockClipboard(blocks, sourceNote)` | 45 - 59 | Stores `{ format: 'tixidian-blocks', at, sourceNoteId, sourceTitle, blocks, text }` in memory and `localStorage` (other tabs); returns `{ text, storedAcrossTabs }` (false when too large for localStorage). |
-| `GetBlockClipboard()` | 62 - 68 | Newest of memory / localStorage. |
-| `ClipboardTextMatchesBlocks(systemText, payload)` | 73 - 77 | A paste inserts blocks only while the system clipboard still holds their text (otherwise the user copied something else). |
-| `WriteSystemClipboardText(text)` | 80 - 94 | `navigator.clipboard.writeText` with an `execCommand('copy')` fallback. |
+| `BlocksToPlainText(blocks)` | 17 - 42 | Markdown/LaTeX per block type (heading `#`, equation `$$`, code fences, TikZ source, callout `>` quote, image placeholder; containers emit nothing). |
+| `SetBlockClipboard(blocks, sourceNote)` | 48 - 63 | Stores `{ format: 'tixidian-blocks', at, sourceNoteId, sourceTitle, blocks, assets, text }` (`assets` = the blocks' images, so another tab or file can paste them) in memory and `localStorage` (other tabs); returns `{ text, storedAcrossTabs }` (false when too large for localStorage). |
+| `GetBlockClipboard()` | 66 - 76 | Newest of memory / localStorage; loads its `assets` into the asset store (and migrates inline images from older builds). |
+| `ClipboardTextMatchesBlocks(systemText, payload)` | 81 - 85 | A paste inserts blocks only while the system clipboard still holds their text (otherwise the user copied something else). |
+| `WriteSystemClipboardText(text)` | 88 - 102 | `navigator.clipboard.writeText` with an `execCommand('copy')` fallback. |
 
 **08_Block_Operations.js**
 
@@ -804,14 +850,15 @@ Module side effects (once): subscribes the bar; `keydown` (Esc clears, Delete/Ba
 | `../00_State.js` | `NotesState` | `BuildSharedNotePayload()` |
 | `../E_Note_Ops/02_Wiki_Link_Rewrite.js` | `NoteMatchesWikiRef` | `flattenForeignWikiLinks()` |
 | `../Writing_Engine/Tikz_Engine/Tikz_Font_Store.js` | `getTikzSvgFontFamilies` | `CollectNoteTikzFonts()` |
+| `../Writing_Engine/Asset_Store.js` | `CollectBlockAssets` | `BuildSharedNotePayload()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `walkShareStrings(obj, fn)` | 13 - 27 | Visits every string (skips ids, SVGs, data URLs). |
-| `CollectCitedKeys(note)` | 30 - 36 | Citation keys from `\cite{a,b}` (also `\citet`/`\citep`, optional `[...]`). |
-| `CollectNoteTikzFonts(note)` | 41 - 45 | Font families used by the note's saved TikZ SVGs. |
-| `flattenForeignWikiLinks(note)` | 48 - 56 | `[[Other note]]` / `[[Other note^ref]]` → plain "Other note"; links into the shared note stay links. |
-| `BuildSharedNotePayload(noteId)` | 60 - 86 | Full vault object with ONLY that note, all global macros, only its TikZ fonts, only cited bibliography entries, its folder/tags, `vaultMeta.shared = { readOnly: true, noteId, sharedAt }`. |
+| `walkShareStrings(obj, fn)` | 14 - 28 | Visits every string (skips ids, SVGs, data URLs, `asset:` refs). |
+| `CollectCitedKeys(note)` | 31 - 39 | Citation keys from `\cite{a,b}` (also `\citet`/`\citep`, optional `[...]`). |
+| `CollectNoteTikzFonts(note)` | 42 - 46 | Font families used by the note's saved TikZ SVGs. |
+| `flattenForeignWikiLinks(note)` | 49 - 58 | `[[Other note]]` / `[[Other note^ref]]` → plain "Other note"; links into the shared note stay links. |
+| `BuildSharedNotePayload(noteId)` | 61 - 88 | Full vault object with ONLY that note, all global macros, only its TikZ fonts, only its images (`assets`), only cited bibliography entries, its folder/tags, `vaultMeta.shared = { readOnly: true, noteId, sharedAt }`. |
 
 **02_Shared_View.js**
 
@@ -1210,12 +1257,13 @@ Module side effects (shared files only): sets `window.__TIX_SHARED_READONLY__`, 
 | `../../02_Utils.js` | `escapeHtml` | `renderImageBlock()` |
 | `./Figure_Utils.js` | `applyFigureAttributes`, `formatFigureCaptionText`, `appendFigureCaption` | `renderImageBlock()` |
 | `./Block_Actions.js` | `getBlockActionsHTML`, `initBlockActions` | `renderImageBlock()` |
+| `../../Writing_Engine/Asset_Store.js` | `PutAsset`, `ResolveAssetUrl` | `renderImageBlock()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `processAndCompressImage(fileOrDataUrl)` | 16 - 66 | Downsamples and compresses raster images (PNG/JPG) using an off-screen canvas, keeping vector SVGs intact. |
-| `compressRasterDataUrl(dataUrl, maxDim, quality)` | 67 - 107 | Internal helper compressing image on canvas to JPEG data URL with dimensions constrained to maxDim. |
-| `renderImageBlock(block, isEditing = false, onUpdate = null, options = {})` | 108 - 1092 | Renders image figure block supporting file upload, clipboard paste, URL linking, Canva-style draggable edge handle on image preview to resize width percentage in real-time (double-click reset), a Grid Collage mode (`block.grid`: N×M cells; rectangular multi-select merge — click cells or use the Multi-select toggle (Shift/Ctrl+click adds to selection), Merge validates the selection spans a full rectangle via `validateRectangularSelection` and folds it into one cell carrying the first source image + caption + fit, Unmerge restores merged regions cell-by-cell; per-column/row `1:2:1` ratio inputs with a "Reset Ratios" button; cover/contain cell fit; per-cell `fitPercent` image scaling (10-100%, edited via the shared Fit input when cells are selected); per-cell subcaption inputs matching cell width with global figure caption intact below; per-cell upload/paste/drop/clear targeting the first selected cell; persisted via `block.gridOn`), surrounding border toggle, scientific captioning (block caption + grid cell subcaptions support $inline math$), and figure numbering. Grid-only blocks (no single url) render their collage in view mode. All mutations persist through the shared `commitFields()` helper. |
+| `processAndCompressImage(fileOrDataUrl)` | 17 - 66 | Downsamples and compresses raster images (PNG/JPG) using an off-screen canvas, keeping vector SVGs intact. |
+| `compressRasterDataUrl(dataUrl, maxDim, quality)` | 68 - 108 | Images over 1600 px or ~320 KB are redrawn on a canvas (max 1600 px) and encoded as WebP when the browser can (keeps transparency), else JPEG; PNG sources also try lossless PNG; the smallest result wins. |
+| `renderImageBlock(block, isEditing = false, onUpdate = null, options = {})` | 110 - 1093 | New images (single or grid cell) go through `PutAsset`, so the block stores `asset:<hash>`; every `<img>` resolves its ref with `ResolveAssetUrl` (cached object URL). Renders image figure block supporting file upload, clipboard paste, URL linking, Canva-style draggable edge handle on image preview to resize width percentage in real-time (double-click reset), a Grid Collage mode (`block.grid`: N×M cells; rectangular multi-select merge — click cells or use the Multi-select toggle (Shift/Ctrl+click adds to selection), Merge validates the selection spans a full rectangle via `validateRectangularSelection` and folds it into one cell carrying the first source image + caption + fit, Unmerge restores merged regions cell-by-cell; per-column/row `1:2:1` ratio inputs with a "Reset Ratios" button; cover/contain cell fit; per-cell `fitPercent` image scaling (10-100%, edited via the shared Fit input when cells are selected); per-cell subcaption inputs matching cell width with global figure caption intact below; per-cell upload/paste/drop/clear targeting the first selected cell; persisted via `block.gridOn`), surrounding border toggle, scientific captioning (block caption + grid cell subcaptions support $inline math$), and figure numbering. Grid-only blocks (no single url) render their collage in view mode. All mutations persist through the shared `commitFields()` helper. |
 
 **Multi_Column_Block.js** *(reference-model orientation container)*
 

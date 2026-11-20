@@ -193,6 +193,8 @@ const tabHandlerFiles = [
 ];
 
 const tabModuleFiles = [
+  '03_Notes/Writing_Engine/Asset_Store.js',
+  '03_Notes/Writing_Engine/Asset_Migrate.js',
   '03_Notes/00_State.js',
   '03_Notes/02_Utils.js',
   '03_Notes/Writing_Engine/BibTeX_Parser.js',

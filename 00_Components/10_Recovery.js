@@ -64,16 +64,21 @@ export function ReadRecoverySnapshot(baseKey) {
 }
 
 // Best-effort snapshot write. On quota exhaustion (multi-MB vaults with
-// base64 images) it degrades silently — recovery is insurance, not storage.
+// base64 images) it logs once and returns false so the caller can tell the
+// user — recovery is insurance, not storage.
 export function WriteRecoverySnapshot(baseKey, data) {
-  if (typeof sessionStorage === 'undefined' || !data || typeof data !== 'object') return;
+  if (typeof sessionStorage === 'undefined' || !data || typeof data !== 'object') return true;
   try {
     sessionStorage.setItem(GetRecoveryScopeKey(baseKey), JSON.stringify({ data, savedAt: Date.now() }));
+    return true;
   } catch (e) {
+    try { sessionStorage.removeItem(GetRecoveryScopeKey(baseKey)); } catch (e2) { } // never leave a stale copy
+
     if (!localhubRecoveryWarnedQuota) {
       localhubRecoveryWarnedQuota = true;
       console.warn(`[Recovery] Snapshot for "${baseKey}" not stored (quota):`, e);
     }
+    return false;
   }
 }
 

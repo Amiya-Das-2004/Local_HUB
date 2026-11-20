@@ -42,6 +42,10 @@ single-HTML, Overleaf + Obsidian style notes app.
   folder, merge; blocks — multi-select, copy/cut/paste across notes and tabs, duplicate, move to
   note, delete. Clashing tags/labels get `-2`; links are rewritten when blocks move; everything
   can be undone (toast Undo or Ctrl+Z outside text fields).
+- **Issues 1–3 (`Writing_Engine/Asset_Store.js`, `Asset_Migrate.js`):** images stored once by
+  content hash; blocks hold `asset:<hash>`; files carry `assets` with only referenced images
+  (via `NotesState.toJSON`, so every save path writes them); small recovery snapshots with a
+  warning toast when the browser refuses one; old inline images migrate on load; WebP encoding.
 - **B1–B2 (`F_Share/`):** share one note as a read-only HTML; export everything as one HTML.
   The shared view's bottom dock shows only Sidebar + Fonts (no empty separators).
 
@@ -51,7 +55,9 @@ single-HTML, Overleaf + Obsidian style notes app.
   tests used a stand-in). Do one manual round in Chrome: Open data file → Save → close → reopen.
 - Brave needs `brave://flags/#file-system-access-api` turned on for data files.
 - The demo note in the root `Index.html` still mentions the old `v1` engine.
-- `Notes_Issues_And_Fixes.md` Issue 1 (images into an internal asset store) is still open.
+- Next open items in `Notes_Issues_And_Fixes.md`: Issue 4 (save the HTML in place — data-file mode
+  already saves the JSON in place) and Issue 6 (storage meter; `GetAssetStats()` is ready).
+- Note logos (`note.logo.data`) still keep their image inline (small, one per note).
 
 ## How the previous session tested (scripts were in a temporary scratchpad and are gone)
 
@@ -61,6 +67,10 @@ single-HTML, Overleaf + Obsidian style notes app.
 - Fake File System Access API: handles with `getFile`, `createWritable`, `queryPermission`,
   `requestPermission`, backed by the Node process (`ctx.exposeBinding`). The app's handle store
   uses `window.__TIX_HANDLE_STORE_MEMORY__` (a Map) when present.
+- Test ideas that worked: upload a big PNG with `setInputFiles` on `.file-upload-input`; check
+  `#NotesData` has no `data:image`; save via `SaveNotesStandalone()` and reopen the download
+  over `file://`; fill `sessionStorage` to test the recovery warning. In study view scroll images
+  into view before reading `naturalWidth` (they are `loading="lazy"`).
 - Rebuild the standalone: open `Tab_Notes/Notes.html` on the server, run its
   `SaveNotesStandalone()`, then copy ONLY the bundled `<script type="module">` into
   `Standalone/Notes.html` (keeps its head, styles and data; avoids CDN artifacts from the sandbox).
