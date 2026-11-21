@@ -107,7 +107,8 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 │   ├── 06_Block_Selection.js               ← Shift/Ctrl/Cmd+click block selection, left-edge checkboxes, editor context
 │   ├── 07_Block_Clipboard.js               ← Internal block clipboard (memory + localStorage) + plain markdown/LaTeX text
 │   ├── 08_Block_Operations.js              ← Copy · Cut · Duplicate · Delete · Move to note… · Paste (undoable)
-│   └── 09_Block_Selection_Bar.js           ← Floating selection bar + Ctrl+C/X/V, Delete, Esc wiring
+│   ├── 09_Block_Selection_Bar.js           ← Floating selection bar + Ctrl+C/X/V, Delete, Esc wiring
+│   └── 10_Rendered_Copy.js                 ← Copying selected rendered text gives its source ($\Omega$, **bold**, - bullets), across blocks too
 │
 ├── F_Share/                                ← Share / export as standalone HTML
 │   ├── 01_Share_Payload.js                 ← One-note payload: note + global macros + used TikZ fonts + cited bibliography
@@ -242,9 +243,9 @@ Module-level side effects: exports `window.SaveNotesState` / `flushNotesSave` / 
 | `clearAllTabLocalCaches()` | 105 - 142 | Clears every `*_Local_Cache` localStorage key (plus ProffTrack/RD/Papers keys), resets `window.__NOTES_UNSAVED__`/`__HAS_UNSAVED_CHANGES__`/`__NOTES_UNSAVED_COUNT__`, calls `window.ClearNotesLocalCache()`, and resets the unsaved badge via `MarkUnsavedChanges(false, 0)`. |
 | `bundleTabFile(filePath)` | 146 - 170 | Fetches one modular JS file (resolved against the project root via `import.meta.url`), strips `import`/`export` statements, and returns a commented flat code chunk; missing files are skipped with a warning. |
 | `bundleTabGroup(files)` | 172 - 176 | Sequentially concatenates `bundleTabFile` output for a file list. |
-| `sharedComponentFiles` / `tabHandlerFiles` / `tabModuleFiles` | 178 - 289 | The tab bundler's three registration arrays: 8 shared `00_Components` files, the 3 `Tab_Notes` handler adapters, and the full ordered ordered Notes module graph (dependency-ordered: state → utils → engines → block infra → block renderers → text submodules → editor chrome → card view → graph → header → Notes.js). New Notes modules MUST be added here. `Writing_Engine/Asset_Store.js` and `Asset_Migrate.js` come BEFORE `00_State.js` (it uses them at load). |
-| `SaveNotesStandalone(options = {})` | 299 - 449 | Bundles `Notes.html` into a self-contained, standalone single-file HTML document: clones the document, syncs vaults via `syncTabStatesToDOM`, and (when not already standalone) flattens shared components + handlers + tab modules into one inline module that defines `LoadThisPage()` (boots `initNotesApp` + all three tab overrides) and a `handlePageRoute()` hash router, replacing the `#localhub-router` boot script. Inside an already-standalone file it just re-emits itself with fresh vault data. Cleans injected dev/live-reload and TikZ engine tags, empties runtime containers, downloads via blob, clears local caches, and flashes the Save button green for 2s. Before download it strips dev scripts and runtime TikZ elements (`#tikzjax-js`, `#tikzjax-css`, `#tikz-engine-host`, `#tikz-saved-fonts` — saved fonts already live in `#NotesData`). Options: `appOnly` (#NotesData becomes an empty vault marked `vaultMeta.appOnly` + `dataFileName` — the notes live in the data file), `payload` (embed this vault instead of the live one — share/export), `fileName`, `markSaved` (only a full embedded save clears the unsaved state). A full save drops a stale `appOnly` marker. Transient UI (`.df-overlay`, `.df-toast`, `.df-menu`) is stripped from the clone. |
-| `InitTabSaveOverride()` | 453 - 507 | Swaps the shared Save-button binding (which would build the all-in-one app) for the per-tab `SaveNotesStandalone` by cloning the button, and provides a standalone implementation of `window.MarkUnsavedChanges(dirty, count)` driving the `.save-badge` unsaved-changes pill (restoring any count present on mount). The Save click goes to `window.HandleNotesSave` (data-file mode decides: overwrite the data file, ask to reconnect, or fall back to `SaveNotesStandalone`); it also exposes `window.SaveNotesStandalone` and calls `window.MountDataFileUI()` after every header mount. |
+| `sharedComponentFiles` / `tabHandlerFiles` / `tabModuleFiles` | 178 - 290 | The tab bundler's three registration arrays: 8 shared `00_Components` files, the 3 `Tab_Notes` handler adapters, and the full ordered ordered Notes module graph (dependency-ordered: state → utils → engines → block infra → block renderers → text submodules → editor chrome → card view → graph → header → Notes.js). New Notes modules MUST be added here. `Writing_Engine/Asset_Store.js` and `Asset_Migrate.js` come BEFORE `00_State.js` (it uses them at load). |
+| `SaveNotesStandalone(options = {})` | 300 - 450 | Bundles `Notes.html` into a self-contained, standalone single-file HTML document: clones the document, syncs vaults via `syncTabStatesToDOM`, and (when not already standalone) flattens shared components + handlers + tab modules into one inline module that defines `LoadThisPage()` (boots `initNotesApp` + all three tab overrides) and a `handlePageRoute()` hash router, replacing the `#localhub-router` boot script. Inside an already-standalone file it just re-emits itself with fresh vault data. Cleans injected dev/live-reload and TikZ engine tags, empties runtime containers, downloads via blob, clears local caches, and flashes the Save button green for 2s. Before download it strips dev scripts and runtime TikZ elements (`#tikzjax-js`, `#tikzjax-css`, `#tikz-engine-host`, `#tikz-saved-fonts` — saved fonts already live in `#NotesData`). Options: `appOnly` (#NotesData becomes an empty vault marked `vaultMeta.appOnly` + `dataFileName` — the notes live in the data file), `payload` (embed this vault instead of the live one — share/export), `fileName`, `markSaved` (only a full embedded save clears the unsaved state). A full save drops a stale `appOnly` marker. Transient UI (`.df-overlay`, `.df-toast`, `.df-menu`) is stripped from the clone. |
+| `InitTabSaveOverride()` | 454 - 508 | Swaps the shared Save-button binding (which would build the all-in-one app) for the per-tab `SaveNotesStandalone` by cloning the button, and provides a standalone implementation of `window.MarkUnsavedChanges(dirty, count)` driving the `.save-badge` unsaved-changes pill (restoring any count present on mount). The Save click goes to `window.HandleNotesSave` (data-file mode decides: overwrite the data file, ask to reconnect, or fall back to `SaveNotesStandalone`); it also exposes `window.SaveNotesStandalone` and calls `window.MountDataFileUI()` after every header mount. |
 
 **Tab_Notes/Tab_Logo_Handler.js**
 
@@ -279,11 +280,12 @@ Module-level side effects: exports `window.SaveNotesState` / `flushNotesSave` / 
 | `./C_Graph_View/Graph_View.js` | `renderGraphView` | `initNotesApp()` |
 | `../00_Components/03_Scrollbar.js` | `InitScrollbar` | `initNotesApp()` |
 | `./F_Share/02_Shared_View.js` | *(side-effect import)* | Read-only route guard for shared-note HTML files (must load before the first route renders). |
+| `./E_Note_Ops/10_Rendered_Copy.js` | *(side-effect import)* | Document `copy` handler: selected rendered note text is copied as markdown/LaTeX source (reading mode and inactive blocks). |
 | `./B_Editor_View/01_Blocks/Text_Block/Wiki_Link_Popup.js` | *(side-effect import)* | Registers `window.openWikiNotePopup` / `window.wikiLinkTabUrl` and the delegated `a.notes-wikilink` click handler before any note renders. |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `initNotesApp()` | 26 - 430 | Master initialization function and route dispatcher for 03_Notes: injects universal 4px opposite-theme scrollbars, heading scroll-margin/scroll-padding offsets, parses hash parameters (`?id=`, `view=graph`, `view=study`), mounts header and modals, renders responsive drawer with clamp/webkit scrollbars, removes leftover floating text docks when outside an individual note, and renders Editor (`RenderLaTeXEditor` in edit or study mode), Graph, or Card Deck view. Exposes `window.initNotesApp` for standalone compatibility. |
+| `initNotesApp()` | 27 - 431 | Master initialization function and route dispatcher for 03_Notes: injects universal 4px opposite-theme scrollbars, heading scroll-margin/scroll-padding offsets, parses hash parameters (`?id=`, `view=graph`, `view=study`), mounts header and modals, renders responsive drawer with clamp/webkit scrollbars, removes leftover floating text docks when outside an individual note, and renders Editor (`RenderLaTeXEditor` in edit or study mode), Graph, or Card Deck view. Exposes `window.initNotesApp` for standalone compatibility. |
 
 ## Writing_Engine
 **Asset_Store.js** *(pure; bundled before `00_State.js`)*
@@ -843,6 +845,28 @@ Copy, move and merge of whole notes (C1) and of blocks (C2). Every operation rec
 
 Module side effects (once): subscribes the bar; `keydown` (Esc clears, Delete/Backspace deletes the selection outside text fields); `copy`/`cut`; `paste` — inserts blocks when the clipboard text matches, also while editing a block of the note (fields outside the note keep normal paste). Imported for side effects by `04_LaTeX_Editor.js`.
 
+**10_Rendered_Copy.js**
+
+Copying selected RENDERED text (reading mode, or blocks not being edited) gives the source, like Obsidian: Ω → `$\Omega$`, bold → `**bold**`, • → `- `, task → `- [ ] `. Rendered lines keep their source in `data-raw` widgets (`Text_Parser.js`), so each line is rebuilt from them: plain text is cut at the selection edges, widgets are copied whole (also when the selection starts inside a formula), block lines (display math, headings, code, tables, rules) are copied whole. The block being edited keeps its own copy handler (`Text_Block.js`).
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| `../00_State.js` | `NotesState` | `findBlockById()` |
+| `./07_Block_Clipboard.js` | `BlocksToPlainText` | `GetRenderedSelectionSource()` |
+| `./06_Block_Selection.js` | `GetSelectedBlockIds` | `onRenderedCopy()` |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `RENDERED_BODY_SELECTOR` | 16 - 16 | `.obsidian-markdown-body` (rendered text of a text block). |
+| `isRenderedWidget(el, line)` / `isPlaceholderLine(line)` | 18 - 25 | Widget = element with `data-raw` / `.live-widget` below the line; empty-block notices are skipped. |
+| `atomicLineRaw(line)` | 28 - 33 | Source of lines copied whole (display math, code, tables, rules, headings, expanded raw editors), else `null`. |
+| `lineSourceInRange(line, r)` | 36 - 60 | Source of the selected part of one line: `data-indent` when the line start is selected, cut text nodes, whole widgets. |
+| `SerializeRenderedSelection(range, bodyEl)` | 63 - 67 | Selected lines of one rendered text body, joined by newlines. |
+| `findBlockById(id)` | 69 - 75 | Block object in any note. |
+| `isEditableNode(node)` | 77 - 80 | Inside a textarea / input / contenteditable (their own copy wins). |
+| `GetRenderedSelectionSource(sel)` | 86 - 107 | Source for the selection or `null` (normal copy). Across several blocks: text blocks give their selected lines, other blocks their `BlocksToPlainText` source, joined by a blank line. |
+| `onRenderedCopy(e)` | 109 - 116 | Document `copy` listener (installed once at load); skipped when another handler already handled it or whole blocks are selected. |
+
 ## F_Share
 **01_Share_Payload.js**
 
@@ -1163,7 +1187,7 @@ Module side effects (shared files only): sets `window.__TIX_SHARED_READONLY__`, 
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `CreateBlockItem(options)` | 8 - 119 | Wraps an individual block in an interactive wrapper element handling selection focus, hover borders, multi-column block picker states, and rendering content via renderBlockContent. The click-to-edit handler forwards the click point (`clientX/clientY`) through `onSelect` so the editor can restore the caret at the clicked position; clicks on interactive controls (`button, input, select, textarea, label, a[href], .live-checkbox`) are ignored so task checkboxes and links act in place instead of flipping the block into edit mode. Forwards `figureInfo`/`eqInfo` plus the full `figureMap`/`eqMap`/`prefixMap` (for container member rendering) and renders a "⧉ docked" badge when `isDocked` is set. |
+| `CreateBlockItem(options)` | 8 - 122 | Wraps an individual block in an interactive wrapper element handling selection focus, hover borders, multi-column block picker states, and rendering content via renderBlockContent. The click-to-edit handler forwards the click point (`clientX/clientY`) through `onSelect` so the editor can restore the caret at the clicked position; clicks on interactive controls (`button, input, select, textarea, label, a[href], .live-checkbox`) are ignored so task checkboxes and links act in place instead of flipping the block into edit mode; a click that ends a mouse-drag text selection over the block is ignored too, so the selection survives for copying. Forwards `figureInfo`/`eqInfo` plus the full `figureMap`/`eqMap`/`prefixMap` (for container member rendering) and renders a "⧉ docked" badge when `isDocked` is set. |
 
 **Orientation_Modal.js**
 

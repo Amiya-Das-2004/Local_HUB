@@ -19,6 +19,7 @@ import { renderGraphView } from './C_Graph_View/Graph_View.js';
 import './B_Editor_View/01_Blocks/Text_Block/Wiki_Link_Popup.js';
 // Side-effect import: read-only route guard for shared-note HTML files (F_Share/)
 import './F_Share/02_Shared_View.js';
+import './E_Note_Ops/10_Rendered_Copy.js'; // copying rendered text gives its markdown/LaTeX source
 import { InitScrollbar } from '../00_Components/03_Scrollbar.js';
 
 let isGlobalEditMode = true;

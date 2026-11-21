@@ -267,6 +267,7 @@ const tabModuleFiles = [
   '03_Notes/E_Note_Ops/07_Block_Clipboard.js',
   '03_Notes/E_Note_Ops/08_Block_Operations.js',
   '03_Notes/E_Note_Ops/09_Block_Selection_Bar.js',
+  '03_Notes/E_Note_Ops/10_Rendered_Copy.js',
   '03_Notes/A_Notes_Card_View/01_Navbar/01_Card_View_Toggle.js',
   '03_Notes/A_Notes_Card_View/01_Navbar/02_Group_Filter.js',
   '03_Notes/A_Notes_Card_View/01_Navbar/03_Search_Bar.js',
