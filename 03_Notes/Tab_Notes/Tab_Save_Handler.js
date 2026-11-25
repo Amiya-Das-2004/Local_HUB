@@ -287,6 +287,11 @@ const tabModuleFiles = [
   '03_Notes/G_Automation/01_Image_Inbox.js',
   '03_Notes/G_Automation/02_Image_Insert.js',
   '03_Notes/G_Automation/03_TeXidian_API.js',
+  '03_Notes/H_Google_Drive/01_Drive_Config.js',
+  '03_Notes/H_Google_Drive/02_Drive_Auth.js',
+  '03_Notes/H_Google_Drive/03_Drive_Files.js',
+  '03_Notes/H_Google_Drive/04_Drive_Handle.js',
+  '03_Notes/H_Google_Drive/05_Drive_UI.js',
   '03_Notes/D_Data_File/04_Data_File_UI.js',
   '03_Notes/01_Header.js',
   '03_Notes/Notes.js'

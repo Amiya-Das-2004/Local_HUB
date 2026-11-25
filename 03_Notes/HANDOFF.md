@@ -54,6 +54,11 @@ single-HTML, Overleaf + Obsidian style notes app.
   Claude skill depends on `NotesState`, `SaveNotesState`, `initNotesApp`,
   `GetNotesUnsavedChangesCount`, `TeXidianAPI` — never rename them; tell the owner when the API
   changes so the skill can be updated. `window.initNotesApp()` now re-renders through the router.
+- **Google Drive data file (`H_Google_Drive/`, guide `H_Google_Drive/Google_Drive_Setup.md`):** open the
+  notes JSON from Drive, Save writes back; needs `http://localhost` (the storage menu shows the command
+  on a file:// page) and the owner's Google client ID. A Drive file is a handle look-alike plugged
+  into data-file mode (`RegisterDataFileSource`, `AttachDataFileHandle`). Images from Drive: not yet.
+  Tested only against a fake Google (no network to Google in the sandbox).
 - **Columns:** new Columns blocks use `members`/`rows` (+ docked text blocks); legacy `cols` from
   outside edits is converted immediately; numeric heading levels are normalised.
 - **B1–B2 (`F_Share/`):** share one note as a read-only HTML; export everything as one HTML.

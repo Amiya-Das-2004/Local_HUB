@@ -121,6 +121,14 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 │   ├── 03_TeXidian_API.js                  ← window.TeXidianAPI: notes, blocks, columns, images from folder/clipboard
 │   └── TeXidian_API.md                     ← API reference for skill authors (calls, options, setup)
 │
+├── H_Google_Drive/                         ← The data file in Google Drive (open, Save → back to Drive), via http://localhost
+│   ├── 01_Drive_Config.js                  ← Client ID, "is this page http(s)?", the "Host locally" terminal command
+│   ├── 02_Drive_Auth.js                    ← Google sign-in (GIS, scope drive.file), token kept for the tab
+│   ├── 03_Drive_Files.js                   ← Drive REST calls: list, info, read, overwrite, create
+│   ├── 04_Drive_Handle.js                  ← A Drive JSON dressed as a file handle + data-file source (remember/recall)
+│   ├── 05_Drive_UI.js                      ← Storage-menu items + dialogs: host locally, set up, open, save to Drive
+│   └── Google_Drive_Setup.md               ← User guide: host locally, Google client ID, daily use
+│
 └── Writing_Engine/                         ← Core text, math, TikZ, and formatting compilers
     ├── Asset_Store.js                      ← Image store: each image once by content hash, blocks hold asset:<hash>, files get only referenced images
     ├── Asset_Migrate.js                    ← Moves older files' inline data-URL images into the asset store (idempotent, on load)
@@ -251,9 +259,9 @@ Module-level side effects: exports `window.SaveNotesState` / `flushNotesSave` / 
 | `clearAllTabLocalCaches()` | 105 - 142 | Clears every `*_Local_Cache` localStorage key (plus ProffTrack/RD/Papers keys), resets `window.__NOTES_UNSAVED__`/`__HAS_UNSAVED_CHANGES__`/`__NOTES_UNSAVED_COUNT__`, calls `window.ClearNotesLocalCache()`, and resets the unsaved badge via `MarkUnsavedChanges(false, 0)`. |
 | `bundleTabFile(filePath)` | 146 - 170 | Fetches one modular JS file (resolved against the project root via `import.meta.url`), strips `import`/`export` statements, and returns a commented flat code chunk; missing files are skipped with a warning. |
 | `bundleTabGroup(files)` | 172 - 176 | Sequentially concatenates `bundleTabFile` output for a file list. |
-| `sharedComponentFiles` / `tabHandlerFiles` / `tabModuleFiles` | 178 - 293 | The tab bundler's three registration arrays: 8 shared `00_Components` files, the 3 `Tab_Notes` handler adapters, and the full ordered ordered Notes module graph (dependency-ordered: state → utils → engines → block infra → block renderers → text submodules → editor chrome → card view → graph → header → Notes.js). New Notes modules MUST be added here. `Writing_Engine/Asset_Store.js` and `Asset_Migrate.js` come BEFORE `00_State.js` (it uses them at load); `G_Automation/` comes after `D_Data_File/03_Data_File_Mode.js` and before `04_Data_File_UI.js`. |
-| `SaveNotesStandalone(options = {})` | 303 - 453 | Bundles the Notes page into a self-contained, standalone single-file HTML document: clones the document, syncs vaults via `syncTabStatesToDOM`, and (when not already standalone) flattens shared components + handlers + tab modules into one inline module that defines `LoadThisPage()` (boots `initNotesApp` + all three tab overrides) and a `handlePageRoute()` hash router, replacing the `#localhub-router` boot script. Inside an already-standalone file it just re-emits itself with fresh vault data. Cleans injected dev/live-reload and TikZ engine tags, empties runtime containers, downloads via blob, clears local caches, and flashes the Save button green for 2s. Before download it strips dev scripts and runtime TikZ elements (`#tikzjax-js`, `#tikzjax-css`, `#tikz-engine-host`, `#tikz-saved-fonts` — saved fonts already live in `#NotesData`). Options: `appOnly` (#NotesData becomes an empty vault marked `vaultMeta.appOnly` + `dataFileName` — the notes live in the data file), `payload` (embed this vault instead of the live one — share/export), `fileName`, `markSaved` (only a full embedded save clears the unsaved state). A full save drops a stale `appOnly` marker. Transient UI (`.df-overlay`, `.df-toast`, `.df-menu`) is stripped from the clone. |
-| `InitTabSaveOverride()` | 457 - 511 | Swaps the shared Save-button binding (which would build the all-in-one app) for the per-tab `SaveNotesStandalone` by cloning the button, and provides a standalone implementation of `window.MarkUnsavedChanges(dirty, count)` driving the `.save-badge` unsaved-changes pill (restoring any count present on mount). The Save click goes to `window.HandleNotesSave` (data-file mode decides: overwrite the data file, ask to reconnect, or fall back to `SaveNotesStandalone`); it also exposes `window.SaveNotesStandalone` and calls `window.MountDataFileUI()` after every header mount. |
+| `sharedComponentFiles` / `tabHandlerFiles` / `tabModuleFiles` | 178 - 298 | The tab bundler's three registration arrays: 8 shared `00_Components` files, the 3 `Tab_Notes` handler adapters, and the full ordered ordered Notes module graph (dependency-ordered: state → utils → engines → block infra → block renderers → text submodules → editor chrome → card view → graph → header → Notes.js). New Notes modules MUST be added here. `Writing_Engine/Asset_Store.js` and `Asset_Migrate.js` come BEFORE `00_State.js` (it uses them at load); `G_Automation/` and `H_Google_Drive/` come after `D_Data_File/03_Data_File_Mode.js` and before `04_Data_File_UI.js`. |
+| `SaveNotesStandalone(options = {})` | 308 - 458 | Bundles the Notes page into a self-contained, standalone single-file HTML document: clones the document, syncs vaults via `syncTabStatesToDOM`, and (when not already standalone) flattens shared components + handlers + tab modules into one inline module that defines `LoadThisPage()` (boots `initNotesApp` + all three tab overrides) and a `handlePageRoute()` hash router, replacing the `#localhub-router` boot script. Inside an already-standalone file it just re-emits itself with fresh vault data. Cleans injected dev/live-reload and TikZ engine tags, empties runtime containers, downloads via blob, clears local caches, and flashes the Save button green for 2s. Before download it strips dev scripts and runtime TikZ elements (`#tikzjax-js`, `#tikzjax-css`, `#tikz-engine-host`, `#tikz-saved-fonts` — saved fonts already live in `#NotesData`). Options: `appOnly` (#NotesData becomes an empty vault marked `vaultMeta.appOnly` + `dataFileName` — the notes live in the data file), `payload` (embed this vault instead of the live one — share/export), `fileName`, `markSaved` (only a full embedded save clears the unsaved state). A full save drops a stale `appOnly` marker. Transient UI (`.df-overlay`, `.df-toast`, `.df-menu`) is stripped from the clone. |
+| `InitTabSaveOverride()` | 462 - 516 | Swaps the shared Save-button binding (which would build the all-in-one app) for the per-tab `SaveNotesStandalone` by cloning the button, and provides a standalone implementation of `window.MarkUnsavedChanges(dirty, count)` driving the `.save-badge` unsaved-changes pill (restoring any count present on mount). The Save click goes to `window.HandleNotesSave` (data-file mode decides: overwrite the data file, ask to reconnect, or fall back to `SaveNotesStandalone`); it also exposes `window.SaveNotesStandalone` and calls `window.MountDataFileUI()` after every header mount. |
 
 **Tab_Notes/Tab_Logo_Handler.js**
 
@@ -643,6 +651,8 @@ Two storage modes, one data format. **Data-file mode** (Chromium with the File S
 
 **03_Data_File_Mode.js**
 
+The data file can also be a Google Drive JSON: any object that behaves like a `FileSystemFileHandle` (`name`, `getFile`, `createWritable`, `queryPermission`, `requestPermission`) plus `remember()`, recalled at boot by a registered source. Save, the changed-elsewhere check, backups and reconnect are shared.
+
 | Import Location | Functions Imported | used in Functions |
 | :--- | :--- | :--- |
 | `../00_State.js` | `ApplyNotesPayload`, `HasUnsavedNotesChanges` | `loadDataFileFromHandle()`, `hasUnsavedNotes()` |
@@ -653,21 +663,23 @@ Two storage modes, one data format. **Data-file mode** (Chromium with the File S
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `dataFileState` | 25 - 32 | `{ status, handle, name, lastModified, backupDir, lastError }`. Status: `'unsupported'` (no API → embedded only), `'embedded'` (notes in this HTML), `'needs-permission'` (remembered file, one click to reopen), `'connected'` (Save overwrites the file). |
-| `IsDataFileSupported()` | 36 - 40 | `showOpenFilePicker` + `showSaveFilePicker` exist (Chrome/Edge; Brave only with `brave://flags/#file-system-access-api`). Works for pages opened via `file://`. |
-| `GetDataFileState()` / `OnDataFileStateChange(fn)` | 42 - 49 | Snapshot of the state; subscribe to changes (UI re-renders the chip). |
-| `rerenderAfterLoad()` | 62 - 67 | After loading a file: apply its saved TikZ fonts, bust the KaTeX macro cache, reset the badge and re-run the current route. |
-| `ensureDataFilePermission(handle, { request })` | 69 - 75 | `queryPermission` → `'granted'`, else (when allowed) `requestPermission` (needs a user gesture). |
-| `loadDataFileFromHandle(handle)` | 78 - 87 | Reads, validates (`ParseNotesDataText`), `ApplyNotesPayload`, records `lastModified`, remembers the handle, re-renders. |
-| `InitDataFileMode()` | 94 - 125 | Once per Notes-page load: recall the handle → permission granted ⇒ load silently; otherwise `'needs-permission'`. An "Export everything" HTML (`vaultMeta.exportedAt`, with notes) stays `'embedded'`: it shows the snapshot and never swaps in the live file. |
-| `ReconnectDataFile()` | 128 - 133 | One-click re-grant + load of the remembered file. |
-| `OpenDataFile()` | 136 - 142 | Picker → (confirm if unsaved changes) → load. |
-| `CreateDataFile({ withCurrentNotes, suggestedName })` | 148 - 162 | Save picker → writes the current notes (or an empty vault) → load it. |
-| `ChooseBackupFolder()` | 165 - 170 | Optional folder (directory handle) where `<name>.backup.json` is written before every save. |
-| `writeBackupOfCurrentFile(handle)` | 172 - 189 | Copies the file's current contents to the IndexedDB backups and, if set, the backup folder. |
-| `SaveToDataFile()` | 192 - 216 | Permission → confirm when the file changed elsewhere since it was read (`lastModified`) → backup → `createWritable` write (Chrome swaps a temp file on close) → clear unsaved state. |
-| `DisconnectDataFile()` | 219 - 222 | Forgets the file in this browser; Save downloads the HTML again. |
-| `SaveNotesSmart()` | 229 - 238 | Save entry: `'data-file'` (written), `'cancelled'`, `'needs-reconnect'` (never writes the notes shown over a file it did not load), or `'embedded'` (caller downloads the HTML). |
+| `dataFileState` | 31 - 38 | `{ status, handle, name, lastModified, backupDir, lastError }`. Status: `'unsupported'` (no API → embedded only), `'embedded'` (notes in this HTML), `'needs-permission'` (remembered file, one click to reopen), `'connected'` (Save overwrites the file). |
+| `RegisterDataFileSource(source)` / `forgetOtherSources(keep)` | 44 - 52 | Other storages (Google Drive, `H_Google_Drive/04_Drive_Handle.js`) register `{ recall, forget }`; only one data file is remembered at a time. |
+| `IsDataFileSupported()` | 54 - 58 | `showOpenFilePicker` + `showSaveFilePicker` exist (Chrome/Edge; Brave only with `brave://flags/#file-system-access-api`). Works for pages opened via `file://`. |
+| `GetDataFileState()` / `OnDataFileStateChange(fn)` | 60 - 67 | Snapshot of the state; subscribe to changes (UI re-renders the chip). |
+| `rerenderAfterLoad()` | 80 - 85 | After loading a file: apply its saved TikZ fonts, bust the KaTeX macro cache, reset the badge and re-run the current route. |
+| `ensureDataFilePermission(handle, { request })` | 87 - 93 | `queryPermission` → `'granted'`, else (when allowed) `requestPermission` (needs a user gesture). |
+| `loadDataFileFromHandle(handle)` | 96 - 113 | Reads, validates (`ParseNotesDataText`), `ApplyNotesPayload`, records `lastModified`, remembers the handle, re-renders. | A handle with its own `remember()` (Drive) is remembered by itself; the local IndexedDB handle and other sources are forgotten.
+| `InitDataFileMode()` | 120 - 158 | Once per Notes-page load: recall the handle → permission granted ⇒ load silently; otherwise `'needs-permission'`. An "Export everything" HTML (`vaultMeta.exportedAt`, with notes) stays `'embedded'`: it shows the snapshot and never swaps in the live file. | A registered source's remembered file (Drive) comes first and works even without the File System Access API.
+| `ReconnectDataFile()` | 161 - 166 | One-click re-grant + load of the remembered file. |
+| `AttachDataFileHandle(handle)` | 172 - 177 | Opens a handle handed in by another module (Google Drive file): permission → load → remember. |
+| `OpenDataFile()` | 180 - 186 | Picker → (confirm if unsaved changes) → load. |
+| `CreateDataFile({ withCurrentNotes, suggestedName })` | 192 - 206 | Save picker → writes the current notes (or an empty vault) → load it. |
+| `ChooseBackupFolder()` | 209 - 214 | Optional folder (directory handle) where `<name>.backup.json` is written before every save. |
+| `writeBackupOfCurrentFile(handle)` | 216 - 233 | Copies the file's current contents to the IndexedDB backups and, if set, the backup folder. |
+| `SaveToDataFile()` | 236 - 260 | Permission → confirm when the file changed elsewhere since it was read (`lastModified`) → backup → `createWritable` write (Chrome swaps a temp file on close) → clear unsaved state. |
+| `DisconnectDataFile()` | 263 - 267 | Forgets the file in this browser; Save downloads the HTML again. |
+| `SaveNotesSmart()` | 274 - 283 | Save entry: `'data-file'` (written), `'cancelled'`, `'needs-reconnect'` (never writes the notes shown over a file it did not load), or `'embedded'` (caller downloads the HTML). |
 
 Module side effect: registers `window.InitDataFileMode`, `window.SaveNotesSmart`, `window.GetDataFileState`.
 
@@ -679,30 +691,32 @@ Module side effect: registers `window.InitDataFileMode`, `window.SaveNotesSmart`
 | `./01_Data_Payload.js` | `HasEmbeddedNotes`, `IsAppOnlyHtml` | `buildDataFileMenuItems()`, `maybeOfferMoveToDataFile()`, `MountDataFileUI()` |
 | `../F_Share/03_Share_Export.js` | `ExportEverythingAsHtml` | `RunExportEverything()` |
 | `../G_Automation/01_Image_Inbox.js` | `GetImageInboxState`, `GetImageInboxMenuItems` | `openDataFileMenu()`, `buildDataFileMenuItems()` |
+| `../H_Google_Drive/05_Drive_UI.js` | `GetDriveMenuItems` | `buildDataFileMenuItems()` |
 | `./03_Data_File_Mode.js` | `GetDataFileState`, `OnDataFileStateChange`, `InitDataFileMode`, `ReconnectDataFile`, `OpenDataFile`, `CreateDataFile`, `ChooseBackupFolder`, `DisconnectDataFile`, `SaveNotesSmart` | menu actions, `HandleNotesSave()`, `MountDataFileUI()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `GetDataFileSlotHTML()` | 62 - 64 | `<span id="notes-data-file-slot">` placed in the header before Save. |
-| `ShowDataFileToast(message, kind, ms)` | 66 - 73 | Bottom toast (`ok` / `error` / `info`). |
-| `runDataFileAction(fn, okMessage)` | 81 - 91 | Runs a menu action with success/error toasts (closing a picker is silent). |
-| `buildDataFileMenuItems(state, inboxState)` | 101 - 135 | Menu per status (+ the image-folder items of `GetImageInboxMenuItems` after a divider) — unsupported (no File System Access API, e.g. Brave without the flag, Firefox, Safari): Save this HTML, Export everything, Copy the Brave setting address; connected: Save, Download app-only HTML, Open another, New empty, Export everything as one HTML, backup folder, Stop using; needs-permission: Reconnect, Open another, Stop using; embedded: Move my notes to a data file… (when the HTML carries notes), Open data file, New empty data file, Export everything as one HTML. |
-| `copyBraveFlagAddress()` | 138 - 143 | Copies `brave://flags/#file-system-access-api` (pages cannot open `brave://` links) and toasts how to use it. |
-| `dataFileMenuHead(state)` | 145 - 150 | One-sentence explanation of where the notes live (incl. the Brave flag hint when unsupported). |
-| `openDataFileMenu(chip)` / `closeDataFileMenu()` | 93 - 176 | Dropdown under the chip (async: reads the image-folder state first); closes on outside click. |
-| `renderDataFileChip(state)` | 178 - 190 | Chip: green dot + file name (connected), amber "Reconnect <name>", or grey "In this HTML". |
-| `ShowDataFileReconnect()` | 193 - 226 | Modal: "Open <name>" (one click), "Open a different file…", "Keep notes in this HTML instead" (declines: `DisconnectDataFile()` → embedded mode, Save downloads the HTML; the file is not asked for again), "Not now"; shows errors inline. |
-| `flashSaveButton(title)` | 228 - 241 | Green tick on the Save button after a data-file save. |
-| `RunExportEverything()` | 244 - 251 | Menu action: `ExportEverythingAsHtml()` with a toast. |
-| `DownloadAppOnlyHtml()` | 254 - 258 | Downloads `TeXidian.html` with NO notes inside (`SaveNotesStandalone({ appOnly: true, dataFileName, markSaved: false })`); the notes stay in the data file. |
-| `showDataFileDialog({ title, html, actions })` | 260 - 281 | Generic modal with primary/secondary actions; an action returning `false` keeps it open; errors show inline. |
-| `MoveNotesToDataFileFlow()` | 284 - 297 | Migration: writes all notes shown now (including unsaved edits) to a new data file via `CreateDataFile({ withCurrentNotes: true })`, connects to it, then offers "Download app-only HTML". |
-| `showAppOnlyWelcome(state)` | 300 - 319 | App-only HTML opened with no remembered data file: "Open your notes" (Open data file… / New empty data file… / Start without a data file); in browsers without the API it explains where the notes are and to use an "Export everything" copy. |
-| `maybeOfferMoveToDataFile(state)` | 323 - 335 | One-time, dismissible bar for HTMLs that still carry their notes (embedded mode, API available): "Move my notes to a data file" / "Not now" (remembered per HTML path in `localStorage`). |
-| `HandleNotesSave()` | 339 - 358 | Single save entry for the Save button and Ctrl+S: `SaveNotesSmart()` → toast / reconnect dialog / `window.SaveNotesStandalone()` fallback. |
-| `MountDataFileUI()` | 362 - 383 | Notes page only: renders the chip after each header mount; the first call subscribes to state, installs Ctrl+S, runs `InitDataFileMode()` and then shows the app-only welcome or the move offer. Skipped entirely in shared read-only files. |
+| `isDriveFile(state)` | 18 - 18 | The open data file is a Google Drive file (chip "☁ name", Drive wording, "Stop using this Google Drive file"). |
+| `GetDataFileSlotHTML()` | 66 - 68 | `<span id="notes-data-file-slot">` placed in the header before Save. |
+| `ShowDataFileToast(message, kind, ms)` | 70 - 77 | Bottom toast (`ok` / `error` / `info`). |
+| `runDataFileAction(fn, okMessage)` | 85 - 95 | Runs a menu action with success/error toasts (closing a picker is silent). |
+| `buildDataFileMenuItems(state, inboxState)` | 105 - 147 | Menu per status (+ Google Drive items of `GetDriveMenuItems`, then image-folder items of `GetImageInboxMenuItems`, each after a divider; items that need a local file picker are hidden when the browser has none) — unsupported (no File System Access API, e.g. Brave without the flag, Firefox, Safari): Save this HTML, Export everything, Copy the Brave setting address; connected: Save, Download app-only HTML, Open another, New empty, Export everything as one HTML, backup folder, Stop using; needs-permission: Reconnect, Open another, Stop using; embedded: Move my notes to a data file… (when the HTML carries notes), Open data file, New empty data file, Export everything as one HTML. |
+| `copyBraveFlagAddress()` | 150 - 155 | Copies `brave://flags/#file-system-access-api` (pages cannot open `brave://` links) and toasts how to use it. |
+| `dataFileMenuHead(state)` | 157 - 163 | One-sentence explanation of where the notes live (incl. the Brave flag hint when unsupported). |
+| `openDataFileMenu(chip)` / `closeDataFileMenu()` | 97 - 189 | Dropdown under the chip (async: reads the image-folder state first); closes on outside click. |
+| `renderDataFileChip(state)` | 191 - 203 | Chip: green dot + file name (connected), amber "Reconnect <name>", or grey "In this HTML". |
+| `ShowDataFileReconnect()` | 206 - 239 | Modal: "Open <name>" (one click), "Open a different file…", "Keep notes in this HTML instead" (declines: `DisconnectDataFile()` → embedded mode, Save downloads the HTML; the file is not asked for again), "Not now"; shows errors inline. |
+| `flashSaveButton(title)` | 241 - 254 | Green tick on the Save button after a data-file save. |
+| `RunExportEverything()` | 257 - 264 | Menu action: `ExportEverythingAsHtml()` with a toast. |
+| `DownloadAppOnlyHtml()` | 267 - 271 | Downloads `TeXidian.html` with NO notes inside (`SaveNotesStandalone({ appOnly: true, dataFileName, markSaved: false })`); the notes stay in the data file. |
+| `showDataFileDialog({ title, html, actions })` | 273 - 294 | Generic modal with primary/secondary actions; an action returning `false` keeps it open; errors show inline. |
+| `MoveNotesToDataFileFlow()` | 297 - 310 | Migration: writes all notes shown now (including unsaved edits) to a new data file via `CreateDataFile({ withCurrentNotes: true })`, connects to it, then offers "Download app-only HTML". |
+| `showAppOnlyWelcome(state)` | 313 - 332 | App-only HTML opened with no remembered data file: "Open your notes" (Open data file… / New empty data file… / Start without a data file); in browsers without the API it explains where the notes are and to use an "Export everything" copy. |
+| `maybeOfferMoveToDataFile(state)` | 336 - 348 | One-time, dismissible bar for HTMLs that still carry their notes (embedded mode, API available): "Move my notes to a data file" / "Not now" (remembered per HTML path in `localStorage`). |
+| `HandleNotesSave()` | 352 - 371 | Single save entry for the Save button and Ctrl+S: `SaveNotesSmart()` → toast / reconnect dialog / `window.SaveNotesStandalone()` fallback. |
+| `MountDataFileUI()` | 375 - 396 | Notes page only: renders the chip after each header mount; the first call subscribes to state, installs Ctrl+S, runs `InitDataFileMode()` and then shows the app-only welcome or the move offer. Skipped entirely in shared read-only files. |
 
-Module side effects: injects `#data-file-ui-styles`; registers `window.HandleNotesSave`, `window.MountDataFileUI`.
+Module side effects: injects `#data-file-ui-styles`; registers `window.HandleNotesSave`, `window.MountDataFileUI`. Also sets `window.ShowDataFileToast` (used by `H_Google_Drive/05_Drive_UI.js`).
 
 ## E_Note_Ops
 Copy, move and merge of whole notes (C1) and of blocks (C2). Every operation records a structural undo snapshot first (`Writing_Engine/Structure_History.js`). Copies get fresh block ids; moves keep ids so `[[Note^blockId]]` links only need their note retargeted.
@@ -988,6 +1002,96 @@ The "image folder": one folder the user connects once from the storage-chip menu
 | `TeXidianAPI` | 36 - 64 | Frozen object: `version`, `listNotes`, `getNote`, `blockTypes`, `createNewBlock`, `createBlockWithMembers`, `insertBlock(note, blockOrArray, at, { render })`, `addBlock(note, type, options, at)`, `rerender`, `imageInboxStatus`, `listInboxImages`, `addImageFromInbox(note, fileName, opts)`, `addImageFromClipboard(note, opts)`, `addImageFromDataUrl(note, dataUrl, opts)`. |
 
 Module side effect: `window.TeXidianAPI = TeXidianAPI` (imported for side effects by `Notes.js`).
+
+## H_Google_Drive
+
+The data file can live in Google Drive: open it from Drive, edit, Save / Ctrl+S write back to Drive (images stay in the notes file / local image folder for now). Google only allows sign-in from `http://localhost` or https, so on a `file://` page the storage menu offers **Use Google Drive (host locally)…** with the terminal command. User guide: **`H_Google_Drive/Google_Drive_Setup.md`** (host locally, one-time Google client ID, daily use). Registered in both bundlers after `D_Data_File/03_Data_File_Mode.js`, before `04_Data_File_UI.js`.
+
+**01_Drive_Config.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| `../00_State.js` | `NotesState` | `GetDriveClientId()`, `SetDriveClientId()` |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `DRIVE_CLIENT_ID_KEY` / `DRIVE_LOCAL_PORT` / `DRIVE_LOCAL_SPARE_PORTS` | 15 - 17 | localStorage key; port 8000; spares 8001, 8080. |
+| `IsDriveCapableOrigin()` | 20 - 22 | http/https page (Google sign-in impossible on `file://`). |
+| `GetDriveClientId()` / `SetDriveClientId(id)` | 24 - 42 | Client ID from localStorage (per address), else `vaultMeta.googleClientId`; setting validates the `…apps.googleusercontent.com` shape and also writes `vaultMeta.googleClientId`. |
+| `detectOs()` / `pageFileLocation()` | 44 - 59 | Windows / macOS / Linux; the page's folder and file name from its own `file://` path (`/C:/…` → `C:\…`). |
+| `GetHostLocallyCommands(port)` | 65 - 76 | `{ os, dir, file, url, command, plainCommand, spare }` — e.g. `cd "<folder>" && python3 -m http.server 8000` (Windows: `cd /d "<folder>" && py -m http.server 8000`) and `http://localhost:8000/<file>`. |
+
+**02_Drive_Auth.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| `./01_Drive_Config.js` | `GetDriveClientId`, `IsDriveCapableOrigin` | `readStoredToken()`, `GetDriveToken()` |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `DRIVE_SCOPE` / `DRIVE_GIS_SRC` / `DRIVE_TOKEN_KEY` | 13 - 15 | `drive.file` (only files TeXidian created/opened); GIS script URL; sessionStorage key. |
+| `readStoredToken()` / `GetCachedDriveToken()` / `ForgetDriveToken()` | 22 - 38 | Token of this tab (valid > 1 min, same client ID) — no popup. |
+| `LoadGoogleSignIn()` | 41 - 54 | Loads `accounts.google.com/gsi/client` once (preloaded when the menu opens, so a click can open the popup at once). |
+| `GetDriveToken({ interactive })` | 60 - 88 | Cached token, or (interactive, from a click) the Google popup via `initTokenClient` (callbacks routed to the waiting request); readable errors (not localhost, no client ID, popup closed/blocked). |
+
+**03_Drive_Files.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| `./02_Drive_Auth.js` | `GetDriveToken`, `ForgetDriveToken` | `driveFetch()` |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `driveFetch(url, init, { interactive })` | 17 - 32 | fetch with `Authorization: Bearer`; a 401 drops the token and retries once; 404 / API errors → readable messages. |
+| `driveFileInfo(f)` | 34 - 36 | `{ id, name, modifiedTime, lastModified, size, trashed }`. |
+| `ListDriveJsonFiles()` | 39 - 43 | JSON files TeXidian can see, newest first. |
+| `GetDriveFileInfo(id)` / `ReadDriveFileText(id)` | 45 - 53 | Metadata / content (`alt=media`). |
+| `UpdateDriveFileText(id, text)` | 56 - 63 | Overwrites the content (`PATCH upload … uploadType=media`). |
+| `CreateDriveJsonFile(name, text, folderId)` | 66 - 77 | Multipart create in My Drive (or a folder). |
+
+**04_Drive_Handle.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| `../D_Data_File/03_Data_File_Mode.js` | `RegisterDataFileSource` | module load |
+| `./02_Drive_Auth.js` | `GetCachedDriveToken`, `GetDriveToken` | `queryPermission`, `requestPermission` |
+| `./01_Drive_Config.js` | `IsDriveCapableOrigin`, `GetDriveClientId` | `DriveDataFileSource.recall()` |
+| `./03_Drive_Files.js` | `GetDriveFileInfo`, `ReadDriveFileText`, `UpdateDriveFileText` | `MakeDriveFileHandle()` |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `DriveDataFileSource` | 19 - 27 | Data-file source: `recall()` rebuilds the remembered Drive file (localStorage `tixidian-drive-data-file`, http(s) + client ID only); `forget()`. |
+| `MakeDriveFileHandle({ id, name })` | 30 - 70 | File-handle look-alike: `getFile()` (fresh `modifiedTime`, lazy `text()` cached per version — saves never re-download), `createWritable()` (uploads on `close`), `queryPermission()` (`'granted'` while the tab has a token), `requestPermission()` (Google popup), `remember()`; `storage: 'google-drive'`. |
+| `IsDriveHandle(handle)` | 72 - 74 | The data file is a Drive file. |
+
+Module side effect: `RegisterDataFileSource(DriveDataFileSource)`.
+
+**05_Drive_UI.js**
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| `../02_Utils.js` | `escapeHtml` | dialogs |
+| `../00_State.js` | `HasUnsavedNotesChanges` | `confirmDiscardUnsaved()` |
+| `../D_Data_File/01_Data_Payload.js` | `BuildNotesPayload`, `SerializeNotesPayload` | `ShowDriveCreateDialog()` |
+| `../D_Data_File/03_Data_File_Mode.js` | `AttachDataFileHandle`, `GetDataFileState` | `ShowDriveOpenDialog()`, `ShowDriveCreateDialog()` |
+| `./01_Drive_Config.js` | `IsDriveCapableOrigin`, `GetDriveClientId`, `SetDriveClientId`, `GetHostLocallyCommands` | dialogs, `GetDriveMenuItems()` |
+| `./02_Drive_Auth.js` | `LoadGoogleSignIn`, `GetDriveToken` | dialogs, `GetDriveMenuItems()` |
+| `./03_Drive_Files.js` | `ListDriveJsonFiles`, `CreateDriveJsonFile` | `ShowDriveOpenDialog()`, `ShowDriveCreateDialog()` |
+| `./04_Drive_Handle.js` | `MakeDriveFileHandle`, `IsDriveHandle` | `ShowDriveOpenDialog()`, `ShowDriveCreateDialog()`, `GetDriveMenuItems()` |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `driveToast(message, kind, ms)` | 41 - 43 | Through `window.ShowDataFileToast`. |
+| `openDriveDialog(title, bodyHtml, wire)` | 46 - 58 | Modal in the data-file dialog style (`.df-overlay`), with an error line. |
+| `driveCopyText(text, btn)` / `cmdRow(text, label)` | 60 - 70 | Copy to clipboard (button shows "Copied"); a command line with a Copy button. |
+| `ShowHostLocallyDialog()` | 73 - 94 | `file://` page: OS-detected command (with this folder) + the localhost link, port-busy alternative, how to stop. |
+| `ShowDriveSetupDialog()` | 97 - 128 | One-time Google Cloud steps, this page's origin to authorize (copyable), client ID box (validated). |
+| `confirmDiscardUnsaved(name)` | 130 - 133 | Confirm before replacing unsaved notes. |
+| `ShowDriveOpenDialog()` | 136 - 158 | Sign in → list TeXidian's JSON files in Drive → the chosen one becomes the data file (`AttachDataFileHandle`). |
+| `ShowDriveCreateDialog()` | 161 - 186 | Name → creates the JSON in My Drive with the notes shown now (incl. unsaved) → switches to it. |
+| `GetDriveMenuItems(state)` | 189 - 200 | `file://`: "Use Google Drive (host locally)…"; no client ID: "Set up Google Drive…"; else "Open notes from Google Drive…", "Save my notes to Google Drive (new file)…", "Google Drive client ID…" (preloads the sign-in script). |
+
+Module side effect: injects `#drive-ui-styles`.
 
 ## A_Notes_Card_View
 **01_Navbar.js**

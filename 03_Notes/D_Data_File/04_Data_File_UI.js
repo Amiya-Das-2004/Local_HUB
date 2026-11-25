@@ -12,6 +12,10 @@ import {
   CreateDataFile, ChooseBackupFolder, DisconnectDataFile, SaveNotesSmart
 } from './03_Data_File_Mode.js';
 import { GetImageInboxState, GetImageInboxMenuItems } from '../G_Automation/01_Image_Inbox.js';
+import { GetDriveMenuItems } from '../H_Google_Drive/05_Drive_UI.js';
+
+// A data file kept in Google Drive (H_Google_Drive/04_Drive_Handle.js) rather than on this computer.
+const isDriveFile = (state) => Boolean(state && state.handle && state.handle.storage === 'google-drive');
 
 const DATA_FILE_SLOT_ID = 'notes-data-file-slot';
 
@@ -103,15 +107,17 @@ function buildDataFileMenuItems(state, inboxState = null) {
   if (state.status === 'connected') {
     items.push({ label: `Save to ${state.name}  (Ctrl+S)`, run: () => HandleNotesSave() });
     items.push({ label: 'Download app-only HTML (no notes inside)', run: () => DownloadAppOnlyHtml() });
-    items.push({ label: 'Open another data file…', run: () => runDataFileAction(OpenDataFile, () => `Opened ${GetDataFileState().name}`) });
-    items.push({ label: 'New empty data file…', run: () => runDataFileAction(() => CreateDataFile({ withCurrentNotes: false }), () => `Created ${GetDataFileState().name}`) });
+    if (state.supported) {
+      items.push({ label: isDriveFile(state) ? 'Open a data file on this computer…' : 'Open another data file…', run: () => runDataFileAction(OpenDataFile, () => `Opened ${GetDataFileState().name}`) });
+      items.push({ label: 'New empty data file…', run: () => runDataFileAction(() => CreateDataFile({ withCurrentNotes: false }), () => `Created ${GetDataFileState().name}`) });
+    }
     items.push({ label: 'Export everything as one HTML', run: () => RunExportEverything() });
     items.push('sep');
-    items.push({ label: state.backupDir ? `Backup folder: ${state.backupDir.name} (change…)` : 'Choose backup folder…', run: () => runDataFileAction(ChooseBackupFolder, 'Backups will also be written to that folder') });
-    items.push({ label: 'Stop using this data file', run: () => runDataFileAction(DisconnectDataFile, 'Data file disconnected — Save downloads the HTML again') });
+    if (state.supported) items.push({ label: state.backupDir ? `Backup folder: ${state.backupDir.name} (change…)` : 'Choose backup folder…', run: () => runDataFileAction(ChooseBackupFolder, 'Backups will also be written to that folder') });
+    items.push({ label: isDriveFile(state) ? 'Stop using this Google Drive file' : 'Stop using this data file', run: () => runDataFileAction(DisconnectDataFile, 'Data file disconnected — Save downloads the HTML again') });
   } else if (state.status === 'needs-permission') {
     items.push({ label: `Reconnect ${state.name}`, run: () => ShowDataFileReconnect() });
-    items.push({ label: 'Open another data file…', run: () => runDataFileAction(OpenDataFile, () => `Opened ${GetDataFileState().name}`) });
+    if (state.supported) items.push({ label: 'Open another data file…', run: () => runDataFileAction(OpenDataFile, () => `Opened ${GetDataFileState().name}`) });
     items.push({ label: 'Stop using this data file', run: () => runDataFileAction(DisconnectDataFile, 'Data file disconnected') });
   } else if (state.status === 'embedded') {
     if (HasEmbeddedNotes()) items.push({ label: 'Move my notes to a data file…', run: () => MoveNotesToDataFileFlow() });
@@ -124,6 +130,12 @@ function buildDataFileMenuItems(state, inboxState = null) {
     items.push({ label: 'Export everything as one HTML', run: () => RunExportEverything() });
     items.push('sep');
     items.push({ label: 'Copy the Brave setting address', run: () => copyBraveFlagAddress() });
+  }
+  // Google Drive data file (H_Google_Drive/05_Drive_UI.js)
+  const driveItems = GetDriveMenuItems(state);
+  if (driveItems.length) {
+    items.push('sep');
+    driveItems.forEach(it => items.push({ label: it.label, run: () => runDataFileAction(it.run, null) }));
   }
   // Image folder for window.TeXidianAPI.addImageFromInbox (G_Automation/01_Image_Inbox.js)
   const inboxItems = GetImageInboxMenuItems(inboxState);
@@ -143,6 +155,7 @@ async function copyBraveFlagAddress() {
 }
 
 function dataFileMenuHead(state) {
+  if (state.status === 'connected' && isDriveFile(state)) return `Notes are saved to <strong>${escapeHtml(state.name)}</strong> in <strong>Google Drive</strong>. Save writes back to it; the previous version is kept as a backup.`;
   if (state.status === 'connected') return `Notes are saved to <strong>${escapeHtml(state.name)}</strong>. Save overwrites that file; the previous version is kept as a backup.`;
   if (state.status === 'needs-permission') return `Your notes are in <strong>${escapeHtml(state.name)}</strong>. The browser needs one click to open it again.`;
   if (state.status === 'unsupported') return 'Notes are stored <strong>inside this HTML</strong>. Data files need Chrome or Edge (in Brave: enable <code>brave://flags/#file-system-access-api</code>).';
@@ -180,7 +193,7 @@ function renderDataFileChip(state = GetDataFileState()) {
   if (!slot) return;
   let label = 'In this HTML';
   let cls = '';
-  if (state.status === 'connected') { label = state.name; cls = 'is-connected'; }
+  if (state.status === 'connected') { label = (isDriveFile(state) ? '☁ ' : '') + state.name; cls = 'is-connected'; }
   else if (state.status === 'needs-permission') { label = `Reconnect ${state.name}`; cls = 'is-attention'; }
   slot.innerHTML = `<button type="button" class="df-chip ${cls}" title="Where your notes are saved"><span class="df-dot"></span><span class="df-name">${escapeHtml(label)}</span></button>`;
   slot.querySelector('.df-chip').addEventListener('click', (e) => {
@@ -198,10 +211,10 @@ export function ShowDataFileReconnect() {
   overlay.innerHTML = `
     <div class="df-dialog" role="dialog" aria-modal="true" aria-label="Open your notes file">
       <h3>Open your notes</h3>
-      <p>Your notes are saved in <strong>${escapeHtml(state.name || 'your data file')}</strong>. Your browser needs one click to let this page read and save it again.</p>
+      <p>Your notes are saved in <strong>${escapeHtml(state.name || 'your data file')}</strong>${isDriveFile(state) ? ' in <strong>Google Drive</strong>. One click signs in to Google again' : '. Your browser needs one click to let this page read and save it again'}.</p>
       <div class="df-actions">
         <button type="button" class="df-btn df-primary" data-act="reconnect">Open ${escapeHtml(state.name || 'data file')}</button>
-        <button type="button" class="df-btn" data-act="other">Open a different file…</button>
+        ${state.supported ? '<button type="button" class="df-btn" data-act="other">Open a different file…</button>' : ''}
         <button type="button" class="df-btn" data-act="embedded" title="Forget the data file in this browser; notes are kept inside this HTML and Save downloads the HTML">Keep notes in this HTML instead</button>
         <button type="button" class="df-btn" data-act="later">Not now</button>
       </div>
@@ -383,6 +396,7 @@ export function MountDataFileUI() {
 }
 
 if (typeof window !== 'undefined') {
+  window.ShowDataFileToast = ShowDataFileToast; // used by H_Google_Drive/05_Drive_UI.js
   window.HandleNotesSave = HandleNotesSave;
   window.MountDataFileUI = MountDataFileUI;
 }

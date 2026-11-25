@@ -12,6 +12,12 @@
  * "<name>.backup.json" in a chosen backup folder when one is set) → write the new JSON
  * (Chrome writes to a temp file and swaps on close, so a crash never leaves half a file).
  * Only active on the Notes page (window.__LOCALHUB_PAGE__ === 'notes').
+ *
+ * Other places can act as the data file (e.g. a Google Drive JSON, H_Google_Drive/): they hand in
+ * an object that behaves like a FileSystemFileHandle (name, getFile, createWritable,
+ * queryPermission, requestPermission) plus remember()/forget(), and register a source
+ * (RegisterDataFileSource) that recalls it on the next page load. Everything else — Save,
+ * the "changed elsewhere" check, backups, reconnect — is shared.
  */
 
 import { ApplyNotesPayload, HasUnsavedNotesChanges } from '../00_State.js';
@@ -31,7 +37,19 @@ const dataFileState = {
   lastError: ''
 };
 const dataFileListeners = new Set();
+const dataFileSources = new Set(); // { recall: async () => handle | null, forget: async () => void }
 let dataFileInitStarted = false;
+
+/** A non-local data-file source (Google Drive …): recall() restores its remembered file at boot. */
+export function RegisterDataFileSource(source) {
+  if (source && typeof source.recall === 'function') dataFileSources.add(source);
+}
+
+async function forgetOtherSources(keepHandle) {
+  for (const src of dataFileSources) {
+    try { if (typeof src.forget === 'function' && !(keepHandle && keepHandle.source === src)) await src.forget(); } catch (_) {}
+  }
+}
 
 export function IsDataFileSupported() {
   return typeof window !== 'undefined'
@@ -82,7 +100,15 @@ async function loadDataFileFromHandle(handle) {
   if (!parsed.ok) throw new Error(`${handle.name}: ${parsed.error}`);
   if (!ApplyNotesPayload(parsed.payload)) throw new Error(`${handle.name} could not be loaded.`);
   setDataFileState({ status: 'connected', handle, name: handle.name, lastModified: file.lastModified, lastError: '' });
-  await RememberHandle('dataFile', handle);
+  // Only one data file is remembered: a local handle (IndexedDB) or a source's own file.
+  if (typeof handle.remember === 'function') {
+    await handle.remember();
+    await ForgetHandle('dataFile');
+    await forgetOtherSources(handle);
+  } else {
+    await RememberHandle('dataFile', handle);
+    await forgetOtherSources(null);
+  }
   rerenderAfterLoad();
 }
 
@@ -95,11 +121,18 @@ export async function InitDataFileMode() {
   if (dataFileInitStarted) return GetDataFileState();
   dataFileInitStarted = true;
   if (typeof window === 'undefined' || window.__LOCALHUB_PAGE__ !== 'notes') return GetDataFileState();
-  if (!IsDataFileSupported()) {
+  // A file from a registered source (Google Drive …) works even without the File System Access API.
+  let handle = null;
+  for (const src of dataFileSources) {
+    try { handle = await src.recall(); } catch (_) { handle = null; }
+    if (handle) break;
+  }
+  if (!handle && !IsDataFileSupported()) {
     setDataFileState({ status: 'unsupported' });
     return GetDataFileState();
   }
-  const [handle, backupDir] = await Promise.all([RecallHandle('dataFile'), RecallHandle('backupFolder')]);
+  const [localHandle, backupDir] = IsDataFileSupported() ? await Promise.all([RecallHandle('dataFile'), RecallHandle('backupFolder')]) : [null, null];
+  if (!handle) handle = localHandle;
   setDataFileState({ backupDir: backupDir || null });
   // An "Export everything" HTML is a snapshot: show it as exported, never swap in the live file.
   const meta = (window.NotesState && window.NotesState.vaultMeta) || {};
@@ -130,6 +163,17 @@ export async function ReconnectDataFile() {
   if (!handle) throw new Error('No data file is remembered in this browser.');
   if (!(await ensureDataFilePermission(handle))) throw new Error(`Access to ${handle.name} was not allowed.`);
   await loadDataFileFromHandle(handle);
+}
+
+/**
+ * Opens a data file handed in by another module (e.g. a Google Drive file): asks for access
+ * when needed, loads it, remembers it. Must run from a user gesture.
+ */
+export async function AttachDataFileHandle(handle) {
+  if (!handle) throw new Error('No file to open.');
+  if (!(await ensureDataFilePermission(handle))) throw new Error(`Access to ${handle.name} was not allowed.`);
+  await loadDataFileFromHandle(handle);
+  return true;
 }
 
 /** Picks an existing data file and loads it. Must run from a user gesture. */
@@ -218,6 +262,7 @@ export async function SaveToDataFile() {
 /** Stops using the data file in this browser (notes stay on screen; Save downloads the HTML again). */
 export async function DisconnectDataFile() {
   await ForgetHandle('dataFile');
+  await forgetOtherSources(null);
   setDataFileState({ status: IsDataFileSupported() ? 'embedded' : 'unsupported', handle: null, name: '', lastModified: 0 });
 }
 
