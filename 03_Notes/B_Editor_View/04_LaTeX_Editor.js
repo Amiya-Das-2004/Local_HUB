@@ -8,9 +8,10 @@ import { NotesState, SaveNotesState, flushNotesSave } from '../00_State.js';
 import { computeHeadingPrefixes, computeFigureNumbers, computeEquationNumbers, computeCitationNumbers } from '../Writing_Engine/Numbering_Engine.js';
 import { bumpKatexMacroVersion } from '../Writing_Engine/Math_Renderer.js';
 import {
-  createNewBlock,
-  insertBlockAt,
+  createBlockWithMembers,
+  insertBlocksAt,
   BLOCK_DEFINITIONS,
+  normalizeOrientationRows,
   GLOBAL_FONT_FAMILIES,
   GLOBAL_FONT_SIZES
 } from '../Writing_Engine/Block_Engine.js';
@@ -147,7 +148,8 @@ export function RenderLaTeXEditor(container, noteId, isEditMode = true) {
   // Core Block Insertion Method
   function insertBlock(type, level = null, targetIndex = -1) {
     if (!note.blocks) note.blocks = [];
-    const newBlock = createNewBlock(type, { level });
+    // Columns come with their member blocks (reference model) — insert all of them together.
+    const newBlocks = createBlockWithMembers(type, { level });
 
     // Determine target index:
     let actualIndex = targetIndex;
@@ -159,7 +161,7 @@ export function RenderLaTeXEditor(container, noteId, isEditMode = true) {
       }
     }
 
-    const insertedIdx = insertBlockAt(note.blocks, newBlock, actualIndex);
+    const insertedIdx = insertBlocksAt(note.blocks, newBlocks, actualIndex);
     activeBlockIndex = insertedIdx;
     activeSelectorIndex = -1;
     SaveNotesState();
@@ -463,26 +465,13 @@ export function RenderLaTeXEditor(container, noteId, isEditMode = true) {
       return;
     }
 
-    // 1. Remove picked block from note.blocks
-    const removeIdx = note.blocks.findIndex(b => b.id === pickedBlock.id);
-    if (removeIdx === -1) return;
-    const [movedBlock] = note.blocks.splice(removeIdx, 1);
-
-    // 2. Insert into targetBlock.cols
-    if (!Array.isArray(targetBlock.cols)) targetBlock.cols = [];
-
-    if (pickerState.targetColIndex !== null && pickerState.targetColIndex >= 0 && pickerState.targetColIndex < targetBlock.cols.length) {
-      targetBlock.cols[pickerState.targetColIndex] = movedBlock;
-      pickerState.targetColIndex++;
-    } else {
-      // Find empty slot or append
-      const emptySlot = targetBlock.cols.findIndex(c => !c || (c.type === 'text' && !c.content));
-      if (emptySlot !== -1) {
-        targetBlock.cols[emptySlot] = movedBlock;
-      } else {
-        targetBlock.cols.push(movedBlock);
-      }
-    }
+    // 1–2. Dock the picked block (reference model): it stays in note.blocks and the
+    //      container lists its id in `members` / `rows` (never the legacy `cols`).
+    if (!note.blocks.some(b => b.id === pickedBlock.id)) return;
+    const members = Array.isArray(targetBlock.members) ? targetBlock.members.slice() : [];
+    if (!members.includes(pickedBlock.id)) members.push(pickedBlock.id);
+    targetBlock.members = members;
+    targetBlock.rows = normalizeOrientationRows(targetBlock).rows;
 
     pickerState.pickedCount++;
 

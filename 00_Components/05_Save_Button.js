@@ -417,6 +417,9 @@ export async function SaveAndDownloadApp() {
       '03_Notes/D_Data_File/01_Data_Payload.js',
       '03_Notes/D_Data_File/02_Handle_Store.js',
       '03_Notes/D_Data_File/03_Data_File_Mode.js',
+      '03_Notes/G_Automation/01_Image_Inbox.js',
+      '03_Notes/G_Automation/02_Image_Insert.js',
+      '03_Notes/G_Automation/03_TeXidian_API.js',
       '03_Notes/D_Data_File/04_Data_File_UI.js',
       '03_Notes/01_Header.js',
       '03_Notes/Notes.js'

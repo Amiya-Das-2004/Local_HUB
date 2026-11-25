@@ -2,6 +2,7 @@ import { clearAllBlockHistory } from './Writing_Engine/Block_History.js';
 import { OfferRecoverySnapshot, WriteRecoverySnapshot, ReadRecoverySnapshot, ClearRecoverySnapshot, PurgeLegacyRecoveryKeys } from '../00_Components/10_Recovery.js';
 import { InstallAssetSerializer, StateWithoutAssets, LoadAssets, TakeSessionAssetsIfChanged, MarkAssetsSaved } from './Writing_Engine/Asset_Store.js';
 import { MigrateInlineImages } from './Writing_Engine/Asset_Migrate.js';
+import { normalizeHeadingLevel } from './Writing_Engine/Block_Engine.js';
 
 export const DEFAULT_GLOBAL_MACROS = {
   equation: `\\newcommand{\\mb}[1]{\\mathbf{#1}}
@@ -111,6 +112,7 @@ function sanitizeNote(n, idx = 0) {
       if (b && typeof b === 'object' && !b.id) {
         b.id = `b_${Date.now()}_${idx}_${bIdx}_${Math.random().toString(36).slice(2, 6)}`;
       }
+      if (b && b.type === 'heading') b.level = normalizeHeadingLevel(b.level);
       return b;
     }) : [],
     // Per-note numbering configs pass through untouched (objects or legacy strings):
@@ -228,14 +230,28 @@ export function ApplyNotesPayload(parsed) {
 
 // A payload copied straight into NotesState (JSON import, older code paths) may carry
 // `assets` and inline images: move them into the asset store. Cheap when there is nothing.
+// Also brings blocks edited from outside (window.TeXidianAPI, a Claude skill, an older
+// file) into the current shape: legacy `cols` containers → members/rows, numeric heading levels.
 function absorbStrayAssets(state) {
   if (!state || typeof state !== 'object') return;
+  normalizeLiveBlocks(state);
   if (Object.prototype.hasOwnProperty.call(state, 'assets')) {
     LoadAssets(state.assets, { fromFile: false });
     delete state.assets;
   }
   MigrateInlineImages(state, { fromFile: false });
   InstallAssetSerializer(state);
+}
+
+// Cheap, idempotent pass over every note: legacy columns migration + heading level strings.
+function normalizeLiveBlocks(state) {
+  (Array.isArray(state.notes) ? state.notes : []).forEach((note) => {
+    if (!note || !Array.isArray(note.blocks)) return;
+    if (note.blocks.some(b => b && Array.isArray(b.cols))) migrateOrientationContainers(note);
+    note.blocks.forEach((b) => {
+      if (b && b.type === 'heading' && !/^h[1-3]$/.test(String(b.level))) b.level = normalizeHeadingLevel(b.level);
+    });
+  });
 }
 
 // Loads notes from HTML vault (#NotesData) and optionally recovers uncommitted edits from localStorage
@@ -625,6 +641,10 @@ export function SaveNotesState(newState = null, { immediate = false } = {}) {
     NotesState.folders = mergeOrderedLists(NotesState.folders, derivedFolders);
     NotesState.tags = mergeOrderedLists(NotesState.tags, derivedTags);
   }
+
+  // Outside edits (TeXidianAPI / skills) may hand over legacy columns or numeric headings:
+  // fix them now, before the next render reads them.
+  normalizeLiveBlocks(NotesState);
 
   // Mark in-memory state as dirty and keep window.NotesState synchronously in sync
   SetNotesUnsavedChanges(true);

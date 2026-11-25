@@ -24,7 +24,7 @@ export async function ExportEverythingAsHtml() {
   delete payload.vaultMeta.shared;
   const d = new Date();
   const stamp = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  const fileName = `Notes_export_${stamp}.html`;
+  const fileName = `TeXidian_export_${stamp}.html`;
   await window.SaveNotesStandalone({ payload, fileName, markSaved: false });
   return fileName;
 }

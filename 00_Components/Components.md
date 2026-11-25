@@ -225,7 +225,7 @@ Integration contract per tab state module: `Load*State()` calls `PurgeLegacyReco
 | :--- | :--- | :--- | :--- |
 | `Index.html` | Master hash router: landing, `#bookmarks`, `#notes` | *(uses shared `00_Components`)* | `Local_HUB.html` (all-in-one, original behavior) |
 | `02_Bookmarks/01_Tab_Bookmarks/Bookmarks.html` | `../Bookmarks.js` + local handlers | `Tab_Save_Handler.js`, `Tab_Logo_Handler.js`, `Tab_Import_Export_Handler.js` | `Bookmarks.html` (single-tab standalone) |
-| `03_Notes/Tab_Notes/Notes.html` | `../Notes.js` + local handlers | `Tab_Save_Handler.js`, `Tab_Logo_Handler.js`, `Tab_Import_Export_Handler.js` | `Notes.html` (single-tab standalone) |
+| `03_Notes/Tab_Notes/Notes.html` | `../Notes.js` + local handlers | `Tab_Save_Handler.js`, `Tab_Logo_Handler.js`, `Tab_Import_Export_Handler.js` | `TeXidian.html` (single-tab standalone, `Standalone/TeXidian.html`) |
 
 How the isolation works:
 

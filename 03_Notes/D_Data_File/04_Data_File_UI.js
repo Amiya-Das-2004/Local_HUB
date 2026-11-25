@@ -11,6 +11,7 @@ import {
   GetDataFileState, OnDataFileStateChange, InitDataFileMode, ReconnectDataFile, OpenDataFile,
   CreateDataFile, ChooseBackupFolder, DisconnectDataFile, SaveNotesSmart
 } from './03_Data_File_Mode.js';
+import { GetImageInboxState, GetImageInboxMenuItems } from '../G_Automation/01_Image_Inbox.js';
 
 const DATA_FILE_SLOT_ID = 'notes-data-file-slot';
 
@@ -97,7 +98,7 @@ function onDocMouseDownForMenu(e) {
   if (!e.target.closest('.df-menu') && !e.target.closest('.df-chip')) closeDataFileMenu();
 }
 
-function buildDataFileMenuItems(state) {
+function buildDataFileMenuItems(state, inboxState = null) {
   const items = [];
   if (state.status === 'connected') {
     items.push({ label: `Save to ${state.name}  (Ctrl+S)`, run: () => HandleNotesSave() });
@@ -124,6 +125,12 @@ function buildDataFileMenuItems(state) {
     items.push('sep');
     items.push({ label: 'Copy the Brave setting address', run: () => copyBraveFlagAddress() });
   }
+  // Image folder for window.TeXidianAPI.addImageFromInbox (G_Automation/01_Image_Inbox.js)
+  const inboxItems = GetImageInboxMenuItems(inboxState);
+  if (inboxItems.length) {
+    items.push('sep');
+    inboxItems.forEach(it => items.push({ label: it.label, run: () => runDataFileAction(it.run, null).then(msg => { if (typeof msg === 'string') ShowDataFileToast(msg, 'info', 3200); }) }));
+  }
   return items;
 }
 
@@ -142,14 +149,17 @@ function dataFileMenuHead(state) {
   return 'Notes are stored <strong>inside this HTML</strong>; Save downloads a new copy of the file.';
 }
 
-function openDataFileMenu(chip) {
+async function openDataFileMenu(chip) {
   closeDataFileMenu();
   const state = GetDataFileState();
+  let inboxState = null;
+  try { inboxState = await GetImageInboxState(); } catch (_) { inboxState = null; }
+  closeDataFileMenu(); // a second click while the state was loading
   const menu = document.createElement('div');
   menu.className = 'df-menu';
   menu.setAttribute('role', 'menu');
   menu.innerHTML = `<div class="df-menu-head">${dataFileMenuHead(state)}</div>`;
-  buildDataFileMenuItems(state).forEach(item => {
+  buildDataFileMenuItems(state, inboxState).forEach(item => {
     if (item === 'sep') { const s = document.createElement('div'); s.className = 'df-sep'; menu.appendChild(s); return; }
     const b = document.createElement('button');
     b.type = 'button';
@@ -244,7 +254,7 @@ export async function RunExportEverything() {
 export async function DownloadAppOnlyHtml() {
   if (typeof window.SaveNotesStandalone !== 'function') { ShowDataFileToast('Saving the app is not available on this page.', 'error'); return; }
   await window.SaveNotesStandalone({ appOnly: true, dataFileName: GetDataFileState().name, markSaved: false });
-  ShowDataFileToast('App-only HTML downloaded — use it in place of your old Notes.html', 'info', 4200);
+  ShowDataFileToast('App-only HTML downloaded — use it in place of your old TeXidian.html', 'info', 4200);
 }
 
 function showDataFileDialog({ title, html, actions }) {

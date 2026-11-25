@@ -9,14 +9,15 @@ single-HTML, Overleaf + Obsidian style notes app.
 ## Working rules (from the owner)
 
 1. Work only on the **`Notes` branch**, only in `03_Notes/` (plus the shared files it needs in
-   `00_Components/` and `Standalone/Notes.html`). Don't touch `v3` or `main` unless asked.
+   `00_Components/` and `Standalone/TeXidian.html`). Don't touch `v3` or `main` unless asked.
    Merges to `main` are done by hand: a squash of only the Notes files, never a GitHub merge button.
 2. **Vanilla JS, one file per job.** Register every new module in **both bundlers**:
    `03_Notes/Tab_Notes/Tab_Save_Handler.js` (`tabModuleFiles`) and `00_Components/05_Save_Button.js`.
    Top-level names must be unique (the standalone build puts every file into one scope).
 3. **Read `03_Notes/Notes.md` before editing and update it after every edit** (folder tree,
    import tables, function tables with line ranges).
-4. `03_Notes/Tab_Notes/Notes.html` is the source page; its Save compiles `Standalone/Notes.html`.
+4. `03_Notes/Tab_Notes/Notes.html` is the source page; its Save compiles `Standalone/TeXidian.html`
+   (the output is named TeXidian, never Notes).
    Both must keep working and both must be tested in a browser.
 5. Work in phases: after each phase test → update `Notes.md` → commit and push to `Notes`.
    Only ask the owner when a decision really is theirs.
@@ -46,6 +47,15 @@ single-HTML, Overleaf + Obsidian style notes app.
   content hash; blocks hold `asset:<hash>`; files carry `assets` with only referenced images
   (via `NotesState.toJSON`, so every save path writes them); small recovery snapshots with a
   warning toast when the browser refuses one; old inline images migrate on load; WebP encoding.
+- **Copy as source (`E_Note_Ops/10_Rendered_Copy.js`):** copying selected rendered text gives
+  `$\Omega$`, `**bold**`, `- ` bullets; a drag no longer flips a block into edit mode.
+- **Automation API (`G_Automation/`, reference `G_Automation/TeXidian_API.md`):** `window.TeXidianAPI`
+  (blocks, columns, images from a connected image folder or the clipboard). The `texidian-notes`
+  Claude skill depends on `NotesState`, `SaveNotesState`, `initNotesApp`,
+  `GetNotesUnsavedChangesCount`, `TeXidianAPI` — never rename them; tell the owner when the API
+  changes so the skill can be updated. `window.initNotesApp()` now re-renders through the router.
+- **Columns:** new Columns blocks use `members`/`rows` (+ docked text blocks); legacy `cols` from
+  outside edits is converted immediately; numeric heading levels are normalised.
 - **B1–B2 (`F_Share/`):** share one note as a read-only HTML; export everything as one HTML.
   The shared view's bottom dock shows only Sidebar + Fonts (no empty separators).
 
@@ -55,6 +65,8 @@ single-HTML, Overleaf + Obsidian style notes app.
   tests used a stand-in). Do one manual round in Chrome: Open data file → Save → close → reopen.
 - Brave needs `brave://flags/#file-system-access-api` turned on for data files.
 - The demo note in the root `Index.html` still mentions the old `v1` engine.
+- Root `README.md` still links `Standalones/Notes.html` (outside `03_Notes/`, left as is).
+- The real folder picker for the image folder was only tested with a stand-in (like the data file).
 - Next open items in `Notes_Issues_And_Fixes.md`: Issue 4 (save the HTML in place — data-file mode
   already saves the JSON in place) and Issue 6 (storage meter; `GetAssetStats()` is ready).
 - Note logos (`note.logo.data`) still keep their image inline (small, one per note).
@@ -73,4 +85,6 @@ single-HTML, Overleaf + Obsidian style notes app.
   into view before reading `naturalWidth` (they are `loading="lazy"`).
 - Rebuild the standalone: open `Tab_Notes/Notes.html` on the server, run its
   `SaveNotesStandalone()`, then copy ONLY the bundled `<script type="module">` into
-  `Standalone/Notes.html` (keeps its head, styles and data; avoids CDN artifacts from the sandbox).
+  `Standalone/TeXidian.html` (keeps its head, styles and data; avoids CDN artifacts from the sandbox).
+- In the standalone the app code sits in a `<script>` inside `<body>`: check rendered blocks, not
+  `document.body.textContent` (it contains the code's own strings).
