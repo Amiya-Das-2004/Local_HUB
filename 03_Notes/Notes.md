@@ -122,11 +122,12 @@ Comprehensive modular documentation of the Local_HUB Notes engine. Includes card
 │   └── TeXidian_API.md                     ← API reference for skill authors (calls, options, setup)
 │
 ├── H_Google_Drive/                         ← The data file in Google Drive (open, Save → back to Drive), via http://localhost
-│   ├── 01_Drive_Config.js                  ← Client ID, "is this page http(s)?", the "Host locally" terminal command
+│   ├── 01_Drive_Config.js                  ← Client ID, picker API key + project number, "is this page http(s)?", the "Host locally" command
 │   ├── 02_Drive_Auth.js                    ← Google sign-in (GIS, scope drive.file), token kept for the tab
 │   ├── 03_Drive_Files.js                   ← Drive REST calls: list, info, read, overwrite, create
 │   ├── 04_Drive_Handle.js                  ← A Drive JSON dressed as a file handle + data-file source (remember/recall)
 │   ├── 05_Drive_UI.js                      ← Storage-menu items + dialogs: host locally, set up, open, save to Drive
+│   ├── 06_Drive_Picker.js                  ← Google's Drive picker: browse all folders to open a notes file / choose a folder
 │   └── Google_Drive_Setup.md               ← User guide: host locally, Google client ID, daily use
 │
 └── Writing_Engine/                         ← Core text, math, TikZ, and formatting compilers
@@ -259,9 +260,9 @@ Module-level side effects: exports `window.SaveNotesState` / `flushNotesSave` / 
 | `clearAllTabLocalCaches()` | 105 - 142 | Clears every `*_Local_Cache` localStorage key (plus ProffTrack/RD/Papers keys), resets `window.__NOTES_UNSAVED__`/`__HAS_UNSAVED_CHANGES__`/`__NOTES_UNSAVED_COUNT__`, calls `window.ClearNotesLocalCache()`, and resets the unsaved badge via `MarkUnsavedChanges(false, 0)`. |
 | `bundleTabFile(filePath)` | 146 - 170 | Fetches one modular JS file (resolved against the project root via `import.meta.url`), strips `import`/`export` statements, and returns a commented flat code chunk; missing files are skipped with a warning. |
 | `bundleTabGroup(files)` | 172 - 176 | Sequentially concatenates `bundleTabFile` output for a file list. |
-| `sharedComponentFiles` / `tabHandlerFiles` / `tabModuleFiles` | 178 - 298 | The tab bundler's three registration arrays: 8 shared `00_Components` files, the 3 `Tab_Notes` handler adapters, and the full ordered ordered Notes module graph (dependency-ordered: state → utils → engines → block infra → block renderers → text submodules → editor chrome → card view → graph → header → Notes.js). New Notes modules MUST be added here. `Writing_Engine/Asset_Store.js` and `Asset_Migrate.js` come BEFORE `00_State.js` (it uses them at load); `G_Automation/` and `H_Google_Drive/` come after `D_Data_File/03_Data_File_Mode.js` and before `04_Data_File_UI.js`. |
-| `SaveNotesStandalone(options = {})` | 308 - 458 | Bundles the Notes page into a self-contained, standalone single-file HTML document: clones the document, syncs vaults via `syncTabStatesToDOM`, and (when not already standalone) flattens shared components + handlers + tab modules into one inline module that defines `LoadThisPage()` (boots `initNotesApp` + all three tab overrides) and a `handlePageRoute()` hash router, replacing the `#localhub-router` boot script. Inside an already-standalone file it just re-emits itself with fresh vault data. Cleans injected dev/live-reload and TikZ engine tags, empties runtime containers, downloads via blob, clears local caches, and flashes the Save button green for 2s. Before download it strips dev scripts and runtime TikZ elements (`#tikzjax-js`, `#tikzjax-css`, `#tikz-engine-host`, `#tikz-saved-fonts` — saved fonts already live in `#NotesData`). Options: `appOnly` (#NotesData becomes an empty vault marked `vaultMeta.appOnly` + `dataFileName` — the notes live in the data file), `payload` (embed this vault instead of the live one — share/export), `fileName`, `markSaved` (only a full embedded save clears the unsaved state). A full save drops a stale `appOnly` marker. Transient UI (`.df-overlay`, `.df-toast`, `.df-menu`) is stripped from the clone. |
-| `InitTabSaveOverride()` | 462 - 516 | Swaps the shared Save-button binding (which would build the all-in-one app) for the per-tab `SaveNotesStandalone` by cloning the button, and provides a standalone implementation of `window.MarkUnsavedChanges(dirty, count)` driving the `.save-badge` unsaved-changes pill (restoring any count present on mount). The Save click goes to `window.HandleNotesSave` (data-file mode decides: overwrite the data file, ask to reconnect, or fall back to `SaveNotesStandalone`); it also exposes `window.SaveNotesStandalone` and calls `window.MountDataFileUI()` after every header mount. |
+| `sharedComponentFiles` / `tabHandlerFiles` / `tabModuleFiles` | 178 - 299 | The tab bundler's three registration arrays: 8 shared `00_Components` files, the 3 `Tab_Notes` handler adapters, and the full ordered ordered Notes module graph (dependency-ordered: state → utils → engines → block infra → block renderers → text submodules → editor chrome → card view → graph → header → Notes.js). New Notes modules MUST be added here. `Writing_Engine/Asset_Store.js` and `Asset_Migrate.js` come BEFORE `00_State.js` (it uses them at load); `G_Automation/` and `H_Google_Drive/` come after `D_Data_File/03_Data_File_Mode.js` and before `04_Data_File_UI.js`. |
+| `SaveNotesStandalone(options = {})` | 309 - 459 | Bundles the Notes page into a self-contained, standalone single-file HTML document: clones the document, syncs vaults via `syncTabStatesToDOM`, and (when not already standalone) flattens shared components + handlers + tab modules into one inline module that defines `LoadThisPage()` (boots `initNotesApp` + all three tab overrides) and a `handlePageRoute()` hash router, replacing the `#localhub-router` boot script. Inside an already-standalone file it just re-emits itself with fresh vault data. Cleans injected dev/live-reload and TikZ engine tags, empties runtime containers, downloads via blob, clears local caches, and flashes the Save button green for 2s. Before download it strips dev scripts and runtime TikZ elements (`#tikzjax-js`, `#tikzjax-css`, `#tikz-engine-host`, `#tikz-saved-fonts` — saved fonts already live in `#NotesData`). Options: `appOnly` (#NotesData becomes an empty vault marked `vaultMeta.appOnly` + `dataFileName` — the notes live in the data file), `payload` (embed this vault instead of the live one — share/export), `fileName`, `markSaved` (only a full embedded save clears the unsaved state). A full save drops a stale `appOnly` marker. Transient UI (`.df-overlay`, `.df-toast`, `.df-menu`) is stripped from the clone. |
+| `InitTabSaveOverride()` | 463 - 517 | Swaps the shared Save-button binding (which would build the all-in-one app) for the per-tab `SaveNotesStandalone` by cloning the button, and provides a standalone implementation of `window.MarkUnsavedChanges(dirty, count)` driving the `.save-badge` unsaved-changes pill (restoring any count present on mount). The Save click goes to `window.HandleNotesSave` (data-file mode decides: overwrite the data file, ask to reconnect, or fall back to `SaveNotesStandalone`); it also exposes `window.SaveNotesStandalone` and calls `window.MountDataFileUI()` after every header mount. |
 
 **Tab_Notes/Tab_Logo_Handler.js**
 
@@ -1018,8 +1019,9 @@ The data file can live in Google Drive: open it from Drive, edit, Save / Ctrl+S 
 | `DRIVE_CLIENT_ID_KEY` / `DRIVE_LOCAL_PORT` / `DRIVE_LOCAL_SPARE_PORTS` | 15 - 17 | localStorage key; port 8000; spares 8001, 8080. |
 | `IsDriveCapableOrigin()` | 20 - 22 | http/https page (Google sign-in impossible on `file://`). |
 | `GetDriveClientId()` / `SetDriveClientId(id)` | 24 - 42 | Client ID from localStorage (per address), else `vaultMeta.googleClientId`; setting validates the `…apps.googleusercontent.com` shape and also writes `vaultMeta.googleClientId`. |
-| `detectOs()` / `pageFileLocation()` | 44 - 59 | Windows / macOS / Linux; the page's folder and file name from its own `file://` path (`/C:/…` → `C:\…`). |
-| `GetHostLocallyCommands(port)` | 65 - 76 | `{ os, dir, file, url, command, plainCommand, spare }` — e.g. `cd "<folder>" && python3 -m http.server 8000` (Windows: `cd /d "<folder>" && py -m http.server 8000`) and `http://localhost:8000/<file>`. |
+| `GetDrivePickerConfig()` / `HasDrivePickerConfig()` / `SetDrivePickerConfig(apiKey, projectNumber)` | 49 - 76 | Picker settings (localStorage `tixidian-google-picker`, else `vaultMeta.googlePicker`): API key (`AIza…`) + Cloud project number (digits); setting validates both and returns an error message or `''`. |
+| `detectOs()` / `pageFileLocation()` | 78 - 93 | Windows / macOS / Linux; the page's folder and file name from its own `file://` path (`/C:/…` → `C:\…`). |
+| `GetHostLocallyCommands(port)` | 99 - 110 | `{ os, dir, file, url, command, plainCommand, spare }` — e.g. `cd "<folder>" && python3 -m http.server 8000` (Windows: `cd /d "<folder>" && py -m http.server 8000`) and `http://localhost:8000/<file>`. |
 
 **02_Drive_Auth.js**
 
@@ -1074,24 +1076,42 @@ Module side effect: `RegisterDataFileSource(DriveDataFileSource)`.
 | `../00_State.js` | `HasUnsavedNotesChanges` | `confirmDiscardUnsaved()` |
 | `../D_Data_File/01_Data_Payload.js` | `BuildNotesPayload`, `SerializeNotesPayload` | `ShowDriveCreateDialog()` |
 | `../D_Data_File/03_Data_File_Mode.js` | `AttachDataFileHandle`, `GetDataFileState` | `ShowDriveOpenDialog()`, `ShowDriveCreateDialog()` |
-| `./01_Drive_Config.js` | `IsDriveCapableOrigin`, `GetDriveClientId`, `SetDriveClientId`, `GetHostLocallyCommands` | dialogs, `GetDriveMenuItems()` |
+| `./01_Drive_Config.js` | `IsDriveCapableOrigin`, `GetDriveClientId`, `SetDriveClientId`, `GetHostLocallyCommands`, `GetDrivePickerConfig`, `SetDrivePickerConfig`, `HasDrivePickerConfig` | dialogs, `GetDriveMenuItems()` |
 | `./02_Drive_Auth.js` | `LoadGoogleSignIn`, `GetDriveToken` | dialogs, `GetDriveMenuItems()` |
 | `./03_Drive_Files.js` | `ListDriveJsonFiles`, `CreateDriveJsonFile` | `ShowDriveOpenDialog()`, `ShowDriveCreateDialog()` |
-| `./04_Drive_Handle.js` | `MakeDriveFileHandle`, `IsDriveHandle` | `ShowDriveOpenDialog()`, `ShowDriveCreateDialog()`, `GetDriveMenuItems()` |
+| `./04_Drive_Handle.js` | `MakeDriveFileHandle`, `IsDriveHandle` | `openDriveFile()`, `ShowDriveCreateDialog()`, `GetDriveMenuItems()` |
+| `./06_Drive_Picker.js` | `PickFromDrive`, `LoadDrivePicker` | `pickWithDialogHidden()`, `GetDriveMenuItems()` |
 
 | Functions | Line Range | Description |
 | :--- | :--- | :--- |
-| `driveToast(message, kind, ms)` | 41 - 43 | Through `window.ShowDataFileToast`. |
-| `openDriveDialog(title, bodyHtml, wire)` | 46 - 58 | Modal in the data-file dialog style (`.df-overlay`), with an error line. |
-| `driveCopyText(text, btn)` / `cmdRow(text, label)` | 60 - 70 | Copy to clipboard (button shows "Copied"); a command line with a Copy button. |
-| `ShowHostLocallyDialog()` | 73 - 94 | `file://` page: OS-detected command (with this folder) + the localhost link, port-busy alternative, how to stop. |
-| `ShowDriveSetupDialog()` | 97 - 128 | One-time Google Cloud steps, this page's origin to authorize (copyable), client ID box (validated). |
-| `confirmDiscardUnsaved(name)` | 130 - 133 | Confirm before replacing unsaved notes. |
-| `ShowDriveOpenDialog()` | 136 - 158 | Sign in → list TeXidian's JSON files in Drive → the chosen one becomes the data file (`AttachDataFileHandle`). |
-| `ShowDriveCreateDialog()` | 161 - 186 | Name → creates the JSON in My Drive with the notes shown now (incl. unsaved) → switches to it. |
-| `GetDriveMenuItems(state)` | 189 - 200 | `file://`: "Use Google Drive (host locally)…"; no client ID: "Set up Google Drive…"; else "Open notes from Google Drive…", "Save my notes to Google Drive (new file)…", "Google Drive client ID…" (preloads the sign-in script). |
+| `driveToast(message, kind, ms)` | 43 - 45 | Through `window.ShowDataFileToast`. |
+| `openDriveDialog(title, bodyHtml, wire)` | 48 - 60 | Modal in the data-file dialog style (`.df-overlay`), with an error line. |
+| `driveCopyText(text, btn)` / `cmdRow(text, label)` | 62 - 72 | Copy to clipboard (button shows "Copied"); a command line with a Copy button. |
+| `ShowHostLocallyDialog()` | 75 - 96 | `file://` page: OS-detected command (with this folder) + the localhost link, port-busy alternative, how to stop. |
+| `ShowDriveSetupDialog()` | 99 - 138 | "Google Drive setup": one-time Google Cloud steps, this page's origin to authorize (copyable), client ID + API key + project number boxes (validated). |
+| `pickWithDialogHidden(overlay, mode)` | 141 - 144 | Hides our dialog while Google's picker is open, restores it after. |
+| `confirmDiscardUnsaved(name)` | 146 - 149 | Confirm before replacing unsaved notes. |
+| `openDriveFile(file)` | 151 - 157 | Confirm if unsaved → `AttachDataFileHandle(MakeDriveFileHandle(file))` → toast. |
+| `ShowDriveOpenDialog()` | 163 - 194 | Sign in → **Browse Google Drive…** (picker over all folders; without API key: a link to setup) plus the notes files TeXidian already used → the chosen one becomes the data file. |
+| `ShowDriveCreateDialog()` | 200 - 236 | File name + folder (My Drive, or **Choose folder…** in the picker) → creates the JSON there with the notes shown now (incl. unsaved) → switches to it. |
+| `GetDriveMenuItems(state)` | 239 - 251 | `file://`: "Use Google Drive (host locally)…"; no client ID: "Set up Google Drive…"; else "Open notes from Google Drive…", "Save my notes to Google Drive (new file)…", "Google Drive setup…" (preloads the sign-in and picker scripts). |
 
 Module side effect: injects `#drive-ui-styles`.
+
+**06_Drive_Picker.js**
+
+Google's own Drive picker (loaded on demand from `apis.google.com/js/api.js`). Picking a file or folder shares just that item with TeXidian (scope `drive.file`), so notes files inside any folder can be opened and new ones created in a chosen folder.
+
+| Import Location | Functions Imported | used in Functions |
+| :--- | :--- | :--- |
+| `./01_Drive_Config.js` | `GetDrivePickerConfig`, `HasDrivePickerConfig` | `PickFromDrive()` |
+| `./02_Drive_Auth.js` | `GetDriveToken` | `PickFromDrive()` |
+
+| Functions | Line Range | Description |
+| :--- | :--- | :--- |
+| `DRIVE_GAPI_SRC` / `DRIVE_FOLDER_MIME` / `DRIVE_JSON_MIMES` | 13 - 16 | Script URL; folder MIME type; JSON-ish MIME types shown in file mode (`application/json`, `text/plain`, `application/octet-stream`). |
+| `LoadDrivePicker()` | 21 - 37 | Loads `gapi` and its `picker` module once. |
+| `PickFromDrive(mode)` | 44 - 76 | `'file'`: folders + JSON files; `'folder'`: folders, folder selectable. Sets OAuth token, API key, app id (project number) and origin; resolves `{ id, name }` or `null` when cancelled. |
 
 ## A_Notes_Card_View
 **01_Navbar.js**

@@ -41,6 +41,40 @@ export function SetDriveClientId(id) {
   return true;
 }
 
+// Google's Drive picker (06_Drive_Picker.js) needs, besides the client ID, an API key and the
+// Cloud project number (so a picked file/folder is shared with TeXidian under drive.file).
+const DRIVE_PICKER_KEY = 'tixidian-google-picker';
+
+/** { apiKey, projectNumber } — empty strings when not set. */
+export function GetDrivePickerConfig() {
+  let cfg = null;
+  try { cfg = JSON.parse(localStorage.getItem(DRIVE_PICKER_KEY) || 'null'); } catch (_) { cfg = null; }
+  const meta = (NotesState.vaultMeta && NotesState.vaultMeta.googlePicker) || {};
+  return {
+    apiKey: String((cfg && cfg.apiKey) || meta.apiKey || '').trim(),
+    projectNumber: String((cfg && cfg.projectNumber) || meta.projectNumber || '').trim()
+  };
+}
+
+export function HasDrivePickerConfig() {
+  const c = GetDrivePickerConfig();
+  return Boolean(c.apiKey && c.projectNumber);
+}
+
+/** Stores the picker settings; returns an error message, or '' when saved. */
+export function SetDrivePickerConfig(apiKey, projectNumber) {
+  const key = String(apiKey || '').trim();
+  const num = String(projectNumber || '').trim();
+  if (key && !/^AIza[0-9A-Za-z_-]{30,}$/.test(key)) return 'That does not look like an API key (it starts with "AIza").';
+  if (num && !/^[0-9]{6,15}$/.test(num)) return 'The project number is digits only (Cloud console → project settings / dashboard).';
+  try {
+    if (key || num) localStorage.setItem(DRIVE_PICKER_KEY, JSON.stringify({ apiKey: key, projectNumber: num }));
+    else localStorage.removeItem(DRIVE_PICKER_KEY);
+  } catch (_) { return 'This browser blocks saving settings.'; }
+  if (NotesState.vaultMeta && typeof NotesState.vaultMeta === 'object') NotesState.vaultMeta.googlePicker = { apiKey: key, projectNumber: num };
+  return '';
+}
+
 function detectOs() {
   const p = ((navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || navigator.userAgent || '').toLowerCase();
   if (p.includes('win')) return 'windows';

@@ -4,8 +4,9 @@
  *   file:// page   → "Use Google Drive (host locally)…": the command to paste into a terminal
  *                    (OS + folder detected) and the http://localhost link to open afterwards
  *   no client ID   → "Set up Google Drive…": the one-time Google Cloud steps + client ID box
- *   ready          → "Open notes from Google Drive…" (TeXidian's JSON files in Drive) and
- *                    "Save my notes to Google Drive…" (creates the JSON there and switches to it)
+ *   ready          → "Open notes from Google Drive…" (Google's picker over all folders, or the
+ *                    notes files TeXidian already used) and "Save my notes to Google Drive…"
+ *                    (creates the JSON in My Drive or a chosen folder and switches to it)
  * Once a Drive file is open, Save / Ctrl+S write back to it (data-file mode).
  */
 
@@ -13,10 +14,11 @@ import { escapeHtml } from '../02_Utils.js';
 import { HasUnsavedNotesChanges } from '../00_State.js';
 import { BuildNotesPayload, SerializeNotesPayload } from '../D_Data_File/01_Data_Payload.js';
 import { AttachDataFileHandle, GetDataFileState } from '../D_Data_File/03_Data_File_Mode.js';
-import { IsDriveCapableOrigin, GetDriveClientId, SetDriveClientId, GetHostLocallyCommands } from './01_Drive_Config.js';
+import { IsDriveCapableOrigin, GetDriveClientId, SetDriveClientId, GetHostLocallyCommands, GetDrivePickerConfig, SetDrivePickerConfig, HasDrivePickerConfig } from './01_Drive_Config.js';
 import { LoadGoogleSignIn, GetDriveToken } from './02_Drive_Auth.js';
 import { ListDriveJsonFiles, CreateDriveJsonFile } from './03_Drive_Files.js';
 import { MakeDriveFileHandle, IsDriveHandle } from './04_Drive_Handle.js';
+import { PickFromDrive, LoadDrivePicker } from './06_Drive_Picker.js';
 
 if (typeof document !== 'undefined' && !document.getElementById('drive-ui-styles')) {
   const style = document.createElement('style');
@@ -93,22 +95,26 @@ export function ShowHostLocallyDialog() {
   });
 }
 
-/** One-time Google Cloud steps + the client ID box. */
+/** One-time Google Cloud steps: client ID (sign-in) + API key and project number (folder browsing). */
 export function ShowDriveSetupDialog() {
   const origin = location.origin;
-  openDriveDialog('Set up Google Drive', `
-    <p>Once, at <strong>console.cloud.google.com</strong> (free):</p>
+  const picker = GetDrivePickerConfig();
+  openDriveDialog('Google Drive setup', `
+    <p>Once, at <strong>console.cloud.google.com</strong> (free) — full steps in <em>Google_Drive_Setup.md</em>:</p>
     <ol class="gd-steps">
-      <li>Create a project, then <em>APIs &amp; Services → Library</em> → enable <strong>Google Drive API</strong>.</li>
-      <li><em>OAuth consent screen</em> (Google Auth Platform): External, app name "TeXidian", your email; under <em>Audience</em> add your Google account as a <strong>test user</strong>.</li>
-      <li><em>Credentials → Create credentials → OAuth client ID</em> → <strong>Web application</strong>. Under <em>Authorized JavaScript origins</em> add:</li>
+      <li><em>APIs &amp; Services → Library</em>: enable <strong>Google Drive API</strong> and <strong>Google Picker API</strong>.</li>
+      <li><em>Google Auth Platform</em>: External app "TeXidian"; under <em>Audience</em> add yourself as a <strong>test user</strong>.</li>
+      <li><em>Clients → Create client → Web application</em>; <em>Authorized JavaScript origins</em>: this address (and :8001, :8080):</li>
     </ol>
     ${cmdRow(origin)}
-    <p class="gd-note">Also add http://localhost:8001 and http://localhost:8080 if you may use those ports. Then copy the <strong>Client ID</strong> (ends with .apps.googleusercontent.com) here:</p>
-    <input class="gd-input" type="text" placeholder="1234567890-abc….apps.googleusercontent.com" value="${escapeHtml(GetDriveClientId())}" />
-    <p class="gd-note">TeXidian only gets access to files it creates or opens in your Drive (scope drive.file).</p>
+    <p class="gd-note"><strong>Client ID</strong> (ends with .apps.googleusercontent.com):</p>
+    <input class="gd-input gd-client" type="text" placeholder="1234567890-abc….apps.googleusercontent.com" value="${escapeHtml(GetDriveClientId())}" />
+    <p class="gd-note" style="margin-top:8px">For browsing your Drive folders: <em>Credentials → Create credentials → API key</em> (restrict it to the Google Picker API), and the <strong>project number</strong> (project dashboard / settings):</p>
+    <input class="gd-input gd-apikey" type="text" placeholder="API key — AIza…" value="${escapeHtml(picker.apiKey)}" />
+    <input class="gd-input gd-projnum" type="text" placeholder="Project number — digits, e.g. 123456789012" value="${escapeHtml(picker.projectNumber)}" style="margin-top:6px" />
+    <p class="gd-note">TeXidian only gets access to files it creates or that you pick (scope drive.file).</p>
     <div class="df-actions">
-      <button type="button" class="df-btn df-primary" data-act="save">Save client ID</button>
+      <button type="button" class="df-btn df-primary" data-act="save">Save</button>
       <button type="button" class="df-btn" data-act="close">Cancel</button>
     </div>`,
   (dialog, close, showError) => {
@@ -118,13 +124,23 @@ export function ShowDriveSetupDialog() {
       const act = e.target.closest('[data-act]')?.getAttribute('data-act');
       if (act === 'close') close();
       if (act === 'save') {
-        if (!SetDriveClientId(dialog.querySelector('.gd-input').value)) { showError('That does not look like a client ID (…apps.googleusercontent.com).'); return; }
+        if (!SetDriveClientId(dialog.querySelector('.gd-client').value)) { showError('That does not look like a client ID (…apps.googleusercontent.com).'); return; }
+        const pickerError = SetDrivePickerConfig(dialog.querySelector('.gd-apikey').value, dialog.querySelector('.gd-projnum').value);
+        if (pickerError) { showError(pickerError); return; }
         close();
         LoadGoogleSignIn().catch(() => {});
-        driveToast('Google Drive is set up — storage menu → "Save my notes to Google Drive…" or "Open notes from Google Drive…"', 'info', 5200);
+        driveToast(HasDrivePickerConfig()
+          ? 'Google Drive is set up — storage menu → "Open notes from Google Drive…" to browse your folders'
+          : 'Client ID saved. Add the API key + project number to browse your Drive folders.', 'info', 5200);
       }
     });
   });
+}
+
+// The picker is Google's own window (iframe) above the page: hide our dialog meanwhile.
+async function pickWithDialogHidden(overlay, mode) {
+  if (overlay) overlay.style.display = 'none';
+  try { return await PickFromDrive(mode); } finally { if (overlay) overlay.style.display = ''; }
 }
 
 function confirmDiscardUnsaved(name) {
@@ -132,54 +148,88 @@ function confirmDiscardUnsaved(name) {
   return window.confirm(`Open ${name}? Your unsaved changes in the notes shown now will be discarded.`);
 }
 
-/** TeXidian's JSON files in Drive → pick one → it becomes the data file. Run from a click. */
+async function openDriveFile(file) {
+  if (!file || !file.id) return false;
+  if (!confirmDiscardUnsaved(file.name)) return false;
+  await AttachDataFileHandle(MakeDriveFileHandle(file));
+  driveToast(`Opened ${GetDataFileState().name} from Google Drive — Save writes back to it`);
+  return true;
+}
+
+/**
+ * Open a notes file from Drive: "Browse Google Drive…" (Google's picker, every folder) or one of
+ * the notes files TeXidian already used. Run from a click.
+ */
 export async function ShowDriveOpenDialog() {
   await GetDriveToken({ interactive: true });
   const files = await ListDriveJsonFiles();
+  const canBrowse = HasDrivePickerConfig();
   const rows = files.length
     ? files.map(f => `<button type="button" class="gd-file" data-id="${escapeHtml(f.id)}" data-name="${escapeHtml(f.name)}">${escapeHtml(f.name)}<small>changed ${escapeHtml(new Date(f.lastModified).toLocaleString())}</small></button>`).join('')
-    : '<p class="gd-note">No TeXidian notes file in your Drive yet. Use "Save my notes to Google Drive…" first (TeXidian can only see files it created).</p>';
-  openDriveDialog('Open notes from Google Drive', `<div class="gd-list">${rows}</div>
+    : '<p class="gd-note">None yet.</p>';
+  openDriveDialog('Open notes from Google Drive', `
+    ${canBrowse
+      ? '<button type="button" class="df-btn df-primary" data-act="browse" style="width:100%">Browse Google Drive… (all folders)</button>'
+      : '<p class="gd-note">To browse your Drive folders, add the API key and project number in <a href="#" data-act="setup">Google Drive setup</a>. Until then only files TeXidian created are listed.</p>'}
+    <p class="gd-note" style="margin-top:10px">Notes files TeXidian already used:</p>
+    <div class="gd-list">${rows}</div>
     <div class="df-actions"><button type="button" class="df-btn" data-act="close">Cancel</button></div>`,
   (dialog, close, showError) => {
+    const overlay = dialog.closest('.df-overlay');
     dialog.addEventListener('click', async (e) => {
-      if (e.target.closest('[data-act="close"]')) { close(); return; }
-      const btn = e.target.closest('.gd-file');
-      if (!btn) return;
-      const name = btn.getAttribute('data-name');
-      if (!confirmDiscardUnsaved(name)) return;
+      const act = e.target.closest('[data-act]')?.getAttribute('data-act');
+      if (act === 'close') { close(); return; }
+      if (act === 'setup') { e.preventDefault(); close(); ShowDriveSetupDialog(); return; }
       try {
-        await AttachDataFileHandle(MakeDriveFileHandle({ id: btn.getAttribute('data-id'), name }));
-        close();
-        driveToast(`Opened ${name} from Google Drive — Save writes back to it`);
+        if (act === 'browse') {
+          const picked = await pickWithDialogHidden(overlay, 'file');
+          if (picked && await openDriveFile(picked)) close();
+          return;
+        }
+        const btn = e.target.closest('.gd-file');
+        if (btn && await openDriveFile({ id: btn.getAttribute('data-id'), name: btn.getAttribute('data-name') })) close();
       } catch (err) { showError(err.message || String(err)); }
     });
   });
 }
 
-/** Creates a JSON in Drive with the notes shown now and switches to it. Run from a click. */
+/**
+ * Creates a JSON in Drive (My Drive, or a folder chosen in Google's picker) with the notes
+ * shown now and switches to it. Run from a click.
+ */
 export function ShowDriveCreateDialog() {
   const suggested = (GetDataFileState().name || 'MyNotes.json').replace(/\.json$/i, '') + '.json';
+  const canBrowse = HasDrivePickerConfig();
+  let folder = null; // { id, name } — null = My Drive
   openDriveDialog('Save my notes to Google Drive', `
-    <p>Creates a new notes file in your Google Drive (My Drive) with every note shown now, including unsaved changes. From then on Save (Ctrl+S) writes to it.</p>
+    <p>Creates a new notes file in your Google Drive with every note shown now, including unsaved changes. From then on Save (Ctrl+S) writes to it.</p>
+    <p class="gd-note">File name:</p>
     <input class="gd-input" type="text" value="${escapeHtml(suggested)}" />
+    <p class="gd-note" style="margin-top:8px">Folder: <strong class="gd-folder">My Drive</strong>
+      ${canBrowse ? '<button type="button" class="df-btn" data-act="folder" style="margin-left:6px;padding:3px 10px">Choose folder…</button>' : '<br>(add the API key in Google Drive setup to choose a folder)'}</p>
     <div class="df-actions" style="margin-top:10px">
       <button type="button" class="df-btn df-primary" data-act="create">Save to Google Drive</button>
       <button type="button" class="df-btn" data-act="close">Cancel</button>
     </div>`,
   (dialog, close, showError) => {
+    const overlay = dialog.closest('.df-overlay');
     dialog.addEventListener('click', async (e) => {
       const act = e.target.closest('[data-act]')?.getAttribute('data-act');
       if (act === 'close') { close(); return; }
-      if (act !== 'create') return;
-      let name = dialog.querySelector('.gd-input').value.trim() || 'MyNotes.json';
-      if (!/\.json$/i.test(name)) name += '.json';
       try {
+        if (act === 'folder') {
+          const picked = await pickWithDialogHidden(overlay, 'folder');
+          if (picked) { folder = picked; dialog.querySelector('.gd-folder').textContent = picked.name || 'chosen folder'; }
+          return;
+        }
+        if (act !== 'create') return;
+        let name = dialog.querySelector('.gd-input').value.trim() || 'MyNotes.json';
+        if (!/\.json$/i.test(name)) name += '.json';
         await GetDriveToken({ interactive: true });
-        const info = await CreateDriveJsonFile(name, SerializeNotesPayload(BuildNotesPayload()));
+        const info = await CreateDriveJsonFile(name, SerializeNotesPayload(BuildNotesPayload()), folder ? folder.id : '');
         await AttachDataFileHandle(MakeDriveFileHandle({ id: info.id, name: info.name }));
         close();
-        driveToast(`Saved to ${info.name} in Google Drive — Save now writes there`, 'ok', 4200);
+        driveToast(`Saved to ${info.name} in ${folder ? folder.name : 'My Drive'} — Save now writes there`, 'ok', 4200);
       } catch (err) { showError(err.message || String(err)); }
     });
   });
@@ -191,10 +241,11 @@ export function GetDriveMenuItems(state) {
   if (!IsDriveCapableOrigin()) return [{ label: 'Use Google Drive (host locally)…', run: () => ShowHostLocallyDialog() }];
   if (!GetDriveClientId()) return [{ label: 'Set up Google Drive…', run: () => ShowDriveSetupDialog() }];
   LoadGoogleSignIn().catch(() => {}); // ready before the click that opens the Google window
+  if (HasDrivePickerConfig()) LoadDrivePicker().catch(() => {});
   const onDrive = state && state.status === 'connected' && IsDriveHandle(state.handle);
   return [
     { label: onDrive ? 'Open another notes file from Google Drive…' : 'Open notes from Google Drive…', run: () => ShowDriveOpenDialog() },
     { label: 'Save my notes to Google Drive (new file)…', run: () => ShowDriveCreateDialog() },
-    { label: 'Google Drive client ID…', run: () => ShowDriveSetupDialog() }
+    { label: 'Google Drive setup…', run: () => ShowDriveSetupDialog() }
   ];
 }
