@@ -66,7 +66,14 @@ export function CreateBlockItem({
 
     if (isEditMode) {
       wrap.addEventListener('click', (e) => {
-        if (e.target.closest('button') || isEditing) return;
+        // Interactive controls inside a rendered block (task checkboxes, form fields,
+        // links) act in place — they must not flip the block into edit mode, which
+        // re-renders it (the checkbox jumped and the toggle was lost).
+        if (isEditing || e.target.closest('button, input, select, textarea, label, a[href], .live-checkbox')) return;
+        // A mouse drag that selected text ends in a click: keep the selection (for copying)
+        // instead of re-rendering the block into edit mode, which would drop it.
+        const sel = window.getSelection();
+        if (sel && !sel.isCollapsed && sel.rangeCount && sel.getRangeAt(0).intersectsNode(wrap)) return;
         // Hand the click point to the editor so it can restore the caret exactly where
         // the user clicked when the block switches into edit mode.
         if (onSelect) onSelect({ clientX: e.clientX, clientY: e.clientY });

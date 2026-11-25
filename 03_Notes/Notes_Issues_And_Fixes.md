@@ -11,7 +11,15 @@ Status legend: `Planned` · `In progress` · `Done`
 
 ## Issue 1 — Crash recovery silently fails on image-heavy vaults
 
-**Status:** Planned (priority 1)
+**Status:** Done
+
+**What was built** (differs from the plan below in one point: no second `<script id="NotesAssets">`)
+- `Writing_Engine/Asset_Store.js` keeps every image once, keyed by a content hash, in memory outside `NotesState`. Blocks and grid cells hold `asset:<hash>`; `<img>` uses a cached object URL.
+- Files keep ONE data format: `assets: { hash: dataUrl }` sits next to `notes` in `#NotesData`, the data file, exports and shared notes. It is added by `NotesState.toJSON`, so every save path (tab Save, data file, Export, the hub's Save button) writes it.
+- Typing re-serializes only note text (live `#NotesData` and the recovery snapshot have no images).
+- Recovery: `NotesData` snapshot = text only; `NotesAssets` snapshot = images added this session, rewritten only when an image is added. If the browser refuses a snapshot, a warning toast says crash recovery is off.
+- `Writing_Engine/Asset_Migrate.js` moves older files' inline images into the store on load (not counted as an unsaved change).
+- Copy/paste of blocks carries their images; a shared note carries only its own images.
 
 **Where:** `00_State.js` → `persistNotesToStorageImmediate()` → `WriteRecoverySnapshot('NotesData', NotesState)` (`00_Components/10_Recovery.js`)
 
@@ -37,7 +45,7 @@ Status legend: `Planned` · `In progress` · `Done`
 
 ## Issue 2 — Duplicate and orphaned images bloat the file
 
-**Status:** Planned (comes with Issue 1)
+**Status:** Done — content-hash keys de-duplicate; a save writes only referenced images (memory keeps the rest for undo).
 
 **Problem**
 - The same image pasted into two blocks / grid cells is stored twice.
@@ -51,7 +59,7 @@ Status legend: `Planned` · `In progress` · `Done`
 
 ## Issue 3 — Images use older, larger encodings
 
-**Status:** Planned
+**Status:** Done — large images are encoded as WebP when the browser can (else JPEG); PNG sources also try PNG; the smallest wins. A 2.9 MB test PNG became ~0.3 MB.
 
 **Where:** `Image_Block.js` → `compressRasterDataUrl(dataUrl, maxDim = 1600, quality = 0.85)` (encodes to PNG/JPEG)
 
@@ -84,17 +92,16 @@ Status legend: `Planned` · `In progress` · `Done`
 
 ## Issue 5 — TikZ diagrams recompile on every open (and need the engine/internet)
 
-**Status:** Planned
+**Status:** Done
 
-**Where:** `Writing_Engine/Tikz_Engine/Tikz_Renderer.js` → `getCachedTikzSvg()` caches only in memory + `sessionStorage`.
-
-**Problem**
-- Opening `Standalone/Notes.html` recompiles every TikZ block.
-- Compiling needs either the ~25 MB `Tikz_Engine/v1/` runtime next to the file or an internet connection (CDN fallback). A standalone file opened offline on another machine shows no diagrams.
-
-**Fix**
-- Persist the compiled SVG (per theme, keyed exactly like the current cache key) into the `#NotesAssets` store.
-- Reading a note renders the stored SVG instantly and offline; the engine loads only when TikZ code is edited.
+**What changed**
+- The old local engine (`Tikz_Engine/v1/`, ~25 MB, 2019 TeX build where every `\usepackage` crashed) was removed.
+- Diagrams compile with the newer TikZJax (`@drgrice1/tikzjax`) loaded from the jsdelivr CDN **only when a compile is needed** (`Tikz_Engine_Loader.js`).
+- Each TikZ block stores its last good render: `block.svg` + `block.svgKey` (hash of engine + code + global TikZ preamble). Viewing a note only shows the saved SVG — no engine, no internet.
+- A compile happens when the code or the global preamble changed (auto, 1.5 s after typing stops), or on ▶. A failed or offline compile **keeps the saved SVG** and shows a warning with the TeX error lines (`Tikz_Render_Panel.js`).
+- The TeX fonts used by saved SVGs are stored once in the file (`NotesState.tikzFonts`, `Tikz_Font_Store.js`), so saved diagrams render correctly offline.
+- Full Overleaf documents can be pasted into a block (`Tikz_Source_Converter.js`); packages the engine does not ship (e.g. `tkz-euclide`) are skipped with a warning.
+- Saved SVGs live inside each block in `#NotesData`, not in the planned `#NotesAssets` store (still planned under Issue 1 for images).
 
 ---
 
@@ -112,9 +119,9 @@ Status legend: `Planned` · `In progress` · `Done`
 
 ## Implementation order
 
-1. Issues 1 + 2 + 3 — asset store, de-duplication, WebP (fixes the silent recovery failure).
+1. ~~Issues 1 + 2 + 3 — asset store, de-duplication, WebP.~~ Done.
 2. Issue 4 — save in place.
-3. Issue 5 — persisted TikZ SVGs.
+3. ~~Issue 5 — persisted TikZ SVGs.~~ Done.
 4. Issue 6 — storage indicator.
 
 After every step: verify `Tab_Notes/Notes.html` (modular) and the compiled `Standalone/Notes.html` behave identically, and update `Notes.md` (folder tree + function tables) and the status fields above.

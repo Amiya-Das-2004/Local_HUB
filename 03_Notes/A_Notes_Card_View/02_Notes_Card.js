@@ -5,6 +5,7 @@ import { GetActiveGroup } from './01_Navbar/02_Group_Filter.js';
 import { GetSearchQuery, FilterNotesByQuery } from './01_Navbar/03_Search_Bar.js';
 import { DeleteNoteById, GetSelectedNoteIds, ToggleNoteSelection } from './01_Navbar/05_Delete_Button.js';
 import { OpenNoteModal } from './01_Navbar/06_Add_Edit_Button.js';
+import { OpenNoteActionsMenu } from '../E_Note_Ops/05_Note_Menu.js';
 
 // Returns complete stylesheet for cards container, group titles, card items, and empty state
 export function GetNotesCardsContainerStyles() {
@@ -578,6 +579,11 @@ export function CreateCardElement(note, { isSelected = false, onRefresh = null }
       </div>
 
       <div class="note-card-actions">
+        <button class="note-card-action-btn more-btn" type="button" title="More: duplicate, move to folder, merge" aria-haspopup="menu">
+          <svg viewBox="0 0 24 24" fill="currentColor" stroke="none">
+            <circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/>
+          </svg>
+        </button>
         <button class="note-card-action-btn edit-btn" type="button" title="Edit note card" data-note-id="${escapeHtml(String(note.id))}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
@@ -637,6 +643,16 @@ export function CreateCardElement(note, { isSelected = false, onRefresh = null }
       e.preventDefault();
       e.stopPropagation();
       OpenNoteModal(note);
+    });
+  }
+
+  // More menu: duplicate / move to folder / merge (E_Note_Ops/05_Note_Menu.js)
+  const moreBtn = card.querySelector('.note-card-action-btn.more-btn');
+  if (moreBtn) {
+    moreBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      OpenNoteActionsMenu(moreBtn, note);
     });
   }
 

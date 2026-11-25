@@ -162,12 +162,9 @@ export function computeFigureNumbers(blocks = [], style = 'numeric', showCaption
 
   const processBlock = (block, fallbackKey) => {
     if (!block || typeof block !== 'object') return;
-    if (block.type === 'columns' || block.type === 'multicolumn' || block.type === 'multi-column') {
-      (block.cols || []).forEach((child, cIdx) => {
-        processBlock(child, `${block.id || fallbackKey}_col_${cIdx}`);
-      });
-      return;
-    }
+    // Containers hold no blocks of their own: docked members are top-level blocks in
+    // note.blocks and get numbered by the normal pass.
+    if (block.type === 'columns' || block.type === 'multicolumn' || block.type === 'multi-column') return;
 
     if (block.type === 'image' || block.type === 'tikz') {
       const blockKey = String(block.id || fallbackKey);
@@ -301,10 +298,8 @@ export function computeEquationNumbers(blocks = [], style = 'numeric') {
 
   const processBlock = (block, fallbackKey) => {
     if (!block || typeof block !== 'object') return;
-    if (block.type === 'columns' || block.type === 'multicolumn' || block.type === 'multi-column') {
-      (block.cols || []).forEach((child, cIdx) => processBlock(child, `${block.id || fallbackKey}_col_${cIdx}`));
-      return;
-    }
+    // Docked members are top-level blocks (numbered by the normal pass); containers hold none.
+    if (block.type === 'columns' || block.type === 'multicolumn' || block.type === 'multi-column') return;
 
     const blockId = block.id || fallbackKey;
     const dupTags = [];
@@ -530,10 +525,8 @@ export function computeCitationNumbers(blocks = []) {
 
   const processBlock = (block) => {
     if (!block || typeof block !== 'object') return;
-    if (block.type === 'columns' || block.type === 'multicolumn' || block.type === 'multi-column') {
-      (block.cols || []).forEach(child => processBlock(child));
-      return;
-    }
+    // Docked members are top-level blocks (visited by the normal pass); containers hold none.
+    if (block.type === 'columns' || block.type === 'multicolumn' || block.type === 'multi-column') return;
     if (block.type === 'text' || block.type === undefined) {
       collectFromText(block.content);
     }

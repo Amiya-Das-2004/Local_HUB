@@ -2,6 +2,7 @@ import { GetLogoHTML, InitLogoLogic } from '../00_Components/01_Local_HUB_Logo.j
 import { GetThemeToggleHTML, InitThemeToggleLogic } from '../00_Components/02_Theme_Toggle.js';
 import { GetImportButtonHTML, GetExportButtonHTML, InitImportExport } from '../00_Components/04_Import_Export.js';
 import { GetSaveButtonHTML, InitSaveButtonLogic } from '../00_Components/05_Save_Button.js';
+import { GetDataFileSlotHTML } from './D_Data_File/04_Data_File_UI.js';
 
 // RESERVED: center "texidian" title component (not rendered — the header center is
 // intentionally empty; the floating toolbar's Back button handles deck navigation)
@@ -218,6 +219,7 @@ export function GetHeaderHTML() {
         <div class="header-right">
           ${GetImportButtonHTML()}
           ${GetExportButtonHTML()}
+          ${GetDataFileSlotHTML()}
           ${GetSaveButtonHTML()}
           ${GetThemeToggleHTML()}
         </div>

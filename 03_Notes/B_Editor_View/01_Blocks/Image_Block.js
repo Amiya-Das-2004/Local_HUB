@@ -8,6 +8,7 @@
 import { escapeHtml } from '../../02_Utils.js';
 import { applyFigureAttributes, formatFigureCaptionText, appendFigureCaption, renderInlineMathCaption } from './Figure_Utils.js';
 import { getBlockActionsHTML, initBlockActions } from './Block_Actions.js';
+import { PutAsset, ResolveAssetUrl } from '../../Writing_Engine/Asset_Store.js';
 
 /**
  * Downsamples and compresses raster images (PNG/JPG) using an off-screen canvas.
@@ -90,15 +91,16 @@ function compressRasterDataUrl(dataUrl, maxDim = 1600, quality = 0.85) {
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, width, height);
 
+      // WebP (smaller at equal quality, keeps transparency) when the browser can encode it,
+      // else JPEG; PNG sources also try lossless PNG and keep whichever is smallest.
       const isPng = dataUrl.startsWith('data:image/png');
-      const compressed = canvas.toDataURL(isPng ? 'image/png' : 'image/jpeg', quality);
-
-      if (isPng && compressed.length > 450000) {
-        const jpegCompressed = canvas.toDataURL('image/jpeg', quality);
-        resolve(jpegCompressed.length < compressed.length ? jpegCompressed : compressed);
-      } else {
-        resolve(compressed);
-      }
+      const candidates = [];
+      const webp = canvas.toDataURL('image/webp', quality);
+      if (webp.startsWith('data:image/webp')) candidates.push(webp);
+      else if (!isPng) candidates.push(canvas.toDataURL('image/jpeg', quality));
+      if (isPng) candidates.push(canvas.toDataURL('image/png'));
+      if (isPng && !candidates.some(c => c.startsWith('data:image/webp'))) candidates.push(canvas.toDataURL('image/jpeg', quality));
+      resolve(candidates.reduce((best, c) => (c.length < best.length ? c : best)));
     };
     img.onerror = () => resolve(dataUrl);
     img.src = dataUrl;
@@ -156,7 +158,7 @@ export function renderImageBlock(
     } else {
       wrap.innerHTML = `
         <div class="${frameClasses}" style="width: ${fitPercent}%;">
-          <img src="${escapeHtml(url)}" alt="${escapeHtml(caption || 'Note Figure')}" class="w-full h-auto object-contain block rounded-lg transition-all" loading="lazy" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 100 60\\'><rect width=\\'100\\' height=\\'60\\' fill=\\'%23242840\\'/><text x=\\'50\\' y=\\'33\\' fill=\\'%23a0a4b8\\' font-size=\\'8\\' text-anchor=\\'middle\\'>Image failed to load</text></svg>'" />
+          <img src="${escapeHtml(ResolveAssetUrl(url))}" alt="${escapeHtml(caption || 'Note Figure')}" class="w-full h-auto object-contain block rounded-lg transition-all" loading="lazy" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 100 60\\'><rect width=\\'100\\' height=\\'60\\' fill=\\'%23242840\\'/><text x=\\'50\\' y=\\'33\\' fill=\\'%23a0a4b8\\' font-size=\\'8\\' text-anchor=\\'middle\\'>Image failed to load</text></svg>'" />
         </div>
       `;
     }
@@ -401,7 +403,7 @@ export function renderImageBlock(
       const selected = isEditView && selectedCells.has(i);
       const cellFit = (cell.fitPercent != null && !isNaN(Number(cell.fitPercent))) ? Math.max(10, Math.min(100, Number(cell.fitPercent))) : 100;
       const imgHtml = cell.src
-        ? `<img src="${escapeHtml(cell.src)}" alt="Grid cell" class="${fitClass} block transition-all" style="width: ${cellFit}%; height: ${cellFit}%; max-width: 100%; max-height: 100%;" loading="lazy" />`
+        ? `<img src="${escapeHtml(ResolveAssetUrl(cell.src))}" alt="Grid cell" class="${fitClass} block transition-all" style="width: ${cellFit}%; height: ${cellFit}%; max-width: 100%; max-height: 100%;" loading="lazy" />`
         : `<div class="w-full h-full min-h-[90px] flex items-center justify-center text-[10px] text-[var(--text-dim)] border border-dashed border-[var(--border)] rounded ${isEditView ? 'cursor-pointer' : ''} select-none">empty</div>`;
 
       const captionHtml = isEditView
@@ -544,7 +546,7 @@ export function renderImageBlock(
         <div class="image-active-zone flex flex-col gap-2.5 w-full pt-1">
           <div class="image-preview-card w-full p-3 rounded-xl ${currentBorderState ? 'border border-[var(--border)] bg-[var(--surface)] shadow-xs' : 'border border-transparent bg-transparent'} flex flex-col items-center justify-center overflow-hidden transition-all">
             <div class="image-preview-fit-box relative flex justify-center max-w-full transition-all group/fit" style="width: ${currentFitPercent}%;">
-              <img src="${escapeHtml(currentUrl)}" alt="Figure Preview" class="w-full h-auto object-contain rounded-lg transition-all" onerror="this.parentElement.innerHTML='<span class=\\'text-amber-400 text-xs p-3\\'>Invalid image data</span>'" />
+              <img src="${escapeHtml(ResolveAssetUrl(currentUrl))}" alt="Figure Preview" class="w-full h-auto object-contain rounded-lg transition-all" onerror="this.parentElement.innerHTML='<span class=\\'text-amber-400 text-xs p-3\\'>Invalid image data</span>'" />
               <!-- Canva-Style Drag Resize Handle -->
               <div class="image-resize-handle absolute top-0 -right-2.5 w-4 h-full cursor-ew-resize flex items-center justify-center group-hover/fit:opacity-100 opacity-60 hover:opacity-100 transition-opacity z-10 touch-none select-none" title="Drag to resize width (Double-click to reset 100%)">
                 <div class="w-1.5 h-10 bg-purple-500 rounded-full shadow-md hover:scale-110 active:scale-125 transition-transform"></div>
@@ -609,7 +611,8 @@ export function renderImageBlock(
 
       const applyNewImage = async (fileOrStr) => {
         if (!fileOrStr) return;
-        const compressed = await processAndCompressImage(fileOrStr);
+        // Data URLs go into the asset store; the block keeps only the asset:<hash> ref.
+        const compressed = PutAsset(await processAndCompressImage(fileOrStr));
         if (compressed) {
           currentUrl = compressed;
           block.url = compressed;
@@ -734,7 +737,7 @@ export function renderImageBlock(
 
       const applyGridCellImage = async (fileOrStr, idx) => {
         if (!currentGrid || idx < 0) return;
-        const compressed = await processAndCompressImage(fileOrStr);
+        const compressed = PutAsset(await processAndCompressImage(fileOrStr));
         if (compressed) {
           currentGrid.cells[idx].src = compressed;
           commitFields();

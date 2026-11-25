@@ -2,7 +2,9 @@
  * 03_Notes/B_Editor_View/03_Floating_ToolBar/04_Macros_Modal.js
  * Dedicated Modal for LaTeX Equation Macros and TikZ Styles/Preamble.
  * Features:
- * - Top Bar: [∑ Macros] | [🌐 Global | 📄 Local] | [ + | ○ Light | ○ Dark ] | [✕ Close]
+ * - Top Bar: [∑ Macros] | [ + | ○ Light | ○ Dark ] | [✕ Close]
+ * - Macros are global-only: one set for every note in this file (per-note macros from
+ *   older files are merged into it on load — see 00_State.js mergeNoteMacrosIntoGlobal).
  * - VS Code-Style Tabs: [∑ Equation Macros] | [🎨 TikZ Macros]
  * - Preset Quick Insertion Buttons
  * - Integration with 00_Components/06_Color_Selector.js
@@ -11,16 +13,14 @@
 
 import { NotesState, SaveNotesState, DEFAULT_GLOBAL_MACROS } from '../../00_State.js';
 import { CreateColorSelector } from '../../../00_Components/06_Color_Selector.js';
-import { escapeHtml } from '../../02_Utils.js';
 import { bumpKatexMacroVersion } from '../../Writing_Engine/Math_Renderer.js';
 
-export function OpenMacrosModal({ note = null, onSave = null } = {}) {
+export function OpenMacrosModal({ onSave = null } = {}) {
   // Remove any existing macros modal
   const existing = document.getElementById('notes-macros-modal-backdrop');
   if (existing) existing.remove();
 
-  // Working state copy
-  let isGlobal = true;
+  // Working state copy (global macros only)
   let activeTab = 'equation'; // 'equation' | 'tikz'
 
   const workingGlobal = {
@@ -28,10 +28,6 @@ export function OpenMacrosModal({ note = null, onSave = null } = {}) {
     tikz: NotesState.globalMacros?.tikz || DEFAULT_GLOBAL_MACROS.tikz
   };
 
-  const workingLocal = {
-    equation: note?.macros?.equation || '',
-    tikz: note?.macros?.tikz || ''
-  };
 
   // Create Modal Backdrop
   const backdrop = document.createElement('div');
@@ -52,18 +48,8 @@ export function OpenMacrosModal({ note = null, onSave = null } = {}) {
         </div>
         <div class="flex flex-col leading-none">
           <span class="font-bold text-xs sm:text-sm text-[var(--text)]">Macros & Preamble</span>
-          <span class="text-[10px] text-[var(--text-dim)]">KaTeX & TikZ Config</span>
+          <span class="text-[10px] text-[var(--text-dim)]">Global · applies to every note</span>
         </div>
-      </div>
-
-      <!-- Center-Left: Global / Local Switch -->
-      <div class="flex items-center rounded-lg border border-[var(--border)] bg-[var(--card)] p-0.5 text-xs font-semibold flex-shrink-0">
-        <button type="button" class="btn-scope-global px-2.5 py-1 rounded-md transition-all cursor-pointer font-medium" title="Vault-wide macros applied across all notes">
-          🌐 Global
-        </button>
-        <button type="button" class="btn-scope-local px-2.5 py-1 rounded-md transition-all cursor-pointer font-medium" title="Note-specific macros applied only to this note">
-          📄 Local ${note?.title ? `(${escapeHtml(note.title.slice(0, 14))}${note.title.length > 14 ? '…' : ''})` : ''}
-        </button>
       </div>
 
       <!-- Center-Right: Color Selector Mount -->
@@ -116,8 +102,6 @@ export function OpenMacrosModal({ note = null, onSave = null } = {}) {
   document.body.appendChild(backdrop);
 
   // Grab DOM references
-  const btnGlobal = modal.querySelector('.btn-scope-global');
-  const btnLocal = modal.querySelector('.btn-scope-local');
   const tabEquation = modal.querySelector('.tab-btn-equation');
   const tabTikz = modal.querySelector('.tab-btn-tikz');
   const textarea = modal.querySelector('.macro-editor-textarea');
@@ -151,23 +135,13 @@ export function OpenMacrosModal({ note = null, onSave = null } = {}) {
 
   // Save current textarea content to working state
   function saveCurrentTextareaToState() {
-    const target = isGlobal ? workingGlobal : workingLocal;
-    target[activeTab] = textarea.value;
+    workingGlobal[activeTab] = textarea.value;
   }
 
   textarea.addEventListener('input', saveCurrentTextareaToState);
 
-  // Update UI appearance based on isGlobal and activeTab
+  // Update UI appearance based on the active tab
   function updateUI() {
-    // 1. Update Global / Local switch buttons
-    if (isGlobal) {
-      btnGlobal.className = 'btn-scope-global px-2.5 py-1 rounded-md transition-all cursor-pointer font-bold bg-[var(--accent)] text-white shadow-xs';
-      btnLocal.className = 'btn-scope-local px-2.5 py-1 rounded-md transition-all cursor-pointer font-medium text-[var(--text-secondary)] hover:text-[var(--text)]';
-    } else {
-      btnLocal.className = 'btn-scope-local px-2.5 py-1 rounded-md transition-all cursor-pointer font-bold bg-[var(--accent)] text-white shadow-xs';
-      btnGlobal.className = 'btn-scope-global px-2.5 py-1 rounded-md transition-all cursor-pointer font-medium text-[var(--text-secondary)] hover:text-[var(--text)]';
-    }
-
     // 2. Update Tabs
     if (activeTab === 'equation') {
       tabEquation.className = 'tab-btn tab-btn-equation flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold rounded-t-lg border-t-2 border-[var(--accent)] bg-[var(--card)] text-[var(--text)] shadow-xs cursor-pointer';
@@ -178,22 +152,8 @@ export function OpenMacrosModal({ note = null, onSave = null } = {}) {
     }
 
     // 3. Load text content into editor
-    const source = isGlobal ? workingGlobal : workingLocal;
-    textarea.value = source[activeTab] || '';
+    textarea.value = workingGlobal[activeTab] || '';
   }
-
-  // Scope button listeners
-  btnGlobal.addEventListener('click', () => {
-    saveCurrentTextareaToState();
-    isGlobal = true;
-    updateUI();
-  });
-
-  btnLocal.addEventListener('click', () => {
-    saveCurrentTextareaToState();
-    isGlobal = false;
-    updateUI();
-  });
 
   // Tab button listeners
   tabEquation.addEventListener('click', () => {
@@ -210,12 +170,8 @@ export function OpenMacrosModal({ note = null, onSave = null } = {}) {
 
   // Reset defaults
   btnReset.addEventListener('click', () => {
-    if (confirm(`Reset ${isGlobal ? 'Global' : 'Local'} ${activeTab === 'equation' ? 'Equation' : 'TikZ'} macros to default preset?`)) {
-      if (isGlobal) {
-        workingGlobal[activeTab] = DEFAULT_GLOBAL_MACROS[activeTab];
-      } else {
-        workingLocal[activeTab] = '';
-      }
+    if (confirm(`Reset ${activeTab === 'equation' ? 'Equation' : 'TikZ'} macros to the default preset?`)) {
+      workingGlobal[activeTab] = DEFAULT_GLOBAL_MACROS[activeTab];
       updateUI();
     }
   });
@@ -233,13 +189,8 @@ export function OpenMacrosModal({ note = null, onSave = null } = {}) {
   btnSave.addEventListener('click', () => {
     saveCurrentTextareaToState();
 
-    // 1. Commit Global Macros
+    // 1. Commit Global Macros (the only scope)
     NotesState.globalMacros = { ...workingGlobal };
-
-    // 2. Commit Local Note Macros
-    if (note) {
-      note.macros = { ...workingLocal };
-    }
 
     // 3. Persist State (invalidates the KaTeX cache so equations re-render with the new macros)
     bumpKatexMacroVersion();
@@ -248,8 +199,7 @@ export function OpenMacrosModal({ note = null, onSave = null } = {}) {
     // 4. Notify Parent / Re-render canvas
     if (onSave) {
       onSave({
-        globalMacros: workingGlobal,
-        localMacros: workingLocal
+        globalMacros: workingGlobal
       });
     }
 

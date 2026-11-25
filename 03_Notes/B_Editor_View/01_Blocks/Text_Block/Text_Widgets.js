@@ -71,16 +71,65 @@ if (typeof document !== 'undefined') {
       vertical-align: middle;
       line-height: 1;
     }
+    /* Task checkbox — identical geometry in edit and reading mode.
+       The wrapper is exactly one text line tall (1lh), so the box is centred on the
+       first line of the task text whether the line is a block (edit) or a flex
+       row (reading), and wrapped multi-line task text stays aligned. */
     .live-widget.live-checkbox {
       display: inline-flex;
       align-items: center;
-      justify-content: center;
-      vertical-align: middle;
-      line-height: 1;
+      justify-content: flex-start;
+      vertical-align: top;
+      line-height: inherit;
+      height: calc(var(--note-line-height, 1.7) * 1em);
+      height: 1lh;
+      padding: 0 !important;
+      margin-right: 0.5em;
+      flex-shrink: 0;
     }
+    .live-line.obsidian-task-item { gap: 0 !important; align-items: flex-start; }
+    /* Themed box: follows --card / --text-dim / --accent, which flip with data-theme */
     .live-widget.live-checkbox .note-task-checkbox {
-      margin: 0;
-      vertical-align: middle;
+      appearance: none;
+      -webkit-appearance: none;
+      box-sizing: border-box;
+      width: 0.95em;
+      height: 0.95em;
+      min-width: 13px;
+      min-height: 13px;
+      margin: 0 !important;
+      border: 1.5px solid var(--text-dim, #6b7088);
+      border-radius: 4px;
+      background: var(--card, #1c1f2e);
+      display: inline-grid;
+      place-content: center;
+      cursor: pointer;
+      position: relative;
+      transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .live-widget.live-checkbox .note-task-checkbox:hover {
+      border-color: var(--accent, #8b6dff);
+    }
+    .live-widget.live-checkbox .note-task-checkbox:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px var(--accent-glow, rgba(139, 109, 255, 0.22));
+    }
+    .live-widget.live-checkbox .note-task-checkbox:checked {
+      background: var(--accent, #8b6dff) !important;
+      border-color: var(--accent, #8b6dff) !important;
+    }
+    .live-widget.live-checkbox .note-task-checkbox::after {
+      content: "";
+      display: block;
+      width: 0.26em;
+      height: 0.5em;
+      border: solid #ffffff;
+      border-width: 0 0.12em 0.12em 0;
+      transform: translateY(-0.05em) rotate(45deg) scale(0);
+      transition: transform 0.12s ease;
+    }
+    .live-widget.live-checkbox .note-task-checkbox:checked::after {
+      transform: translateY(-0.05em) rotate(45deg) scale(1);
     }
     .live-widget.live-math {
       display: inline-flex;
@@ -249,21 +298,29 @@ export const createLiveWidget = (type, raw, contentHtml = '', options = {}) => {
     span.innerHTML = `${escapeHtml(noteName || '(empty)')}${refBadge}`;
 
     if (resolved) {
+      // Popup + tab URL come from Wiki_Link_Popup.js via `window` (registered at
+      // module load, see Notes.js). No dynamic import(): it breaks in the flat
+      // standalone bundle and would delay window.open past the user gesture.
+      const tabUrl = () => (typeof window.wikiLinkTabUrl === 'function')
+        ? window.wikiLinkTabUrl(target.id, blockRef)
+        : `${window.location.href.split('#')[0]}#Notes?id=${encodeURIComponent(target.id)}${blockRef ? `&goto=${encodeURIComponent(blockRef)}` : ''}`;
       span.addEventListener('click', (e) => {
         e.stopPropagation();
         e.preventDefault();
         if (e.ctrlKey || e.metaKey) {
-          // Lazy-loaded: importing the popup statically would create a module cycle
-          // (Text_Widgets → Wiki_Link_Popup → Block_Dispatcher → Text_Block → here)
-          import('./Wiki_Link_Popup.js').then((m) => {
-            if (e.ctrlKey || e.metaKey) window.open(m.wikiLinkTabUrl(target.id, blockRef), '_blank');
-            else m.openWikiNotePopup(target.id, blockRef);
-          });
+          window.open(tabUrl(), '_blank');
         } else if (e.altKey && !isViewMode && options.onExpand) {
           options.onExpand(span);
-        } else {
-          import('./Wiki_Link_Popup.js').then((m) => m.openWikiNotePopup(target.id, blockRef));
+        } else if (typeof window.openWikiNotePopup === 'function') {
+          window.openWikiNotePopup(target.id, blockRef);
         }
+      });
+      // Middle-click also opens the note in a new tab (browser-link behaviour).
+      span.addEventListener('auxclick', (e) => {
+        if (e.button !== 1) return;
+        e.stopPropagation();
+        e.preventDefault();
+        window.open(tabUrl(), '_blank');
       });
     } else if (isViewMode) {
       span.addEventListener('click', (e) => e.stopPropagation());
@@ -274,7 +331,7 @@ export const createLiveWidget = (type, raw, contentHtml = '', options = {}) => {
     span.innerHTML = contentHtml;
   } else if (type === 'checkbox') {
     const isChecked = raw.includes('[x]') || raw.includes('[X]');
-    span.className = `live-widget live-checkbox inline-flex items-center justify-center align-middle pr-2 select-none ${baseCursor}`;
+    span.className = `live-widget live-checkbox select-none ${baseCursor}`;
     span.innerHTML = `<input type="checkbox" class="note-task-checkbox cursor-pointer" ${isChecked ? 'checked' : ''} />`;
     const cb = span.querySelector('input');
     cb.addEventListener('change', (e) => {
@@ -294,6 +351,13 @@ export const createLiveWidget = (type, raw, contentHtml = '', options = {}) => {
   if (!isViewMode && onExpand && type !== 'fig' && type !== 'eq' && type !== 'wikilink') {
     span.addEventListener('click', (e) => {
       if (e.target.closest('a')) return;
+      // A click ON the task checkbox toggles it (handled by its change listener);
+      // expanding here would swap the widget for its stale raw `- [ ] ` text
+      // before the toggle is serialized, so the checkbox vanished and nothing saved.
+      if (type === 'checkbox' && e.target.tagName === 'INPUT') {
+        e.stopPropagation();
+        return;
+      }
       e.stopPropagation();
       onExpand(span);
     });

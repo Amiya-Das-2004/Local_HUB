@@ -299,22 +299,16 @@ export function parseLatexMacrosIntoObject(macroString, targetMacros = {}) {
 }
 
 /**
- * Returns merged KaTeX macros: built-in + global macros + note-level local macros
+ * Returns merged KaTeX macros: built-in + global macros.
+ * Macros are global-only (per-note macros from older files are merged into the
+ * global set on load by 00_State.js → mergeNoteMacrosIntoGlobal). The `note`
+ * parameter is kept for call-site compatibility.
  */
-export function getActiveKatexMacros(note = null) {
-  const effectiveNote = note || activeNoteContext;
+export function getActiveKatexMacros(_note = null) {
   const combinedMacros = { ...KATEX_MACROS };
-
-  // 1. Global equation macros
   if (typeof NotesState !== 'undefined' && NotesState.globalMacros?.equation) {
     parseLatexMacrosIntoObject(NotesState.globalMacros.equation, combinedMacros);
   }
-
-  // 2. Note-level local equation macros (override/extend global)
-  if (effectiveNote?.macros?.equation) {
-    parseLatexMacrosIntoObject(effectiveNote.macros.equation, combinedMacros);
-  }
-
   return combinedMacros;
 }
 

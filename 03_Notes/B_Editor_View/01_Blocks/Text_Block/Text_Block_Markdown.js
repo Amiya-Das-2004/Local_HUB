@@ -542,7 +542,7 @@ export function createLiveBlockElement(blk, options = {}) {
         return renderSingleLineToDom(blk.raw, options);
       }
       el = document.createElement('div');
-      el.className = 'live-line obsidian-task-item flex items-start gap-2 min-h-[1.5em] my-0.5 select-text';
+      el.className = 'live-line obsidian-task-item flex items-start min-h-[1.5em] my-0.5 select-text';
       el.setAttribute('data-raw', blk.raw);
 
       if (blk.indent) {
@@ -571,7 +571,12 @@ export function createLiveBlockElement(blk, options = {}) {
       );
 
       el.appendChild(checkboxWidget);
-      el.appendChild(parseTextToFragment(blk.content, options));
+      // One inline label element: as direct flex children, text nodes and math
+      // widgets each became separate flex items and lost the spaces between them.
+      const label = document.createElement('span');
+      label.className = 'obsidian-task-label min-w-0 flex-1';
+      label.appendChild(parseTextToFragment(blk.content, options));
+      el.appendChild(label);
       break;
     }
 
@@ -623,8 +628,40 @@ export function renderObsidianMarkdown(markdownText = '', options = {}) {
   }
 
   const blocks = lexMarkdownBlocks(markdownText);
+
+  // View-mode task toggles: rebuild the markdown from the lexed blocks' raw text
+  // (the toggled task block has already rewritten its own `raw`). Serializing the
+  // rendered view DOM instead dropped every newline in the block. The lexer covers
+  // every source line, so joining raws round-trips; if it ever would not, only the
+  // toggled task line is patched in the original text.
+  let blockOptions = options;
+  if (options.isViewMode && typeof options.onCheckboxToggle === 'function') {
+    const userToggle = options.onCheckboxToggle;
+    const originalRaws = blocks.map(b => b.raw);
+    const roundTrips = originalRaws.join('\n') === markdownText;
+    blockOptions = {
+      ...options,
+      onCheckboxToggle: () => {
+        if (roundTrips) {
+          userToggle(blocks.map(b => b.raw).join('\n'));
+          return;
+        }
+        const lines = markdownText.split('\n');
+        blocks.forEach((b, i) => {
+          if (b.raw !== originalRaws[i]) {
+            const li = lines.indexOf(originalRaws[i]);
+            if (li !== -1) lines[li] = b.raw;
+            originalRaws[i] = b.raw;
+          }
+        });
+        markdownText = lines.join('\n');
+        userToggle(markdownText);
+      }
+    };
+  }
+
   blocks.forEach((blk) => {
-    container.appendChild(createLiveBlockElement(blk, options));
+    container.appendChild(createLiveBlockElement(blk, blockOptions));
   });
 
   return container;

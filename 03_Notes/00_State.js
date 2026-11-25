@@ -1,5 +1,8 @@
 import { clearAllBlockHistory } from './Writing_Engine/Block_History.js';
-import { OfferRecoverySnapshot, WriteRecoverySnapshot, ClearRecoverySnapshot, PurgeLegacyRecoveryKeys } from '../00_Components/10_Recovery.js';
+import { OfferRecoverySnapshot, WriteRecoverySnapshot, ReadRecoverySnapshot, ClearRecoverySnapshot, PurgeLegacyRecoveryKeys } from '../00_Components/10_Recovery.js';
+import { InstallAssetSerializer, StateWithoutAssets, LoadAssets, TakeSessionAssetsIfChanged, MarkAssetsSaved } from './Writing_Engine/Asset_Store.js';
+import { MigrateInlineImages } from './Writing_Engine/Asset_Migrate.js';
+import { normalizeHeadingLevel } from './Writing_Engine/Block_Engine.js';
 
 export const DEFAULT_GLOBAL_MACROS = {
   equation: `\\newcommand{\\mb}[1]{\\mathbf{#1}}
@@ -53,12 +56,14 @@ export let NotesState = (typeof window !== 'undefined' && window.NotesState && A
       globalMacros: { ...DEFAULT_GLOBAL_MACROS },
       tableTemplates: [],
       tikzTemplates: [],
+      tikzFonts: {},
       bibliography: [],
       citationStyle: 'numeric',
       folders: [],
       tags: [],
       notes: []
     };
+InstallAssetSerializer(NotesState);
 if (typeof window !== 'undefined') {
   window.NotesState = NotesState;
 }
@@ -107,6 +112,7 @@ function sanitizeNote(n, idx = 0) {
       if (b && typeof b === 'object' && !b.id) {
         b.id = `b_${Date.now()}_${idx}_${bIdx}_${Math.random().toString(36).slice(2, 6)}`;
       }
+      if (b && b.type === 'heading') b.level = normalizeHeadingLevel(b.level);
       return b;
     }) : [],
     // Per-note numbering configs pass through untouched (objects or legacy strings):
@@ -162,6 +168,92 @@ function migrateOrientationContainers(note) {
   }
 }
 
+// ONE data format for both storage modes: the JSON inside <script id="NotesData"> and the
+// external data file (D_Data_File/) are the same object. Normalizes a parsed payload.
+export function normalizeNotesPayload(parsed) {
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+  return {
+    vaultMeta: (parsed.vaultMeta && typeof parsed.vaultMeta === 'object') ? parsed.vaultMeta : { title: "My Research & Notes Vault", version: "1.0.0", lastSaved: 0 },
+    globalMacros: parsed.globalMacros || { ...DEFAULT_GLOBAL_MACROS },
+    tableTemplates: Array.isArray(parsed.tableTemplates) ? parsed.tableTemplates : [],
+    tikzTemplates: Array.isArray(parsed.tikzTemplates) ? parsed.tikzTemplates : [],
+    tikzFonts: (parsed.tikzFonts && typeof parsed.tikzFonts === 'object') ? parsed.tikzFonts : {},
+    bibliography: Array.isArray(parsed.bibliography) ? parsed.bibliography : [],
+    citationStyle: typeof parsed.citationStyle === 'string' ? parsed.citationStyle : 'numeric',
+    folders: Array.isArray(parsed.folders) ? parsed.folders : [],
+    tags: Array.isArray(parsed.tags) ? parsed.tags : [],
+    notes: Array.isArray(parsed.notes) ? parsed.notes.map(sanitizeNote) : [],
+    // Images (Writing_Engine/Asset_Store.js): { hash: dataUrl }, referenced by blocks as asset:<hash>
+    assets: (parsed.assets && typeof parsed.assets === 'object' && !Array.isArray(parsed.assets)) ? parsed.assets : {}
+  };
+}
+
+// Writes a normalized payload into the live NotesState (folders/tags derived when missing).
+function assignNotesPayload(payload) {
+  Object.assign(NotesState, {
+    vaultMeta: payload.vaultMeta,
+    globalMacros: payload.globalMacros || { ...DEFAULT_GLOBAL_MACROS },
+    tableTemplates: payload.tableTemplates || [],
+    tikzTemplates: payload.tikzTemplates || [],
+    tikzFonts: payload.tikzFonts || {},
+    bibliography: payload.bibliography || [],
+    citationStyle: payload.citationStyle || 'numeric',
+    folders: payload.folders.length > 0 ? payload.folders : Array.from(new Set(payload.notes.map(n => n.folder || 'General').filter(Boolean))),
+    tags: payload.tags.length > 0 ? payload.tags : Array.from(new Set(payload.notes.flatMap(n => n.tags || []).filter(Boolean))),
+    notes: payload.notes
+  });
+  delete NotesState.assets;
+  // Images live in the asset store, not in NotesState; older files' inline images move there.
+  LoadAssets(payload.assets, { fromFile: true });
+  MigrateInlineImages(NotesState, { fromFile: true });
+  InstallAssetSerializer(NotesState);
+  mergeNoteMacrosIntoGlobal(NotesState);
+}
+
+/**
+ * Replaces the whole vault with a payload read from elsewhere (the external data file).
+ * The result is the new "saved" baseline: unsaved-change count resets to 0.
+ * @returns {boolean} false when the payload is not a notes vault
+ */
+export function ApplyNotesPayload(parsed) {
+  const payload = normalizeNotesPayload(parsed);
+  if (!payload) return false;
+  assignNotesPayload(payload);
+  if (typeof window !== 'undefined') window.NotesState = NotesState;
+  clearTimeout(notesSaveDebounceTimer);
+  const dataBlock = typeof document !== 'undefined' ? document.getElementById('NotesData') : null;
+  if (dataBlock) dataBlock.textContent = JSON.stringify(StateWithoutAssets(NotesState));
+  clearAllBlockHistory();
+  CaptureNotesBaseline(NotesState);
+  return true;
+}
+
+// A payload copied straight into NotesState (JSON import, older code paths) may carry
+// `assets` and inline images: move them into the asset store. Cheap when there is nothing.
+// Also brings blocks edited from outside (window.TeXidianAPI, a Claude skill, an older
+// file) into the current shape: legacy `cols` containers → members/rows, numeric heading levels.
+function absorbStrayAssets(state) {
+  if (!state || typeof state !== 'object') return;
+  normalizeLiveBlocks(state);
+  if (Object.prototype.hasOwnProperty.call(state, 'assets')) {
+    LoadAssets(state.assets, { fromFile: false });
+    delete state.assets;
+  }
+  MigrateInlineImages(state, { fromFile: false });
+  InstallAssetSerializer(state);
+}
+
+// Cheap, idempotent pass over every note: legacy columns migration + heading level strings.
+function normalizeLiveBlocks(state) {
+  (Array.isArray(state.notes) ? state.notes : []).forEach((note) => {
+    if (!note || !Array.isArray(note.blocks)) return;
+    if (note.blocks.some(b => b && Array.isArray(b.cols))) migrateOrientationContainers(note);
+    note.blocks.forEach((b) => {
+      if (b && b.type === 'heading' && !/^h[1-3]$/.test(String(b.level))) b.level = normalizeHeadingLevel(b.level);
+    });
+  });
+}
+
 // Loads notes from HTML vault (#NotesData) and optionally recovers uncommitted edits from localStorage
 export function LoadNotesState(forceReload = false) {
   // Reuse in-memory state if already loaded to avoid multi-MB JSON parsing on every route change
@@ -172,6 +264,7 @@ export function LoadNotesState(forceReload = false) {
     if (typeof window !== 'undefined' && window.NotesState && NotesState !== window.NotesState) {
       Object.assign(NotesState, window.NotesState);
     }
+    absorbStrayAssets(NotesState);
     return NotesState;
   }
 
@@ -180,20 +273,7 @@ export function LoadNotesState(forceReload = false) {
 
   if (dataBlock && typeof dataBlock.textContent === 'string' && dataBlock.textContent.trim()) {
     try {
-      const parsedDom = JSON.parse(dataBlock.textContent);
-      if (parsedDom && typeof parsedDom === 'object') {
-        domState = {
-          vaultMeta: parsedDom.vaultMeta || { title: "My Research & Notes Vault", version: "1.0.0", lastSaved: 0 },
-          globalMacros: parsedDom.globalMacros || { ...DEFAULT_GLOBAL_MACROS },
-          tableTemplates: Array.isArray(parsedDom.tableTemplates) ? parsedDom.tableTemplates : [],
-          tikzTemplates: Array.isArray(parsedDom.tikzTemplates) ? parsedDom.tikzTemplates : [],
-          bibliography: Array.isArray(parsedDom.bibliography) ? parsedDom.bibliography : [],
-          citationStyle: typeof parsedDom.citationStyle === 'string' ? parsedDom.citationStyle : 'numeric',
-          folders: Array.isArray(parsedDom.folders) ? parsedDom.folders : [],
-          tags: Array.isArray(parsedDom.tags) ? parsedDom.tags : [],
-          notes: Array.isArray(parsedDom.notes) ? parsedDom.notes.map(sanitizeNote) : []
-        };
-      }
+      domState = normalizeNotesPayload(JSON.parse(dataBlock.textContent));
     } catch (e) {
       console.warn('Could not parse DOM NotesData from HTML:', e);
     }
@@ -212,17 +292,7 @@ export function LoadNotesState(forceReload = false) {
 
   // 3. Pure, clean load directly from HTML data vault (#NotesData)
   if (domState) {
-    Object.assign(NotesState, {
-      vaultMeta: domState.vaultMeta,
-      globalMacros: domState.globalMacros || { ...DEFAULT_GLOBAL_MACROS },
-      tableTemplates: domState.tableTemplates || [],
-      tikzTemplates: domState.tikzTemplates || [],
-      bibliography: domState.bibliography || [],
-      citationStyle: domState.citationStyle || 'numeric',
-      folders: domState.folders.length > 0 ? domState.folders : Array.from(new Set(domState.notes.map(n => n.folder || 'General').filter(Boolean))),
-      tags: domState.tags.length > 0 ? domState.tags : Array.from(new Set(domState.notes.flatMap(n => n.tags || []).filter(Boolean))),
-      notes: domState.notes
-    });
+    assignNotesPayload(domState);
     if (typeof window !== 'undefined') window.NotesState = NotesState;
     if (!isBaselineCaptured) {
       CaptureNotesBaseline(NotesState);
@@ -236,6 +306,7 @@ export function LoadNotesState(forceReload = false) {
     globalMacros: { ...DEFAULT_GLOBAL_MACROS },
     tableTemplates: [],
     tikzTemplates: [],
+    tikzFonts: {},
     bibliography: [],
     citationStyle: 'numeric',
     folders: [],
@@ -247,6 +318,29 @@ export function LoadNotesState(forceReload = false) {
     CaptureNotesBaseline(NotesState);
   }
   return NotesState;
+}
+
+// Macros are global-only. Older files may still carry per-note macros
+// (note.macros.equation / note.macros.tikz): append each line the global set does
+// not already contain, then clear the note's copy. Idempotent across reloads.
+function mergeNoteMacrosIntoGlobal(state) {
+  if (!state || !Array.isArray(state.notes)) return;
+  if (!state.globalMacros || typeof state.globalMacros !== 'object') state.globalMacros = { ...DEFAULT_GLOBAL_MACROS };
+  ['equation', 'tikz'].forEach((kind) => {
+    let globalText = typeof state.globalMacros[kind] === 'string' ? state.globalMacros[kind] : '';
+    const existing = new Set(globalText.split('\n').map(l => l.trim()).filter(Boolean));
+    state.notes.forEach((note) => {
+      const local = note && note.macros && typeof note.macros[kind] === 'string' ? note.macros[kind] : '';
+      if (!local.trim()) return;
+      const newLines = local.split('\n').filter(l => l.trim() && !existing.has(l.trim()));
+      if (newLines.length) {
+        globalText = `${globalText.replace(/\s+$/, '')}\n% --- merged from note: ${note.title || note.id} ---\n${newLines.join('\n')}`;
+        newLines.forEach(l => existing.add(l.trim()));
+      }
+      note.macros[kind] = '';
+    });
+    state.globalMacros[kind] = globalText;
+  });
 }
 
 let notesSaveDebounceTimer = null;
@@ -440,19 +534,41 @@ function persistNotesToStorageImmediate() {
     notesSaveDebounceTimer = null;
   }
 
+  // Safety net: an inline data URL that arrived some other way (import, old clipboard,
+  // a new block type) moves into the asset store before anything is written.
+  absorbStrayAssets(NotesState);
+
   // 1. Write to live in-memory DOM <script id="NotesData">
   const dataBlock = typeof document !== 'undefined' ? document.getElementById('NotesData') : null;
+  //    Images are left out (asset store); every file serializer adds them via NotesState.toJSON.
+  const withoutAssets = StateWithoutAssets(NotesState);
   if (dataBlock) {
-    dataBlock.textContent = JSON.stringify(NotesState, null, 2);
+    dataBlock.textContent = JSON.stringify(withoutAssets, null, 2);
   }
 
   // 2. Keep this file's path-scoped crash-recovery snapshot in sessionStorage
   //    in sync with the working buffer (survives reloads/crashes, never leaks
-  //    into other files or tabs).
-  WriteRecoverySnapshot('NotesData', NotesState);
+  //    into other files or tabs). Note text only; images added this session get
+  //    their own snapshot, rewritten only when an image is added.
+  let recoveryOk = WriteRecoverySnapshot('NotesData', withoutAssets) !== false;
+  const newAssets = TakeSessionAssetsIfChanged();
+  if (newAssets) {
+    recoveryOk = (Object.keys(newAssets).length ? WriteRecoverySnapshot('NotesAssets', newAssets) !== false : (ClearRecoverySnapshot('NotesAssets'), true)) && recoveryOk;
+  }
+  if (!recoveryOk) warnRecoveryFailed();
 
   // Pure in-memory session: do NOT persist unsaved working notes buffer to browser localStorage.
   // This ensures zero cross-file cache contamination between different standalone LocalHUB files.
+}
+
+// Visible (once per session) instead of silent: the browser refused the recovery snapshot.
+let recoveryWarningShown = false;
+function warnRecoveryFailed() {
+  if (recoveryWarningShown || typeof window === 'undefined') return;
+  recoveryWarningShown = true;
+  const msg = 'Crash recovery is off for this session: the browser has no room for the backup copy. Save often.';
+  if (typeof window.ShowStructureToast === 'function') window.ShowStructureToast(msg, { undo: false, kind: 'warn', ms: 12000 });
+  else console.warn('[Notes] ' + msg);
 }
 
 // Applies a user-approved recovery snapshot (Restore banner) to the live state:
@@ -461,6 +577,8 @@ function persistNotesToStorageImmediate() {
 // restored edits keep counting as unsaved until the next SAVE.
 function RestoreNotesFromSnapshot(snapData) {
   if (!snapData || typeof snapData !== 'object') return;
+  const assetSnap = ReadRecoverySnapshot('NotesAssets');
+  if (assetSnap) LoadAssets(assetSnap.data);
   Object.assign(NotesState, {
     vaultMeta: snapData.vaultMeta || NotesState.vaultMeta,
     globalMacros: snapData.globalMacros || NotesState.globalMacros,
@@ -472,6 +590,7 @@ function RestoreNotesFromSnapshot(snapData) {
     tags: Array.isArray(snapData.tags) ? snapData.tags : NotesState.tags,
     notes: Array.isArray(snapData.notes) ? snapData.notes.map(sanitizeNote) : NotesState.notes
   });
+  MigrateInlineImages(NotesState, { fromFile: false }); // snapshots from older builds
   if (typeof window !== 'undefined') window.NotesState = NotesState;
   persistNotesToStorageImmediate();
   SetNotesUnsavedChanges(true);
@@ -511,7 +630,7 @@ if (typeof window !== 'undefined' && !window.__NOTES_BEFOREUNLOAD_INSTALLED__) {
 
 // Persists active notes, syncs folder/tag lists, and updates HTML vault in-memory with debouncing
 export function SaveNotesState(newState = null, { immediate = false } = {}) {
-  if (newState) NotesState = newState;
+  if (newState) NotesState = InstallAssetSerializer(newState);
 
   // Sync folders and tags to currently active notes.
   // The existing lists are the ordering source of truth (drag-reorder writes them directly);
@@ -522,6 +641,10 @@ export function SaveNotesState(newState = null, { immediate = false } = {}) {
     NotesState.folders = mergeOrderedLists(NotesState.folders, derivedFolders);
     NotesState.tags = mergeOrderedLists(NotesState.tags, derivedTags);
   }
+
+  // Outside edits (TeXidianAPI / skills) may hand over legacy columns or numeric headings:
+  // fix them now, before the next render reads them.
+  normalizeLiveBlocks(NotesState);
 
   // Mark in-memory state as dirty and keep window.NotesState synchronously in sync
   SetNotesUnsavedChanges(true);
@@ -551,6 +674,8 @@ export function ClearNotesLocalCache() {
     console.warn('Failed to clear NotesData_Local_Cache:', e);
   }
   ClearRecoverySnapshot('NotesData');
+  ClearRecoverySnapshot('NotesAssets');
+  MarkAssetsSaved();
   if (typeof clearAllBlockHistory === 'function') {
     clearAllBlockHistory();
   }

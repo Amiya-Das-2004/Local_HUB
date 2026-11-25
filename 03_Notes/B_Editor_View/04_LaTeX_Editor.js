@@ -8,9 +8,10 @@ import { NotesState, SaveNotesState, flushNotesSave } from '../00_State.js';
 import { computeHeadingPrefixes, computeFigureNumbers, computeEquationNumbers, computeCitationNumbers } from '../Writing_Engine/Numbering_Engine.js';
 import { bumpKatexMacroVersion } from '../Writing_Engine/Math_Renderer.js';
 import {
-  createNewBlock,
-  insertBlockAt,
+  createBlockWithMembers,
+  insertBlocksAt,
   BLOCK_DEFINITIONS,
+  normalizeOrientationRows,
   GLOBAL_FONT_FAMILIES,
   GLOBAL_FONT_SIZES
 } from '../Writing_Engine/Block_Engine.js';
@@ -22,6 +23,8 @@ import { getRawOffsetFromPoint, placeCaretAtRawOffset } from './01_Blocks/Text_B
 import { escapeHtml } from '../02_Utils.js';
 import { setActiveNoteContext, setActiveFigureTagMap, setActiveEquationTagMap, setActiveCitationMap } from '../Writing_Engine/Math_Renderer.js';
 import { setActiveTikzNoteContext } from '../Writing_Engine/Tikz_Engine/Tikz_Renderer.js';
+import { AttachBlockSelection, SetBlockEditorContext, ClearBlockEditorContext, RefreshBlockSelectionMarks } from '../E_Note_Ops/06_Block_Selection.js';
+import '../E_Note_Ops/09_Block_Selection_Bar.js';
 
 export function RenderLaTeXEditor(container, noteId, isEditMode = true) {
   if (!container) return;
@@ -139,11 +142,14 @@ export function RenderLaTeXEditor(container, noteId, isEditMode = true) {
   const blocksContainer = document.createElement('div');
   blocksContainer.className = 'space-y-0.5';
   paper.appendChild(blocksContainer);
+  // Multi-block selection (Shift/Ctrl/Cmd+click) — E_Note_Ops/06_Block_Selection.js
+  if (isEditMode) AttachBlockSelection(blocksContainer);
 
   // Core Block Insertion Method
   function insertBlock(type, level = null, targetIndex = -1) {
     if (!note.blocks) note.blocks = [];
-    const newBlock = createNewBlock(type, { level });
+    // Columns come with their member blocks (reference model) — insert all of them together.
+    const newBlocks = createBlockWithMembers(type, { level });
 
     // Determine target index:
     let actualIndex = targetIndex;
@@ -155,7 +161,7 @@ export function RenderLaTeXEditor(container, noteId, isEditMode = true) {
       }
     }
 
-    const insertedIdx = insertBlockAt(note.blocks, newBlock, actualIndex);
+    const insertedIdx = insertBlocksAt(note.blocks, newBlocks, actualIndex);
     activeBlockIndex = insertedIdx;
     activeSelectorIndex = -1;
     SaveNotesState();
@@ -459,26 +465,13 @@ export function RenderLaTeXEditor(container, noteId, isEditMode = true) {
       return;
     }
 
-    // 1. Remove picked block from note.blocks
-    const removeIdx = note.blocks.findIndex(b => b.id === pickedBlock.id);
-    if (removeIdx === -1) return;
-    const [movedBlock] = note.blocks.splice(removeIdx, 1);
-
-    // 2. Insert into targetBlock.cols
-    if (!Array.isArray(targetBlock.cols)) targetBlock.cols = [];
-
-    if (pickerState.targetColIndex !== null && pickerState.targetColIndex >= 0 && pickerState.targetColIndex < targetBlock.cols.length) {
-      targetBlock.cols[pickerState.targetColIndex] = movedBlock;
-      pickerState.targetColIndex++;
-    } else {
-      // Find empty slot or append
-      const emptySlot = targetBlock.cols.findIndex(c => !c || (c.type === 'text' && !c.content));
-      if (emptySlot !== -1) {
-        targetBlock.cols[emptySlot] = movedBlock;
-      } else {
-        targetBlock.cols.push(movedBlock);
-      }
-    }
+    // 1–2. Dock the picked block (reference model): it stays in note.blocks and the
+    //      container lists its id in `members` / `rows` (never the legacy `cols`).
+    if (!note.blocks.some(b => b.id === pickedBlock.id)) return;
+    const members = Array.isArray(targetBlock.members) ? targetBlock.members.slice() : [];
+    if (!members.includes(pickedBlock.id)) members.push(pickedBlock.id);
+    targetBlock.members = members;
+    targetBlock.rows = normalizeOrientationRows(targetBlock).rows;
 
     pickerState.pickedCount++;
 
@@ -650,6 +643,7 @@ export function RenderLaTeXEditor(container, noteId, isEditMode = true) {
       }
     }
     blocksContainer.appendChild(fragment);
+    RefreshBlockSelectionMarks(blocksContainer);
   }
 
   // Bottom Floating Dock Toolbar (Sidebar Toggle, Study Toggle, Note Fonts, Font Size, Macros)
@@ -784,11 +778,26 @@ export function RenderLaTeXEditor(container, noteId, isEditMode = true) {
     }
     document.removeEventListener('click', onDocClick);
     document.removeEventListener('keydown', onDocKeyDown);
+    ClearBlockEditorContext(note.id);
     if (container.__themeObserver) {
       container.__themeObserver.disconnect();
       container.__themeObserver = null;
     }
   };
+
+  // Context for block selection / copy / paste / move (E_Note_Ops/06–09).
+  SetBlockEditorContext({
+    note,
+    container: blocksContainer,
+    isEditMode,
+    getActiveIndex: () => activeBlockIndex,
+    rerender: () => {
+      activeBlockIndex = -1;
+      activeSelectorIndex = -1;
+      renderBlocks();
+      refreshSidebar();
+    }
+  });
 
   renderBlocks();
 }

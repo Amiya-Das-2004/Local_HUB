@@ -8,7 +8,7 @@
 //
 // The shared Save button on Index.html (all-in-one build) is completely untouched.
 
-const TAB_OUTPUT_NAME = 'Notes.html';
+const TAB_OUTPUT_NAME = 'TeXidian.html';
 
 // Syncs all DOM <script type="application/json"> vault blocks with live window
 // states and localStorage caches (local copy of the proven shared sync logic).
@@ -73,6 +73,9 @@ function syncTabStatesToDOM(doc) {
         if (id === 'NotesData') {
           if (!cleanData.vaultMeta) cleanData.vaultMeta = {};
           cleanData.vaultMeta.lastSaved = now;
+          // Same data format as the external data file (D_Data_File/01_Data_Payload.js)
+          cleanData.vaultMeta.format = 'tixidian-notes';
+          cleanData.vaultMeta.formatVersion = 1;
           if (window.NotesState && window.NotesState.vaultMeta) {
             window.NotesState.vaultMeta.lastSaved = now;
           }
@@ -190,6 +193,8 @@ const tabHandlerFiles = [
 ];
 
 const tabModuleFiles = [
+  '03_Notes/Writing_Engine/Asset_Store.js',
+  '03_Notes/Writing_Engine/Asset_Migrate.js',
   '03_Notes/00_State.js',
   '03_Notes/02_Utils.js',
   '03_Notes/Writing_Engine/BibTeX_Parser.js',
@@ -198,12 +203,16 @@ const tabModuleFiles = [
   '03_Notes/Writing_Engine/Block_Engine.js',
   '03_Notes/Writing_Engine/Numbering_Engine.js',
   '03_Notes/Writing_Engine/Math_Renderer.js',
+  '03_Notes/Writing_Engine/Tikz_Engine/Tikz_Source_Converter.js',
+  '03_Notes/Writing_Engine/Tikz_Engine/Tikz_Engine_Loader.js',
+  '03_Notes/Writing_Engine/Tikz_Engine/Tikz_Font_Store.js',
   '03_Notes/Writing_Engine/Tikz_Engine/Tikz_Renderer.js',
   '03_Notes/Writing_Engine/Code_Highlighter.js',
   '03_Notes/Writing_Engine/Link_Parser.js',
   '03_Notes/Writing_Engine/Highlight_Sync.js',
   '03_Notes/Writing_Engine/Table_Parser.js',
   '03_Notes/Writing_Engine/Block_History.js',
+  '03_Notes/Writing_Engine/Structure_History.js',
   '03_Notes/B_Editor_View/01_Blocks/Block_Actions.js',
   '03_Notes/B_Editor_View/01_Blocks/Figure_Utils.js',
   '03_Notes/B_Editor_View/01_Blocks/Block_Textarea.js',
@@ -222,6 +231,7 @@ const tabModuleFiles = [
   '03_Notes/B_Editor_View/01_Blocks/Text_Block/Text_Block_Markdown.js',
   '03_Notes/B_Editor_View/01_Blocks/Text_Block.js',
   '03_Notes/B_Editor_View/01_Blocks/Equation_Block.js',
+  '03_Notes/B_Editor_View/01_Blocks/Tikz_Render_Panel.js',
   '03_Notes/B_Editor_View/01_Blocks/Tikz_Block.js',
   '03_Notes/B_Editor_View/01_Blocks/Image_Block.js',
   '03_Notes/B_Editor_View/01_Blocks/Table_Block.js',
@@ -245,6 +255,19 @@ const tabModuleFiles = [
   '03_Notes/B_Editor_View/02_Floating_Toolbar.js',
   '03_Notes/B_Editor_View/03_Study_View.js',
   '03_Notes/B_Editor_View/04_LaTeX_Editor.js',
+  '03_Notes/E_Note_Ops/01_Block_Clone.js',
+  '03_Notes/E_Note_Ops/02_Wiki_Link_Rewrite.js',
+  '03_Notes/F_Share/01_Share_Payload.js',
+  '03_Notes/F_Share/02_Shared_View.js',
+  '03_Notes/F_Share/03_Share_Export.js',
+  '03_Notes/E_Note_Ops/03_Note_Operations.js',
+  '03_Notes/E_Note_Ops/04_Note_Picker.js',
+  '03_Notes/E_Note_Ops/05_Note_Menu.js',
+  '03_Notes/E_Note_Ops/06_Block_Selection.js',
+  '03_Notes/E_Note_Ops/07_Block_Clipboard.js',
+  '03_Notes/E_Note_Ops/08_Block_Operations.js',
+  '03_Notes/E_Note_Ops/09_Block_Selection_Bar.js',
+  '03_Notes/E_Note_Ops/10_Rendered_Copy.js',
   '03_Notes/A_Notes_Card_View/01_Navbar/01_Card_View_Toggle.js',
   '03_Notes/A_Notes_Card_View/01_Navbar/02_Group_Filter.js',
   '03_Notes/A_Notes_Card_View/01_Navbar/03_Search_Bar.js',
@@ -258,16 +281,61 @@ const tabModuleFiles = [
   '03_Notes/C_Graph_View/Graph_Data.js',
   '03_Notes/C_Graph_View/Graph_Physics.js',
   '03_Notes/C_Graph_View/Graph_View.js',
+  '03_Notes/D_Data_File/01_Data_Payload.js',
+  '03_Notes/D_Data_File/02_Handle_Store.js',
+  '03_Notes/D_Data_File/03_Data_File_Mode.js',
+  '03_Notes/G_Automation/01_Image_Inbox.js',
+  '03_Notes/G_Automation/02_Image_Insert.js',
+  '03_Notes/G_Automation/03_TeXidian_API.js',
+  '03_Notes/D_Data_File/04_Data_File_UI.js',
   '03_Notes/01_Header.js',
   '03_Notes/Notes.js'
 ];
 
 // Compiles THIS tab into one standalone HTML file and downloads it.
 // Inside an already-standalone file it just re-emits itself with fresh vault data.
-export async function SaveNotesStandalone() {
+// options:
+//   appOnly   — the HTML carries NO notes (they live in the data file, D_Data_File/);
+//               #NotesData becomes an empty vault marked vaultMeta.appOnly
+//   payload   — embed this vault object instead of the live one (share / export)
+//   fileName  — download name (default TeXidian.html)
+//   markSaved — clear the unsaved-changes state afterwards (only a full embedded save does)
+export async function SaveNotesStandalone(options = {}) {
+  const appOnly = Boolean(options && options.appOnly);
+  const payloadOverride = (options && options.payload) || null;
+  const fileName = (options && options.fileName) || TAB_OUTPUT_NAME;
+  const markSaved = (options && typeof options.markSaved === 'boolean') ? options.markSaved : (!appOnly && !payloadOverride);
   const DocClone = document.documentElement.cloneNode(true);
 
   syncTabStatesToDOM(DocClone);
+
+  const notesDataEl = DocClone.querySelector('script#NotesData');
+  if (notesDataEl && (appOnly || payloadOverride)) {
+    let vault;
+    if (payloadOverride) {
+      vault = JSON.parse(JSON.stringify(payloadOverride));
+    } else {
+      const live = JSON.parse(notesDataEl.textContent || '{}');
+      vault = {
+        vaultMeta: { ...(live.vaultMeta || {}), appOnly: true, dataFileName: options.dataFileName || '' },
+        globalMacros: live.globalMacros || {},
+        tableTemplates: [], tikzTemplates: [], tikzFonts: {}, bibliography: [],
+        citationStyle: live.citationStyle || 'numeric', folders: [], tags: [], notes: []
+      };
+    }
+    vault.vaultMeta = { ...(vault.vaultMeta || {}), format: 'tixidian-notes', formatVersion: 1 };
+    notesDataEl.textContent = JSON.stringify(vault, null, 2);
+  } else if (notesDataEl) {
+    // A full save carries notes: it is no longer an app-only file.
+    try {
+      const live = JSON.parse(notesDataEl.textContent || '{}');
+      if (live.vaultMeta && live.vaultMeta.appOnly) {
+        delete live.vaultMeta.appOnly;
+        delete live.vaultMeta.dataFileName;
+        notesDataEl.textContent = JSON.stringify(live, null, 2);
+      }
+    } catch (e) { }
+  }
 
   const isStandalone = typeof window !== 'undefined' && window.__IS_STANDALONE__ === true;
 
@@ -343,7 +411,7 @@ handlePageRoute();
   }
 
   // Cleanup injected dev scripts, runtime containers, and dynamic TikZ engine tags before download
-  DocClone.querySelectorAll('script[src*="livepreview"], script[src*="livereload"], #tikzjax-js, #tikzjax-css, script[src*="tikzjax"]').forEach(s => s.remove());
+  DocClone.querySelectorAll('script[src*="livepreview"], script[src*="livereload"], #tikzjax-js, #tikzjax-css, script[src*="tikzjax"], #tikz-engine-host, #tikz-saved-fonts, .df-overlay, .df-toast, .df-menu').forEach(s => s.remove());
   ['#canvas-container', '#loading-container', '#root'].forEach(sel => {
     const el = DocClone.querySelector(sel);
     if (el) el.innerHTML = '';
@@ -354,12 +422,13 @@ handlePageRoute();
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = TAB_OUTPUT_NAME;
+  link.download = fileName;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 
+  if (!markSaved) return;
   clearAllTabLocalCaches();
 
   const saveBtn = document.getElementById('save-btn');
@@ -392,8 +461,15 @@ export function InitTabSaveOverride() {
     btn.replaceWith(clone);
     clone.addEventListener('click', (e) => {
       e.preventDefault();
-      SaveNotesStandalone();
+      // Data-file mode (D_Data_File/) decides: overwrite the data file in place, ask to
+      // reconnect it, or fall back to downloading this whole HTML (embedded mode).
+      if (typeof window.HandleNotesSave === 'function') window.HandleNotesSave();
+      else SaveNotesStandalone();
     });
+  }
+  if (typeof window !== 'undefined') {
+    window.SaveNotesStandalone = SaveNotesStandalone;
+    if (typeof window.MountDataFileUI === 'function') window.MountDataFileUI();
   }
 
   // Provide MarkUnsavedChanges for standalone Notes tab

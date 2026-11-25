@@ -7,11 +7,12 @@ import { escapeHtml } from '../../02_Utils.js';
 import { formatRichTextWithMath } from '../../Writing_Engine/Math_Renderer.js';
 import { getBlockActionsHTML, initBlockActions } from './Block_Actions.js';
 import { attachBlockHistory } from '../../Writing_Engine/Block_History.js';
+import { normalizeHeadingLevel } from '../../Writing_Engine/Block_Engine.js';
 
 export function renderHeadingBlock(block, isEditing = false, onUpdate = null, { prefix = '', note = null, onConfigUpdate = null, onDone = null, onMoveUp = null, onMoveDown = null, onDelete = null, index = 0, totalBlocks = 1 } = {}) {
   const container = document.createElement('div');
   container.className = 'w-full notes-heading-container';
-  const level = block.level || 'h1';
+  const level = normalizeHeadingLevel(block.level);
   const title = block.title || '';
   const anchorId = (block.id || title || 'section').toLowerCase().replace(/[^a-z0-9]+/g, '-');
   container.id = anchorId;

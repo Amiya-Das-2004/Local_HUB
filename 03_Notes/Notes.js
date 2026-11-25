@@ -15,6 +15,12 @@ import { GetHeaderHTML, InitHeader } from './01_Header.js';
 import { GetNoteModalHTML, RenderNotesCardView } from './A_Notes_Card_View/A_Notes_Card_View.js';
 import { RenderLaTeXEditor } from './B_Editor_View/04_LaTeX_Editor.js';
 import { renderGraphView } from './C_Graph_View/Graph_View.js';
+// Side-effect import: registers window.openWikiNotePopup / wikiLinkTabUrl used by [[wiki-link]] clicks
+import './B_Editor_View/01_Blocks/Text_Block/Wiki_Link_Popup.js';
+// Side-effect import: read-only route guard for shared-note HTML files (F_Share/)
+import './F_Share/02_Shared_View.js';
+import './E_Note_Ops/10_Rendered_Copy.js'; // copying rendered text gives its markdown/LaTeX source
+import './G_Automation/03_TeXidian_API.js'; // window.TeXidianAPI (automation: blocks, images from the image folder/clipboard)
 import { InitScrollbar } from '../00_Components/03_Scrollbar.js';
 
 let isGlobalEditMode = true;
@@ -425,9 +431,15 @@ export function initNotesApp() {
   }
 }
 
-// Clean Window Registration for standalone compatibility
+// Clean Window Registration for standalone compatibility.
+// Outside callers (JSON Import, recovery Restore, the study toggle, window.TeXidianAPI and
+// automation such as the texidian-notes Claude skill) re-render through the page router, so
+// the page's own setup (TeXidian Save binding, storage chip) runs too — calling the bare
+// renderer dropped both. The routers themselves call the module function, never this global.
 if (typeof window !== 'undefined') {
-  window.initNotesApp = initNotesApp;
+  window.initNotesApp = function initNotesAppViaRouter() {
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+  };
 }
 
 

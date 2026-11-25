@@ -27,6 +27,16 @@ export const GLOBAL_FONT_SIZES = {
   xl: { label: 'Large', css: '1.125rem', lineHeight: '1.7', hidden: true }
 };
 
+/**
+ * Heading blocks have three levels, stored as 'h1' | 'h2' | 'h3'. Accepts numbers (2), digit
+ * strings ('2', 'H2'); 4–6 become 'h3', anything else 'h1' — so outside edits and older
+ * files render correctly.
+ */
+export function normalizeHeadingLevel(level) {
+  const n = parseInt(String(level === undefined || level === null ? '' : level).replace(/[^0-9]/g, ''), 10);
+  return `h${Number.isFinite(n) ? Math.min(3, Math.max(1, n)) : 1}`;
+}
+
 export const BLOCK_DEFINITIONS = [
   {
     type: 'heading',
@@ -37,7 +47,7 @@ export const BLOCK_DEFINITIONS = [
     description: 'Document section title with auto-numbering',
     createDefault: (opts = {}) => ({
       type: 'heading',
-      level: opts.level || 'h1',
+      level: normalizeHeadingLevel(opts.level || 'h1'),
       title: opts.title || ''
     })
   },
@@ -142,14 +152,19 @@ export const BLOCK_DEFINITIONS = [
     badge: 'Layout',
     icon: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="8" height="18" rx="1"/><rect x="13" y="3" width="8" height="18" rx="1"/></svg>`,
     description: 'Side-by-side multi-column content layout',
+    // Reference model: the container lists member ids (`members`, `rows`); the member blocks
+    // live in note.blocks right after it. createDefault alone gives an empty container —
+    // use createBlockWithMembers() to get the container plus its starter members.
     createDefault: (opts = {}) => ({
       type: 'columns',
       layout: opts.layout || '50-50',
-      cols: opts.cols || [
-        createNewBlock('text', { content: '' }),
-        createNewBlock('text', { content: '' })
-      ]
-    })
+      members: [],
+      rows: []
+    }),
+    createMembers: (opts = {}) => [
+      createNewBlock('text', { content: '' }),
+      createNewBlock('text', { content: '' })
+    ]
   }
 ];
 
@@ -165,6 +180,34 @@ export function createNewBlock(type, options = {}) {
     id: `b_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
     ...base
   };
+}
+
+/**
+ * Creates a block plus the member blocks it starts with (only the Columns container has any).
+ * The container references the members (`members` + one row side by side).
+ * @returns {Object[]} [block, ...members] — insert them together, in this order
+ */
+export function createBlockWithMembers(type, options = {}) {
+  const block = createNewBlock(type, options);
+  const def = BLOCK_DEF_MAP.get(block.type);
+  const members = def && typeof def.createMembers === 'function' ? def.createMembers(options) : [];
+  if (members.length) {
+    const ids = members.map(m => m.id);
+    block.members = ids;
+    block.rows = [ids.slice()];
+  }
+  return [block, ...members];
+}
+
+/**
+ * Inserts several blocks (e.g. a container and its members) at targetIndex, keeping their order.
+ * Returns the index of the first inserted block.
+ */
+export function insertBlocksAt(blocks = [], newBlocks = [], targetIndex = -1) {
+  if (!Array.isArray(blocks) || !newBlocks.length) return 0;
+  const at = (targetIndex < 0 || targetIndex >= blocks.length) ? blocks.length : targetIndex;
+  blocks.splice(at, 0, ...newBlocks);
+  return at;
 }
 
 /**

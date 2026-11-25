@@ -200,3 +200,29 @@ export function openWikiNotePopup(noteId, blockRef = '') {
 export function closeWikiNotePopup() {
   if (wikiNotePanelEl) wikiNotePanelEl.style.display = 'none';
 }
+
+// Delegated handler for the anchor-style links that Link_Parser.js emits
+// (callout/theorem blocks): plain click → reader popup; Ctrl/Cmd/Shift/middle
+// click falls through to the browser, which opens the href in a new tab/window.
+function onWikiAnchorClick(e) {
+  const a = e.target && e.target.closest ? e.target.closest('a.notes-wikilink[data-note-id]') : null;
+  if (!a || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+  e.preventDefault();
+  e.stopPropagation();
+  openWikiNotePopup(a.getAttribute('data-note-id'), a.getAttribute('data-block-ref') || '');
+}
+
+// Window registration: text-block widgets call these through `window` so the
+// click stays synchronous (keeps Ctrl+Click's user activation for window.open)
+// and works in the flat standalone bundle, where dynamic import() of a module
+// path cannot resolve. Registering here also avoids the static import cycle
+// Text_Widgets → Wiki_Link_Popup → Block_Dispatcher → Text_Block → Text_Widgets.
+if (typeof window !== 'undefined') {
+  window.openWikiNotePopup = openWikiNotePopup;
+  window.closeWikiNotePopup = closeWikiNotePopup;
+  window.wikiLinkTabUrl = wikiLinkTabUrl;
+  if (!window.__WIKI_ANCHOR_CLICK_BOUND__) {
+    window.__WIKI_ANCHOR_CLICK_BOUND__ = true;
+    document.addEventListener('click', onWikiAnchorClick, true);
+  }
+}

@@ -326,6 +326,8 @@ export async function SaveAndDownloadApp() {
     ];
 
     const noteFiles = [
+      '03_Notes/Writing_Engine/Asset_Store.js',
+      '03_Notes/Writing_Engine/Asset_Migrate.js',
       '03_Notes/00_State.js',
       '03_Notes/02_Utils.js',
       '03_Notes/Writing_Engine/BibTeX_Parser.js',
@@ -334,12 +336,16 @@ export async function SaveAndDownloadApp() {
       '03_Notes/Writing_Engine/Block_Engine.js',
       '03_Notes/Writing_Engine/Numbering_Engine.js',
       '03_Notes/Writing_Engine/Math_Renderer.js',
+      '03_Notes/Writing_Engine/Tikz_Engine/Tikz_Source_Converter.js',
+      '03_Notes/Writing_Engine/Tikz_Engine/Tikz_Engine_Loader.js',
+      '03_Notes/Writing_Engine/Tikz_Engine/Tikz_Font_Store.js',
       '03_Notes/Writing_Engine/Tikz_Engine/Tikz_Renderer.js',
       '03_Notes/Writing_Engine/Code_Highlighter.js',
       '03_Notes/Writing_Engine/Link_Parser.js',
       '03_Notes/Writing_Engine/Highlight_Sync.js',
       '03_Notes/Writing_Engine/Table_Parser.js',
       '03_Notes/Writing_Engine/Block_History.js',
+      '03_Notes/Writing_Engine/Structure_History.js',
       '03_Notes/B_Editor_View/01_Blocks/Block_Actions.js',
       '03_Notes/B_Editor_View/01_Blocks/Figure_Utils.js',
       '03_Notes/B_Editor_View/01_Blocks/Block_Textarea.js',
@@ -358,6 +364,7 @@ export async function SaveAndDownloadApp() {
       '03_Notes/B_Editor_View/01_Blocks/Text_Block/Text_Block_Markdown.js',
       '03_Notes/B_Editor_View/01_Blocks/Text_Block.js',
       '03_Notes/B_Editor_View/01_Blocks/Equation_Block.js',
+      '03_Notes/B_Editor_View/01_Blocks/Tikz_Render_Panel.js',
       '03_Notes/B_Editor_View/01_Blocks/Tikz_Block.js',
       '03_Notes/B_Editor_View/01_Blocks/Image_Block.js',
       '03_Notes/B_Editor_View/01_Blocks/Table_Block.js',
@@ -381,6 +388,19 @@ export async function SaveAndDownloadApp() {
       '03_Notes/B_Editor_View/02_Floating_Toolbar.js',
       '03_Notes/B_Editor_View/03_Study_View.js',
       '03_Notes/B_Editor_View/04_LaTeX_Editor.js',
+      '03_Notes/E_Note_Ops/01_Block_Clone.js',
+      '03_Notes/E_Note_Ops/02_Wiki_Link_Rewrite.js',
+      '03_Notes/F_Share/01_Share_Payload.js',
+      '03_Notes/F_Share/02_Shared_View.js',
+      '03_Notes/F_Share/03_Share_Export.js',
+      '03_Notes/E_Note_Ops/03_Note_Operations.js',
+      '03_Notes/E_Note_Ops/04_Note_Picker.js',
+      '03_Notes/E_Note_Ops/05_Note_Menu.js',
+      '03_Notes/E_Note_Ops/06_Block_Selection.js',
+      '03_Notes/E_Note_Ops/07_Block_Clipboard.js',
+      '03_Notes/E_Note_Ops/08_Block_Operations.js',
+      '03_Notes/E_Note_Ops/09_Block_Selection_Bar.js',
+      '03_Notes/E_Note_Ops/10_Rendered_Copy.js',
       '03_Notes/A_Notes_Card_View/01_Navbar/01_Card_View_Toggle.js',
       '03_Notes/A_Notes_Card_View/01_Navbar/02_Group_Filter.js',
       '03_Notes/A_Notes_Card_View/01_Navbar/03_Search_Bar.js',
@@ -394,6 +414,13 @@ export async function SaveAndDownloadApp() {
       '03_Notes/C_Graph_View/Graph_Data.js',
       '03_Notes/C_Graph_View/Graph_Physics.js',
       '03_Notes/C_Graph_View/Graph_View.js',
+      '03_Notes/D_Data_File/01_Data_Payload.js',
+      '03_Notes/D_Data_File/02_Handle_Store.js',
+      '03_Notes/D_Data_File/03_Data_File_Mode.js',
+      '03_Notes/G_Automation/01_Image_Inbox.js',
+      '03_Notes/G_Automation/02_Image_Insert.js',
+      '03_Notes/G_Automation/03_TeXidian_API.js',
+      '03_Notes/D_Data_File/04_Data_File_UI.js',
       '03_Notes/01_Header.js',
       '03_Notes/Notes.js'
     ];
@@ -591,7 +618,7 @@ handleRoute();
   }
 
   // Cleanup injected dev scripts, runtime containers, and dynamic TikZ engine tags before download
-  DocClone.querySelectorAll('script[src*="livepreview"], script[src*="livereload"], #tikzjax-js, #tikzjax-css, script[src*="tikzjax"]').forEach(s => s.remove());
+  DocClone.querySelectorAll('script[src*="livepreview"], script[src*="livereload"], #tikzjax-js, #tikzjax-css, script[src*="tikzjax"], #tikz-engine-host, #tikz-saved-fonts, .df-overlay, .df-toast, .df-menu').forEach(s => s.remove());
   ['#canvas-container', '#loading-container', '#root'].forEach(sel => {
     const el = DocClone.querySelector(sel);
     if (el) el.innerHTML = '';
